@@ -5,7 +5,7 @@
 
 ## Context
 
-.my-bootの`install.sh`は`rsync -a`で`.claude/`ディレクトリを丸ごとコピーしており、プロジェクト固有のCLAUDE.md内容やsettings.jsonの追加設定を上書きしてしまう。`hub rules deploy`ではプロジェクト固有の記述を保護しつつ、共通ルールを更新できる仕組みが必要。
+.my-bootの`install.sh`は`rsync -a`で`.claude/`ディレクトリを丸ごとコピーしており、プロジェクト固有のCLAUDE.md内容やsettings.jsonの追加設定を上書きしてしまう。`hub boot deploy`ではプロジェクト固有の記述を保護しつつ、共通ルールを更新できる仕組みが必要。
 
 ## Decision
 
@@ -54,4 +54,4 @@
 
 - CLAUDE.mdにHTMLコメントのマーカーが残る（表示には影響しない）
 - マーカーが手動で削除された場合、deployは共通部分を更新できない → `hub doctor`で検出する
-- .my-bootの`install.sh`は`hub rules deploy`に置き換えられ、廃止される
+- .my-bootの`install.sh`は`hub boot deploy`に置き換えられ、廃止される

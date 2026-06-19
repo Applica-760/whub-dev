@@ -39,7 +39,7 @@ resources:
     git:
       url: <string>          # GitリモートURL
       branch: <string>       # optional, default: デフォルトブランチ
-    agent_rules: <bool>      # optional, default: false — Agentルール配布対象か
+    boot: <bool>             # optional, default: false — boot配布対象か
 ```
 
 ### 設計原則
@@ -47,7 +47,7 @@ resources:
 1. **hostsは独立セクション** — 複数リソースが同一ホストを共有するため、DRYに参照する
 2. **resourcesはフラットリスト** — `path`フィールドでツリー上の位置を決定。ネスト構造はパースの複雑性に見合わない
 3. **gitフィールドはtype非依存** — symlinkもmountもGitリポジトリであり得る。mountの場合、git操作はリモート側で実行する（`hub exec`経由）
-4. **agent_rulesフラグ** — FR-5配布対象をリソース単位で宣言する。デフォルトfalse
+4. **bootフラグ** — FR-5（boot配布）対象をリソース単位で宣言する。デフォルトfalse
 
 ## Consequences
 

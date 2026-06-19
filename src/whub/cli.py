@@ -117,17 +117,20 @@ def status(ctx: click.Context) -> None:
         click.echo(f"  {r.name:20s}  {r.type:8s}  {mark}")
 
 
-# ── Rules ──
+# ── Boot ──
 @main.group()
-def rules() -> None:
-    """Manage agent rules."""
+def boot() -> None:
+    """Manage agent bootstrap configuration."""
 
 
-@rules.command("deploy")
+@boot.command("deploy")
 @click.pass_context
-def rules_deploy(ctx: click.Context) -> None:
-    """Deploy agent rules to target resources."""
-    click.echo("rules deploy: not yet implemented")
+def boot_deploy(ctx: click.Context) -> None:
+    """Deploy agent bootstrap config to target resources."""
+    from whub.boot import deploy_all
+
+    for name, ok in deploy_all(_load(ctx)):
+        click.echo(f"  {'done':6s}  {name}" if ok else f"  {'skip':6s}  {name} (not found)")
 
 
 # ── Diagnostics ──

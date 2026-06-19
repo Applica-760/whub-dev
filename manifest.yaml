@@ -20,7 +20,7 @@ resources:
     git:
       url: git@github.com:Applica-760/.my-boot.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: mind
     path: mind
@@ -29,7 +29,7 @@ resources:
     git:
       url: git@github.com:Applica-760/mind.git
       branch: main
-    agent_rules: true
+    boot: true
     
   - name: portfolio
     path: portfolio
@@ -38,7 +38,7 @@ resources:
     git:
       url: git@github.com:Applica-760/portfolio.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: recruit
     path: projects/personal/recruit
@@ -47,7 +47,7 @@ resources:
     git:
       url: git@github.com:Applica-760/recruit.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: doc-drill
     path: projects/personal/doc-drill
@@ -56,7 +56,7 @@ resources:
     git:
       url: git@github.com:Applica-760/doc-drill.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: sns-lab
     path: projects/personal/sns-lab
@@ -65,7 +65,7 @@ resources:
     git:
       url: git@github.com:Applica-760/sns-lab.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: solution-sprints
     path: projects/personal/solution-sprints
@@ -74,7 +74,7 @@ resources:
     git:
       url: git@github.com:Applica-760/solution-sprints.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: laplust-docs
     path: projects/LAplust/docs
@@ -85,6 +85,7 @@ resources:
     path: projects/research/slide
     type: symlink
     source: 
+    boot: true
 
   # ── mount ──
 
@@ -96,7 +97,7 @@ resources:
     git:
       url: git@github.com:Applica-760/esn-lab.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: esn-lab-run
     path: projects/research/esn-lab-run
@@ -106,7 +107,7 @@ resources:
     git:
       url: git@github.com:Applica-760/esn-lab.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: la-imitation-learning
     path: projects/LAplust/imitation-learning
@@ -116,7 +117,7 @@ resources:
     git:
       url: git@github.com:Applica-760/lerobot-experiment.git
       branch: main
-    agent_rules: true
+    boot: true
 
   - name: private
     path: projects/personal/private

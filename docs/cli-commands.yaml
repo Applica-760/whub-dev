@@ -44,11 +44,11 @@ hub cd:                          # FR-3, FR-6, FR-7
     - ローカルcdはシェル関数が必要（hub shell-initで生成、.zshrcに追記）
     - ローカルcd後に `claude` を起動すれば、プロジェクトのCLAUDE.mdが自動で読み込まれる
 
-# ── ルール配布系 ──
+# ── ブートストラップ配布系 ──
 
-hub rules deploy:                # FR-5
-  説明: agent_rules=trueの全リソースに.my-bootのルールを配布
-  例: hub rules deploy
+hub boot deploy:                 # FR-5
+  説明: boot=trueの全リソースに.my-bootのエージェント設定を配布
+  例: hub boot deploy
   備考: .my-bootの一元管理機能をworkspace-hubに統合。配布内容の定義は別途設計
 
 # ── 診断系 ──

@@ -34,7 +34,7 @@ class Resource(BaseModel):
     source: str | None = None
     # common optional
     git: GitInfo | None = None
-    agent_rules: bool = False
+    boot: bool = False
 
     @model_validator(mode="after")
     def _check_type_fields(self):

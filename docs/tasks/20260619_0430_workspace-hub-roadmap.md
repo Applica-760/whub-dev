@@ -42,7 +42,7 @@
   - [x] Step 1: uv init + pyproject.toml + src/whub/ 構造
   - [x] Step 2: Pydanticマニフェストモデル（ADR-0004準拠、SSOT）
   - [x] Step 3: manifest.yamlをADR-0004スキーマに更新
-  - [x] Step 4: Clickサブコマンドスタブ（link, mount, unmount, cd, status, rules, doctor）
+  - [x] Step 4: Clickサブコマンドスタブ（link, mount, unmount, cd, status, boot, doctor）
   - [x] Step 5: `whub status` 実装（マニフェスト読み→リソース状態表示）
   - [x] .yml → .yaml 統一（manifest, ADR, docs全体）
 
@@ -66,7 +66,7 @@
 
 ### Phase 6: Agentルール統合（FR-5）
 - [ ] CLAUDE.mdのマーカー方式テンプレート作成
-- [ ] hub rules deploy（マーカー範囲のみ置換 + settings.jsonマージ + skills/mcp上書き）
+- [ ] hub boot deploy（マーカー範囲のみ置換 + settings.jsonマージ + skills/mcp上書き）
 - [ ] 既存.my-boot install.shからの移行
 
 ## 実行ログ
