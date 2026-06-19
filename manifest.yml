@@ -1,0 +1,24 @@
+# workspace-hub manifest（仮置き：スキーマ・フィールドは未確定）
+
+repos:
+  - name: my-boot
+    url: git@github.com:Applica-760/.my-boot.git
+    path: .my-boot           # workspace-hub内の配置先
+    branch: main             # 同期対象ブランチ（要否未定）
+
+# mounts:                    # FR-2: リモートマウント定義（未設計）
+#   - name: homeserver-data
+#     host: homeserver
+#     remote_path: /data/ml
+#     local_path: remote/homeserver/data
+
+# local_links:               # FR-7: ローカルディレクトリ統合（未設計）
+#   - name: research-docs
+#     source: ~/書類/研究
+#     path: research/docs
+#     exclude: [poster/]
+
+# hosts:                     # FR-3: リモートホスト定義（未設計）
+#   - name: homeserver
+#     ssh: user@192.168.x.x
+#     default_dir: ~/workspace

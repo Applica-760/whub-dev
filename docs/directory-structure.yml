@@ -1,0 +1,31 @@
+# workspace-hub ディレクトリ構成案
+# 記法: インデント=親子関係, #=役割コメント
+# type: dir / git / symlink / mount のいずれかを記載
+
+# 前提として、このリポ全体を、symlink, mount等をignoreしてGit管理する。そのため、manifest.yamlなどは直接配置するが、Git管理もする
+
+manifest.yml: dir          # 全リソース定義
+cli/: dir                 # CLIツール（Python）
+
+projects/:
+  research/:
+    esn-lab/: mount # 自宅Linuxサーバ　Claude Code等を用いて開発
+    esn-lab-run: mount # スパコン　CCやCodexが使えないのでesn-labをCloneして実行するだけ　名前は要検討
+  LAplust/:
+    projectA: mount # 自宅Linuxサーバ　インターン関連のプロジェクトごとに幾つかのディレクトリをマウントしたい
+    docs: symlink # 請求書等の事務書類で、クライアントローカルのディレクトリ ``
+  personal/:
+    doc-drill: symlink # ``
+    sns-lab: symlink # ``
+    solution-sprints: symlink # ``
+
+mind/: symlink   # 思考・意思決定・バックログ ``
+recruit/: symlink # 就活関連 ``
+
+docs/: dir
+  ADR/:
+  tasks/:
+  requirements.md:
+
+.my-boot/:    # 暫定（後にcli/へ統合）
+.claude/:     # AI設定

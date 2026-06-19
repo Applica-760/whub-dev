@@ -1,0 +1,5 @@
+.my-boot/
+.claude/
+.codex/
+.codegraph/
+AGENTS.md
