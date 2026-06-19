@@ -9,7 +9,7 @@
 
 ## Decision
 
-`manifest.yml` としてリポジトリルート直下に配置する。
+`manifest.yaml` としてリポジトリルート直下に配置する。
 
 ## Rationale
 
@@ -19,4 +19,4 @@
 
 ## Consequences
 
-- CLIはカレントディレクトリの `manifest.yml` を読む規約とする
+- CLIはカレントディレクトリの `manifest.yaml` を読む規約とする

@@ -1,0 +1,63 @@
+# workspace-hub CLI サブコマンド設計
+# 記法: コマンド名 → 説明 + 対応FR
+# CLIエントリポイント: hub
+
+# ── セットアップ系 ──
+
+hub link:                        # FR-6, FR-7
+  説明: manifest.yamlのsymlinkエントリからリンクを作成
+  例: hub link
+  備考: excludes対応、既存リンクはスキップ
+
+hub mount:                       # FR-2
+  説明: ホスト単位でsshfsマウント（manifest.yamlのmountエントリ）
+  例:
+    - hub mount                  # 全ホストの全mountをマウント
+    - hub mount home-server      # 指定ホストのmountのみ
+  備考: 同一ホストのリソースはまとめてマウントするのが自然
+
+hub unmount:                     # FR-2
+  説明: マウント解除（ホスト単位）
+  例:
+    - hub unmount                # 全解除
+    - hub unmount home-server    # 指定ホストのみ
+
+# ── 日常操作系 ──
+
+hub status:                      # FR-2
+  説明: 全リソースの状態一覧（リンク有無・マウント有無・git状態）
+  例: hub status
+
+hub cd:                          # FR-3, FR-6, FR-7
+  説明: リソース名で移動（typeに応じてローカルcd or SSH接続）
+  動作:
+    symlink: ローカルのリソースパスにcd（シェル関数経由）
+    mount: リモートホストにSSH接続し、remote_pathにcd
+  例:
+    - hub cd doc-drill                       # ローカルcd → projects/personal/doc-drill/
+    - hub cd mind                            # ローカルcd → mind/
+    - hub cd esn-lab                         # SSH → home-server:
+    - hub cd super                           # SSH → スパコン:研究ディレクトリ
+    - hub cd esn-lab "python train.py"       # 非対話: リモートでコマンド実行して結果を返す
+  備考:
+    - Tab補完でリソース名を補完
+    - ローカルcdはシェル関数が必要（hub shell-initで生成、.zshrcに追記）
+    - ローカルcd後に `claude` を起動すれば、プロジェクトのCLAUDE.mdが自動で読み込まれる
+
+# ── ルール配布系 ──
+
+hub rules deploy:                # FR-5
+  説明: agent_rules=trueの全リソースに.my-bootのルールを配布
+  例: hub rules deploy
+  備考: .my-bootの一元管理機能をworkspace-hubに統合。配布内容の定義は別途設計
+
+# ── 診断系 ──
+
+hub doctor:
+  説明: 設定の整合性チェック
+  例: hub doctor
+  チェック項目:
+    - symlinkのリンク先が存在するか
+    - mountのホストに接続可能か
+    - gitリポジトリの状態（未コミット変更、ブランチ乖離等）
+    - manifest.yamlの構文・参照整合性

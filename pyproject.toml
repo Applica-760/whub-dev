@@ -1,0 +1,21 @@
+[project]
+name = "whub"
+version = "0.1.0"
+description = "workspace-hub CLI: manage local symlinks, remote mounts, and agent rules from a single manifest"
+readme = "README.md"
+authors = [
+    { name = "Applica-760", email = "90311870+Applica-760@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.1",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+whub = "whub.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"

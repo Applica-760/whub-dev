@@ -13,6 +13,9 @@
 - [ADR-0001: マニフェストを単一YAMLファイルとする](../ADR/0001-manifest-single-file.md)
 - [ADR-0002: CLIツールの実装言語をPythonとする](../ADR/0002-cli-language-python.md)
 - [ADR-0003: マニフェストをルート直下に配置する](../ADR/0003-manifest-placement-root.md)
+- [ADR-0004: マニフェストスキーマ定義](../ADR/0004-manifest-schema.md)
+- [ADR-0005: CLIサブコマンド体系](../ADR/0005-cli-subcommands.md)
+- [ADR-0006: Agentルール配布方式](../ADR/0006-agent-rules-deploy.md)
 
 ### 確定済み方針（ADR未起票）
 
@@ -28,30 +31,39 @@
 - [x] マニフェストの配置パス → ADR-0003
 - [x] mindディレクトリの位置づけ → ルート直下symlink
 - [x] ディレクトリ構成の方針 → ドメイン別
-- [ ] マニフェストの詳細スキーマ設計
-- [ ] CLIのサブコマンド体系
-- [ ] FR-5: Agentルール配布の仕組み（.my-bootからの移行方式）
+- [x] マニフェストの詳細スキーマ設計 → ADR-0004
+- [x] CLIのサブコマンド体系 → ADR-0005
+- [x] FR-5: Agentルール配布の仕組み → ADR-0006
 
 ### Phase 1: 基盤構築
-- [ ] git init + .gitignore整備
-- [ ] マニフェストスキーマ設計・ADR化
-- [ ] CLIの骨組み作成（pyproject.toml + エントリポイント）
+- [x] git init + .gitignore整備
+- [x] マニフェストスキーマ設計・ADR化 → ADR-0004
+- [x] CLI基盤作成（uv + Click + Pydantic）
+  - [x] Step 1: uv init + pyproject.toml + src/whub/ 構造
+  - [x] Step 2: Pydanticマニフェストモデル（ADR-0004準拠、SSOT）
+  - [x] Step 3: manifest.yamlをADR-0004スキーマに更新
+  - [x] Step 4: Clickサブコマンドスタブ（link, mount, unmount, cd, status, rules, doctor）
+  - [x] Step 5: `whub status` 実装（マニフェスト読み→リソース状態表示）
+  - [x] .yml → .yaml 統一（manifest, ADR, docs全体）
 
 ### Phase 2: symlink管理（FR-6, FR-7）
-- [ ] manifest.ymlのsymlinkエントリに基づくリンク作成コマンド
+- [ ] manifest.yamlのsymlinkエントリに基づくリンク作成コマンド
 
 ### Phase 3: リモートマウント（FR-2）
-- [ ] manifest.ymlのmountエントリに基づくsshfsマウントコマンド
+- [ ] manifest.yamlのmountエントリに基づくsshfsマウントコマンド
 
-### Phase 4: リモート操作（FR-3）
-- [ ] exec / sshコマンド
+### Phase 4: hub cd + リモート操作（FR-3, FR-6, FR-7）
+- [ ] hub cd（symlink→ローカルcd、mount→SSH接続）
+- [ ] hub shell-init（シェル関数生成）
+- [ ] Tab補完
 
-### Phase 5: 同期・コンテキスト生成（FR-1, FR-4）
-- [ ] Git一括同期（gitタイプ追加時）
-- [ ] 状態サマリー自動生成
+### Phase 5: 状態確認（FR-4）
+- [ ] hub status（全リソースの状態一覧）
 
 ### Phase 6: Agentルール統合（FR-5）
-- [ ] .my-bootからの移行
+- [ ] CLAUDE.mdのマーカー方式テンプレート作成
+- [ ] hub rules deploy（マーカー範囲のみ置換 + settings.jsonマージ + skills/mcp上書き）
+- [ ] 既存.my-boot install.shからの移行
 
 ## 実行ログ
 

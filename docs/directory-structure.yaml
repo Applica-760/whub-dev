@@ -4,7 +4,7 @@
 
 # 前提として、このリポ全体を、symlink, mount等をignoreしてGit管理する。そのため、manifest.yamlなどは直接配置するが、Git管理もする
 
-manifest.yml: dir          # 全リソース定義
+manifest.yaml: dir         # 全リソース定義
 cli/: dir                 # CLIツール（Python）
 
 projects/:
@@ -25,6 +25,7 @@ recruit/: symlink # 就活関連 ``
 docs/: dir
   ADR/:
   tasks/:
+  
   requirements.md:
 
 .my-boot/:    # 暫定（後にcli/へ統合）

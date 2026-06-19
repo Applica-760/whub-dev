@@ -1,0 +1,16 @@
+version: "1"
+
+# hosts:
+#   home-server:
+#     hostname: 192.168.x.x
+#     user: takumi
+
+resources:
+  - name: my-boot
+    path: .my-boot
+    type: symlink
+    source: 
+    git:
+      url: git@github.com:Applica-760/.my-boot.git
+      branch: main
+    agent_rules: true
