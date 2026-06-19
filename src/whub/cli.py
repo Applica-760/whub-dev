@@ -28,16 +28,17 @@ _GITIGNORE_MARKER = "# whub link (auto-generated)"
 def _update_gitignore(m):
     gitignore = m.root / ".gitignore"
     existing = gitignore.read_text() if gitignore.exists() else ""
-    existing_lines = set(existing.splitlines())
 
-    top_dirs = {r.path.split("/")[0] + "/" for r in m.resources if r.type == "symlink"}
-    new_entries = sorted(e for e in top_dirs if e not in existing_lines)
-    if not new_entries:
-        return
+    top_dirs = sorted({r.path.split("/")[0] for r in m.resources if r.type == "symlink"})
+    block = _GITIGNORE_MARKER + "\n" + "\n".join(top_dirs) + "\n"
 
-    block = "\n" + _GITIGNORE_MARKER + "\n" + "\n".join(new_entries) + "\n"
-    with gitignore.open("a") as f:
-        f.write(block)
+    if _GITIGNORE_MARKER in existing:
+        before = existing[: existing.index(_GITIGNORE_MARKER)]
+        text = before.rstrip("\n") + "\n\n" + block
+    else:
+        text = existing.rstrip("\n") + "\n\n" + block
+
+    gitignore.write_text(text)
 
 
 # ── Setup ──
