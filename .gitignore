@@ -4,6 +4,10 @@
 .codegraph/
 AGENTS.md
 
+# Python cache
+__pycache__/
+*.py[cod]
+
 # whub link (auto-generated)
 .my-boot
 mind
