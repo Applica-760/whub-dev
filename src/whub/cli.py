@@ -1,13 +1,9 @@
 """whub CLI entry point."""
 
 from __future__ import annotations
-
 from pathlib import Path
-
 import click
-
 from whub.manifest import load_manifest
-
 
 @click.group()
 @click.option(
@@ -22,20 +18,60 @@ def main(ctx: click.Context, manifest: Path | None) -> None:
     ctx.ensure_object(dict)
     ctx.obj["manifest_path"] = manifest
 
-
 def _load(ctx: click.Context):
     return load_manifest(ctx.obj["manifest_path"])
 
 
+_GITIGNORE_MARKER = "# whub link (auto-generated)"
+
+
+def _update_gitignore(m):
+    gitignore = m.root / ".gitignore"
+    existing = gitignore.read_text() if gitignore.exists() else ""
+    existing_lines = set(existing.splitlines())
+
+    top_dirs = {r.path.split("/")[0] + "/" for r in m.resources if r.type == "symlink"}
+    new_entries = sorted(e for e in top_dirs if e not in existing_lines)
+    if not new_entries:
+        return
+
+    block = "\n" + _GITIGNORE_MARKER + "\n" + "\n".join(new_entries) + "\n"
+    with gitignore.open("a") as f:
+        f.write(block)
+
+
 # ── Setup ──
-
-
 @main.command()
 @click.pass_context
 def link(ctx: click.Context) -> None:
     """Create symlinks declared in the manifest."""
-    click.echo("link: not yet implemented")
+    m = _load(ctx)
+    created = skipped = warnings = 0
 
+    for r in m.resources:
+        if r.type != "symlink":
+            continue
+
+        target = m.resolve_path(r.path)
+        source = Path(r.source).expanduser()
+
+        if not source.exists():
+            click.echo(f"  WARN  {r.name}: source not found ({source})")
+            warnings += 1
+        elif target.is_symlink() and target.resolve() == source.resolve():
+            click.echo(f"  skip  {r.name}")
+            skipped += 1
+        elif target.exists():
+            click.echo(f"  WARN  {r.name}: exists but unexpected ({target})")
+            warnings += 1
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.symlink_to(source)
+            click.echo(f"  link  {r.name}: {target} -> {source}")
+            created += 1
+
+    _update_gitignore(m)
+    click.echo(f"\n  done: {created} created, {skipped} skipped, {warnings} warnings")
 
 @main.command()
 @click.argument("host", required=False)
@@ -43,7 +79,6 @@ def link(ctx: click.Context) -> None:
 def mount(ctx: click.Context, host: str | None) -> None:
     """Mount remote directories via sshfs."""
     click.echo("mount: not yet implemented")
-
 
 @main.command()
 @click.argument("host", required=False)
@@ -54,8 +89,6 @@ def unmount(ctx: click.Context, host: str | None) -> None:
 
 
 # ── Daily ──
-
-
 @main.command()
 @click.argument("resource")
 @click.argument("command", required=False)
@@ -71,7 +104,7 @@ def status(ctx: click.Context) -> None:
     """Show status of all resources."""
     m = _load(ctx)
     for r in m.resources:
-        hub_path = Path(r.path)
+        hub_path = m.resolve_path(r.path)
         if r.type == "symlink":
             exists = hub_path.is_symlink() or hub_path.exists()
             mark = "ok" if exists else "missing"
@@ -84,8 +117,6 @@ def status(ctx: click.Context) -> None:
 
 
 # ── Rules ──
-
-
 @main.group()
 def rules() -> None:
     """Manage agent rules."""
@@ -99,8 +130,6 @@ def rules_deploy(ctx: click.Context) -> None:
 
 
 # ── Diagnostics ──
-
-
 @main.command()
 @click.pass_context
 def doctor(ctx: click.Context) -> None:

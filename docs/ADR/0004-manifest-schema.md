@@ -19,6 +19,7 @@ hosts:
   <host-key>:
     hostname: <string>       # required: IPまたはDNS名
     user: <string>           # required: SSHユーザ名
+    identity_file: <string>  # required: SSH秘密鍵パス
     port: <int>              # optional, default: 22
 
 # ── リソース定義 ──
@@ -33,8 +34,6 @@ resources:
 
     # symlink専用
     source: <string>         # symlinkの場合required: ローカルの絶対パス
-    excludes:                # optional: 除外するサブディレクトリ/ファイル（glob）
-      - <pattern>
 
     # 共通optional
     git:

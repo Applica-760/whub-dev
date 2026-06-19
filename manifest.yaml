@@ -1,11 +1,18 @@
 version: "1"
 
-# hosts:
-#   home-server:
-#     hostname: 192.168.x.x
-#     user: takumi
+hosts:
+  home-server:
+    hostname: "100.105.236.93"
+    user: "takumi"
+    identity_file: "~/.ssh/id_rsa"
+  supercomputer:
+    hostname: "genkai.hpc.kyushu-u.ac.jp"
+    user: ""
+    identity_file: ""
 
 resources:
+  # ── symlink ──
+
   - name: my-boot
     path: .my-boot
     type: symlink
@@ -14,3 +21,105 @@ resources:
       url: git@github.com:Applica-760/.my-boot.git
       branch: main
     agent_rules: true
+
+  - name: mind
+    path: mind
+    type: symlink
+    source: 
+    git:
+      url: git@github.com:Applica-760/mind.git
+      branch: main
+    agent_rules: true
+    
+  - name: portfolio
+    path: portfolio
+    type: symlink
+    source: 
+    git:
+      url: git@github.com:Applica-760/portfolio.git
+      branch: main
+    agent_rules: true
+
+  - name: recruit
+    path: projects/personal/recruit
+    type: symlink
+    source: 
+    git:
+      url: git@github.com:Applica-760/recruit.git
+      branch: main
+    agent_rules: true
+
+  - name: doc-drill
+    path: projects/personal/doc-drill
+    type: symlink
+    source: 
+    git:
+      url: git@github.com:Applica-760/doc-drill.git
+      branch: main
+    agent_rules: true
+
+  - name: sns-lab
+    path: projects/personal/sns-lab
+    type: symlink
+    source: 
+    git:
+      url: git@github.com:Applica-760/sns-lab.git
+      branch: main
+    agent_rules: true
+
+  - name: solution-sprints
+    path: projects/personal/solution-sprints
+    type: symlink
+    source: 
+    git:
+      url: git@github.com:Applica-760/solution-sprints.git
+      branch: main
+    agent_rules: true
+
+  - name: laplust-docs
+    path: projects/LAplust/docs
+    type: symlink
+    source: 
+
+  - name: research-slide
+    path: projects/research/slide
+    type: symlink
+    source: 
+
+  # ── mount ──
+
+  - name: esn-lab
+    path: projects/research/esn-lab
+    type: mount
+    host: home-server
+    remote_path: 
+    git:
+      url: git@github.com:Applica-760/esn-lab.git
+      branch: main
+    agent_rules: true
+
+  - name: esn-lab-run
+    path: projects/research/esn-lab-run
+    type: mount
+    host: supercomputer
+    remote_path: 
+    git:
+      url: git@github.com:Applica-760/esn-lab.git
+      branch: main
+    agent_rules: true
+
+  - name: la-imitation-learning
+    path: projects/LAplust/imitation-learning
+    type: mount
+    host: home-server
+    remote_path: 
+    git:
+      url: git@github.com:Applica-760/lerobot-experiment.git
+      branch: main
+    agent_rules: true
+
+  - name: private
+    path: projects/personal/private
+    type: mount
+    host: home-server
+    remote_path: 

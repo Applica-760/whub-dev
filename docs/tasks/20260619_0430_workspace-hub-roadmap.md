@@ -47,7 +47,11 @@
   - [x] .yml → .yaml 統一（manifest, ADR, docs全体）
 
 ### Phase 2: symlink管理（FR-6, FR-7）
-- [ ] manifest.yamlのsymlinkエントリに基づくリンク作成コマンド
+- [x] Step 1: `excludes`をスキーマから削除（ADR-0004 + manifest.py）— 不要と判断
+- [x] Step 2: workspace root解決ユーティリティ追加（manifest.yaml基準、CWD非依存）
+- [x] Step 3: `whub link` 実装（symlink作成 + 親ディレクトリ自動作成 + 冪等性 + サマリー出力）
+- [x] Step 4: `whub link` 実行時にsymlinkパスを.gitignoreへ自動追記（重複なし）
+- [x] Step 5: 動作検証（`whub link` → `whub status`）
 
 ### Phase 3: リモートマウント（FR-2）
 - [ ] manifest.yamlのmountエントリに基づくsshfsマウントコマンド

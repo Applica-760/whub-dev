@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class Host(BaseModel):
     hostname: str
     user: str
     port: int = 22
+    identity_file: str
 
 
 class GitInfo(BaseModel):
@@ -31,8 +32,6 @@ class Resource(BaseModel):
 
     # symlink
     source: str | None = None
-    excludes: list[str] | None = None
-
     # common optional
     git: GitInfo | None = None
     agent_rules: bool = False
@@ -49,9 +48,12 @@ class Resource(BaseModel):
 
 
 class Manifest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     version: str = "1"
     hosts: dict[str, Host] | None = None
     resources: list[Resource] = []
+    root: Path = Path(".")
 
     @model_validator(mode="after")
     def _check_host_refs(self):
@@ -61,10 +63,16 @@ class Manifest(BaseModel):
                 raise ValueError(f"resource '{r.name}' references unknown host '{r.host}'")
         return self
 
+    def resolve_path(self, relative: str) -> Path:
+        return self.root / relative
+
 
 def load_manifest(path: Path | None = None) -> Manifest:
     if path is None:
         path = Path("manifest.yaml")
+    path = path.resolve()
     text = path.read_text()
     data = yaml.safe_load(text)
-    return Manifest.model_validate(data)
+    m = Manifest.model_validate(data)
+    m.root = path.parent
+    return m
