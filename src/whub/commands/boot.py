@@ -69,8 +69,10 @@ def _copy(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if src.is_dir():
         if dst.exists():
-            shutil.rmtree(dst)
-        shutil.copytree(src, dst, ignore=shutil.ignore_patterns(*_SKIP))
+            shutil.rmtree(dst, ignore_errors=True)
+        shutil.copytree(
+            src, dst, ignore=shutil.ignore_patterns(*_SKIP), dirs_exist_ok=True,
+        )
     else:
         shutil.copy2(src, dst)
 
@@ -95,6 +97,16 @@ def _ensure_gitignore(target: Path) -> None:
                 f.write(e + "\n")
 
 
+def _clean_apple_double(target: Path) -> None:
+    """Remove macOS AppleDouble (._*) files generated on FUSE mounts."""
+    for d in (target / ".claude", target / ".codex"):
+        if d.exists():
+            for f in d.rglob("._*"):
+                f.unlink(missing_ok=True)
+    for f in target.glob("._*"):
+        f.unlink(missing_ok=True)
+
+
 def _deploy_to_project(boot_source: Path, target: Path) -> None:
     claude, codex = boot_source / "claude", boot_source / "codex"
 
@@ -109,6 +121,7 @@ def _deploy_to_project(boot_source: Path, target: Path) -> None:
         _deploy_marked(boot_source / src_rel, target / dst_name)
 
     _ensure_gitignore(target)
+    _clean_apple_double(target)
 
 
 def _deploy_all(m) -> list[tuple[str, bool]]:

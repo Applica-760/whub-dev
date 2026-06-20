@@ -108,7 +108,7 @@ resources:
     git:
       url: git@github.com:Applica-760/esn-lab.git
       branch: main
-    boot: true
+    boot: false
 
   - name: la-imitation-learning
     path: projects/LAplust/imitation-learning

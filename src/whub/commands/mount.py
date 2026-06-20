@@ -45,6 +45,7 @@ def _mount_one(r: Resource, host: Host, root: Path) -> str:
         _require_sshfs(),
         remote,
         str(local),
+        "-s",
         "-o", f"IdentityFile={identity}",
         "-o", f"port={host.port}",
     ]
