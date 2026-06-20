@@ -9,6 +9,7 @@ hosts:
     hostname: "genkai.hpc.kyushu-u.ac.jp"
     user: ""
     identity_file: ""
+    auto_mount: false
 
 resources:
   # ── symlink ──

@@ -35,13 +35,16 @@
 - `permissions.allow`: 共通ベースをマージ（既存のプロジェクト固有エントリを消さない）
 - `hooks`: 共通hookで上書き
 
+### AGENTS.md — マーカー方式（部分置換）
+
+CLAUDE.md と同じマーカー方式。`codex/AGENTS.md` をソースとし、プロジェクトルートの `AGENTS.md` にマーカー範囲のみ置換する。
+
 ### その他 — 上書き方式
 
 | ファイル | 戦略 |
 |----------|------|
 | `skills/*` | 上書き（常に最新化） |
 | `.mcp.json` | 上書き |
-| `AGENTS.md` (codex) | 上書き |
 | `.codex/` | 上書き |
 
 ## Rationale
@@ -54,4 +57,5 @@
 
 - CLAUDE.mdにHTMLコメントのマーカーが残る（表示には影響しない）
 - マーカーが手動で削除された場合、deployは共通部分を更新できない → `hub doctor`で検出する
-- .my-bootの`install.sh`は`hub boot deploy`に置き換えられ、廃止される
+- .my-bootの`install.sh`はスタンドアロン用途として現行維持する（workspace-hub外での単体利用向け）
+- workspace-hub配下では`hub boot deploy`を使用する

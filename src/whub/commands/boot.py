@@ -1,10 +1,14 @@
-"""Boot deploy — distribute .my-boot config to target projects."""
+"""whub boot deploy — distribute .my-boot config to target projects."""
 
 from __future__ import annotations
 
 import json
 import shutil
 from pathlib import Path
+
+import click
+
+from whub.commands import get_manifest
 
 MARKER_START = "<!-- hub:managed:start -->"
 MARKER_END = "<!-- hub:managed:end -->"
@@ -19,7 +23,7 @@ _BOOT_SOURCE = "my-boot"
 _SELF_TARGET = "workspace-hub"
 
 
-def deploy_marked(src: Path, dst: Path) -> None:
+def _deploy_marked(src: Path, dst: Path) -> None:
     block = src.read_text()
     dst.parent.mkdir(parents=True, exist_ok=True)
 
@@ -73,7 +77,7 @@ def _copy(src: Path, dst: Path) -> None:
 
 def _deploy_file(src: Path, dst: Path) -> None:
     if src.name in _MARKER_FILES:
-        deploy_marked(src, dst)
+        _deploy_marked(src, dst)
     elif src.name in _MERGE_FILES:
         _merge_settings(src, dst)
     else:
@@ -91,8 +95,23 @@ def _ensure_gitignore(target: Path) -> None:
                 f.write(e + "\n")
 
 
-def deploy_all(m) -> list[tuple[str, bool]]:
-    """Deploy boot config to all boot-enabled resources + workspace-hub itself."""
+def _deploy_to_project(boot_source: Path, target: Path) -> None:
+    claude, codex = boot_source / "claude", boot_source / "codex"
+
+    for item in sorted(claude.iterdir()):
+        if item.name in _SKIP:
+            continue
+        dst = target / _REMAP.get(item.name, f".claude/{item.name}")
+        _deploy_file(item, dst)
+
+    _copy(codex, target / ".codex")
+    for src_rel, dst_name in _ROOT_MARKERS.items():
+        _deploy_marked(boot_source / src_rel, target / dst_name)
+
+    _ensure_gitignore(target)
+
+
+def _deploy_all(m) -> list[tuple[str, bool]]:
     boot_res = next((r for r in m.resources if r.name == _BOOT_SOURCE), None)
     if not boot_res:
         raise RuntimeError(f"{_BOOT_SOURCE} not found in manifest")
@@ -106,22 +125,19 @@ def deploy_all(m) -> list[tuple[str, bool]]:
         if not path.exists():
             results.append((name, False))
             continue
-        deploy_to_project(boot_src, path)
+        _deploy_to_project(boot_src, path)
         results.append((name, True))
     return results
 
 
-def deploy_to_project(boot_source: Path, target: Path) -> None:
-    claude, codex = boot_source / "claude", boot_source / "codex"
+@click.group()
+def boot() -> None:
+    """Manage agent bootstrap configuration."""
 
-    for item in sorted(claude.iterdir()):
-        if item.name in _SKIP:
-            continue
-        dst = target / _REMAP.get(item.name, f".claude/{item.name}")
-        _deploy_file(item, dst)
 
-    _copy(codex, target / ".codex")
-    for src_rel, dst_name in _ROOT_MARKERS.items():
-        deploy_marked(boot_source / src_rel, target / dst_name)
-
-    _ensure_gitignore(target)
+@boot.command("deploy")
+@click.pass_context
+def boot_deploy(ctx: click.Context) -> None:
+    """Deploy agent bootstrap config to target resources."""
+    for name, ok in _deploy_all(get_manifest(ctx)):
+        click.echo(f"  {'done':6s}  {name}" if ok else f"  {'skip':6s}  {name} (not found)")

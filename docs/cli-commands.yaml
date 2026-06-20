@@ -49,7 +49,11 @@ hub cd:                          # FR-3, FR-6, FR-7
 hub boot deploy:                 # FR-5
   説明: boot=trueの全リソースに.my-bootのエージェント設定を配布
   例: hub boot deploy
-  備考: .my-bootの一元管理機能をworkspace-hubに統合。配布内容の定義は別途設計
+  配布戦略:
+    - CLAUDE.md / AGENTS.md: マーカー方式（既存内容を保護）
+    - settings.json: マージ（permissions追記、hooks上書き）
+    - skills, .mcp.json, .codex/: 上書き
+  備考: ADR-0006 参照
 
 # ── 診断系 ──
 
@@ -61,3 +65,4 @@ hub doctor:
     - mountのホストに接続可能か
     - gitリポジトリの状態（未コミット変更、ブランチ乖離等）
     - manifest.yamlの構文・参照整合性
+    - CLAUDE.md / AGENTS.md のマーカー存在・整合性

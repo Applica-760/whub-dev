@@ -14,6 +14,7 @@ class Host(BaseModel):
     user: str
     port: int = 22
     identity_file: str
+    auto_mount: bool = True
 
 
 class GitInfo(BaseModel):

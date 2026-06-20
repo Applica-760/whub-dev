@@ -21,6 +21,7 @@ hosts:
     user: <string>           # required: SSHユーザ名
     identity_file: <string>  # required: SSH秘密鍵パス
     port: <int>              # optional, default: 22
+    auto_mount: <bool>       # optional, default: true — whub mount のデフォルト対象か
 
 # ── リソース定義 ──
 resources:
