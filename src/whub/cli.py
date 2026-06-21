@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import click
 
 from whub.commands.boot import boot
@@ -16,17 +14,8 @@ from whub.commands.status import status
 
 
 @click.group()
-@click.option(
-    "--manifest",
-    type=click.Path(exists=True, path_type=Path),
-    default=None,
-    help="Path to manifest.yaml (default: ./manifest.yaml)",
-)
-@click.pass_context
-def main(ctx: click.Context, manifest: Path | None) -> None:
+def main() -> None:
     """workspace-hub: manage workspaces from a single manifest."""
-    ctx.ensure_object(dict)
-    ctx.obj["manifest_path"] = manifest
 
 
 main.add_command(link)

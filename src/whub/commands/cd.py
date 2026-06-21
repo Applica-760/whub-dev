@@ -9,6 +9,7 @@ import sys
 import click
 
 from whub.commands import get_manifest, resource_names
+from whub.models import MountResource, SymlinkResource
 
 EXIT_SSH = 100
 
@@ -24,13 +25,13 @@ def cd(ctx: click.Context, resource: str) -> None:
     if matched is None:
         raise click.ClickException(f"unknown resource: {resource}")
 
-    if matched.type == "symlink":
+    if isinstance(matched, SymlinkResource):
         path = m.resolve_path(matched.path)
         if not path.exists():
             raise click.ClickException(f"symlink target does not exist: {path}")
         click.echo(str(path))
 
-    elif matched.type == "mount":
+    elif isinstance(matched, MountResource):
         host = m.hosts[matched.host]
         identity = os.path.expanduser(host.identity_file)
         ssh_cmd = [

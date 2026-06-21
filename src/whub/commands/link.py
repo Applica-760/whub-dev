@@ -7,6 +7,8 @@ from pathlib import Path
 import click
 
 from whub.commands import get_manifest
+from whub.health import inspect_resource
+from whub.models import SymlinkResource
 
 _GITIGNORE_MARKER = "# whub link (auto-generated)"
 
@@ -15,7 +17,9 @@ def _update_gitignore(m) -> None:
     gitignore = m.root / ".gitignore"
     existing = gitignore.read_text() if gitignore.exists() else ""
 
-    top_dirs = sorted({r.path.split("/")[0] for r in m.resources if r.type == "symlink"})
+    top_dirs = sorted({
+        r.path.split("/")[0] for r in m.resources if isinstance(r, SymlinkResource)
+    })
     block = _GITIGNORE_MARKER + "\n" + "\n".join(top_dirs) + "\n"
 
     if _GITIGNORE_MARKER in existing:
@@ -35,26 +39,31 @@ def link(ctx: click.Context) -> None:
     created = skipped = warnings = 0
 
     for r in m.resources:
-        if r.type != "symlink":
+        if not isinstance(r, SymlinkResource):
             continue
 
         target = m.resolve_path(r.path)
         source = Path(r.source).expanduser()
+        health = inspect_resource(r, m)
 
-        if not source.exists():
-            click.echo(f"  WARN  {r.name}: source not found ({source})")
-            warnings += 1
-        elif target.is_symlink() and target.resolve() == source.resolve():
+        if health.state == "ok":
             click.echo(f"  skip  {r.name}")
             skipped += 1
-        elif target.exists():
-            click.echo(f"  WARN  {r.name}: exists but unexpected ({target})")
+        elif health.state != "missing":
+            detail = f" ({health.detail})" if health.detail else ""
+            click.echo(f"  WARN  {r.name}: {health.state}{detail}")
             warnings += 1
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.symlink_to(source)
-            click.echo(f"  link  {r.name}: {target} -> {source}")
-            created += 1
+            result = inspect_resource(r, m)
+            if result.state == "ok":
+                click.echo(f"  link  {r.name}: {target} -> {source}")
+                created += 1
+            else:
+                detail = f" ({result.detail})" if result.detail else ""
+                click.echo(f"  WARN  {r.name}: {result.state}{detail}")
+                warnings += 1
 
     _update_gitignore(m)
     click.echo(f"\n  done: {created} created, {skipped} skipped, {warnings} warnings")

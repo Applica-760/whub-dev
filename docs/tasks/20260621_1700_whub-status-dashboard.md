@@ -95,15 +95,17 @@ whub status -p <resource> red                 # priority 編集 (red/yellow/blue
 ## 計画
 
 ### Phase 1: models/ パッケージ整理
-- [ ] `src/whub/models/` 作成、`manifest.py` のモデル定義 + `load_manifest()` を移動
-- [ ] `models/__init__.py` に `.whub/` パス解決ヘルパー + re-exports
-- [ ] `src/whub/models/state.py` に `ResourceState` モデル + `load_state()` / `save_state()` 定義
-- [ ] 既存 import を全コマンドで更新・動作確認
+- [x] `src/whub/models/` 作成 + `__init__.py`（re-exports のみ、パス解決は Phase 2）
+- [x] `src/whub/manifest.py` → `src/whub/models/manifest.py` に移動
+- [x] `src/whub/models/state.py` 新設（ResourceState, State, load_state, save_state）
+- [x] `commands/__init__.py`, `commands/mount.py` の import 更新
+- [x] 旧 `src/whub/manifest.py` 削除
+- [x] 動作確認（`whub status` 実行）
 
 ### Phase 2: `.whub/` + manifest 移動
-- [ ] `manifest.yaml` を `.whub/` 配下に移動
-- [ ] `load_manifest` のデフォルトパスを `.whub/manifest.yaml` に変更
-- [ ] 既存コマンドの動作確認
+- [x] `manifest.yaml` を `.whub/` 配下に移動
+- [x] デフォルトパスを `cli.py` に一元化、`load_manifest` は `path: Path` 必須に変更
+- [x] 既存コマンドの動作確認（`whub status`）
 
 ### Phase 3: `whub status` 表示拡張
 - [ ] resource ごとの git 差分ファイル数取得ロジック
