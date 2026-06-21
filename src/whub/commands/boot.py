@@ -10,21 +10,41 @@ import click
 
 from whub.commands import get_manifest
 
-MARKER_START = "<!-- hub:managed:start -->"
-MARKER_END = "<!-- hub:managed:end -->"
+MARKERS = ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->")
+GITIGNORE_MARKERS = ("# hub:managed:start", "# hub:managed:end")
 
 _MARKER_FILES = {"CLAUDE.md", "AGENTS.md"}
 _MERGE_FILES = {"settings.json"}
 _SKIP = {".DS_Store", ".git"}
-_GITIGNORE_ENTRIES = [".claude/", ".codex/", ".codegraph/", "AGENTS.md", ".mcp.json"]
 _REMAP = {"mcp.json": ".mcp.json"}
 _ROOT_MARKERS = {"codex/AGENTS.md": "AGENTS.md"}
+_GITIGNORE = (".gitignore", ".gitignore")
 _BOOT_SOURCE = "my-boot"
 _SELF_TARGET = "workspace-hub"
 
 
-def _deploy_marked(src: Path, dst: Path) -> None:
+def _managed_range(
+    text: str, markers: tuple[str, str], path: Path,
+) -> tuple[int, int] | None:
+    start, end = markers
+    if start not in text and end not in text:
+        return None
+    if text.count(start) != 1 or text.count(end) != 1:
+        raise ValueError(f"invalid managed markers: {path}")
+    first, last = text.index(start), text.index(end)
+    if first > last:
+        raise ValueError(f"invalid managed markers: {path}")
+    return first, last + len(end)
+
+
+def _deploy_marked(
+    src: Path,
+    dst: Path,
+    markers: tuple[str, str] = MARKERS,
+) -> None:
     block = src.read_text()
+    if _managed_range(block, markers, src) is None:
+        raise ValueError(f"managed markers are missing: {src}")
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     if not dst.exists():
@@ -32,12 +52,12 @@ def _deploy_marked(src: Path, dst: Path) -> None:
         return
 
     existing = dst.read_text()
-    if MARKER_START in existing:
-        before = existing[: existing.index(MARKER_START)]
-        after = existing[existing.index(MARKER_END) + len(MARKER_END) :]
-        new = before + block + after
-    else:
-        new = block + "\n" + existing
+    managed = _managed_range(existing, markers, dst)
+    new = (
+        block + "\n" + existing
+        if managed is None
+        else existing[:managed[0]] + block + existing[managed[1]:]
+    )
 
     if new != existing:
         dst.write_text(new)
@@ -59,7 +79,7 @@ def _merge_settings(src: Path, dst: Path) -> None:
     proj["permissions"]["allow"] = list(dict.fromkeys(dst_allow + src_allow))
 
     if "hooks" in common:
-        proj["hooks"] = common["hooks"]
+        proj["hooks"] = {**proj.get("hooks", {}), **common["hooks"]}
 
     if json.dumps(proj, sort_keys=True) != original:
         dst.write_text(json.dumps(proj, indent=2, ensure_ascii=False) + "\n")
@@ -68,8 +88,6 @@ def _merge_settings(src: Path, dst: Path) -> None:
 def _copy(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if src.is_dir():
-        if dst.exists():
-            shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(
             src, dst, ignore=shutil.ignore_patterns(*_SKIP), dirs_exist_ok=True,
         )
@@ -84,17 +102,6 @@ def _deploy_file(src: Path, dst: Path) -> None:
         _merge_settings(src, dst)
     else:
         _copy(src, dst)
-
-
-def _ensure_gitignore(target: Path) -> None:
-    path = target / ".gitignore"
-    existing = path.read_text() if path.exists() else ""
-    lines = existing.splitlines()
-    added = [e for e in _GITIGNORE_ENTRIES if e not in lines]
-    if added:
-        with path.open("a") as f:
-            for e in added:
-                f.write(e + "\n")
 
 
 def _clean_apple_double(target: Path) -> None:
@@ -120,7 +127,12 @@ def _deploy_to_project(boot_source: Path, target: Path) -> None:
     for src_rel, dst_name in _ROOT_MARKERS.items():
         _deploy_marked(boot_source / src_rel, target / dst_name)
 
-    _ensure_gitignore(target)
+    src_name, dst_name = _GITIGNORE
+    _deploy_marked(
+        boot_source / src_name,
+        target / dst_name,
+        GITIGNORE_MARKERS,
+    )
     _clean_apple_double(target)
 
 

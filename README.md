@@ -13,7 +13,7 @@ symlink・sshfsマウント・マニフェスト駆動のCLIにより、俯瞰�
 
 ```sh
 uv tool install -e .
-eval "$(whub shell-init)"   # .zshrc に追記
+source <(whub shell-init)   # .zshrc に追記
 ```
 
 ## コマンド一覧

@@ -54,10 +54,14 @@
 
 
 ### Phase 3: boot配布とmanaged file更新の整理
-- [ ] `.gitignore`の既存内容を保持するmanaged-block更新処理を整備する
-- [ ] managed blockの終了マーカー欠落・重複を明示的に検出する
-- [ ] ファイルコピーとディレクトリ置換を分離し、`.codex`の配布方針を明示する
-- [ ] `AGENTS.md`・`.claude`・`.codex`等の配置仕様を一つの構造へ集約する
+- [ ] 現行boot配布のcharacterization testを追加し、マーカー外記述・JSON固有設定・配布先固有ファイルの保持条件を固定する
+- [x] managed block更新を一つの汎用関数へ統一し、Markdownと`.gitignore`で開始・終了マーカーだけを切り替える
+- [x] managed blockの片側欠落・重複・順序逆転を更新前に検出し、対象ファイルを含む明示的エラーで書き込みを中止する
+- [x] `.gitignore`へ共通ignoreをmanaged blockとして挿入・更新し、マーカー外の既存記述と既存の重複行を変更しない
+- [x] ディレクトリ全置換を廃止し、ファイル単位の上書きへ変更してプロジェクト固有Skill・設定を保持する
+- [ ] `source`・`destination`・更新戦略を配布仕様テーブルへ集約し、`AGENTS.md`・`.claude`・`.codex`・`.mcp.json`の分岐を単純化する
+- [ ] `_copy`・`_deploy_file`・個別定数群を配布仕様と少数の更新関数へ整理し、`boot.py`を短縮する
+- [ ] 初回配布・再配布の冪等性、固有記述保持、異常マーカー時の非更新、固有Skill保持を一時ディレクトリ上で検証する
 
 ### Phase 4: shellと外部コマンド境界の整理
 - [ ] SSH遷移用終了コードを単一定義からPythonとshellへ反映する
@@ -88,6 +92,11 @@
 ### 試行 2: resource種別と生存確認の共通化
 - 実施内容: Resourceを判別Unionへ分割し、Health判定をlink・mount/unmount・statusへ統合
 - 結果: 既存manifest互換、symlink各状態、mount浅部/SSH深度判定、link→status統合、host補完を確認
+- 判断: 続行
+
+### 試行 3: boot配布の非破壊化と`.gitignore`管理
+- 実施内容: managed block検証を共通化し、ディレクトリ全削除を廃止、`.my-boot/.gitignore`をSSOTとしてbootとinstall.shから配布
+- 結果: 構文・差分検査に成功し、install.shの2回実行で既存ignore保持とmanaged blockの冪等性を確認
 - 判断: 続行
 
 ## 結果

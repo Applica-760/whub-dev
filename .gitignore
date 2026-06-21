@@ -1,3 +1,11 @@
+# hub:managed:start
+.claude/
+.codex/
+.codegraph/
+AGENTS.md
+.mcp.json
+# hub:managed:end
+
 .my-boot/
 .claude/
 .codex/

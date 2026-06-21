@@ -1,4 +1,4 @@
-"""whub cd — jump to a resource (local cd or SSH)."""
+"""whub cd and shell integration."""
 
 from __future__ import annotations
 
@@ -12,6 +12,27 @@ from whub.commands import get_manifest, resource_names
 from whub.models import MountResource, SymlinkResource
 
 EXIT_SSH = 100
+
+_SHELL_INIT = r"""
+whub() {
+    if [ "$1" = "cd" ] && [ -n "$2" ]; then
+        local _out _rc
+        _out="$(command whub "$@")"
+        _rc=$?
+        if [ $_rc -eq 0 ]; then
+            builtin cd "$_out"
+        elif [ $_rc -eq 100 ]; then
+            command whub "$@"
+        else
+            echo "$_out" >&2
+            return $_rc
+        fi
+    else
+        command whub "$@"
+    fi
+}
+source <(_WHUB_COMPLETE=zsh_source command whub)
+"""
 
 
 @click.command()
@@ -39,7 +60,19 @@ def cd(ctx: click.Context, resource: str) -> None:
             "-i", identity,
             "-p", str(host.port),
             f"{host.user}@{host.hostname}",
-            f"cd {matched.remote_path} && exec $SHELL -l",
+            f"cd {shlex.quote(matched.remote_path)} && exec $SHELL -l",
         ]
-        click.echo(" ".join(shlex.quote(s) for s in ssh_cmd))
-        sys.exit(EXIT_SSH)
+        if not sys.stdout.isatty():
+            sys.exit(EXIT_SSH)
+        try:
+            os.execvp(ssh_cmd[0], ssh_cmd)
+        except OSError as error:
+            raise click.ClickException(f"failed to start ssh: {error}") from error
+
+
+@click.command("shell-init")
+@click.option("--shell", "shell_type", type=click.Choice(["zsh"]), default="zsh")
+def shell_init(shell_type: str) -> None:
+    """Emit zsh function and completion setup."""
+    if shell_type == "zsh":
+        click.echo(_SHELL_INIT.strip())

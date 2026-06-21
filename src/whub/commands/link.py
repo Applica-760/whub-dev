@@ -23,8 +23,11 @@ def _update_gitignore(m) -> None:
     block = _GITIGNORE_MARKER + "\n" + "\n".join(top_dirs) + "\n"
 
     if _GITIGNORE_MARKER in existing:
-        before = existing[: existing.index(_GITIGNORE_MARKER)]
-        text = before.rstrip("\n") + "\n\n" + block
+        start = existing.index(_GITIGNORE_MARKER)
+        rest_start = existing.find("\n\n", start)
+        before = existing[:start]
+        after = existing[rest_start:] if rest_start != -1 else ""
+        text = before.rstrip("\n") + "\n\n" + block + after.lstrip("\n")
     else:
         text = existing.rstrip("\n") + "\n\n" + block
 
