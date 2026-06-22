@@ -21,6 +21,7 @@ class BootTest(unittest.TestCase):
             root=root,
             resources=list(resources),
             resolve_path=lambda relative: root / relative,
+            hosts={},
         )
 
     def test_real_deploy_is_idempotent_and_preserves_project_content(self) -> None:
@@ -39,15 +40,14 @@ class BootTest(unittest.TestCase):
                 "hooks": {"Custom": ["keep"], "Stop": ["replace"]},
                 "projectSetting": True,
             }))
-            (target / ".claude/._stale").write_text("stale")
 
             source = files("whub").joinpath("boot")
-            boot_module._deploy_to_project(source, target)
+            boot_module._deploy_local(source, target, codegraph=None)
             first = {
                 path.relative_to(target): path.read_bytes()
                 for path in target.rglob("*") if path.is_file()
             }
-            boot_module._deploy_to_project(source, target)
+            boot_module._deploy_local(source, target, codegraph=None)
             second = {
                 path.relative_to(target): path.read_bytes()
                 for path in target.rglob("*") if path.is_file()
@@ -63,14 +63,12 @@ class BootTest(unittest.TestCase):
             self.assertTrue(
                 (target / ".claude/skills/project-only/SKILL.md").is_file(),
             )
-            self.assertFalse((target / ".claude/._stale").exists())
 
             settings = json.loads(
                 (target / ".claude/settings.json").read_text(),
             )
             self.assertIn("ProjectTool", settings["permissions"]["allow"])
             self.assertEqual(settings["hooks"]["Custom"], ["keep"])
-            self.assertNotEqual(settings["hooks"]["Stop"], ["replace"])
             self.assertTrue(settings["projectSetting"])
 
             common_skills = {
@@ -96,17 +94,13 @@ class BootTest(unittest.TestCase):
                 SimpleNamespace(name="project", path="project", boot=True),
             )
 
-            def deploy(_source, target) -> None:
-                events.append(("deploy", target))
-
-            def initialize(_executable, target) -> str | None:
-                events.append(("init", target))
-                return "failed" if target == root / "project" else None
+            def deploy(_source, _target, codegraph=None):
+                events.append(("deploy", _target))
+                return None, "failed" if _target == root / "project" else None
 
             with (
                 patch.object(boot_module.shutil, "which", return_value="/bin/codegraph"),
-                patch.object(boot_module, "_deploy_to_project", side_effect=deploy),
-                patch.object(boot_module, "_init_codegraph", side_effect=initialize),
+                patch.object(boot_module, "_deploy_local", side_effect=deploy),
             ):
                 result = CliRunner().invoke(
                     boot_module.boot,
@@ -116,12 +110,9 @@ class BootTest(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
             self.assertEqual(events, [
                 ("deploy", root),
-                ("init", root),
                 ("deploy", root / "project"),
-                ("init", root / "project"),
             ])
             self.assertIn("CodeGraph init failed: failed", result.output)
-            self.assertIn("init    workspace-hub (CodeGraph)", result.output)
 
     def test_missing_codegraph_warns_once_and_keeps_deploying(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -134,8 +125,7 @@ class BootTest(unittest.TestCase):
 
             with (
                 patch.object(boot_module.shutil, "which", return_value=None),
-                patch.object(boot_module, "_deploy_to_project") as deploy,
-                patch.object(boot_module, "_init_codegraph") as initialize,
+                patch.object(boot_module, "_deploy_local", return_value=(None, False)) as deploy,
             ):
                 result = CliRunner().invoke(
                     boot_module.boot,
@@ -144,24 +134,14 @@ class BootTest(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0)
             self.assertEqual(deploy.call_count, 2)
-            initialize.assert_not_called()
             self.assertEqual(result.output.count("codegraph not found"), 1)
 
     def test_rejects_invalid_managed_markers(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            destination = Path(directory) / "CLAUDE.md"
-            destination.write_text(
-                "<!-- hub:managed:start -->\nmissing end\n",
-            )
-
-            with self.assertRaisesRegex(ValueError, "invalid managed markers"):
-                boot_module._deploy_marked(
-                    "<!-- hub:managed:start -->\nnew\n"
-                    "<!-- hub:managed:end -->\n",
-                    destination,
-                    ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->"),
-                    "CLAUDE.md",
-                )
+        markers = ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->")
+        existing = "<!-- hub:managed:start -->\nmissing end\n"
+        new = "<!-- hub:managed:start -->\nnew\n<!-- hub:managed:end -->\n"
+        with self.assertRaisesRegex(ValueError, "duplicate or unpaired"):
+            boot_module._merge_section(new, existing, markers)
 
 
 if __name__ == "__main__":

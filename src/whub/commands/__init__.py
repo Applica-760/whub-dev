@@ -10,7 +10,7 @@ from click.shell_completion import CompletionItem
 from whub.models import Host, load_manifest
 
 
-def _ssh_target(host: Host) -> tuple[str, str, int]:
+def ssh_target(host: Host) -> tuple[str, str, int]:
     target = f"{host.user}@{host.hostname}"
     identity = str(Path(host.identity_file).expanduser())
     return target, identity, host.port
@@ -28,7 +28,7 @@ def build_ssh_command(
     options: tuple[str, ...] = (),
 ) -> list[str]:
     """Build an SSH command."""
-    target, identity, port = _ssh_target(host)
+    target, identity, port = ssh_target(host)
     return [
         "ssh",
         *(["-t"] if tty else []),
@@ -46,7 +46,7 @@ def build_sshfs_command(
     mountpoint: Path,
 ) -> list[str]:
     """Build an sshfs command."""
-    target, identity, port = _ssh_target(host)
+    target, identity, port = ssh_target(host)
     return [
         "sshfs",
         f"{target}:{remote_path}",
@@ -62,6 +62,21 @@ def build_sshfs_command(
             "noapplexattr",
             "defer_permissions",
         )),
+    ]
+
+
+def build_rsync_command(
+    host: Host,
+    local_src: str,
+    remote_dest: str,
+) -> list[str]:
+    """Build an rsync command to sync local_src/ to remote host."""
+    target, identity, port = ssh_target(host)
+    return [
+        "rsync", "-a",
+        "-e", f"ssh -i {identity} -p {port}",
+        f"{local_src}/",
+        f"{target}:{remote_dest}/",
     ]
 
 
