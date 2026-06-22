@@ -1,23 +1,29 @@
 # hub:managed:start
+.agents/
 .claude/
 .codex/
 .codegraph/
-AGENTS.md
 .mcp.json
+AGENTS.md
 # hub:managed:end
 
-.my-boot/
 .claude/
 .codex/
 .codegraph/
 AGENTS.md
+
+!src/whub/boot/.claude/
+!src/whub/boot/.claude/**
+!src/whub/boot/.codex/
+!src/whub/boot/.codex/**
+!src/whub/boot/AGENTS.md
+!src/whub/boot/.mcp.json
 
 # Python cache
 __pycache__/
 *.py[cod]
 
 # whub link (auto-generated)
-.my-boot
 mind
 portfolio
 projects

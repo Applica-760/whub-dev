@@ -5,9 +5,9 @@ symlink・sshfsマウント・マニフェスト駆動のCLIにより、俯瞰�
 
 ## 方針
 
-- `manifest.yaml` が単一定義源（SSOT）。リソースの追加・変更はここだけ
+- `.whub/manifest.yaml` が単一定義源（SSOT）。リソースの追加・変更はここだけ
 - ローカルリポジトリは symlink、リモートは sshfs mount で参照（実体は移動しない）
-- `.my-boot` に共通Agent設定（CLAUDE.md / AGENTS.md / MCP設定）を集約し、`whub boot deploy` で全プロジェクトに配布
+- whubパッケージ内の共通Agent設定を`whub boot`で対象プロジェクトに配布
 
 ## セットアップ
 
@@ -21,15 +21,15 @@ source <(whub shell-init)   # .zshrc に追記
 | コマンド | 概要 |
 |---|---|
 | `whub link` | manifest の symlink を一括作成（`.gitignore` も自動更新） |
-| `whub mount [HOST]` | sshfs でリモートをマウント（`--all` で auto_mount=false も含む） |
+| `whub mount [HOST]` | sshfsでマウント（HOST省略時は`auto_mount: true`、`--all`で全対象） |
 | `whub unmount [HOST]` | マウント解除 |
 | `whub cd <RESOURCE>` | リソースへ移動（symlink→cd、mount→SSH） |
-| `whub status` | 全リソースの状態一覧 |
-| `whub boot deploy` | `.my-boot` のAgent設定を `boot: true` な全プロジェクトに配布 |
+| `whub status [--check]` | 全リソースの状態一覧（`--check`でリモート接続も確認） |
+| `whub boot` | パッケージ内のAgent設定を`boot: true`な全プロジェクトとworkspace-hubへ配布 |
 | `whub doctor` | ヘルスチェック（未実装） |
-| `whub shell-init` | シェル関数＋補完設定を出力 |
+| `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
 
-## manifest.yaml の構造
+## `.whub/manifest.yaml` の構造
 
 ```yaml
 hosts:
@@ -49,5 +49,5 @@ resources:
     git:
       url: git@github.com:...
       branch: main
-    boot: true                 # true で whub boot deploy の対象
+    boot: true                 # true で whub boot の対象
 ```

@@ -1,4 +1,4 @@
-# ADR-0003: マニフェストをリポジトリルート直下に配置する
+# ADR-0003: マニフェストを`.whub/`に配置する
 
 - **Status:** Accepted
 - **Date:** 2026-06-19
@@ -9,14 +9,14 @@
 
 ## Decision
 
-`manifest.yaml` としてリポジトリルート直下に配置する。
+`.whub/manifest.yaml`として配置する。
 
 ## Rationale
 
-- workspace-hubの最も重要な定義ファイルであり、即座に見つかるべき
-- CLIもAIも追加のパス解決なしでアクセスできる
-- ルートの肥大化は.gitignore等と同列で実質問題にならない
+- whub固有の設定を`.whub/`へ集約できる
+- 可変状態の`.whub/state.yaml`と配置規則を統一できる
+- リポジトリルートの設定ファイル増加を抑えられる
 
 ## Consequences
 
-- CLIはカレントディレクトリの `manifest.yaml` を読む規約とする
+- CLIはカレントディレクトリの`.whub/manifest.yaml`を読む

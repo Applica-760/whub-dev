@@ -2,10 +2,14 @@
 # 記法: インデント=親子関係, #=役割コメント
 # type: dir / git / symlink / mount のいずれかを記載
 
-# 前提として、このリポ全体を、symlink, mount等をignoreしてGit管理する。そのため、manifest.yamlなどは直接配置するが、Git管理もする
+# 前提として、このリポ全体を、symlink, mount等をignoreしてGit管理する
 
-manifest.yaml: dir         # 全リソース定義
-src/whub/: dir              # CLIツール（Python / uv + Click + Pydantic）
+.whub/:
+  manifest.yaml: file       # 全リソース定義
+  state.yaml: file          # 任意・未生成可。リソースの可変状態（現在CLI未接続）
+src/whub/:
+  _type: dir                # CLIツール（Python / uv + Click + Pydantic）
+  boot/: dir                # whub bootの配布資産
 
 projects/:
   research/:
@@ -25,11 +29,10 @@ projects/:
 mind/: symlink   # 思考・意思決定・バックログ ``
 portfolio/: symlink # ``
 
-docs/: dir
-  ADR/:
-  tasks/:
+docs/:
+  _type: dir
+  ADR/: dir
+  tasks/: dir
+  requirements.md: file
 
-  requirements.md:
-
-.my-boot/: symlink  # エージェント設定テンプレートソース（boot deploy で参照）
-.claude/:           # AI設定
+.claude/: dir       # AI設定

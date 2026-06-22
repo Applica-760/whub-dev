@@ -1,14 +1,10 @@
 """whub cd and shell integration."""
-
 from __future__ import annotations
-
 import os
 import shlex
 import sys
-
 import click
-
-from whub.commands import get_manifest, resource_names
+from whub.commands import build_ssh_command, get_manifest, resource_names
 from whub.models import MountResource, SymlinkResource
 
 EXIT_SSH = 100
@@ -16,17 +12,13 @@ EXIT_SSH = 100
 _SHELL_INIT = r"""
 whub() {
     if [ "$1" = "cd" ] && [ -n "$2" ]; then
-        local _out _rc
-        _out="$(command whub "$@")"
-        _rc=$?
-        if [ $_rc -eq 0 ]; then
-            builtin cd "$_out"
-        elif [ $_rc -eq 100 ]; then
-            command whub "$@"
-        else
-            echo "$_out" >&2
-            return $_rc
-        fi
+        local target rc
+        target="$(command whub "$@")"; rc=$?
+        case $rc in
+            0) builtin cd "$target" ;;
+            100) command whub "$@" ;;
+            *) return $rc ;;
+        esac
     else
         command whub "$@"
     fi
@@ -54,20 +46,14 @@ def cd(ctx: click.Context, resource: str) -> None:
 
     elif isinstance(matched, MountResource):
         host = m.hosts[matched.host]
-        identity = os.path.expanduser(host.identity_file)
-        ssh_cmd = [
-            "ssh", "-t",
-            "-i", identity,
-            "-p", str(host.port),
-            f"{host.user}@{host.hostname}",
+        cmd = build_ssh_command(
+            host,
             f"cd {shlex.quote(matched.remote_path)} && exec $SHELL -l",
-        ]
+            tty=True,
+        )
         if not sys.stdout.isatty():
             sys.exit(EXIT_SSH)
-        try:
-            os.execvp(ssh_cmd[0], ssh_cmd)
-        except OSError as error:
-            raise click.ClickException(f"failed to start ssh: {error}") from error
+        os.execvp("ssh", cmd)
 
 
 @click.command("shell-init")

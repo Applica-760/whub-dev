@@ -1,13 +1,11 @@
 """Resource health inspection shared by commands."""
-
 from __future__ import annotations
-
 import shlex
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, assert_never
-
+from whub.commands import build_ssh_command
 from whub.models import Manifest, MountResource, Resource, SymlinkResource
 
 HealthState = Literal[
@@ -60,15 +58,11 @@ def inspect_mount(
         return ResourceHealth("ok")
 
     host = manifest.hosts[resource.host]
-    command = [
-        "ssh",
-        "-o", "BatchMode=yes",
-        "-o", "ConnectTimeout=5",
-        "-i", str(Path(host.identity_file).expanduser()),
-        "-p", str(host.port),
-        f"{host.user}@{host.hostname}",
+    command = build_ssh_command(
+        host,
         f"test -d {shlex.quote(resource.remote_path)}",
-    ]
+        options=("BatchMode=yes", "ConnectTimeout=5"),
+    )
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=8)
     except (OSError, subprocess.TimeoutExpired) as error:

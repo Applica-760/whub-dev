@@ -1,68 +1,68 @@
 # workspace-hub CLI サブコマンド設計
 # 記法: コマンド名 → 説明 + 対応FR
-# CLIエントリポイント: hub
+# CLIエントリポイント: whub
 
 # ── セットアップ系 ──
 
-hub link:                        # FR-6, FR-7
-  説明: manifest.yamlのsymlinkエントリからリンクを作成
-  例: hub link
-  備考: excludes対応、既存リンクはスキップ
+whub link:                       # FR-6, FR-7
+  説明: .whub/manifest.yamlのsymlinkリソースからリンクを作成
+  例: whub link
+  備考: 正常な既存リンクはスキップし、ルート.gitignoreの自動生成ブロックを更新
 
-hub mount:                       # FR-2
-  説明: ホスト単位でsshfsマウント（manifest.yamlのmountエントリ）
+whub mount:                      # FR-2
+  説明: .whub/manifest.yamlのmountリソースをsshfsでマウント
   例:
-    - hub mount                  # 全ホストの全mountをマウント
-    - hub mount home-server      # 指定ホストのmountのみ
-  備考: 同一ホストのリソースはまとめてマウントするのが自然
+    - whub mount                 # auto_mount=trueのホスト
+    - whub mount --all           # auto_mount=falseを含む全ホスト
+    - whub mount home-server     # 指定ホスト（auto_mount設定を問わない）
 
-hub unmount:                     # FR-2
+whub unmount:                    # FR-2
   説明: マウント解除（ホスト単位）
   例:
-    - hub unmount                # 全解除
-    - hub unmount home-server    # 指定ホストのみ
+    - whub unmount               # 全解除
+    - whub unmount home-server   # 指定ホストのみ
 
 # ── 日常操作系 ──
 
-hub status:                      # FR-2
-  説明: 全リソースの状態一覧（リンク有無・マウント有無・git状態）
-  例: hub status
+whub status:                     # FR-2
+  説明: 全リソースのリンク・マウント状態一覧
+  例:
+    - whub status
+    - whub status --check        # SSHでリモートmountの接続も確認
 
-hub cd:                          # FR-3, FR-6, FR-7
+whub cd:                         # FR-3, FR-6, FR-7
   説明: リソース名で移動（typeに応じてローカルcd or SSH接続）
   動作:
     symlink: ローカルのリソースパスにcd（シェル関数経由）
     mount: リモートホストにSSH接続し、remote_pathにcd
   例:
-    - hub cd doc-drill                       # ローカルcd → projects/personal/doc-drill/
-    - hub cd mind                            # ローカルcd → mind/
-    - hub cd esn-lab                         # SSH → home-server:
-    - hub cd super                           # SSH → スパコン:研究ディレクトリ
-    - hub cd esn-lab "python train.py"       # 非対話: リモートでコマンド実行して結果を返す
+    - whub cd doc-drill          # ローカルcd → projects/personal/doc-drill/
+    - whub cd esn-lab            # SSH → 対象リソースのremote_path
   備考:
     - Tab補完でリソース名を補完
-    - ローカルcdはシェル関数が必要（hub shell-initで生成、.zshrcに追記）
+    - ローカルcdはシェル関数が必要（whub shell-initで生成、.zshrcに追記）
     - ローカルcd後に `claude` を起動すれば、プロジェクトのCLAUDE.mdが自動で読み込まれる
 
 # ── ブートストラップ配布系 ──
 
-hub boot deploy:                 # FR-5
-  説明: boot=trueの全リソースに.my-bootのエージェント設定を配布
-  例: hub boot deploy
+whub boot:                       # FR-5
+  説明: boot=trueの全リソースとworkspace-hubにパッケージ内のエージェント設定を配布
+  例: whub boot
   配布戦略:
-    - CLAUDE.md / AGENTS.md: マーカー方式（既存内容を保護）
-    - settings.json: マージ（permissions追記、hooks上書き）
-    - skills, .mcp.json, .codex/: 上書き
+    - .claude/CLAUDE.md / AGENTS.md / .gitignore: マーカー方式
+    - .claude/settings.json: permissions追記、hooksマージ
+    - .claude/のその他 / .mcp.json / .codex/: 上書き
+  備考: workspace-hub自身も常に配布対象
+
+whub shell-init:
+  説明: zsh用のwhub関数と補完設定を出力
+  例:
+    - source <(whub shell-init)
+    - whub shell-init --shell zsh
   備考: ADR-0006 参照
 
 # ── 診断系 ──
 
-hub doctor:
-  説明: 設定の整合性チェック
-  例: hub doctor
-  チェック項目:
-    - symlinkのリンク先が存在するか
-    - mountのホストに接続可能か
-    - gitリポジトリの状態（未コミット変更、ブランチ乖離等）
-    - manifest.yamlの構文・参照整合性
-    - CLAUDE.md / AGENTS.md のマーカー存在・整合性
+whub doctor:
+  説明: 未実装（現在はメッセージを表示するスタブ）
+  例: whub doctor

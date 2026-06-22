@@ -14,15 +14,6 @@ hosts:
 resources:
   # ── symlink ──
 
-  - name: my-boot
-    path: .my-boot
-    type: symlink
-    source: 
-    git:
-      url: git@github.com:Applica-760/.my-boot.git
-      branch: main
-    boot: true
-
   - name: mind
     path: mind
     type: symlink

@@ -5,7 +5,7 @@
 
 ## Context
 
-.my-bootの`install.sh`は`rsync -a`で`.claude/`ディレクトリを丸ごとコピーしており、プロジェクト固有のCLAUDE.md内容やsettings.jsonの追加設定を上書きしてしまう。`hub boot deploy`ではプロジェクト固有の記述を保護しつつ、共通ルールを更新できる仕組みが必要。
+whubパッケージ内の共通設定を配布しつつ、プロジェクト固有のCLAUDE.md・AGENTS.md・settings.json・.gitignoreを保護する必要がある。
 
 ## Decision
 
@@ -37,15 +37,19 @@
 
 ### AGENTS.md — マーカー方式（部分置換）
 
-CLAUDE.md と同じマーカー方式。`codex/AGENTS.md` をソースとし、プロジェクトルートの `AGENTS.md` にマーカー範囲のみ置換する。
+CLAUDE.md と同じマーカー方式。パッケージ内の`AGENTS.md`をソースとし、プロジェクトルートの`AGENTS.md`にマーカー範囲のみ置換する。
+
+### .gitignore — マーカー方式（部分置換）
+
+`# hub:managed:start` / `# hub:managed:end`の範囲のみ置換する。
 
 ### その他 — 上書き方式
 
 | ファイル | 戦略 |
 |----------|------|
-| `skills/*` | 上書き（常に最新化） |
+| `.claude/`内のその他 | 上書き（既存の固有ファイルは削除しない） |
 | `.mcp.json` | 上書き |
-| `.codex/` | 上書き |
+| `.codex/` | 上書き（既存の固有ファイルは削除しない） |
 
 ## Rationale
 
@@ -56,6 +60,6 @@ CLAUDE.md と同じマーカー方式。`codex/AGENTS.md` をソースとし、�
 ## Consequences
 
 - CLAUDE.mdにHTMLコメントのマーカーが残る（表示には影響しない）
-- マーカーが手動で削除された場合、deployは共通部分を更新できない → `hub doctor`で検出する
-- .my-bootの`install.sh`はスタンドアロン用途として現行維持する（workspace-hub外での単体利用向け）
-- workspace-hub配下では`hub boot deploy`を使用する
+- 配布先にマーカーがない場合は共通ブロックを先頭へ挿入する
+- マーカーの重複・片側欠損・逆順はエラーとする
+- 配布資産は`importlib.resources`で参照し、外部リポジトリへ依存しない
