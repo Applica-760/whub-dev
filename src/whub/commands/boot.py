@@ -1,5 +1,4 @@
 """whub boot — distribute packaged agent config to target projects.
-
 boot/ layout (directory = operation):
   merge/   section insert   (.md → HTML, .gitignore → #, .toml → #)
   json/    recursive merge   (JSON)
@@ -7,7 +6,7 @@ boot/ layout (directory = operation):
 """
 
 from __future__ import annotations
-
+import click
 import json
 import shlex
 import shutil
@@ -16,11 +15,9 @@ from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Callable, Iterator
-
-import click
-
-from whub.commands import build_rsync_command, build_ssh_command, get_manifest
-from whub.models import Host, MountResource
+from whub.commands import get_manifest
+from whub.models import Host, RemoteResource
+from whub.remote import build_rsync_command, build_ssh_command
 
 _MARKERS = {
     ".md": ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->"),
@@ -32,8 +29,6 @@ _SKILLS_DESTS = (".claude/skills", ".agents/skills")
 
 
 # ── Merge logic ───────────────────────────────────────────────────
-
-
 def _managed_range(text: str, markers: tuple[str, str]) -> tuple[int, int] | None:
     start, end = markers
     if start not in text and end not in text:
@@ -94,8 +89,6 @@ def _merge_json(overlay_text: str, existing: str | None) -> str:
 
 
 # ── Helpers ───────────────────────────────────────────────────────
-
-
 def _walk(root: Traversable) -> Iterator[tuple[Traversable, str]]:
     def _inner(node: Traversable, prefix: str) -> Iterator[tuple[Traversable, str]]:
         for item in node.iterdir():
@@ -132,7 +125,6 @@ def _run_command(command: list[str], timeout: int) -> str | None:
 
 
 # ── Deploy (shared loop) ─────────────────────────────────────────
-
 ReadFn = Callable[[str], str | None]
 WriteFn = Callable[[str, str], None]
 
@@ -221,15 +213,24 @@ def boot(ctx: click.Context) -> None:
     if codegraph is None:
         click.echo("  WARN    codegraph not found; skipped for local resources")
 
-    targets = [("workspace-hub", manifest.root, None)] + [
-        (r.name, manifest.resolve_path(r.path), r)
-        for r in manifest.resources if r.boot
-    ]
+    targets = (
+        [("workspace-hub", manifest.root, None)]
+        + [
+            (resource.name, manifest.resolve_path(resource.workspace_path), resource)
+            for resource in manifest.resources.symlinks
+            if resource.boot
+        ]
+        + [
+            (resource.name, None, resource)
+            for resource in manifest.resources.remotes
+            if resource.boot
+        ]
+    )
     for name, path, resource in targets:
-        if isinstance(resource, MountResource):
+        if isinstance(resource, RemoteResource):
             host = manifest.hosts[resource.host]
-            deploy_err, cg_err = _deploy_remote(boot_source, host, resource.remote_path)
-        elif path.exists():
+            deploy_err, cg_err = _deploy_remote(boot_source, host, resource.path)
+        elif path is not None and path.exists():
             deploy_err, cg_err = _deploy_local(boot_source, path, codegraph)
         else:
             click.echo(f"  {'skip':6s}  {name} (not found)")

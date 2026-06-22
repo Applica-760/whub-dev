@@ -5,10 +5,12 @@ from whub.models.manifest import (
     GitInfo,
     Host,
     Manifest,
-    MountResource,
-    Resource,
+    RemoteResource,
+    Resources,
     SymlinkResource,
+    host_names,
     load_manifest,
+    resource_names,
 )
 from whub.models.state import PRIORITY_EMOJI, ResourceState, State, load_state, save_state
 
@@ -17,13 +19,15 @@ __all__ = [
     "GitInfo",
     "Host",
     "Manifest",
-    "MountResource",
     "PRIORITY_EMOJI",
-    "Resource",
+    "RemoteResource",
     "ResourceState",
+    "Resources",
     "State",
     "SymlinkResource",
+    "host_names",
     "load_manifest",
     "load_state",
+    "resource_names",
     "save_state",
 ]

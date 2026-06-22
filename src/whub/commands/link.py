@@ -1,24 +1,19 @@
 """whub link — create symlinks declared in the manifest."""
-
 from __future__ import annotations
-
 from pathlib import Path
-
 import click
-
 from whub.commands import get_manifest
 from whub.health import inspect_resource
-from whub.models import SymlinkResource
 
 _GITIGNORE_MARKER = "# whub link (auto-generated)"
-
 
 def _update_gitignore(m) -> None:
     gitignore = m.root / ".gitignore"
     existing = gitignore.read_text() if gitignore.exists() else ""
 
     top_dirs = sorted({
-        r.path.split("/")[0] for r in m.resources if isinstance(r, SymlinkResource)
+        resource.workspace_path.split("/")[0]
+        for resource in m.resources.symlinks
     })
     block = _GITIGNORE_MARKER + "\n" + "\n".join(top_dirs) + "\n"
 
@@ -33,7 +28,6 @@ def _update_gitignore(m) -> None:
 
     gitignore.write_text(text)
 
-
 @click.command()
 @click.pass_context
 def link(ctx: click.Context) -> None:
@@ -41,11 +35,8 @@ def link(ctx: click.Context) -> None:
     m = get_manifest(ctx)
     created = skipped = warnings = 0
 
-    for r in m.resources:
-        if not isinstance(r, SymlinkResource):
-            continue
-
-        target = m.resolve_path(r.path)
+    for r in m.resources.symlinks:
+        target = m.resolve_path(r.workspace_path)
         source = Path(r.source).expanduser()
         health = inspect_resource(r, m)
 

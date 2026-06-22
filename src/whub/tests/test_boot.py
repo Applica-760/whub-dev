@@ -19,7 +19,10 @@ class BootTest(unittest.TestCase):
     def _manifest(self, root: Path, *resources) -> SimpleNamespace:
         return SimpleNamespace(
             root=root,
-            resources=list(resources),
+            resources=SimpleNamespace(
+                symlinks=list(resources),
+                remotes=[],
+            ),
             resolve_path=lambda relative: root / relative,
             hosts={},
         )
@@ -91,7 +94,11 @@ class BootTest(unittest.TestCase):
             events = []
             manifest = self._manifest(
                 root,
-                SimpleNamespace(name="project", path="project", boot=True),
+                SimpleNamespace(
+                    name="project",
+                    workspace_path="project",
+                    boot=True,
+                ),
             )
 
             def deploy(_source, _target, codegraph=None):
@@ -120,7 +127,11 @@ class BootTest(unittest.TestCase):
             (root / "project").mkdir()
             manifest = self._manifest(
                 root,
-                SimpleNamespace(name="project", path="project", boot=True),
+                SimpleNamespace(
+                    name="project",
+                    workspace_path="project",
+                    boot=True,
+                ),
             )
 
             with (

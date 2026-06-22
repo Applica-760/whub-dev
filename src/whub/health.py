@@ -5,8 +5,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, assert_never
-from whub.commands import build_ssh_command
-from whub.models import Manifest, MountResource, Resource, SymlinkResource
+from whub.models import Manifest, RemoteResource, SymlinkResource
+from whub.remote import build_ssh_command
 
 HealthState = Literal[
     "ok",
@@ -15,19 +15,16 @@ HealthState = Literal[
     "broken",
     "wrong-target",
     "unexpected",
-    "unmounted",
     "unreachable",
 ]
-
 
 @dataclass(frozen=True)
 class ResourceHealth:
     state: HealthState
     detail: str | None = None
 
-
 def inspect_symlink(resource: SymlinkResource, manifest: Manifest) -> ResourceHealth:
-    target = manifest.resolve_path(resource.path)
+    target = manifest.resolve_path(resource.workspace_path)
     source = Path(resource.source).expanduser()
 
     if not source.exists():
@@ -44,43 +41,33 @@ def inspect_symlink(resource: SymlinkResource, manifest: Manifest) -> ResourceHe
         return ResourceHealth("unexpected", str(target))
     return ResourceHealth("missing", str(target))
 
-
-def inspect_mount(
-    resource: MountResource,
+def inspect_remote(
+    resource: RemoteResource,
     manifest: Manifest,
-    *,
-    deep: bool = False,
 ) -> ResourceHealth:
-    target = manifest.resolve_path(resource.path)
-    if not target.is_mount():
-        return ResourceHealth("unmounted", str(target))
-    if not deep:
-        return ResourceHealth("ok")
-
     host = manifest.hosts[resource.host]
     command = build_ssh_command(
         host,
-        f"test -d {shlex.quote(resource.remote_path)}",
+        f"test -d {shlex.quote(resource.path)}",
         options=("BatchMode=yes", "ConnectTimeout=5"),
     )
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=8)
     except (OSError, subprocess.TimeoutExpired) as error:
         return ResourceHealth("unreachable", str(error))
-    if result.returncode != 0:
+    if result.returncode == 255:
         detail = result.stderr.strip() or f"ssh exited with status {result.returncode}"
         return ResourceHealth("unreachable", detail)
+    if result.returncode != 0:
+        return ResourceHealth("missing", resource.path)
     return ResourceHealth("ok")
 
-
 def inspect_resource(
-    resource: Resource,
+    resource: SymlinkResource | RemoteResource,
     manifest: Manifest,
-    *,
-    deep: bool = False,
 ) -> ResourceHealth:
     if isinstance(resource, SymlinkResource):
         return inspect_symlink(resource, manifest)
-    if isinstance(resource, MountResource):
-        return inspect_mount(resource, manifest, deep=deep)
+    if isinstance(resource, RemoteResource):
+        return inspect_remote(resource, manifest)
     assert_never(resource)

@@ -4,8 +4,9 @@ import os
 import shlex
 import sys
 import click
-from whub.commands import build_ssh_command, get_manifest, resource_names
-from whub.models import MountResource, SymlinkResource
+from whub.commands import get_manifest
+from whub.models import RemoteResource, SymlinkResource, resource_names
+from whub.remote import build_ssh_command
 
 EXIT_SSH = 100
 
@@ -34,21 +35,21 @@ def cd(ctx: click.Context, resource: str) -> None:
     """Jump to a resource (local cd or SSH)."""
     m = get_manifest(ctx)
 
-    matched = next((r for r in m.resources if r.name == resource), None)
+    matched = next((r for r in m.all_resources if r.name == resource), None)
     if matched is None:
         raise click.ClickException(f"unknown resource: {resource}")
 
     if isinstance(matched, SymlinkResource):
-        path = m.resolve_path(matched.path)
+        path = m.resolve_path(matched.workspace_path)
         if not path.exists():
             raise click.ClickException(f"symlink target does not exist: {path}")
         click.echo(str(path))
 
-    elif isinstance(matched, MountResource):
+    elif isinstance(matched, RemoteResource):
         host = m.hosts[matched.host]
         cmd = build_ssh_command(
             host,
-            f"cd {shlex.quote(matched.remote_path)} && exec $SHELL -l",
+            f"cd {shlex.quote(matched.path)} && exec $SHELL -l",
             tty=True,
         )
         if not sys.stdout.isatty():

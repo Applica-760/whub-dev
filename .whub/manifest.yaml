@@ -9,110 +9,90 @@ hosts:
     hostname: "genkai.hpc.kyushu-u.ac.jp"
     user: ""
     identity_file: ""
-    auto_mount: false
 
 resources:
-  # ── symlink ──
+  symlinks:
+    - name: mind
+      workspace_path: mind
+      source: 
+      git:
+        url: git@github.com:Applica-760/mind.git
+        branch: main
+      boot: true
 
-  - name: mind
-    path: mind
-    type: symlink
-    source: 
-    git:
-      url: git@github.com:Applica-760/mind.git
-      branch: main
-    boot: true
-    
-  - name: portfolio
-    path: portfolio
-    type: symlink
-    source: 
-    git:
-      url: git@github.com:Applica-760/portfolio.git
-      branch: main
-    boot: true
+    - name: portfolio
+      workspace_path: portfolio
+      source: 
+      git:
+        url: git@github.com:Applica-760/portfolio.git
+        branch: main
+      boot: true
 
-  - name: recruit
-    path: projects/personal/recruit
-    type: symlink
-    source: 
-    git:
-      url: git@github.com:Applica-760/recruit.git
-      branch: main
-    boot: true
+    - name: recruit
+      workspace_path: projects/personal/recruit
+      source: 
+      git:
+        url: git@github.com:Applica-760/recruit.git
+        branch: main
+      boot: true
 
-  - name: doc-drill
-    path: projects/personal/doc-drill
-    type: symlink
-    source: 
-    git:
-      url: git@github.com:Applica-760/doc-drill.git
-      branch: main
-    boot: true
+    - name: doc-drill
+      workspace_path: projects/personal/doc-drill
+      source: 
+      git:
+        url: git@github.com:Applica-760/doc-drill.git
+        branch: main
+      boot: true
 
-  - name: sns-lab
-    path: projects/personal/sns-lab
-    type: symlink
-    source: 
-    git:
-      url: git@github.com:Applica-760/sns-lab.git
-      branch: main
-    boot: true
+    - name: sns-lab
+      workspace_path: projects/personal/sns-lab
+      source: 
+      git:
+        url: git@github.com:Applica-760/sns-lab.git
+        branch: main
+      boot: true
 
-  - name: solution-sprints
-    path: projects/personal/solution-sprints
-    type: symlink
-    source: 
-    git:
-      url: git@github.com:Applica-760/solution-sprints.git
-      branch: main
-    boot: true
+    - name: solution-sprints
+      workspace_path: projects/personal/solution-sprints
+      source: 
+      git:
+        url: git@github.com:Applica-760/solution-sprints.git
+        branch: main
+      boot: true
 
-  - name: laplust-docs
-    path: projects/LAplust/docs
-    type: symlink
-    source: 
+    - name: laplust-docs
+      workspace_path: projects/LAplust/docs
+      source: 
 
-  - name: research-slide
-    path: projects/research/slide
-    type: symlink
-    source: 
-    boot: true
+    - name: research-slide
+      workspace_path: projects/research/slide
+      source: 
+      boot: true
 
-  # ── mount ──
+  remotes:
+    - name: esn-lab
+      host: home-server
+      path: 
+      git:
+        url: git@github.com:Applica-760/esn-lab.git
+        branch: main
+      boot: true
 
-  - name: esn-lab
-    path: projects/research/esn-lab
-    type: mount
-    host: home-server
-    remote_path: 
-    git:
-      url: git@github.com:Applica-760/esn-lab.git
-      branch: main
-    boot: true
+    - name: esn-lab-run
+      host: supercomputer
+      path: 
+      git:
+        url: git@github.com:Applica-760/esn-lab.git
+        branch: main
 
-  - name: esn-lab-run
-    path: projects/research/esn-lab-run
-    type: mount
-    host: supercomputer
-    remote_path: 
-    git:
-      url: git@github.com:Applica-760/esn-lab.git
-      branch: main
-    boot: false
+    - name: la-imitation-learning
+      host: home-server
+      path: 
+      git:
+        url: git@github.com:Applica-760/lerobot-experiment.git
+        branch: main
+      boot: true
 
-  - name: la-imitation-learning
-    path: projects/LAplust/imitation-learning
-    type: mount
-    host: home-server
-    remote_path: 
-    git:
-      url: git@github.com:Applica-760/lerobot-experiment.git
-      branch: main
-    boot: true
-
-  - name: private
-    path: projects/personal/private
-    type: mount
-    host: home-server
-    remote_path: 
+    - name: private
+      host: home-server
+      path: 
