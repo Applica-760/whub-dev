@@ -2,6 +2,13 @@
 
 ## whub CLIの新機能・拡張
 
+- [ ] `whub fetch <resource> <remote-path>` — リモートファイルのローカル取得
+    - SSHFS廃止により、リモートの画像・動画をローカルで確認する手段がなくなった問題の解決策
+    - `run_ssh_command()`基盤のscp相当で取得。リソース名からホスト解決するのでパス指定が簡潔
+    - 想定ワークフロー: `whub cd`でSSH作業 → `pwd`でパス取得 → 別ターミナルで`whub fetch`
+    - fetch先は`.whub/downloads/<resource>/`。`.gitignore`・CodeGraph走査対象外にする
+    - オンデマンドSSHFSは不採用（Apple Bundle汚染`.DS_Store`等がリモートに生成される問題が解消しない）
+    - 蓄積対策（`--clean`等）は運用後に必要に応じて追加
 - [ ] ⭐️`whub boot`の仕様書を書く。どこにヘルパーがあるかといったマップがあるとAIが正確になるはず
 - [x] `whub boot`がまだ遅い。codegraphのインデックス作成を、まだMacのプロセスとして実行してないか？sshを確立して、内部でコマンド走らせるようにしたら一瞬で終わるはず
 - [ ] `whub task` — プロジェクト横断のタスク管理

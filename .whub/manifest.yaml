@@ -96,3 +96,4 @@ resources:
     - name: private
       host: home-server
       path: 
+      boot: true

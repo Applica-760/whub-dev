@@ -2,29 +2,7 @@
 
 ## 概要
 
----
-
-## Phase 3: State/GitInfo接続 + status拡張
-
-元タスク: refactoring Phase 5 + status-dashboard Phase 3-4
-
-### 3A: モデル接続（refactoring Phase 5）
-- [ ] State の status/priority を status 表示と編集処理へ接続
-- [ ] GitInfo を status の git 状態取得へ接続
-- [ ] manifest version を検証するか廃止するか決定
-- [ ] doctor の責務定義 → 実装 or CLI登録解除
-
-### 3B: status表示拡張（status-dashboard Phase 3）
-- [ ] resource ごとの git 差分ファイル数取得ロジック
-- [ ] state.yaml から status text / priority を読み込み表示に統合
-- [ ] 表示フォーマット実装（priority emoji, git count, status text）
-
-### 3C: status編集機能（status-dashboard Phase 4）
-- [ ] `-e <resource> "text"` で status text を更新
-- [ ] `-p <resource> <priority>` で priority を更新
-- [ ] manifest との resource 名バリデーション
-
----
+status拡張は [20260622_1830_whub-status-enhancement.md](20260622_1830_whub-status-enhancement.md) に移動。
 
 ---
 

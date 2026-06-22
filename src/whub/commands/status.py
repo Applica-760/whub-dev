@@ -1,28 +1,144 @@
 """whub status — show status of all resources."""
 from __future__ import annotations
+
+import shlex
+import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from pathlib import Path
+
 import click
+
 from whub.commands import get_manifest
-from whub.health import inspect_resource
-from whub.models import SymlinkResource
+from whub.health import ResourceHealth
+from whub.models import Manifest, RemoteResource, SymlinkResource
+from whub.remote import run_ssh_command
+
+
+@dataclass(frozen=True)
+class _ResourceInfo:
+    name: str
+    resource_type: str
+    health: ResourceHealth
+    git_diff_count: int | None
+
+
+def _fetch_symlink_info(r: SymlinkResource, m: Manifest) -> _ResourceInfo:
+    from whub.health import inspect_symlink
+
+    health = inspect_symlink(r, m)
+    git_diff: int | None = None
+
+    if health.state == "ok" and r.git is not None:
+        source = Path(r.source).expanduser()
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(source), "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                lines = [l for l in result.stdout.splitlines() if l.strip()]
+                git_diff = len(lines)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+    return _ResourceInfo(
+        name=r.name,
+        resource_type="symlink",
+        health=health,
+        git_diff_count=git_diff,
+    )
+
+
+def _fetch_remote_info(r: RemoteResource, m: Manifest) -> _ResourceInfo:
+    host = m.hosts[r.host]
+    health: ResourceHealth
+    git_diff: int | None = None
+
+    if r.git is not None:
+        cmd = (
+            f"test -d {shlex.quote(r.path)}"
+            f" && git -C {shlex.quote(r.path)} status --porcelain"
+        )
+    else:
+        cmd = f"test -d {shlex.quote(r.path)}"
+
+    try:
+        result = run_ssh_command(
+            host, cmd, batch_mode=True, connect_timeout=5, timeout=8,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return _ResourceInfo(
+            name=r.name,
+            resource_type="remote",
+            health=ResourceHealth("unreachable", str(error)),
+            git_diff_count=None,
+        )
+
+    if result.returncode == 255:
+        detail = result.stderr.strip() or f"ssh exited with status {result.returncode}"
+        health = ResourceHealth("unreachable", detail)
+    elif result.returncode != 0:
+        health = ResourceHealth("missing", r.path)
+    else:
+        health = ResourceHealth("ok")
+        if r.git is not None:
+            lines = [l for l in result.stdout.splitlines() if l.strip()]
+            git_diff = len(lines)
+
+    return _ResourceInfo(
+        name=r.name,
+        resource_type="remote",
+        health=health,
+        git_diff_count=git_diff,
+    )
+
+
+def _format_git_column(info: _ResourceInfo) -> str:
+    if info.git_diff_count is None:
+        return "-"
+    return f"{info.git_diff_count} files"
+
 
 @click.command()
 @click.pass_context
 def status(ctx: click.Context) -> None:
     """Show status of all resources."""
     m = get_manifest(ctx)
-    resources = m.all_resources
+    resources = [r for r in m.all_resources if r.boot]
     if not resources:
         click.echo("  (no resources)")
         return
+
+    infos: dict[str, _ResourceInfo] = {}
+
+    for r in resources:
+        if isinstance(r, SymlinkResource):
+            infos[r.name] = _fetch_symlink_info(r, m)
+
+    remotes = [r for r in resources if isinstance(r, RemoteResource)]
+    if remotes:
+        with ThreadPoolExecutor() as pool:
+            futures = {
+                pool.submit(_fetch_remote_info, r, m): r.name for r in remotes
+            }
+            for future in as_completed(futures):
+                info = future.result()
+                infos[info.name] = info
 
     name_w = max(len(r.name) for r in resources)
     failed = False
 
     for r in resources:
-        health = inspect_resource(r, m)
-        resource_type = "symlink" if isinstance(r, SymlinkResource) else "remote"
-        click.echo(f"  {r.name:<{name_w}}  {resource_type:8s}  {health.state}")
-        failed |= health.state != "ok"
+        info = infos[r.name]
+        git_col = _format_git_column(info)
+        click.echo(
+            f"  {info.name:<{name_w}}  {info.resource_type:8s}"
+            f"  {info.health.state:<14s}  {git_col}"
+        )
+        failed |= info.health.state != "ok"
 
     if failed:
         raise click.exceptions.Exit(1)
