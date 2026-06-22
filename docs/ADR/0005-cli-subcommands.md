@@ -16,15 +16,14 @@ workspace-hub CLIのサブコマンド体系を決める必要がある。全FR�
 | コマンド | 対応FR | 説明 |
 |----------|--------|------|
 | `whub link` | FR-6, FR-7 | symlinkリソースからリンクを作成 |
-| `whub mount [host] [--all]` | FR-2 | 省略時はauto_mount対象、host指定または--allで対象を拡張 |
-| `whub unmount [host]` | FR-2 | 省略時は全mount、host指定時は対象ホストを解除 |
 
 ### 日常操作系
 
 | コマンド | 対応FR | 説明 |
 |----------|--------|------|
-| `whub cd <resource>` | FR-3, FR-6, FR-7 | symlinkはローカルcd、mountは対話SSH接続 |
-| `whub status [--check]` | FR-2 | 全リソースの状態一覧。--checkでSSH接続も確認 |
+| `whub cd <resource>` | FR-3, FR-6, FR-7 | symlinkはローカルcd、remoteは対話SSH接続 |
+| `whub run [--tty] <resource> <command> [arg]...` | FR-3 | remoteの対象パスでコマンドを実行 |
+| `whub status` | FR-2 | symlinkとremoteの状態一覧 |
 
 ### ブートストラップ配布・診断系
 
@@ -39,7 +38,7 @@ workspace-hub CLIのサブコマンド体系を決める必要がある。全FR�
 `whub cd`はリソースのtypeに応じて挙動を切り替える:
 
 - **symlink**: ローカルのリソースパスにcd（シェル関数経由）
-- **mount**: リモートホストにSSH接続し、remote_pathにcd
+- **remote**: リモートホストにSSH接続し、対象パスにcd
 
 ローカルcdには親シェルのディレクトリ変更が必要なため、`whub shell-init`が生成するシェル関数を`.zshrc`に追記する。
 
@@ -49,11 +48,18 @@ source <(whub shell-init)
 
 Tab補完はマニフェストのリソース名一覧から生成する。
 
+### whub run の挙動
+
+`whub run`はremoteリソース専用とし、対象パスへ移動してから引数境界を維持してコマンドを実行する。標準入出力と終了コードはSSH経由で伝達し、対話コマンドでは`--tty`を指定する。
+
+### 採用した名称
+
+- **whub run**: remoteリソース上でコマンドを実行する
+- **whub cd**: remoteリソースへの対話SSH接続を行う
+
 ### 廃止した候補
 
 - **whub sync**: Git一括同期は不要。各リポジトリのgit操作は環境ごとに手動判断する
-- **whub exec**: 現在は提供しない
-- **whub ssh**: mountリソースへの`whub cd`が対話SSH接続を行う
 - **whub init**: 現在は提供しない
 - **whub context**: CLIコマンドとしては不要。将来的に自動化を検討
 

@@ -49,7 +49,8 @@ def inspect_remote(
     command = build_ssh_command(
         host,
         f"test -d {shlex.quote(resource.path)}",
-        options=("BatchMode=yes", "ConnectTimeout=5"),
+        batch_mode=True,
+        connect_timeout=5,
     )
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=8)
