@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 import json
+import shlex
 import shutil
 import subprocess
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
 import click
-from whub.commands import get_manifest
+from whub.commands import build_ssh_command, get_manifest
+from whub.models import Host, MountResource
 
 def _managed_range(
     text: str, markers: tuple[str, str], path: str | Path,
@@ -72,12 +74,6 @@ def _merge_settings(common: dict, dst: Path) -> None:
         dst.write_text(json.dumps(proj, indent=2, ensure_ascii=False) + "\n")
 
 
-def _clean_apple_double(target: Path) -> None:
-    """Remove macOS AppleDouble (._*) files generated on FUSE mounts."""
-    for path in target.rglob("._*"):
-        path.unlink(missing_ok=True)
-
-
 def _copy_tree(src: Traversable, dst: Path) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     for item in src.iterdir():
@@ -87,15 +83,7 @@ def _copy_tree(src: Traversable, dst: Path) -> None:
             (dst / item.name).write_bytes(item.read_bytes())
 
 
-def _deploy_to_project(boot_source: Traversable, target: Path) -> None:
-    for relative in (".codex/config.toml", ".mcp.json"):
-        dst = target / relative
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_bytes(boot_source.joinpath(relative).read_bytes())
-
-    for skill_target in (target / ".claude/skills", target / ".agents/skills"):
-        _copy_tree(boot_source.joinpath("skills"), skill_target)
-
+def _deploy_merged(boot_source: Traversable, target: Path) -> None:
     for relative in (".claude/CLAUDE.md", "AGENTS.md"):
         _deploy_marked(
             boot_source.joinpath(relative).read_text(),
@@ -103,29 +91,50 @@ def _deploy_to_project(boot_source: Traversable, target: Path) -> None:
             ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->"),
             relative,
         )
-
     gitignore = "\n".join((
-        "# hub:managed:start",
-        ".agents/",
-        ".claude/",
-        ".codex/",
-        ".codegraph/",
-        ".mcp.json",
-        "AGENTS.md",
-        "# hub:managed:end",
+        "# hub:managed:start", ".agents/", ".claude/", ".codex/",
+        ".codegraph/", ".mcp.json", "AGENTS.md", "# hub:managed:end",
     )) + "\n"
     _deploy_marked(
-        gitignore,
-        target / ".gitignore",
-        ("# hub:managed:start", "# hub:managed:end"),
-        "generated .gitignore",
+        gitignore, target / ".gitignore",
+        ("# hub:managed:start", "# hub:managed:end"), "generated .gitignore",
     )
-
     _merge_settings(
         json.loads(boot_source.joinpath(".claude/settings.json").read_text()),
         target / ".claude/settings.json",
     )
-    _clean_apple_double(target)
+
+
+def _deploy_to_project(boot_source: Traversable, target: Path) -> None:
+    for relative in (".codex/config.toml", ".mcp.json"):
+        dst = target / relative
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(boot_source.joinpath(relative).read_bytes())
+    for skill_target in (target / ".claude/skills", target / ".agents/skills"):
+        _copy_tree(boot_source.joinpath("skills"), skill_target)
+    _deploy_merged(boot_source, target)
+
+
+def _deploy_to_remote(
+    boot_source: Traversable, host: Host, remote_path: str, local_path: Path,
+) -> str | None:
+    src = str(boot_source)
+    identity = str(Path(host.identity_file).expanduser())
+    ssh_opt = f"ssh -i {shlex.quote(identity)} -p {host.port}"
+    dest = f"{host.user}@{host.hostname}:{remote_path}"
+    for args in (
+        [f"{src}/.codex", f"{src}/.mcp.json", f"{dest}/"],
+        [f"{src}/skills/", f"{dest}/.claude/skills/"],
+        [f"{src}/skills/", f"{dest}/.agents/skills/"],
+    ):
+        result = subprocess.run(
+            ["rsync", "-a", "-e", ssh_opt, *args],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            return result.stderr.strip() or f"exit status {result.returncode}"
+    _deploy_merged(boot_source, local_path)
+    return None
 
 
 def _init_codegraph(executable: str, target: Path) -> str | None:
@@ -134,7 +143,32 @@ def _init_codegraph(executable: str, target: Path) -> str | None:
             [executable, "init", str(target)],
             capture_output=True,
             text=True,
+            timeout=60,
         )
+    except subprocess.TimeoutExpired:
+        return "timeout (60s)"
+    except OSError as error:
+        return str(error)
+    if result.returncode == 0:
+        return None
+    return (
+        result.stderr.strip()
+        or result.stdout.strip()
+        or f"exit status {result.returncode}"
+    )
+
+
+def _init_codegraph_remote(host: Host, remote_path: str) -> str | None:
+    """Run codegraph init on the remote host via SSH."""
+    rp = shlex.quote(remote_path)
+    cmd = build_ssh_command(
+        host,
+        f'source "$HOME/.nvm/nvm.sh" 2>/dev/null; codegraph init {rp}',
+    )
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return "timeout (60s)"
     except OSError as error:
         return str(error)
     if result.returncode == 0:
@@ -151,28 +185,41 @@ def _init_codegraph(executable: str, target: Path) -> str | None:
 def boot(ctx: click.Context) -> None:
     """Deploy agent bootstrap config to target resources."""
     manifest = get_manifest(ctx)
-    targets = [("workspace-hub", manifest.root)] + [
-        (r.name, manifest.resolve_path(r.path))
-        for r in manifest.resources if r.boot
-    ]
-
     boot_source = files("whub").joinpath("boot")
     codegraph = shutil.which("codegraph")
     if codegraph is None:
-        click.echo("  WARN    codegraph not found; initialization skipped")
+        click.echo("  WARN    codegraph not found; skipped for local resources")
 
-    for name, path in targets:
+    targets = [("workspace-hub", manifest.root, None)] + [
+        (r.name, manifest.resolve_path(r.path), r)
+        for r in manifest.resources if r.boot
+    ]
+
+    for name, path, resource in targets:
         ok = path.exists()
-        if ok:
+        if not ok:
+            click.echo(f"  {'skip':6s}  {name} (not found)")
+            continue
+
+        is_remote = isinstance(resource, MountResource)
+        if is_remote:
+            host = manifest.hosts[resource.host]
+            err = _deploy_to_remote(boot_source, host, resource.remote_path, path)
+            if err:
+                click.echo(f"  {'WARN':6s}  {name}: remote deploy failed: {err}")
+                continue
+        else:
             _deploy_to_project(boot_source, path)
-        click.echo(
-            f"  {'done':6s}  {name}"
-            if ok else f"  {'skip':6s}  {name} (not found)"
-        )
-        if ok and codegraph:
+        click.echo(f"  {'done':6s}  {name}")
+
+        if is_remote:
+            error = _init_codegraph_remote(host, resource.remote_path)
+        elif codegraph:
             error = _init_codegraph(codegraph, path)
-            click.echo(
-                f"  {'init':6s}  {name} (CodeGraph)"
-                if error is None
-                else f"  {'WARN':6s}  {name}: CodeGraph init failed: {error}"
-            )
+        else:
+            continue
+        click.echo(
+            f"  {'init':6s}  {name} (CodeGraph)"
+            if error is None
+            else f"  {'WARN':6s}  {name}: CodeGraph init failed: {error}"
+        )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import subprocess
+import time
 import click
 from whub.commands import build_sshfs_command, get_manifest, host_names
 from whub.health import inspect_resource
@@ -36,7 +37,12 @@ def _mount(m: Manifest, targets: list[MountResource]) -> list[tuple[str, str]]:
         if result.returncode != 0:
             status = f"FAIL: {result.stderr.strip()}"
         else:
-            health = inspect_resource(r, m)
+            # fuse-t on macOS: mount table lags ~0.2-0.4s behind sshfs exit
+            for _ in range(10):
+                health = inspect_resource(r, m)
+                if health.state == "ok":
+                    break
+                time.sleep(0.2)
             status = "mount" if health.state == "ok" else f"FAIL: {health.state}"
         results.append((r.name, status))
     return results

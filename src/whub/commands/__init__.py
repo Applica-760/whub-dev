@@ -58,6 +58,9 @@ def build_sshfs_command(
             "reconnect",
             "ServerAliveInterval=15",
             "ServerAliveCountMax=3",
+            "noappledouble",
+            "noapplexattr",
+            "defer_permissions",
         )),
     ]
 
