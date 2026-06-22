@@ -11,13 +11,12 @@ import json
 import shlex
 import shutil
 import subprocess
-from importlib.resources import files
-from importlib.resources.abc import Traversable
+from importlib.resources import as_file, files
 from pathlib import Path
 from typing import Callable, Iterator
 from whub.commands import get_manifest
 from whub.models import Host, RemoteResource
-from whub.remote import build_rsync_command, build_ssh_command
+from whub.remote import run_rsync_command, run_ssh_command
 
 _MARKERS = {
     ".md": ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->"),
@@ -28,7 +27,7 @@ _RENAME = {".gitignore-template": ".gitignore"}
 _SKILLS_DESTS = (".claude/skills", ".agents/skills")
 
 
-# ── Merge logic ───────────────────────────────────────────────────
+# ── Merge ─────────────────────────────────────────────────────────
 def _managed_range(text: str, markers: tuple[str, str]) -> tuple[int, int] | None:
     start, end = markers
     if start not in text and end not in text:
@@ -88,159 +87,167 @@ def _merge_json(overlay_text: str, existing: str | None) -> str:
     return existing if merged == base else dump(merged)
 
 
-# ── Helpers ───────────────────────────────────────────────────────
-def _walk(root: Traversable) -> Iterator[tuple[Traversable, str]]:
-    def _inner(node: Traversable, prefix: str) -> Iterator[tuple[Traversable, str]]:
-        for item in node.iterdir():
-            rel = f"{prefix}{item.name}"
-            if item.is_dir():
-                yield from _inner(item, f"{rel}/")
-            else:
-                yield item, rel
-    try:
-        yield from _inner(root, "")
-    except (FileNotFoundError, NotADirectoryError):
-        return
-
-
-def _copy_tree(src: Traversable, dst: Path) -> None:
-    dst.mkdir(parents=True, exist_ok=True)
-    for item in src.iterdir():
-        if item.is_dir():
-            _copy_tree(item, dst / item.name)
-        else:
-            (dst / item.name).write_bytes(item.read_bytes())
-
-
-def _run_command(command: list[str], timeout: int) -> str | None:
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        return f"timeout ({timeout}s)"
-    except OSError as error:
-        return str(error)
-    if result.returncode == 0:
-        return None
-    return result.stderr.strip() or result.stdout.strip() or f"exit status {result.returncode}"
-
-
-# ── Deploy (shared loop) ─────────────────────────────────────────
 ReadFn = Callable[[str], str | None]
-WriteFn = Callable[[str, str], None]
 
 
-def _deploy_merged(boot: Traversable, read: ReadFn, write: WriteFn) -> None:
-    for src, rel in _walk(boot / "merge"):
+def _merged_files(
+    source: Path,
+    read: ReadFn,
+) -> Iterator[tuple[str, str]]:
+    for src in (source / "merge").rglob("*"):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(source / "merge").as_posix()
         dst_rel = _RENAME.get(rel, rel)
         markers = next(m for s, m in _MARKERS.items() if dst_rel.endswith(s))
         existing = read(dst_rel)
         merged = _merge_section(src.read_text(), existing, markers)
         if merged != existing:
-            write(dst_rel, merged)
-    for src, rel in _walk(boot / "json"):
+            yield dst_rel, merged
+    for src in (source / "json").rglob("*"):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(source / "json").as_posix()
         existing = read(rel)
         merged = _merge_json(src.read_text(), existing)
         if merged != existing:
-            write(rel, merged)
+            yield rel, merged
 
 
-def _deploy_local(
-    boot: Traversable, target: Path, codegraph: str | None,
-) -> tuple[str | None, str | None]:
-    def read(rel: str) -> str | None:
-        p = target / rel
-        return p.read_text() if p.exists() else None
-
-    def write(rel: str, content: str) -> None:
-        (target / rel).parent.mkdir(parents=True, exist_ok=True)
-        (target / rel).write_text(content)
-
-    _deploy_merged(boot, read, write)
-    for dest in _SKILLS_DESTS:
-        _copy_tree(boot / "skills", target / dest)
-
-    cg_err: str | None | bool = (
-        _run_command([codegraph, "init", str(target)], 60) if codegraph else False
-    )
-    return None, cg_err
+# ── Apply ─────────────────────────────────────────────────────────
+def _process_error(error: OSError | subprocess.SubprocessError) -> str:
+    if isinstance(error, subprocess.TimeoutExpired):
+        return f"timeout ({error.timeout}s)"
+    if isinstance(error, subprocess.CalledProcessError):
+        return (
+            (error.stderr or "").strip()
+            or (error.stdout or "").strip()
+            or f"exit status {error.returncode}"
+        )
+    return str(error)
 
 
-def _deploy_remote(
-    boot: Traversable, host: Host, remote_path: str,
-) -> tuple[str | None, str | None]:
-    def read(rel: str) -> str | None:
-        r = subprocess.run(
-            build_ssh_command(host, f"cat {shlex.quote(f'{remote_path}/{rel}')}"),
-            capture_output=True, text=True, timeout=30)
-        return r.stdout if r.returncode == 0 else None
+def _apply_local_boot(
+    source: Path,
+    targets: list[tuple[str, Path]],
+    codegraph: str | None,
+) -> None:
+    if codegraph is None:
+        click.echo("  WARN    codegraph not found; skipped for local resources")
 
-    def write(rel: str, content: str) -> None:
-        full = f"{remote_path}/{rel}"
-        subprocess.run(
-            build_ssh_command(host, f'mkdir -p "$(dirname {shlex.quote(full)})" && cat > {shlex.quote(full)}'),
-            input=content, capture_output=True, text=True, timeout=30)
+    for name, target in targets:
+        if not target.exists():
+            click.echo(f"  {'skip':6s}  {name} (not found)")
+            continue
+        try:
+            def read(rel: str) -> str | None:
+                path = target / rel
+                return path.read_text() if path.exists() else None
 
-    _deploy_merged(boot, read, write)
+            for rel, content in _merged_files(source, read):
+                destination = target / rel
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(content)
+            for dest in _SKILLS_DESTS:
+                shutil.copytree(
+                    source / "skills",
+                    target / dest,
+                    dirs_exist_ok=True,
+                )
+        except (OSError, ValueError) as error:
+            click.echo(f"  {'WARN':6s}  {name}: deploy failed: {error}")
+            continue
+        click.echo(f"  {'done':6s}  {name}")
 
-    boot_dir = str(boot)
+        if codegraph is None:
+            continue
+        try:
+            subprocess.run(
+                [codegraph, "init", str(target)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=True,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            click.echo(
+                f"  {'WARN':6s}  {name}: CodeGraph init failed:"
+                f" {_process_error(error)}",
+            )
+            continue
+        click.echo(f"  {'init':6s}  {name} (CodeGraph)")
 
-    def rsync(src: str, dest: str) -> str | None:
-        r = subprocess.run(
-            build_rsync_command(host, src, dest),
-            capture_output=True, text=True, timeout=30)
-        return (r.stderr.strip() or f"exit status {r.returncode}") if r.returncode else None
+def _apply_remote_boot(
+    source: Path,
+    resources: tuple[RemoteResource, ...],
+    hosts: dict[str, Host],
+) -> None:
+    for resource in resources:
+        host = hosts[resource.host]
+        try:
+            def read(rel: str) -> str | None:
+                full = shlex.quote(f"{resource.path}/{rel}")
+                result = run_ssh_command(
+                    host,
+                    f"test ! -f {full} || cat {full}",
+                    timeout=30,
+                    check=True,
+                )
+                return result.stdout or None
 
-    for dest in _SKILLS_DESTS:
-        if err := rsync(f"{boot_dir}/skills", f"{remote_path}/{dest}"):
-            return err, None
+            for rel, content in _merged_files(source, read):
+                full = f"{resource.path}/{rel}"
+                run_ssh_command(
+                    host,
+                    f'mkdir -p "$(dirname {shlex.quote(full)})"'
+                    f" && cat > {shlex.quote(full)}",
+                    input=content,
+                    timeout=30,
+                    check=True,
+                )
+            for dest in _SKILLS_DESTS:
+                run_rsync_command(
+                    host,
+                    str(source / "skills"),
+                    f"{resource.path}/{dest}",
+                    timeout=30,
+                    check=True,
+                )
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            click.echo(
+                f"  {'WARN':6s}  {resource.name}: deploy failed:"
+                f" {_process_error(error)}",
+            )
+            continue
+        click.echo(f"  {'done':6s}  {resource.name}")
 
-    cg_err = _run_command(build_ssh_command(
-        host, f'source "$HOME/.nvm/nvm.sh" 2>/dev/null;'
-        f" codegraph init {shlex.quote(remote_path)}"), 60)
-    return None, cg_err
+        try:
+            run_ssh_command(
+                host,
+                f'source "$HOME/.nvm/nvm.sh" 2>/dev/null;'
+                f" codegraph init {shlex.quote(resource.path)}",
+                timeout=60,
+                check=True,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            click.echo(
+                f"  {'WARN':6s}  {resource.name}: CodeGraph init failed:"
+                f" {_process_error(error)}",
+            )
+            continue
+        click.echo(f"  {'init':6s}  {resource.name} (CodeGraph)")
 
 
 # ── CLI ───────────────────────────────────────────────────────────
-
-
 @click.command()
 @click.pass_context
 def boot(ctx: click.Context) -> None:
     """Deploy agent bootstrap config to target resources."""
     manifest = get_manifest(ctx)
-    boot_source = files("whub").joinpath("boot")
-    codegraph = shutil.which("codegraph")
-    if codegraph is None:
-        click.echo("  WARN    codegraph not found; skipped for local resources")
-
-    targets = (
-        [("workspace-hub", manifest.root, None)]
-        + [
-            (resource.name, manifest.resolve_path(resource.workspace_path), resource)
-            for resource in manifest.resources.symlinks
-            if resource.boot
-        ]
-        + [
-            (resource.name, None, resource)
-            for resource in manifest.resources.remotes
-            if resource.boot
-        ]
-    )
-    for name, path, resource in targets:
-        if isinstance(resource, RemoteResource):
-            host = manifest.hosts[resource.host]
-            deploy_err, cg_err = _deploy_remote(boot_source, host, resource.path)
-        elif path is not None and path.exists():
-            deploy_err, cg_err = _deploy_local(boot_source, path, codegraph)
-        else:
-            click.echo(f"  {'skip':6s}  {name} (not found)")
-            continue
-
-        if deploy_err:
-            click.echo(f"  {'WARN':6s}  {name}: deploy failed: {deploy_err}")
-            continue
-        click.echo(f"  {'done':6s}  {name}")
-        if isinstance(cg_err, str):
-            click.echo(f"  {'WARN':6s}  {name}: CodeGraph init failed: {cg_err}")
-        elif cg_err is None:
-            click.echo(f"  {'init':6s}  {name} (CodeGraph)")
+    with as_file(files("whub").joinpath("boot")) as source:
+        _apply_local_boot(
+            source,
+            [("workspace-hub", manifest.root), *manifest.boot_local_targets],
+            shutil.which("codegraph"),
+        )
+        _apply_remote_boot(source, manifest.boot_remote_resources, manifest.hosts)

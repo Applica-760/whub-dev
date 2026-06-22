@@ -1,17 +1,8 @@
 """Command builders for remote operations."""
 from __future__ import annotations
-import shlex
+import subprocess
 from pathlib import Path
 from whub.models import Host
-
-def build_remote_exec_command(
-    working_directory: str,
-    arguments: tuple[str, ...],
-) -> str:
-    return (
-        f"cd {shlex.quote(working_directory)}"
-        f" && exec {shlex.join(arguments)}"
-    )
 
 def ssh_target(host: Host) -> tuple[str, str, int]:
     target = f"{host.user}@{host.hostname}"
@@ -42,6 +33,34 @@ def build_ssh_command(
         remote_command,
     ]
 
+
+def run_ssh_command(
+    host: Host,
+    remote_command: str,
+    *,
+    input: str | None = None,
+    timeout: int | None = None,
+    tty: bool = False,
+    batch_mode: bool = False,
+    connect_timeout: int | None = None,
+    check: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        build_ssh_command(
+            host,
+            remote_command,
+            tty=tty,
+            batch_mode=batch_mode,
+            connect_timeout=connect_timeout,
+        ),
+        input=input,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=check,
+    )
+
+
 def build_rsync_command(
     host: Host,
     local_src: str,
@@ -54,3 +73,20 @@ def build_rsync_command(
         f"{local_src}/",
         f"{target}:{remote_dest}/",
     ]
+
+
+def run_rsync_command(
+    host: Host,
+    local_src: str,
+    remote_dest: str,
+    *,
+    timeout: int | None = None,
+    check: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        build_rsync_command(host, local_src, remote_dest),
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=check,
+    )

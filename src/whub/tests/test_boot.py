@@ -2,32 +2,63 @@ from __future__ import annotations
 
 import importlib
 import json
+import subprocess
 import tempfile
 import unittest
-from importlib.resources import files
+from importlib.resources import as_file, files
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from click.testing import CliRunner
+
+from whub.models import Manifest
 
 
 boot_module = importlib.import_module("whub.commands.boot")
 
 
 class BootTest(unittest.TestCase):
-    def _manifest(self, root: Path, *resources) -> SimpleNamespace:
-        return SimpleNamespace(
-            root=root,
-            resources=SimpleNamespace(
-                symlinks=list(resources),
-                remotes=[],
-            ),
-            resolve_path=lambda relative: root / relative,
-            hosts={},
-        )
+    def _manifest(
+        self,
+        root: Path,
+        *,
+        locals: tuple[str, ...] = (),
+        remotes: tuple[str, ...] = (),
+    ) -> Manifest:
+        manifest = Manifest.model_validate({
+            "version": "1",
+            "hosts": {
+                "server": {
+                    "hostname": "example.com",
+                    "user": "user",
+                    "identity_file": "/tmp/key",
+                },
+            },
+            "resources": {
+                "symlinks": [
+                    {
+                        "name": name,
+                        "workspace_path": name,
+                        "source": f"/tmp/{name}",
+                        "boot": True,
+                    }
+                    for name in locals
+                ],
+                "remotes": [
+                    {
+                        "name": name,
+                        "host": "server",
+                        "path": f"/srv/{name}",
+                        "boot": True,
+                    }
+                    for name in remotes
+                ],
+            },
+        })
+        manifest.root = root
+        return manifest
 
-    def test_real_deploy_is_idempotent_and_preserves_project_content(self) -> None:
+    def test_local_apply_is_idempotent_and_preserves_project_content(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             (target / ".claude/skills/project-only").mkdir(parents=True)
@@ -44,17 +75,25 @@ class BootTest(unittest.TestCase):
                 "projectSetting": True,
             }))
 
-            source = files("whub").joinpath("boot")
-            boot_module._deploy_local(source, target, codegraph=None)
-            first = {
-                path.relative_to(target): path.read_bytes()
-                for path in target.rglob("*") if path.is_file()
-            }
-            boot_module._deploy_local(source, target, codegraph=None)
-            second = {
-                path.relative_to(target): path.read_bytes()
-                for path in target.rglob("*") if path.is_file()
-            }
+            with as_file(files("whub").joinpath("boot")) as source:
+                boot_module._apply_local_boot(
+                    source,
+                    [("target", target)],
+                    codegraph=None,
+                )
+                first = {
+                    path.relative_to(target): path.read_bytes()
+                    for path in target.rglob("*") if path.is_file()
+                }
+                boot_module._apply_local_boot(
+                    source,
+                    [("target", target)],
+                    codegraph=None,
+                )
+                second = {
+                    path.relative_to(target): path.read_bytes()
+                    for path in target.rglob("*") if path.is_file()
+                }
 
             self.assertEqual(first, second)
             self.assertIn(
@@ -87,27 +126,26 @@ class BootTest(unittest.TestCase):
             self.assertTrue((target / ".mcp.json").is_file())
             self.assertTrue((target / ".codex/config.toml").is_file())
 
-    def test_codegraph_failure_does_not_stop_later_targets(self) -> None:
+    def test_local_codegraph_failure_does_not_stop_later_targets(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "project").mkdir()
-            events = []
-            manifest = self._manifest(
-                root,
-                SimpleNamespace(
-                    name="project",
-                    workspace_path="project",
-                    boot=True,
-                ),
-            )
-
-            def deploy(_source, _target, codegraph=None):
-                events.append(("deploy", _target))
-                return None, "failed" if _target == root / "project" else None
+            (root / "first").mkdir()
+            (root / "second").mkdir()
+            manifest = self._manifest(root, locals=("first", "second"))
 
             with (
+                patch.object(boot_module, "_merged_files", side_effect=lambda *_: iter(())),
+                patch.object(boot_module.shutil, "copytree"),
                 patch.object(boot_module.shutil, "which", return_value="/bin/codegraph"),
-                patch.object(boot_module, "_deploy_local", side_effect=deploy),
+                patch.object(
+                    boot_module.subprocess,
+                    "run",
+                    side_effect=[
+                        subprocess.CompletedProcess([], 0),
+                        subprocess.CalledProcessError(1, [], stderr="failed"),
+                        subprocess.CompletedProcess([], 0),
+                    ],
+                ) as execute,
             ):
                 result = CliRunner().invoke(
                     boot_module.boot,
@@ -115,28 +153,20 @@ class BootTest(unittest.TestCase):
                 )
 
             self.assertEqual(result.exit_code, 0)
-            self.assertEqual(events, [
-                ("deploy", root),
-                ("deploy", root / "project"),
-            ])
-            self.assertIn("CodeGraph init failed: failed", result.output)
+            self.assertEqual(execute.call_count, 3)
+            self.assertIn("first: CodeGraph init failed: failed", result.output)
+            self.assertIn("second (CodeGraph)", result.output)
 
     def test_missing_codegraph_warns_once_and_keeps_deploying(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "project").mkdir()
-            manifest = self._manifest(
-                root,
-                SimpleNamespace(
-                    name="project",
-                    workspace_path="project",
-                    boot=True,
-                ),
-            )
+            manifest = self._manifest(root, locals=("project",))
 
             with (
+                patch.object(boot_module, "_merged_files", side_effect=lambda *_: iter(())),
+                patch.object(boot_module.shutil, "copytree") as copytree,
                 patch.object(boot_module.shutil, "which", return_value=None),
-                patch.object(boot_module, "_deploy_local", return_value=(None, False)) as deploy,
             ):
                 result = CliRunner().invoke(
                     boot_module.boot,
@@ -144,8 +174,44 @@ class BootTest(unittest.TestCase):
                 )
 
             self.assertEqual(result.exit_code, 0)
-            self.assertEqual(deploy.call_count, 2)
+            self.assertEqual(copytree.call_count, 4)
             self.assertEqual(result.output.count("codegraph not found"), 1)
+
+    def test_remote_codegraph_failure_does_not_stop_later_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = self._manifest(
+                Path(directory),
+                remotes=("first", "second"),
+            )
+            completed = subprocess.CompletedProcess([], 0, "", "")
+
+            with (
+                patch.object(boot_module, "_apply_local_boot"),
+                patch.object(boot_module, "_merged_files", side_effect=lambda *_: iter(())),
+                patch.object(
+                    boot_module,
+                    "run_rsync_command",
+                    return_value=completed,
+                ) as rsync,
+                patch.object(
+                    boot_module,
+                    "run_ssh_command",
+                    side_effect=[
+                        subprocess.CalledProcessError(1, [], stderr="failed"),
+                        completed,
+                    ],
+                ) as ssh,
+            ):
+                result = CliRunner().invoke(
+                    boot_module.boot,
+                    obj={"manifest": manifest},
+                )
+
+            self.assertEqual(result.exit_code, 0)
+            self.assertEqual(rsync.call_count, 4)
+            self.assertEqual(ssh.call_count, 2)
+            self.assertIn("first: CodeGraph init failed: failed", result.output)
+            self.assertIn("second (CodeGraph)", result.output)
 
     def test_rejects_invalid_managed_markers(self) -> None:
         markers = ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->")

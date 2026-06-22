@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, assert_never
 from whub.models import Manifest, RemoteResource, SymlinkResource
-from whub.remote import build_ssh_command
+from whub.remote import run_ssh_command
 
 HealthState = Literal[
     "ok",
@@ -46,14 +46,14 @@ def inspect_remote(
     manifest: Manifest,
 ) -> ResourceHealth:
     host = manifest.hosts[resource.host]
-    command = build_ssh_command(
-        host,
-        f"test -d {shlex.quote(resource.path)}",
-        batch_mode=True,
-        connect_timeout=5,
-    )
     try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=8)
+        result = run_ssh_command(
+            host,
+            f"test -d {shlex.quote(resource.path)}",
+            batch_mode=True,
+            connect_timeout=5,
+            timeout=8,
+        )
     except (OSError, subprocess.TimeoutExpired) as error:
         return ResourceHealth("unreachable", str(error))
     if result.returncode == 255:

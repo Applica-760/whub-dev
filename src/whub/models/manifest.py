@@ -74,6 +74,18 @@ class Manifest(SchemaModel):
     def all_resources(self) -> tuple[SymlinkResource | RemoteResource, ...]:
         return (*self.resources.symlinks, *self.resources.remotes)
 
+    @property
+    def boot_local_targets(self) -> tuple[tuple[str, Path], ...]:
+        return tuple(
+            (resource.name, self.resolve_path(resource.workspace_path))
+            for resource in self.resources.symlinks
+            if resource.boot
+        )
+
+    @property
+    def boot_remote_resources(self) -> tuple[RemoteResource, ...]:
+        return tuple(resource for resource in self.resources.remotes if resource.boot)
+
     @model_validator(mode="after")
     def _validate_resources(self) -> Manifest:
         names = [resource.name for resource in self.all_resources]

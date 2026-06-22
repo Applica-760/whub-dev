@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import unittest
+from pathlib import Path
 
 from pydantic import ValidationError
 
@@ -81,6 +82,22 @@ class ManifestTest(unittest.TestCase):
                 "version": "1",
                 "resources": [{"name": "legacy", "type": "mount"}],
             })
+
+    def test_exposes_boot_targets_by_resource_type(self) -> None:
+        data = copy.deepcopy(self.data)
+        data["resources"]["symlinks"][0]["boot"] = True
+        data["resources"]["remotes"][0]["boot"] = True
+        manifest = Manifest.model_validate(data)
+        manifest.root = Path("/workspace")
+
+        self.assertEqual(
+            manifest.boot_local_targets,
+            (("local", Path("/workspace/projects/local")),),
+        )
+        self.assertEqual(
+            [resource.name for resource in manifest.boot_remote_resources],
+            ["remote"],
+        )
 
 
 if __name__ == "__main__":
