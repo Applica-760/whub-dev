@@ -15,6 +15,7 @@ from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.models.manifest import resource_names
 from whub.models.state import PRIORITIES, ResourceState, load_state, save_state
 from whub.remote import run_ssh_command
+from whub.render import render_table
 
 
 @dataclass(frozen=True)
@@ -144,19 +145,24 @@ def _show_status(m: Manifest) -> None:
     state = load_state()
     all_infos = [infos[r.name] for r in resources]
 
-    name_w = max(len(i.name) for i in all_infos)
-    health_w = max(len(i.health.state) for i in all_infos)
     failed = False
+    rows = []
 
     for info in all_infos:
         rs = state.resources.get(info.name, ResourceState())
         git_col = _format_git_column(info)
-        click.echo(
-            f"  {rs.priority_icon} {info.name:<{name_w}}"
-            f"  {info.health.state:<{health_w}s}  {info.resource_type:8s}"
-            f"  {git_col:>8s}  {rs.status or ''}"
-        )
+        rows.append((
+            rs.priority_icon,
+            info.name,
+            info.health.state,
+            info.resource_type,
+            git_col,
+            rs.status or "",
+        ))
         failed |= info.health.state != "ok"
+
+    for line in render_table(rows, right_align={4}):
+        click.echo(f"  {line}")
 
     if failed:
         raise click.exceptions.Exit(1)
