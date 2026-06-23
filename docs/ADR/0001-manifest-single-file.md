@@ -5,7 +5,7 @@
 
 ## Context
 
-workspace-hubが管理する全リソース（Gitリポジトリ、リモートマウント、ローカルリンク等）の宣言的定義をどの形式・構成で持つか。
+workspace-hubが管理する全リソース（ローカルsymlink、SSH接続先、Git情報等）の宣言的定義をどの形式・構成で持つか。
 
 ## Decision
 

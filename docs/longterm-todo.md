@@ -2,22 +2,19 @@
 
 ## whub CLIの新機能・拡張
 
-- [ ] `whub fetch <resource> <remote-path>` — リモートファイルのローカル取得
-    - SSHFS廃止により、リモートの画像・動画をローカルで確認する手段がなくなった問題の解決策
-    - `run_ssh_command()`基盤のscp相当で取得。リソース名からホスト解決するのでパス指定が簡潔
-    - 想定ワークフロー: `whub cd`でSSH作業 → `pwd`でパス取得 → 別ターミナルで`whub fetch`
-    - fetch先は`.whub/downloads/<resource>/`。`.gitignore`・CodeGraph走査対象外にする
-    - オンデマンドSSHFSは不採用（Apple Bundle汚染`.DS_Store`等がリモートに生成される問題が解消しない）
-    - 蓄積対策（`--clean`等）は運用後に必要に応じて追加
-- [ ] ⭐️`whub boot`の仕様書を書く。どこにヘルパーがあるかといったマップがあるとAIが正確になるはず
-- [x] `whub boot`がまだ遅い。codegraphのインデックス作成を、まだMacのプロセスとして実行してないか？sshを確立して、内部でコマンド走らせるようにしたら一瞬で終わるはず
+- [ ] リモートファイルのオンデマンド操作（SSHFS廃止の代替、方向A: オンデマンドSFTP方式）
+    - SSHFSのマウント方式はApple Doubleファイル汚染・boot遅延の原因だったため廃止。代わりにscp/ssh subprocessベースでオンデマンドにファイルを取得・編集する
+    - 既存の`remote.py`（`run_ssh_command` / `build_ssh_command`）をそのまま活用し、paramiko等の依存追加は不要
+    - `whub fetch <resource> <remote-path>` — scpでファイル取得。fetch先は`.whub/downloads/<resource>/`
+    - `whub edit <resource> <remote-path>` — scp取得→$EDITORで開く→mtime変更検知→書き戻し
+    - `whub browse <resource>` — TUIファイルブラウザ。自前curses or filessh等の外部ツールラップ。優先度低、fetch/editで運用してから判断
+    - 検討済み代替案: Mutagen（双方向リアルタイム同期）は大容量データセットに不向き、filessh/termscp（既存TUIツール）はマニフェスト統合がない
+- [ ] `whub boot`の保守用ドキュメントを書く
+    - 配布元、merge/json/skillsの処理、local/remote分岐、SSH・rsync・CodeGraph初期化の関係を記録する
 - [ ] `whub task` — プロジェクト横断のタスク管理
     - `whub task`を叩いたら、やるべきToDoリストが出てきて、完了したらチェックがつく
     - 複数ワークスペースを統合したからこそ成立する、プロジェクト横断の一元管理
     - `mind/tasks.md`に、Obsidian起点で試行した痕跡があるが、CLIなら可搬性が高く軽量
-- [ ] `whub status` — リソース横断のgit状況確認 → [タスク起票済み](tasks/20260621_whub-remaining.md#phase-3-stategitinfo接続--status拡張)
-    - それぞれのリソースで`git status`を実行し、未Commit内容がないか確認
-    - 詳細まで出すと行数が嵩むので、変更があったファイル数くらいでいいかも？
 - [ ] 自宅サーバのシャットダウンをwhubに組み込む
     - 寝る前にリモート接続して`sudo shutdown -h now`が面倒
 - [ ] tailscale upの自動実行
@@ -34,7 +31,7 @@
     - 参考: https://zenn.dev/oubakiou/articles/b9db61885cd7be
     - MDファイルから見出しベースの目次インデックスを生成し、LLMが必要セクションだけを読めるようにする手法
     - 5000行のAPI仕様書でも目次→該当セクションのみ取得で80〜98%のトークン削減が見込める
-    - `whub boot deploy`で配布するCLAUDE.md/skillsに組み込めば、全リソースで統一的に使える
+    - `whub boot`で配布するCLAUDE.md/skillsに組み込めば、全リソースで統一的に使える
     - md2idx（npm）をそのまま使うか、同等のPython実装をwhubに内蔵するか要検討
 
 ## Agentルール・ドキュメント管理

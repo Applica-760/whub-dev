@@ -5,7 +5,7 @@
 
 ## Context
 
-workspace-hub CLIのサブコマンド体系を決める必要がある。全FR（FR-1〜FR-7）をカバーしつつ、日常的に使うコマンドを最小限に保つ。
+workspace-hub CLIの日常操作とAgent設定配布に必要なサブコマンド体系を決める。
 
 ## Decision
 
@@ -13,29 +13,28 @@ workspace-hub CLIのサブコマンド体系を決める必要がある。全FR�
 
 ### セットアップ系
 
-| コマンド | 対応FR | 説明 |
-|----------|--------|------|
-| `whub link` | FR-6, FR-7 | symlinkリソースからリンクを作成 |
+| コマンド | 説明 |
+|----------|------|
+| `whub link` | symlinkリソースからリンクを作成 |
 
 ### 日常操作系
 
-| コマンド | 対応FR | 説明 |
-|----------|--------|------|
-| `whub cd <resource>` | FR-3, FR-6, FR-7 | symlinkはローカルcd、remoteは対話SSH接続 |
-| `whub run [--tty] <resource> <command> [arg]...` | FR-3 | remoteの対象パスでコマンドを実行 |
-| `whub status` | FR-2 | symlinkとremoteの状態一覧 |
+| コマンド | 説明 |
+|----------|------|
+| `whub cd <resource>` | symlinkはローカルcd、remoteは対話SSH接続 |
+| `whub status` | `boot: true`なsymlinkとremoteの状態一覧 |
+| `whub status <resource> -e/-p` | リソースの状態文または優先度を更新 |
 
 ### ブートストラップ配布・診断系
 
-| コマンド | 対応FR | 説明 |
-|----------|--------|------|
-| `whub boot` | FR-5 | boot=trueの全リソースとworkspace-hubにパッケージ内のAgent設定を配布 |
-| `whub shell-init` | — | zsh関数と補完設定を出力 |
-| `whub doctor` | — | 未実装の診断コマンド |
+| コマンド | 説明 |
+|----------|------|
+| `whub boot` | `boot: true`な全リソースとworkspace-hubにパッケージ内のAgent設定を配布 |
+| `whub shell-init` | zsh関数と補完設定を出力 |
 
 ### whub cd の挙動
 
-`whub cd`はリソースのtypeに応じて挙動を切り替える:
+`whub cd`はリソース種別に応じて挙動を切り替える:
 
 - **symlink**: ローカルのリソースパスにcd（シェル関数経由）
 - **remote**: リモートホストにSSH接続し、対象パスにcd
@@ -48,18 +47,21 @@ source <(whub shell-init)
 
 Tab補完はマニフェストのリソース名一覧から生成する。
 
-### whub run の挙動
+### whub status の挙動
 
-`whub run`はremoteリソース専用とし、対象パスへ移動してから引数境界を維持してコマンドを実行する。標準入出力と終了コードはSSH経由で伝達し、対話コマンドでは`--tty`を指定する。
+引数なしでは`boot: true`なリソースを表示する。symlinkはローカル、remoteはSSH経由でディレクトリとGit差分件数を確認する。remoteは並列に確認し、いずれかが正常でなければ全件表示後に終了コード1を返す。
 
-### 採用した名称
+`-e`または`-p`を指定した場合は、対象リソースの状態文または優先度を`.whub/state.yaml`へ保存する。
 
-- **whub run**: remoteリソース上でコマンドを実行する
-- **whub cd**: remoteリソースへの対話SSH接続を行う
+### whub boot の挙動
+
+workspace-hubと`boot: true`なリソースへAgent設定を配布する。remoteへの読込・書込・skills同期・CodeGraph初期化はSSHまたはrsyncを使う。対象単位の失敗は警告として表示し、後続対象を処理して終了コード0を返す。
 
 ### 廃止した候補
 
 - **whub sync**: Git一括同期は不要。各リポジトリのgit操作は環境ごとに手動判断する
+- **whub run**: 任意コマンド実行用の公開CLIは設けず、remote操作は内部APIとして利用する
+- **whub mount / unmount**: remoteをローカルへマウントしない
 - **whub init**: 現在は提供しない
 - **whub context**: CLIコマンドとしては不要。将来的に自動化を検討
 
@@ -72,4 +74,4 @@ Tab補完はマニフェストのリソース名一覧から生成する。
 
 - `whub shell-init`によるシェル関数の初期セットアップが必要
 - Tab補完の実装にはCLIフレームワークの補完機能を利用する
-- FR-1（Git一括同期）はCLIコマンドとして提供しない
+- Git一括同期はCLIコマンドとして提供しない

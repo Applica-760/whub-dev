@@ -1,7 +1,8 @@
 # ADR-0007: sshfs シングルスレッドモード (-s)
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-06-21
+- **Superseded:** 2026-06-22
 
 ## Context
 
@@ -11,6 +12,10 @@ sshfs はデフォルトでマルチスレッドで動作し、リソース数�
 ## Decision
 
 `-s` フラグ（シングルスレッドモード）を常時付与する。
+
+## Superseded
+
+remoteリソースをローカルへマウントせず、SSH経由で直接操作する方式へ変更した。SSHFS、mount、unmountの実装を廃止したため、この決定は適用されない。
 
 ## Consequences
 

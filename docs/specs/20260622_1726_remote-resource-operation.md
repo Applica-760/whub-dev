@@ -81,9 +81,10 @@
   - 理想の状態
     - manifest、CLIおよび文書が実装と一致している。
   - 乖離内容
-    - ADR、README、要求定義およびCLI仕様がSSHFSを前提としている。
+    - ADR、READMEおよびCLI仕様がSSHFSを前提としている。
   - 変更方針
     - ADR-0004、0005と利用者向け文書を更新し、ADR-0007をSupersededとする。
+    - 初期要求を記録した`docs/requirements.md`は廃止し、将来要望は`docs/longterm-todo.md`で管理する。
 
 ## 実装方針
 - manifestは`resources.symlinks`と`resources.remotes`に独立モデルを持つ。
@@ -92,24 +93,25 @@
 - 対象単位の失敗を収集し、独立した後続処理を継続する。
 
 ## 受け入れ基準
-- [ ] symlinkとremoteが独立したスキーマとして検証される。
-- [ ] remoteの`path`が絶対パス以外を拒否する。
-- [ ] `mount`、`auto_mount`および旧スキーマが受理されない。
-- [ ] remoteがローカルファイルツリーに存在しない。
-- [ ] remoteに対する`cd`、`status`、`boot`がSSH経由で動作する。
-- [ ] `status`と`boot`が共通SSH実行基盤を利用する。
-- [ ] `status`が失敗後も後続を処理し、最終的に非ゼロで終了する。
-- [ ] `boot`が失敗を対象別に表示し、後続を処理する。
-- [ ] `boot`がremote上でCodeGraphを初期化する。
-- [ ] mount、unmountおよびSSHFS依存コードが存在しない。
-- [ ] CodeGraphの索引とローカル走査がremoteへ到達しない。
-- [ ] symlinkリソースの既存動作が維持される。
+- [x] symlinkとremoteが独立したスキーマとして検証される。
+- [x] remoteの`path`が絶対パス以外を拒否する。
+- [x] `mount`、`auto_mount`および旧スキーマが受理されない。
+- [x] remoteがローカルファイルツリーに存在しない。
+- [x] remoteに対する`cd`、`status`、`boot`がSSH経由で動作する。
+- [x] `status`と`boot`が共通SSH実行基盤を利用する。
+- [x] `status`が失敗後も後続を処理し、最終的に非ゼロで終了する。
+- [x] `boot`が失敗を対象別に表示し、後続を処理する。
+- [x] `boot`がremote上でCodeGraphを初期化する。
+- [x] mount、unmountおよびSSHFS依存コードが存在しない。
+- [x] CodeGraphの索引とローカル走査がremoteへ到達しない。
+- [x] symlinkリソースの既存動作が維持される。
 
 ## 検証条件
-- manifestの正常系、旧形式、host不在および不正なremote pathを検証する。
-- SSH処理をテストダブルへ置換し、各コマンドの構築、失敗継続および終了コードを検証する。
-- 実環境でremoteがローカルツリーとCodeGraph索引に存在しないことを確認する。
-- symlinkの既存テストを実行する。
+- [x] manifestの正常系、旧形式、host不在および不正なremote pathを検証する。
+- [x] SSH処理をテストダブルへ置換し、共通SSH・rsync実行基盤とbootの失敗継続を検証する。
+- [x] 実環境でremoteがローカルツリーに存在しないことを確認する。
+- [x] symlinkの既存テストを実行する。
+- [ ] `cd`と`status`のSSH異常系・終了コードを自動テストで検証する。
 
 ## リスク・注意点
 - statusの応答時間はremote数と接続状態に依存する。

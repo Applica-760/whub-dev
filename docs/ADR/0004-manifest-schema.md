@@ -21,37 +21,47 @@ hosts:
     user: <string>           # required: SSHユーザ名
     identity_file: <string>  # required: SSH秘密鍵パス
     port: <int>              # optional, default: 22
-    auto_mount: <bool>       # optional, default: true — whub mount のデフォルト対象か
 
 # ── リソース定義 ──
 resources:
-  - name: <string>           # required: 一意な識別名
-    path: <string>           # required: workspace-hub内の相対パス
-    type: mount | symlink    # required
+  symlinks:
+    - name: <string>             # required: 全リソース内で一意
+      workspace_path: <string>   # required: workspace-hub内の相対パス
+      source: <string>           # required: ローカルの絶対パス
+      git:
+        url: <string>            # required when git is present
+        branch: <string>         # optional
+      boot: <bool>               # optional, default: false
 
-    # mount専用
-    host: <host-key>         # mountの場合required: hostsのキーを参照
-    remote_path: <string>    # mountの場合required: リモート側の絶対パス
-
-    # symlink専用
-    source: <string>         # symlinkの場合required: ローカルの絶対パス
-
-    # 共通optional
-    git:
-      url: <string>          # GitリモートURL
-      branch: <string>       # optional, default: デフォルトブランチ
-    boot: <bool>             # optional, default: false — boot配布対象か
+  remotes:
+    - name: <string>             # required: 全リソース内で一意
+      host: <host-key>           # required: hostsのキーを参照
+      path: <string>             # required: リモート側の絶対パス
+      git:
+        url: <string>            # required when git is present
+        branch: <string>         # optional
+      boot: <bool>               # optional, default: false
 ```
 
 ### 設計原則
 
 1. **hostsは独立セクション** — 複数リソースが同一ホストを共有するため、DRYに参照する
-2. **resourcesはフラットリスト** — `path`フィールドでツリー上の位置を決定。ネスト構造はパースの複雑性に見合わない
-3. **gitフィールドはtype非依存** — symlinkもmountもGitリポジトリであり得る。現在はメタデータとして保持し、CLIからは未使用
-4. **bootフラグ** — FR-5（boot配布）対象をリソース単位で宣言する。デフォルトfalse
+2. **symlinkとremoteは独立モデル** — ローカルパスとリモートパスの意味を混在させない
+3. **remoteはローカルツリーに配置しない** — `host`と`path`を使ってSSH経由で操作する
+4. **gitフィールドは種別非依存** — symlinkとremoteの状態表示でGit差分件数を取得する
+5. **bootフラグ** — Agent設定の配布対象をリソース単位で宣言する。デフォルトfalse
+
+### 検証規則
+
+- 未定義フィールドは拒否する
+- `workspace_path`は絶対パスと`..`によるworkspace外参照を拒否する
+- symlinkの`source`は絶対パスのみ受理する
+- remoteの`path`は`~`を含まないPOSIX絶対パスのみ受理する
+- remoteの`host`は`hosts`に存在しなければならない
+- symlinkとremoteを通してリソース名の重複を拒否する
 
 ## Consequences
 
-- CLIはresources配列をtype別にフィルタしてlink・mount・unmount・cd・status・bootを実行する
+- CLIは`resources.symlinks`と`resources.remotes`を使ってlink・cd・status・bootを実行する
+- mount、unmount、SSHFSおよび旧フラットスキーマとの互換処理は提供しない
 - Git操作コマンドは現時点で提供しない
-- 将来`type: git`（workspace-hub内に直接cloneする方式）が必要になった場合、typeの追加で対応可能

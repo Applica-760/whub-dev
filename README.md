@@ -1,7 +1,7 @@
 # workspace-hub
 
-複数PC・複数プロジェクトにまたがる開発作業を、1つのディレクトリツリーとして統合する。
-symlink・SSH・マニフェスト駆動のCLIにより、俯瞰・操作・AI連携を一元化する。
+複数PC・複数プロジェクトにまたがる開発作業を、単一マニフェストから管理する。
+symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動・Agent設定配布を一元化する。
 
 ## 方針
 
@@ -22,10 +22,8 @@ source <(whub shell-init)   # .zshrc に追記
 |---|---|
 | `whub link` | manifest の symlink を一括作成（`.gitignore` も自動更新） |
 | `whub cd <RESOURCE>` | symlinkへ移動、またはremoteで対話シェルを開始 |
-| `whub run [--tty] <RESOURCE> <COMMAND> [ARG]...` | remoteの対象パスでコマンドを実行 |
-| `whub status` | symlinkとremoteの状態一覧 |
+| `whub status [RESOURCE] [-e TEXT] [-p PRIORITY]` | `boot: true`なリソースの状態一覧、またはリソース状態の編集 |
 | `whub boot` | パッケージ内のAgent設定を`boot: true`な全プロジェクトとworkspace-hubへ配布 |
-| `whub doctor` | ヘルスチェック（未実装） |
 | `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
 
 ## `.whub/manifest.yaml` の構造
