@@ -12,6 +12,8 @@ import click
 from whub.commands import get_manifest
 from whub.health import ResourceHealth
 from whub.models import Manifest, RemoteResource, SymlinkResource
+from whub.models.manifest import resource_names
+from whub.models.state import PRIORITIES, ResourceState, load_state, save_state
 from whub.remote import run_ssh_command
 
 
@@ -102,11 +104,22 @@ def _format_git_column(info: _ResourceInfo) -> str:
     return f"{info.git_diff_count} files"
 
 
-@click.command()
-@click.pass_context
-def status(ctx: click.Context) -> None:
-    """Show status of all resources."""
-    m = get_manifest(ctx)
+def _update_state(m: Manifest, resource: str, edit: str | None, priority: str | None) -> None:
+    names = [r.name for r in m.all_resources]
+    if resource not in names:
+        raise click.UsageError(f"unknown resource: {resource}")
+    state = load_state()
+    rs = state.resources.get(resource, ResourceState())
+    if edit is not None:
+        rs = rs.model_copy(update={"status": edit})
+    if priority is not None:
+        rs = rs.model_copy(update={"priority": priority})
+    state.resources[resource] = rs
+    save_state(state)
+    click.echo(f"  {rs.priority_icon} {resource}: {rs.status or ''}")
+
+
+def _show_status(m: Manifest) -> None:
     resources = [r for r in m.all_resources if r.boot]
     if not resources:
         click.echo("  (no resources)")
@@ -128,17 +141,43 @@ def status(ctx: click.Context) -> None:
                 info = future.result()
                 infos[info.name] = info
 
-    name_w = max(len(r.name) for r in resources)
+    state = load_state()
+    all_infos = [infos[r.name] for r in resources]
+
+    name_w = max(len(i.name) for i in all_infos)
+    health_w = max(len(i.health.state) for i in all_infos)
     failed = False
 
-    for r in resources:
-        info = infos[r.name]
+    for info in all_infos:
+        rs = state.resources.get(info.name, ResourceState())
         git_col = _format_git_column(info)
         click.echo(
-            f"  {info.name:<{name_w}}  {info.resource_type:8s}"
-            f"  {info.health.state:<14s}  {git_col}"
+            f"  {rs.priority_icon} {info.name:<{name_w}}"
+            f"  {info.health.state:<{health_w}s}  {info.resource_type:8s}"
+            f"  {git_col:>8s}  {rs.status or ''}"
         )
         failed |= info.health.state != "ok"
 
     if failed:
         raise click.exceptions.Exit(1)
+
+
+@click.command()
+@click.argument("resource", required=False, shell_complete=resource_names)
+@click.option("-e", "--edit", metavar="TEXT", help="Set status text")
+@click.option("-p", "--priority", type=click.Choice(PRIORITIES), help="Set priority")
+@click.pass_context
+def status(
+    ctx: click.Context,
+    resource: str | None,
+    edit: str | None,
+    priority: str | None,
+) -> None:
+    """Show status of all resources, or update a resource's state."""
+    m = get_manifest(ctx)
+    if edit is not None or priority is not None:
+        if resource is None:
+            raise click.UsageError("resource name required with -e or -p")
+        _update_state(m, resource, edit, priority)
+    else:
+        _show_status(m)

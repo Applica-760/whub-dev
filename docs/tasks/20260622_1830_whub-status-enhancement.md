@@ -25,19 +25,18 @@ esn-lab-run     remote   unreachable  -
 - [ ] Step4: `src/whub/tests/test_status.py` 新設。subprocess/SSHモックで正常系・異常系検証
 - [x] Step5: 実環境で動作確認
 
-## Phase 2: State/GitInfo接続（後日）
+## Phase 2: State/GitInfo接続
 
-元: `20260621_whub-remaining.md` Phase 3A/3B残部
+- [x] `state.yaml`のstatus text / priorityを表示に統合
+- [x] priority emoji表示
+- [x] manifest version検証 → 不要と判断。現状`version: "1"`固定で検証の実益なし
+- [x] doctor → 空実装のためCLI登録削除で決着
 
-- [ ] `state.yaml`のstatus text / priorityを表示に統合
-- [ ] priority emoji表示
-- [ ] manifest versionの検証方針決定
-- [ ] doctorの責務定義 → 実装 or CLI登録解除
+## Phase 3: status編集機能
 
-## Phase 3: status編集機能（後日）
-
-元: `20260621_whub-remaining.md` Phase 3C
-
-- [ ] `-e <resource> "text"`でstatus textを更新
-- [ ] `-p <resource> <priority>`でpriorityを更新
-- [ ] manifestとのresource名バリデーション
+- [x] `-e <resource> "text"`でstatus textを更新
+- [x] `-p <resource> <priority>`でpriorityを更新
+- [x] manifestとのresource名バリデーション
+- [x] resource / priority の tab補完（`resource_names` + `click.Choice(PRIORITIES)`）
+- [x] `Priority` Literal → `get_args()` で `PRIORITIES` 導出。SSOT化
+- [x] `status()` 本体を `_show_status()` / `_update_state()` に分離

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Literal
+from typing import Literal, get_args
 import yaml
 from pydantic import BaseModel
 
 STATE_PATH = Path(".whub/state.yaml")
+
+Priority = Literal["red", "yellow", "blue", "none"]
+PRIORITIES: list[str] = list(get_args(Priority))
 
 PRIORITY_EMOJI: dict[str | None, str] = {
     "red": "🔴",
@@ -18,7 +21,7 @@ PRIORITY_EMOJI: dict[str | None, str] = {
 
 class ResourceState(BaseModel):
     status: str | None = None
-    priority: Literal["red", "yellow", "blue", "none"] | None = None
+    priority: Priority | None = None
 
     @property
     def priority_icon(self) -> str:
