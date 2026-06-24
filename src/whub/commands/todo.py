@@ -2,14 +2,14 @@
 from __future__ import annotations
 from datetime import date, datetime
 import click
-from whub.models import load_manifest, resource_names
+from whub.models import load_manifest, project_names
 from whub.models.todo import PRIORITIES, PRIORITY_EMOJI, Todo, load_todos, save_todos
 from whub.render import render_table
 
 
 def _project_names(ctx, param, incomplete: str) -> list[str]:
     none = ["none"] if "none".startswith(incomplete) else []
-    return none + resource_names(ctx, param, incomplete)
+    return none + project_names(ctx, param, incomplete)
 
 
 def _render_list(items: list[Todo], date_label: str, date_fn, *, empty: str) -> None:
@@ -60,8 +60,7 @@ def add(
     """Add a todo."""
     project_name = None if project == "none" else project
     if project_name is not None:
-        names = {resource.name for resource in load_manifest().all_resources}
-        if project_name not in names:
+        if load_manifest().resolve_project(project_name) is None:
             raise click.UsageError(f"unknown project: {project_name}")
 
     todos = load_todos()

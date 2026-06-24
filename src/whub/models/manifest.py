@@ -1,10 +1,10 @@
-"""Manifest models and loader — Pydantic model is SSOT for the schema (see ADR-0004)."""
+"""Manifest models and loader — Pydantic model is SSOT for the schema."""
 from __future__ import annotations
+from typing import Annotated, Literal
 from pathlib import Path
 from pathlib import PurePosixPath
-from typing import Literal
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 MANIFEST_PATH = Path(".whub/manifest.yaml")
 
@@ -22,11 +22,11 @@ class GitInfo(SchemaModel):
     branch: str | None = None
 
 class BaseResource(SchemaModel):
-    name: str
     git: GitInfo | None = None
     boot: bool = False
 
 class SymlinkResource(BaseResource):
+    type: Literal["symlink"]
     workspace_path: str
     source: str
 
@@ -49,6 +49,7 @@ class SymlinkResource(BaseResource):
         return value
 
 class RemoteResource(BaseResource):
+    type: Literal["remote"]
     host: str
     path: str
 
@@ -60,67 +61,63 @@ class RemoteResource(BaseResource):
             raise ValueError("remote path must be an absolute path without '~'")
         return value
 
-class Resources(SchemaModel):
-    symlinks: list[SymlinkResource] = Field(default_factory=list)
-    remotes: list[RemoteResource] = Field(default_factory=list)
+Resource = Annotated[SymlinkResource | RemoteResource, Field(discriminator="type")]
+
+class Project(SchemaModel):
+    name: str
+    resource: Resource | None = None
 
 class Manifest(SchemaModel):
-    version: Literal["1"] = "1"
+    version: Literal["2"] = "2"
     hosts: dict[str, Host] = Field(default_factory=dict)
-    resources: Resources = Field(default_factory=Resources)
-    root: Path = Path(".")
-
-    @property
-    def all_resources(self) -> tuple[SymlinkResource | RemoteResource, ...]:
-        return (*self.resources.symlinks, *self.resources.remotes)
-
-    @property
-    def boot_local_targets(self) -> tuple[tuple[str, Path], ...]:
-        return tuple(
-            (resource.name, self.resolve_path(resource.workspace_path))
-            for resource in self.resources.symlinks
-            if resource.boot
-        )
-
-    @property
-    def boot_remote_resources(self) -> tuple[RemoteResource, ...]:
-        return tuple(resource for resource in self.resources.remotes if resource.boot)
+    projects: list[Project] = Field(default_factory=list)
+    _root: Path = PrivateAttr(default=Path("."))
 
     @model_validator(mode="after")
-    def _validate_resources(self) -> Manifest:
-        names = [resource.name for resource in self.all_resources]
+    def _validate_projects(self) -> Manifest:
+        names = [project.name for project in self.projects]
         duplicates = sorted({name for name in names if names.count(name) > 1})
         if duplicates:
-            raise ValueError(f"duplicate resource names: {', '.join(duplicates)}")
+            raise ValueError(f"duplicate project names: {', '.join(duplicates)}")
 
-        for resource in self.resources.remotes:
+        for project in self.projects:
+            resource = project.resource
+            if not isinstance(resource, RemoteResource):
+                continue
             if resource.host not in self.hosts:
                 raise ValueError(
-                    f"resource '{resource.name}' references unknown host "
+                    f"project '{project.name}' references unknown host "
                     f"'{resource.host}'"
                 )
         return self
 
+    @property
+    def workspace_root(self) -> Path:
+        return self._root
+
     def resolve_path(self, relative: str) -> Path:
-        return self.root / relative
+        return self._root / relative
+
+    def resolve_project(self, name: str) -> Project | None:
+        return next((project for project in self.projects if project.name == name), None)
 
 def load_manifest() -> Manifest:
     text = MANIFEST_PATH.read_text()
     data = yaml.safe_load(text)
     m = Manifest.model_validate(data)
-    m.root = Path.cwd()
+    m._root = Path.cwd()
     return m
 
-def resource_names(ctx, param, incomplete: str) -> list[str]:
+def project_names(ctx, param, incomplete: str) -> list[str]:
     del ctx, param
     try:
-        resources = load_manifest().all_resources
+        projects = load_manifest().projects
     except Exception:
         return []
     return [
-        resource.name
-        for resource in resources
-        if resource.name.startswith(incomplete)
+        project.name
+        for project in projects
+        if project.name.startswith(incomplete)
     ]
 
 def host_names(ctx, param, incomplete: str) -> list[str]:

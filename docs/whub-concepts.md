@@ -4,7 +4,7 @@
 
 # 用語定義
 - `project`: 私が抱えているプロジェクトのこと
-- `resource`: 接続先のデータリソース。ある`resource`は必ず1つの`project`と紐づいている
+- `resource`: `project`が持つ任意の接続先データリソース
     - `remote`: `resource`が持つ属性で、リモートのコンピュータに格納されている`project`データを指す
     - `local`: `resource`が持つ属性で、このコンピュータにある`project`データを指す。シンボリックリンクでwhub以下に接続する
 - `workspace-hub`: whub自体の`project`。ただしmount/link対象ではないため、現時点では`resource`ではない
@@ -27,8 +27,7 @@
 # データモデル制約
 - `project`は活動単位であり、必須フィールドは`name`のみ
 - `project` 1 -- 0..1 `resource`
-- `resource` * -- 1 `project`
-- `resource`が参照する`project`は`manifest`上に存在しなければならない
+- `resource`は`project`直下に定義する
 - `resource`のパス系フィールドは意味が曖昧な`path`へ寄せず、`workspace_path`や`source`など用途が分かる名前を使う
 
 # CLI設計ポリシー（コードをどう作るか）
@@ -40,8 +39,8 @@
 - `Skill`は壁打ち、整理、昇格、仕様化など、CLIに持たせない判断処理を担う
 
 # CLI振る舞いポリシー（どのような挙動を想定するか）
-- とにかく`whub`を特別扱いしない。`whub`自身もプロジェクトの1つとして扱い、`whub`専用の例外処理などは、できるだけ実装しない
-- `cd <project>`で紐づく`resource`がない場合は「移動先がありません」と表示する（whubも）
+- とにかく`whub`を特別扱いしない。ただし`boot`は例外。
+- `cd <project>`で紐づく`resource`がない場合は移動先なしを通知する（whubも）
 - `status`は接続状態、ヘルスチェック、git差分確認に責務を絞る
 - `todo`は`project`に紐づく単発アクションを管理する。`project`に`resource`がなくても`todo`は持てる
 - `roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する

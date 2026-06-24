@@ -1,4 +1,4 @@
-version: "1"
+version: "2"
 
 hosts:
   home-server:
@@ -10,9 +10,13 @@ hosts:
     user: ""
     identity_file: ""
 
-resources:
-  symlinks:
-    - name: mind
+projects:
+  - name: workspace-hub
+
+  # --------------- symlink ---------------
+  - name: mind
+    resource:
+      type: symlink
       workspace_path: mind
       source: 
       git:
@@ -20,7 +24,9 @@ resources:
         branch: main
       boot: true
 
-    - name: portfolio
+  - name: portfolio
+    resource:
+      type: symlink
       workspace_path: portfolio
       source: 
       git:
@@ -28,7 +34,9 @@ resources:
         branch: main
       boot: true
 
-    - name: recruit
+  - name: recruit
+    resource:
+      type: symlink
       workspace_path: projects/personal/recruit
       source: 
       git:
@@ -36,7 +44,9 @@ resources:
         branch: main
       boot: true
 
-    - name: doc-drill
+  - name: doc-drill
+    resource:
+      type: symlink
       workspace_path: projects/personal/doc-drill
       source: 
       git:
@@ -44,7 +54,9 @@ resources:
         branch: main
       boot: true
 
-    - name: sns-lab
+  - name: sns-lab
+    resource:
+      type: symlink
       workspace_path: projects/personal/sns-lab
       source: 
       git:
@@ -52,7 +64,9 @@ resources:
         branch: main
       boot: true
 
-    - name: solution-sprints
+  - name: solution-sprints
+    resource:
+      type: symlink
       workspace_path: projects/personal/solution-sprints
       source: 
       git:
@@ -60,17 +74,23 @@ resources:
         branch: main
       boot: true
 
-    - name: laplust-docs
+  - name: laplust-docs
+    resource:
+      type: symlink
       workspace_path: projects/LAplust/docs
       source: 
 
-    - name: research-slide
+  - name: research-slide
+    resource:
+      type: symlink
       workspace_path: projects/research/slide
       source: 
       boot: true
 
-  remotes:
-    - name: esn-lab
+  # --------------- remote ---------------
+  - name: esn-lab
+    resource:
+      type: remote
       host: home-server
       path: 
       git:
@@ -78,14 +98,18 @@ resources:
         branch: main
       boot: true
 
-    - name: esn-lab-run
+  - name: esn-lab-run
+    resource:
+      type: remote
       host: supercomputer
       path: 
       git:
         url: git@github.com:Applica-760/esn-lab.git
         branch: main
 
-    - name: la-imitation-learning
+  - name: la-imitation-learning
+    resource:
+      type: remote
       host: home-server
       path: 
       git:
@@ -93,7 +117,9 @@ resources:
         branch: main
       boot: true
 
-    - name: private
+  - name: private
+    resource:
+      type: remote
       host: home-server
       path: 
       boot: true

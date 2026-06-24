@@ -23,7 +23,7 @@ class _ResourceInfo:
     git_diff_count: int | None
 
 
-def _fetch_symlink_info(r: SymlinkResource, m: Manifest) -> _ResourceInfo:
+def _fetch_symlink_info(name: str, r: SymlinkResource, m: Manifest) -> _ResourceInfo:
     from whub.health import inspect_symlink
 
     health = inspect_symlink(r, m)
@@ -45,14 +45,14 @@ def _fetch_symlink_info(r: SymlinkResource, m: Manifest) -> _ResourceInfo:
             pass
 
     return _ResourceInfo(
-        name=r.name,
+        name=name,
         resource_type="symlink",
         health=health,
         git_diff_count=git_diff,
     )
 
 
-def _fetch_remote_info(r: RemoteResource, m: Manifest) -> _ResourceInfo:
+def _fetch_remote_info(name: str, r: RemoteResource, m: Manifest) -> _ResourceInfo:
     host = m.hosts[r.host]
     health: ResourceHealth
     git_diff: int | None = None
@@ -71,7 +71,7 @@ def _fetch_remote_info(r: RemoteResource, m: Manifest) -> _ResourceInfo:
         )
     except (OSError, subprocess.TimeoutExpired) as error:
         return _ResourceInfo(
-            name=r.name,
+            name=name,
             resource_type="remote",
             health=ResourceHealth("unreachable", str(error)),
             git_diff_count=None,
@@ -89,7 +89,7 @@ def _fetch_remote_info(r: RemoteResource, m: Manifest) -> _ResourceInfo:
             git_diff = len(lines)
 
     return _ResourceInfo(
-        name=r.name,
+        name=name,
         resource_type="remote",
         health=health,
         git_diff_count=git_diff,
@@ -107,17 +107,21 @@ def _format_git_column(info: _ResourceInfo) -> str:
 def status(ctx: click.Context) -> None:
     """Show health of all resources."""
     m = get_manifest(ctx)
-    resources = [r for r in m.all_resources if r.boot]
-    if not resources:
+    projects = [
+        project for project in m.projects
+        if project.resource is not None and project.resource.boot
+    ]
+    if not projects:
         click.echo("  (no resources)")
         return
 
     infos = []
-    for r in resources:
+    for project in projects:
+        r = project.resource
         if isinstance(r, SymlinkResource):
-            infos.append(_fetch_symlink_info(r, m))
-        else:
-            infos.append(_fetch_remote_info(r, m))
+            infos.append(_fetch_symlink_info(project.name, r, m))
+        elif isinstance(r, RemoteResource):
+            infos.append(_fetch_remote_info(project.name, r, m))
 
     rows = [
         (info.name, info.health.state, info.resource_type, _format_git_column(info))

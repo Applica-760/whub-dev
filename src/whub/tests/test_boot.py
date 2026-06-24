@@ -26,7 +26,7 @@ class BootTest(unittest.TestCase):
         remotes: tuple[str, ...] = (),
     ) -> Manifest:
         manifest = Manifest.model_validate({
-            "version": "1",
+            "version": "2",
             "hosts": {
                 "server": {
                     "hostname": "example.com",
@@ -34,28 +34,31 @@ class BootTest(unittest.TestCase):
                     "identity_file": "/tmp/key",
                 },
             },
-            "resources": {
-                "symlinks": [
-                    {
-                        "name": name,
+            "projects": [
+                {
+                    "name": name,
+                    "resource": {
+                        "type": "symlink",
                         "workspace_path": name,
                         "source": f"/tmp/{name}",
                         "boot": True,
-                    }
-                    for name in locals
-                ],
-                "remotes": [
-                    {
-                        "name": name,
+                    },
+                }
+                for name in locals
+            ] + [
+                {
+                    "name": name,
+                    "resource": {
+                        "type": "remote",
                         "host": "server",
                         "path": f"/srv/{name}",
                         "boot": True,
-                    }
-                    for name in remotes
-                ],
-            },
+                    },
+                }
+                for name in remotes
+            ],
         })
-        manifest.root = root
+        manifest._root = root
         return manifest
 
     def test_local_apply_is_idempotent_and_preserves_project_content(self) -> None:

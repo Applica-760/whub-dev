@@ -12,7 +12,7 @@ from whub.models import Manifest
 class ManifestTest(unittest.TestCase):
     def setUp(self) -> None:
         self.data = {
-            "version": "1",
+            "version": "2",
             "hosts": {
                 "home": {
                     "hostname": "home.example.com",
@@ -20,55 +20,69 @@ class ManifestTest(unittest.TestCase):
                     "identity_file": "~/.ssh/id_rsa",
                 },
             },
-            "resources": {
-                "symlinks": [
-                    {
-                        "name": "local",
+            "projects": [
+                {
+                    "name": "local",
+                    "resource": {
+                        "type": "symlink",
                         "workspace_path": "projects/local",
                         "source": "/Users/takumi/projects/local",
                     },
-                ],
-                "remotes": [
-                    {
-                        "name": "remote",
+                },
+                {
+                    "name": "remote",
+                    "resource": {
+                        "type": "remote",
                         "host": "home",
                         "path": "",
                     },
-                ],
-            },
+                },
+                {
+                    "name": "workspace-hub",
+                },
+            ],
         }
+
+    def test_accepts_project_without_resource(self) -> None:
+        manifest = Manifest.model_validate(self.data)
+
+        self.assertEqual(
+            [project.name for project in manifest.projects],
+            ["local", "remote", "workspace-hub"],
+        )
+        self.assertIsNone(manifest.projects[2].resource)
 
     def test_rejects_workspace_path_outside_root(self) -> None:
         for value in ("/absolute", "../outside", "projects/../../outside"):
             with self.subTest(value=value):
                 data = copy.deepcopy(self.data)
-                data["resources"]["symlinks"][0]["workspace_path"] = value
+                data["projects"][0]["resource"]["workspace_path"] = value
                 with self.assertRaises(ValidationError):
                     Manifest.model_validate(data)
 
     def test_requires_absolute_source_and_remote_path(self) -> None:
         invalid_fields = (
-            ("symlinks", "source", "relative/source"),
-            ("symlinks", "source", "~/source"),
-            ("remotes", "path", "relative/path"),
-            ("remotes", "path", "~/path"),
+            (0, "source", "relative/source"),
+            (0, "source", "~/source"),
+            (1, "path", "relative/path"),
+            (1, "path", "~/path"),
         )
-        for resource_type, field, value in invalid_fields:
-            with self.subTest(resource_type=resource_type, field=field, value=value):
+        for project_index, field, value in invalid_fields:
+            with self.subTest(project_index=project_index, field=field, value=value):
                 data = copy.deepcopy(self.data)
-                data["resources"][resource_type][0][field] = value
+                data["projects"][project_index]["resource"][field] = value
                 with self.assertRaises(ValidationError):
                     Manifest.model_validate(data)
 
-    def test_rejects_unknown_host_and_duplicate_resource_name(self) -> None:
+    def test_rejects_unknown_host_and_duplicate_project_name(self) -> None:
         data = copy.deepcopy(self.data)
-        data["resources"]["remotes"][0]["host"] = "missing"
+        data["projects"][1]["resource"]["host"] = "missing"
         with self.assertRaisesRegex(ValidationError, "unknown host"):
             Manifest.model_validate(data)
 
         data = copy.deepcopy(self.data)
-        data["resources"]["remotes"][0]["name"] = "local"
-        with self.assertRaisesRegex(ValidationError, "duplicate resource names"):
+        data["projects"][1]["name"] = "local"
+        with self.assertRaisesRegex(ValidationError, "duplicate project names"):
             Manifest.model_validate(data)
 
     def test_rejects_legacy_and_unknown_fields(self) -> None:
@@ -80,24 +94,42 @@ class ManifestTest(unittest.TestCase):
         with self.assertRaises(ValidationError):
             Manifest.model_validate({
                 "version": "1",
-                "resources": [{"name": "legacy", "type": "mount"}],
+                "resources": {
+                    "symlinks": [
+                        {
+                            "name": "legacy",
+                            "workspace_path": "legacy",
+                            "source": "/tmp/legacy",
+                        },
+                    ],
+                },
             })
 
-    def test_exposes_boot_targets_by_resource_type(self) -> None:
+    def test_rejects_mismatched_resource_shape(self) -> None:
         data = copy.deepcopy(self.data)
-        data["resources"]["symlinks"][0]["boot"] = True
-        data["resources"]["remotes"][0]["boot"] = True
-        manifest = Manifest.model_validate(data)
-        manifest.root = Path("/workspace")
+        data["projects"][0]["resource"] = {
+            "type": "remote",
+            "workspace_path": "projects/local",
+            "source": "/Users/takumi/projects/local",
+        }
+        with self.assertRaises(ValidationError):
+            Manifest.model_validate(data)
+
+    def test_resolves_workspace_path(self) -> None:
+        manifest = Manifest.model_validate(self.data)
+        manifest._root = Path("/workspace")
 
         self.assertEqual(
-            manifest.boot_local_targets,
-            (("local", Path("/workspace/projects/local")),),
+            manifest.resolve_path("projects/local"),
+            Path("/workspace/projects/local"),
         )
-        self.assertEqual(
-            [resource.name for resource in manifest.boot_remote_resources],
-            ["remote"],
-        )
+        self.assertEqual(manifest.workspace_root, Path("/workspace"))
+
+    def test_resolves_project(self) -> None:
+        manifest = Manifest.model_validate(self.data)
+
+        self.assertEqual(manifest.resolve_project("local").name, "local")
+        self.assertIsNone(manifest.resolve_project("missing"))
 
 
 if __name__ == "__main__":

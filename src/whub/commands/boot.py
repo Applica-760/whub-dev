@@ -15,7 +15,7 @@ from importlib.resources import as_file, files
 from pathlib import Path
 from typing import Callable, Iterator
 from whub.commands import get_manifest
-from whub.models import Host, RemoteResource
+from whub.models import Host, RemoteResource, SymlinkResource
 from whub.remote import run_rsync_command, run_ssh_command
 
 _MARKERS = {
@@ -179,10 +179,10 @@ def _apply_local_boot(
 
 def _apply_remote_boot(
     source: Path,
-    resources: tuple[RemoteResource, ...],
+    targets: list[tuple[str, RemoteResource]],
     hosts: dict[str, Host],
 ) -> None:
-    for resource in resources:
+    for name, resource in targets:
         host = hosts[resource.host]
         try:
             def read(rel: str) -> str | None:
@@ -215,11 +215,11 @@ def _apply_remote_boot(
                 )
         except (OSError, ValueError, subprocess.SubprocessError) as error:
             click.echo(
-                f"  {'WARN':6s}  {resource.name}: deploy failed:"
+                f"  {'WARN':6s}  {name}: deploy failed:"
                 f" {_process_error(error)}",
             )
             continue
-        click.echo(f"  {'done':6s}  {resource.name}")
+        click.echo(f"  {'done':6s}  {name}")
 
         try:
             run_ssh_command(
@@ -231,11 +231,11 @@ def _apply_remote_boot(
             )
         except (OSError, subprocess.SubprocessError) as error:
             click.echo(
-                f"  {'WARN':6s}  {resource.name}: CodeGraph init failed:"
+                f"  {'WARN':6s}  {name}: CodeGraph init failed:"
                 f" {_process_error(error)}",
             )
             continue
-        click.echo(f"  {'init':6s}  {resource.name} (CodeGraph)")
+        click.echo(f"  {'init':6s}  {name} (CodeGraph)")
 
 
 # ── CLI ───────────────────────────────────────────────────────────
@@ -244,10 +244,22 @@ def _apply_remote_boot(
 def boot(ctx: click.Context) -> None:
     """Deploy agent bootstrap config to target resources."""
     manifest = get_manifest(ctx)
+    local_targets = [("workspace-hub", manifest.workspace_root)]
+    remote_targets = []
+    for project in manifest.projects:
+        resource = project.resource
+        if isinstance(resource, SymlinkResource) and resource.boot:
+            local_targets.append((
+                project.name,
+                manifest.resolve_path(resource.workspace_path),
+            ))
+        elif isinstance(resource, RemoteResource) and resource.boot:
+            remote_targets.append((project.name, resource))
+
     with as_file(files("whub").joinpath("boot")) as source:
         _apply_local_boot(
             source,
-            [("workspace-hub", manifest.root), *manifest.boot_local_targets],
+            local_targets,
             shutil.which("codegraph"),
         )
-        _apply_remote_boot(source, manifest.boot_remote_resources, manifest.hosts)
+        _apply_remote_boot(source, remote_targets, manifest.hosts)

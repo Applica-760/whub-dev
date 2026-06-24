@@ -2,9 +2,10 @@
 
 ## 直近の整理順
 
-1. [ ] 用語定義とCLI実装ポリシーをドキュメント化する
+1. [x] 用語定義とCLI実装ポリシーをドキュメント化する
     - Projects / Resources / Todo(tasks) / status / roadmap / specs / ADR / Skillの意味を固定する
     - Click関数、コマンド固有処理、Target/Router、remote.pyの責務境界を明文化する
+    - 正本: `docs/whub-concepts.md`
 2. [ ] 共通Target/Routerを作る
     - local/remote差分は`exists` / `read_text` / `write_text` / `append_text` / `run`などの一般操作だけで吸収する
     - roadmap/status/fetch/editなどの業務ロジックは各コマンド側に残す
@@ -41,27 +42,27 @@
 ## 完了済み
 
 - [x] `whub todo` — プロジェクト横断のタスク管理
-    - 実装済み: `.whub/todos.yaml`のPydanticモデル + load/save、`add` / `done` / `rm` / 一覧表示、完了済み表示、resource補完、priority表示
+    - 実装済み: `.whub/todos.yaml`のPydanticモデル + load/save、`add` / `done` / `rm` / 一覧表示、完了済み表示、project補完、priority表示
     - `whub status`のpriority/statusテキストを廃止し、リンク・接続状態・git差分の確認に責務を絞った
     - TUI(curses)は初期スコープ外。必要性はCLI運用後に再判断する
-    - 残課題: projectとresourceの概念整理、todoの自動テスト追加
+    - 残課題: manifestの`projects`移行、todoの自動テスト追加
 
 ## whub アーキテクチャ・設定
 
-- [ ] projectとresourceの概念・命名・関連付けを整理する
-    - resourceは操作対象、projectはTodoの活動単位であり、現状はTodoのprojectをresource名に限定している
-    - workspace-hub自身がresourceではないためwhub開発Todoを割り当てられず、複数resourceを1projectに束ねる表現もできない
-    - manifestへのproject定義追加と、resourceからprojectへの任意の関連付けを検討する
-- [ ] whub自身の扱いを整理する
+- [x] projectとresourceの概念・命名・関連付けを整理する
+    - `project`は活動単位、`resource`は接続先データリソースとして定義済み
+    - `project` 1 -- 0..1 `resource`、`resource` * -- 1 `project`で固定済み
+    - 残る実装課題はmanifestへの`projects`追加と既存コマンドの参照移行
+- [x] whub自身の扱いを整理する
     - workspace-hubはprojectではあるが、mount/link対象ではないためresourceではない
-    - 現状はstatus/cd/todo/roadmapの対象にworkspace-hub自身を自然に含められず、whub関連Todoはprojectなしで仮置きしている
-    - whub運用をproject/resource再設計、todo、roadmap、statusのどこで扱うか決める
-- [ ] whub用語・責務ドキュメントを作る
+    - `workspace-hub`は明示的な`project`として扱い、`resource`なしの場合は移動先なしとする
+    - 残る実装課題はmanifestと`cd`/`todo`/`roadmap`のproject参照対応
+- [x] whub用語・責務ドキュメントを作る
     - Projects, Resources, Todo/tasks, state/status, roadmap, specs, ADR, boot配布Skillなどの意味を定義する
     - CLIコマンドと頒布Skillで同じ語を一貫して使い、AIコンテキストの誤解を減らす
     - whub自身の位置づけもこのドキュメントで固定する
 - [ ] projectごとの長期計画ドキュメントとwhub導線を設計する
-    - これまでの方針: `whub todo` / `whub status`で全体のタスクと優先度を把握し、`whub cd`で対象projectへ移動し、project内の`docs/roadmap.md`で長期計画を確認する
+    - これまでの方針: `whub todo`で全体のタスクと優先度、`whub status`で接続状態を確認し、`whub cd`で対象projectへ移動する
     - todoは実行可能な単発アクション、roadmapはprojectごとの長期方針、`/task-planning`は個別作業の実行計画と記録を担う
     - longterm-todoのproject固有項目は、whub todo運用が安定してから各projectのroadmapへ段階的に移行する
     - `whub roadmap <project> <text...>`で`<project>/docs/roadmap.md`末尾の未整理メモへ追記する

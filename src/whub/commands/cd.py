@@ -5,8 +5,9 @@ import shlex
 import sys
 import click
 from whub.commands import get_manifest
-from whub.models import RemoteResource, SymlinkResource, resource_names
+from whub.models import Manifest, RemoteResource, SymlinkResource, project_names
 from whub.remote import build_ssh_command
+from whub.target import on_target, resolve_target
 
 EXIT_SSH = 100
 
@@ -28,33 +29,33 @@ source <(_WHUB_COMPLETE=zsh_source command whub)
 """
 
 
+def _cd_local(resource: SymlinkResource, manifest: Manifest) -> None:
+    path = manifest.resolve_path(resource.workspace_path)
+    if not path.exists():
+        raise click.ClickException(f"symlink target does not exist: {path}")
+    click.echo(str(path))
+
+
+def _cd_remote(resource: RemoteResource, manifest: Manifest) -> None:
+    host = manifest.hosts[resource.host]
+    cmd = build_ssh_command(
+        host,
+        f"cd {shlex.quote(resource.path)} && exec $SHELL -l",
+        tty=True,
+    )
+    if not sys.stdout.isatty():
+        sys.exit(EXIT_SSH)
+    os.execvp("ssh", cmd)
+
+
 @click.command()
-@click.argument("resource", shell_complete=resource_names)
+@click.argument("project", shell_complete=project_names)
 @click.pass_context
-def cd(ctx: click.Context, resource: str) -> None:
-    """Jump to a resource (local cd or SSH)."""
+def cd(ctx: click.Context, project: str) -> None:
+    """Jump to a project resource (local cd or SSH)."""
     m = get_manifest(ctx)
-
-    matched = next((r for r in m.all_resources if r.name == resource), None)
-    if matched is None:
-        raise click.ClickException(f"unknown resource: {resource}")
-
-    if isinstance(matched, SymlinkResource):
-        path = m.resolve_path(matched.workspace_path)
-        if not path.exists():
-            raise click.ClickException(f"symlink target does not exist: {path}")
-        click.echo(str(path))
-
-    elif isinstance(matched, RemoteResource):
-        host = m.hosts[matched.host]
-        cmd = build_ssh_command(
-            host,
-            f"cd {shlex.quote(matched.path)} && exec $SHELL -l",
-            tty=True,
-        )
-        if not sys.stdout.isatty():
-            sys.exit(EXIT_SSH)
-        os.execvp("ssh", cmd)
+    resource = resolve_target(m, project)
+    on_target(resource, m, local=_cd_local, remote=_cd_remote)
 
 
 @click.command("shell-init")

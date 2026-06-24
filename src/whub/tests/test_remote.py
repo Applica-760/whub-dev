@@ -14,7 +14,7 @@ remote_module = importlib.import_module("whub.remote")
 class RemoteTest(unittest.TestCase):
     def setUp(self) -> None:
         self.host = Manifest.model_validate({
-            "version": "1",
+            "version": "2",
             "hosts": {
                 "server": {
                     "hostname": "example.com",
