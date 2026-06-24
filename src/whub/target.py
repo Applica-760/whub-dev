@@ -1,6 +1,6 @@
 """Target routing for project resources."""
 from __future__ import annotations
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import TypeVar, assert_never
 import click
 from whub.models import Manifest, RemoteResource, Resource, SymlinkResource
@@ -8,7 +8,7 @@ from whub.models import Manifest, RemoteResource, Resource, SymlinkResource
 class TargetError(click.ClickException):
     pass
 
-# return Resource Model (SymlinkResource / RemoteResource)
+
 def resolve_target(manifest: Manifest, project_name: str) -> Resource:
     project = manifest.resolve_project(project_name)
     if project is None:
@@ -18,19 +18,21 @@ def resolve_target(manifest: Manifest, project_name: str) -> Resource:
     return project.resource
 
 
-D = TypeVar("D")    # represents the data
-R = TypeVar("R")    # represents the Resource
+D = TypeVar("D")
+R = TypeVar("R")
 
-# exec function corresponding to the resource type
-def on_target(
-    target: Resource,
-    data: D,
+def on_targets(
+    targets: Iterable[tuple[Resource, D]],
     *,
     local: Callable[[SymlinkResource, D], R],
     remote: Callable[[RemoteResource, D], R],
-) -> R:
-    if isinstance(target, SymlinkResource):
-        return local(target, data)
-    if isinstance(target, RemoteResource):
-        return remote(target, data)
-    assert_never(target)
+) -> list[R]:
+    results: list[R] = []
+    for target, data in targets:
+        if isinstance(target, SymlinkResource):
+            results.append(local(target, data))
+        elif isinstance(target, RemoteResource):
+            results.append(remote(target, data))
+        else:
+            assert_never(target)
+    return results

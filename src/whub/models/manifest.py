@@ -101,6 +101,13 @@ class Manifest(SchemaModel):
     def resolve_project(self, name: str) -> Project | None:
         return next((project for project in self.projects if project.name == name), None)
 
+    def project_resources(self) -> list[tuple[str, Resource]]:
+        return [
+            (project.name, project.resource)
+            for project in self.projects
+            if project.resource is not None
+        ]
+
 def load_manifest() -> Manifest:
     text = MANIFEST_PATH.read_text()
     data = yaml.safe_load(text)

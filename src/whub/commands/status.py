@@ -13,6 +13,7 @@ from whub.health import ResourceHealth
 from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.remote import run_ssh_command
 from whub.render import render_table
+from whub.target import on_targets
 
 
 @dataclass(frozen=True)
@@ -20,14 +21,21 @@ class _ResourceInfo:
     name: str
     resource_type: str
     health: ResourceHealth
-    git_diff_count: int | None
+    git_diff: str = "-"
 
 
-def _fetch_symlink_info(name: str, r: SymlinkResource, m: Manifest) -> _ResourceInfo:
+@dataclass(frozen=True)
+class _StatusData:
+    name: str
+    manifest: Manifest
+
+
+def _fetch_symlink_info(r: SymlinkResource, data: _StatusData) -> _ResourceInfo:
     from whub.health import inspect_symlink
 
+    m = data.manifest
     health = inspect_symlink(r, m)
-    git_diff: int | None = None
+    git_diff = "-"
 
     if health.state == "ok" and r.git is not None:
         source = Path(r.source).expanduser()
@@ -40,22 +48,23 @@ def _fetch_symlink_info(name: str, r: SymlinkResource, m: Manifest) -> _Resource
             )
             if result.returncode == 0:
                 lines = [l for l in result.stdout.splitlines() if l.strip()]
-                git_diff = len(lines)
+                git_diff = f"{len(lines)} files"
         except (OSError, subprocess.TimeoutExpired):
             pass
 
     return _ResourceInfo(
-        name=name,
-        resource_type="symlink",
+        name=data.name,
+        resource_type=r.type,
         health=health,
-        git_diff_count=git_diff,
+        git_diff=git_diff,
     )
 
 
-def _fetch_remote_info(name: str, r: RemoteResource, m: Manifest) -> _ResourceInfo:
+def _fetch_remote_info(r: RemoteResource, data: _StatusData) -> _ResourceInfo:
+    m = data.manifest
     host = m.hosts[r.host]
     health: ResourceHealth
-    git_diff: int | None = None
+    git_diff = "-"
 
     if r.git is not None:
         cmd = (
@@ -71,10 +80,10 @@ def _fetch_remote_info(name: str, r: RemoteResource, m: Manifest) -> _ResourceIn
         )
     except (OSError, subprocess.TimeoutExpired) as error:
         return _ResourceInfo(
-            name=name,
-            resource_type="remote",
+            name=data.name,
+            resource_type=r.type,
             health=ResourceHealth("unreachable", str(error)),
-            git_diff_count=None,
+            git_diff=git_diff,
         )
 
     if result.returncode == 255:
@@ -86,20 +95,14 @@ def _fetch_remote_info(name: str, r: RemoteResource, m: Manifest) -> _ResourceIn
         health = ResourceHealth("ok")
         if r.git is not None:
             lines = [l for l in result.stdout.splitlines() if l.strip()]
-            git_diff = len(lines)
+            git_diff = f"{len(lines)} files"
 
     return _ResourceInfo(
-        name=name,
-        resource_type="remote",
+        name=data.name,
+        resource_type=r.type,
         health=health,
-        git_diff_count=git_diff,
+        git_diff=git_diff,
     )
-
-
-def _format_git_column(info: _ResourceInfo) -> str:
-    if info.git_diff_count is None:
-        return "-"
-    return f"{info.git_diff_count} files"
 
 
 @click.command()
@@ -107,24 +110,17 @@ def _format_git_column(info: _ResourceInfo) -> str:
 def status(ctx: click.Context) -> None:
     """Show health of all resources."""
     m = get_manifest(ctx)
-    projects = [
-        project for project in m.projects
-        if project.resource is not None and project.resource.boot
+    targets = [
+        (resource, _StatusData(name, m))
+        for name, resource in m.project_resources()
     ]
-    if not projects:
+    if not targets:
         click.echo("  (no resources)")
         return
 
-    infos = []
-    for project in projects:
-        r = project.resource
-        if isinstance(r, SymlinkResource):
-            infos.append(_fetch_symlink_info(project.name, r, m))
-        elif isinstance(r, RemoteResource):
-            infos.append(_fetch_remote_info(project.name, r, m))
-
+    infos = on_targets(targets, local=_fetch_symlink_info, remote=_fetch_remote_info)
     rows = [
-        (info.name, info.health.state, info.resource_type, _format_git_column(info))
+        (info.name, info.health.state, info.resource_type, info.git_diff)
         for info in infos
     ]
     render_table(rows, right_align={3})
