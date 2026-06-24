@@ -12,8 +12,7 @@ from whub.models.manifest import (
     load_manifest,
     resource_names,
 )
-from whub.models.state import PRIORITY_EMOJI, ResourceState, State, load_state, save_state
-from whub.models.todo import Todo, Todos, load_todos, save_todos
+from whub.models.todo import PRIORITY_EMOJI, Todo, Todos, load_todos, save_todos
 
 __all__ = [
     "BaseResource",
@@ -22,17 +21,13 @@ __all__ = [
     "Manifest",
     "PRIORITY_EMOJI",
     "RemoteResource",
-    "ResourceState",
     "Resources",
-    "State",
     "SymlinkResource",
     "Todo",
     "Todos",
     "host_names",
     "load_manifest",
-    "load_state",
     "load_todos",
     "resource_names",
-    "save_state",
     "save_todos",
 ]

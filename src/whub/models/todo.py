@@ -2,9 +2,20 @@
 from __future__ import annotations
 from datetime import date
 from pathlib import Path
+from typing import Literal, get_args
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from whub.models.state import Priority
+
+Priority = Literal["red", "yellow", "blue", "none"]
+PRIORITIES: list[str] = list(get_args(Priority))
+
+PRIORITY_EMOJI: dict[str | None, str] = {
+    "red": "🔴",
+    "yellow": "🟡",
+    "blue": "🔵",
+    "none": "─",
+    None: "─",
+}
 
 TODO_PATH = Path(".whub/todos.yaml")
 

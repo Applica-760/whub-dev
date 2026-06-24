@@ -1,9 +1,8 @@
-"""whub status — show status of all resources."""
+"""whub status — show health of all resources."""
 from __future__ import annotations
 
 import shlex
 import subprocess
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,8 +11,6 @@ import click
 from whub.commands import get_manifest
 from whub.health import ResourceHealth
 from whub.models import Manifest, RemoteResource, SymlinkResource
-from whub.models.manifest import resource_names
-from whub.models.state import PRIORITIES, ResourceState, load_state, save_state
 from whub.remote import run_ssh_command
 from whub.render import render_table
 
@@ -105,85 +102,28 @@ def _format_git_column(info: _ResourceInfo) -> str:
     return f"{info.git_diff_count} files"
 
 
-def _update_state(m: Manifest, resource: str, edit: str | None, priority: str | None) -> None:
-    names = [r.name for r in m.all_resources]
-    if resource not in names:
-        raise click.UsageError(f"unknown resource: {resource}")
-    state = load_state()
-    rs = state.resources.get(resource, ResourceState())
-    if edit is not None:
-        rs = rs.model_copy(update={"status": edit})
-    if priority is not None:
-        rs = rs.model_copy(update={"priority": priority})
-    state.resources[resource] = rs
-    save_state(state)
-    click.echo(f"  {rs.priority_icon} {resource}: {rs.status or ''}")
-
-
-def _show_status(m: Manifest) -> None:
+@click.command()
+@click.pass_context
+def status(ctx: click.Context) -> None:
+    """Show health of all resources."""
+    m = get_manifest(ctx)
     resources = [r for r in m.all_resources if r.boot]
     if not resources:
         click.echo("  (no resources)")
         return
 
-    infos: dict[str, _ResourceInfo] = {}
-
+    infos = []
     for r in resources:
         if isinstance(r, SymlinkResource):
-            infos[r.name] = _fetch_symlink_info(r, m)
+            infos.append(_fetch_symlink_info(r, m))
+        else:
+            infos.append(_fetch_remote_info(r, m))
 
-    remotes = [r for r in resources if isinstance(r, RemoteResource)]
-    if remotes:
-        with ThreadPoolExecutor() as pool:
-            futures = {
-                pool.submit(_fetch_remote_info, r, m): r.name for r in remotes
-            }
-            for future in as_completed(futures):
-                info = future.result()
-                infos[info.name] = info
+    rows = [
+        (info.name, info.health.state, info.resource_type, _format_git_column(info))
+        for info in infos
+    ]
+    render_table(rows, right_align={3})
 
-    state = load_state()
-    all_infos = [infos[r.name] for r in resources]
-
-    failed = False
-    rows = []
-
-    for info in all_infos:
-        rs = state.resources.get(info.name, ResourceState())
-        git_col = _format_git_column(info)
-        rows.append((
-            rs.priority_icon,
-            info.name,
-            info.health.state,
-            info.resource_type,
-            git_col,
-            rs.status or "",
-        ))
-        failed |= info.health.state != "ok"
-
-    for line in render_table(rows, right_align={4}):
-        click.echo(f"  {line}")
-
-    if failed:
+    if any(info.health.state != "ok" for info in infos):
         raise click.exceptions.Exit(1)
-
-
-@click.command()
-@click.argument("resource", required=False, shell_complete=resource_names)
-@click.option("-e", "--edit", metavar="TEXT", help="Set status text")
-@click.option("-p", "--priority", type=click.Choice(PRIORITIES), help="Set priority")
-@click.pass_context
-def status(
-    ctx: click.Context,
-    resource: str | None,
-    edit: str | None,
-    priority: str | None,
-) -> None:
-    """Show status of all resources, or update a resource's state."""
-    m = get_manifest(ctx)
-    if edit is not None or priority is not None:
-        if resource is None:
-            raise click.UsageError("resource name required with -e or -p")
-        _update_state(m, resource, edit, priority)
-    else:
-        _show_status(m)

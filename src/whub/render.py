@@ -5,16 +5,16 @@ from __future__ import annotations
 import unicodedata
 from collections.abc import Sequence
 
+import click
+
 
 def render_table(
     rows: Sequence[Sequence[object]],
     *,
     right_align: set[int] | None = None,
-    padding: str = "  ",
-) -> list[str]:
-    """Render rows as a display-width-aware table."""
+) -> None:
     if not rows:
-        return []
+        return
 
     def display_width(value: object) -> int:
         width = 0
@@ -36,11 +36,9 @@ def render_table(
     ]
     right_aligned = right_align or set()
 
-    lines: list[str] = []
     for row in rows:
         columns = []
         for index, width in enumerate(widths):
             value = row[index] if index < len(row) else ""
             columns.append(pad(value, width, right=index in right_aligned))
-        lines.append(padding.join(columns).rstrip())
-    return lines
+        click.echo(f"  {'  '.join(columns).rstrip()}")
