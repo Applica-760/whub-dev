@@ -1,5 +1,17 @@
 <!-- /task-planning Skills を補強する長期スパンでやりたいこと -->
 
+## 直近の整理順
+
+1. [ ] 用語定義とCLI実装ポリシーをドキュメント化する
+    - Projects / Resources / Todo(tasks) / status / roadmap / specs / ADR / Skillの意味を固定する
+    - Click関数、コマンド固有処理、Target/Router、remote.pyの責務境界を明文化する
+2. [ ] 共通Target/Routerを作る
+    - local/remote差分は`exists` / `read_text` / `write_text` / `append_text` / `run`などの一般操作だけで吸収する
+    - roadmap/status/fetch/editなどの業務ロジックは各コマンド側に残す
+3. [ ] `whub roadmap`を実装する
+    - `<project>/docs/roadmap.md`へ未整理メモを追記する最小CLIとして実装する
+    - roadmapの洗練・昇格はSkill/Agent側に任せる
+
 ## whub CLIの新機能・拡張
 
 - [ ] リモートファイルのオンデマンド操作（SSHFS廃止の代替、方向A: オンデマンドSFTP方式）
@@ -11,16 +23,6 @@
     - 検討済み代替案: Mutagen（双方向リアルタイム同期）は大容量データセットに不向き、filessh/termscp（既存TUIツール）はマニフェスト統合がない
 - [ ] `whub boot`の保守用ドキュメントを書く
     - 配布元、merge/json/skillsの処理、local/remote分岐、SSH・rsync・CodeGraph初期化の関係を記録する
-- [ ] `whub todo` — プロジェクト横断のタスク管理
-    - `whub todo`を叩いたら、やるべきToDoリストが出てきて、完了したらチェックがつく
-    - 複数ワークスペースを統合したからこそ成立する、プロジェクト横断の一元管理
-    - `mind/tasks.md`に、Obsidian起点で試行した痕跡があるが、CLIなら可搬性が高く軽量
-    - 実装要素: `~/.whub/todos.yaml`のPydanticモデル + load/save、curses TUI（Add/Done/Delete/View completed）、resource補完（manifest連携）、priority色分け表示
-    - statusのpriorityを廃止して、
-        - `status`はリンク、接続状態の確認、git差分(未commit/pushがないかの確認)に留めて、
-        - `todo`側に、todo管理、優先度把握を任せる
-        - という構成にするといいのでは？
-
 - [ ] 思考キャプチャ・練り上げの仕組み（検討中）
     - 解きたい問題: 開発中に湧く雑多な思いつきを中断なく記録し、壁打ちを経て仕様レベルまで練り上げたい
     - CLIコマンド（`whub inbox`等）で持つか、mind側のアプリとするか、skillsだけで回すかは未決
@@ -36,12 +38,36 @@
     - リモートリソース操作の実装は完了済み（SSHFS廃止、manifest分離、共通SSH基盤）
     - 残りはこのテスト追加のみ
 
+## 完了済み
+
+- [x] `whub todo` — プロジェクト横断のタスク管理
+    - 実装済み: `.whub/todos.yaml`のPydanticモデル + load/save、`add` / `done` / `rm` / 一覧表示、完了済み表示、resource補完、priority表示
+    - `whub status`のpriority/statusテキストを廃止し、リンク・接続状態・git差分の確認に責務を絞った
+    - TUI(curses)は初期スコープ外。必要性はCLI運用後に再判断する
+    - 残課題: projectとresourceの概念整理、todoの自動テスト追加
+
 ## whub アーキテクチャ・設定
 
 - [ ] projectとresourceの概念・命名・関連付けを整理する
     - resourceは操作対象、projectはTodoの活動単位であり、現状はTodoのprojectをresource名に限定している
     - workspace-hub自身がresourceではないためwhub開発Todoを割り当てられず、複数resourceを1projectに束ねる表現もできない
     - manifestへのproject定義追加と、resourceからprojectへの任意の関連付けを検討する
+- [ ] whub自身の扱いを整理する
+    - workspace-hubはprojectではあるが、mount/link対象ではないためresourceではない
+    - 現状はstatus/cd/todo/roadmapの対象にworkspace-hub自身を自然に含められず、whub関連Todoはprojectなしで仮置きしている
+    - whub運用をproject/resource再設計、todo、roadmap、statusのどこで扱うか決める
+- [ ] whub用語・責務ドキュメントを作る
+    - Projects, Resources, Todo/tasks, state/status, roadmap, specs, ADR, boot配布Skillなどの意味を定義する
+    - CLIコマンドと頒布Skillで同じ語を一貫して使い、AIコンテキストの誤解を減らす
+    - whub自身の位置づけもこのドキュメントで固定する
+- [ ] projectごとの長期計画ドキュメントとwhub導線を設計する
+    - これまでの方針: `whub todo` / `whub status`で全体のタスクと優先度を把握し、`whub cd`で対象projectへ移動し、project内の`docs/roadmap.md`で長期計画を確認する
+    - todoは実行可能な単発アクション、roadmapはprojectごとの長期方針、`/task-planning`は個別作業の実行計画と記録を担う
+    - longterm-todoのproject固有項目は、whub todo運用が安定してから各projectのroadmapへ段階的に移行する
+    - `whub roadmap <project> <text...>`で`<project>/docs/roadmap.md`末尾の未整理メモへ追記する
+    - `init`や`list`は作らず、本文なし実行はエラーにする
+    - roadmap上部は整理済みロードマップ、末尾は未整理メモの投入口としてテンプレートで明確に分ける
+    - 壁打ち、計画の構造化、specs/ADRへの昇華はCLIではなくSkill/Agent側に任せる
 - [ ] `whub`をグローバルコマンドとして登録すべきか検討
     - 現状はリポジトリ内でのみ動作。`~/.whub/`に設定を集約するなら、どこからでも叩けるようにする方が自然
 
