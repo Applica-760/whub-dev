@@ -50,6 +50,14 @@ class Todos(BaseModel):
 
     todos: list[Todo] = Field(default_factory=list)
 
+    @property
+    def pending(self) -> list[Todo]:
+        return [t for t in self.todos if not t.done]
+
+    @property
+    def completed(self) -> list[Todo]:
+        return [t for t in self.todos if t.done]
+
     @model_validator(mode="after")
     def _validate_unique_ids(self) -> Todos:
         ids = [todo.id for todo in self.todos]

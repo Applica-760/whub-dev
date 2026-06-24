@@ -13,37 +13,39 @@ def _project_names(ctx, param, incomplete: str) -> list[str]:
     return none + resource_names(ctx, param, incomplete)
 
 
-def _show_pending() -> None:
-    pending = [item for item in load_todos().todos if not item.done]
-    if not pending:
-        click.echo("  (no pending todos)")
+def _render_list(items: list[Todo], date_label: str, date_fn, *, empty: str) -> None:
+    if not items:
+        click.echo(f"  ({empty})")
         return
-
     rows = []
-    for item in pending:
+    for item in items:
         project = item.project or "-"
-        due = item.due_date.isoformat() if item.due_date else "-"
+        d = date_fn(item)
         rows.append((
             item.id,
             PRIORITY_EMOJI[item.priority],
             item.title,
             project,
-            "created",
-            item.created_at.isoformat(),
-            "due",
-            due,
+            date_label,
+            d.isoformat() if d else "-",
         ))
-
     for line in render_table(rows, right_align={0}):
         click.echo(f"  {line}")
 
 
 @click.group(invoke_without_command=True)
+@click.option("-a", is_flag=True, help="Include completed todos.")
 @click.pass_context
-def todo(ctx: click.Context) -> None:
+def todo(ctx: click.Context, a: bool) -> None:
     """Manage personal todos."""
-    if ctx.invoked_subcommand is None:
-        _show_pending()
+    if ctx.invoked_subcommand is not None:
+        return
+    todos = load_todos()
+    _render_list(todos.pending, "due", lambda t: t.due_date, empty="no pending todos")
+    if a:
+        click.echo()
+        click.echo("  done:")
+        _render_list(todos.completed, "done", lambda t: t.done_at, empty="no completed todos")
 
 
 @todo.command()
@@ -77,3 +79,19 @@ def add(
     todos.todos.append(item)
     save_todos(todos)
     click.echo(f"  added {item.id}: {item.title}")
+
+
+@todo.command()
+@click.argument("todo_id", type=int)
+def done(todo_id: int) -> None:
+    """Mark a todo as done."""
+    todos = load_todos()
+    item = next((t for t in todos.todos if t.id == todo_id), None)
+    if item is None:
+        raise click.UsageError(f"todo not found: {todo_id}")
+    if item.done:
+        raise click.UsageError(f"already done: {todo_id}")
+    item.done = True
+    item.done_at = date.today()
+    save_todos(todos)
+    click.echo(f"  done {item.id}: {item.title}")
