@@ -5,16 +5,14 @@ import shlex
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-
 import click
-
 from whub.commands import get_manifest
 from whub.health import ResourceHealth
 from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.remote import run_ssh_command
 from whub.render import render_table
 from whub.target import on_targets
-
+from whub.health import inspect_symlink
 
 @dataclass(frozen=True)
 class _ResourceInfo:
@@ -31,8 +29,6 @@ class _StatusData:
 
 
 def _fetch_symlink_info(r: SymlinkResource, data: _StatusData) -> _ResourceInfo:
-    from whub.health import inspect_symlink
-
     m = data.manifest
     health = inspect_symlink(r, m)
     git_diff = "-"

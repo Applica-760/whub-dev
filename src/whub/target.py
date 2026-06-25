@@ -1,7 +1,8 @@
 """Target routing for project resources."""
 from __future__ import annotations
 from collections.abc import Callable, Iterable
-from typing import TypeVar, assert_never
+from dataclasses import dataclass
+from typing import Generic, TypeVar, assert_never
 import click
 from whub.models import Manifest, RemoteResource, Resource, SymlinkResource
 
@@ -21,18 +22,24 @@ def resolve_target(manifest: Manifest, project_name: str) -> Resource:
 D = TypeVar("D")
 R = TypeVar("R")
 
+@dataclass(frozen=True)
+class TargetItem(Generic[D]):
+    resource: Resource
+    data: D
+
 def on_targets(
-    targets: Iterable[tuple[Resource, D]],
+    targets: Iterable[TargetItem[D]],
     *,
     local: Callable[[SymlinkResource, D], R],
     remote: Callable[[RemoteResource, D], R],
 ) -> list[R]:
     results: list[R] = []
-    for target, data in targets:
-        if isinstance(target, SymlinkResource):
-            results.append(local(target, data))
-        elif isinstance(target, RemoteResource):
-            results.append(remote(target, data))
+    for target in targets:
+        resource = target.resource
+        if isinstance(resource, SymlinkResource):
+            results.append(local(resource, target.data))
+        elif isinstance(resource, RemoteResource):
+            results.append(remote(resource, target.data))
         else:
-            assert_never(target)
+            assert_never(resource)
     return results

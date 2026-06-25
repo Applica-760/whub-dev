@@ -34,6 +34,8 @@
 - CLI側から、操作対象の`resource`が`remote`か`local`かを意識せず操作できる
 - Clickの`command callback`では`resource`が`remote`か`local`かを秘匿して記述する。条件分岐はローカル関数に移譲する
 - `target`は`resource`と処理データの列を受け取り、`local`/`remote`ごとの関数呼び分けを担う
+- 各コマンドは`target`の入力インターフェースへ処理対象を整形する責務を持つ
+- `target.py`は`resolve_target`など、入力インターフェースへ整形するための汎用ヘルパーを提供する
 - `target`は存在確認、ファイル書き込みのような、`resource`属性ごとに処理が変わるもののうち、一般操作だけを担う
 - `roadmap`のテンプレート、`status`の表示、`boot`の配布手順などのドメイン処理は各コマンド側に置く
 - `remote.py`はSSH/rsyncの低レイヤーを担い、`project`や`roadmap`の意味は持たない

@@ -5,7 +5,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, assert_never
-from whub.models import Manifest, RemoteResource, SymlinkResource
+from whub.models import RemoteResource, SymlinkResource
 from whub.remote import run_ssh_command
 
 HealthState = Literal[
@@ -23,8 +23,8 @@ class ResourceHealth:
     state: HealthState
     detail: str | None = None
 
-def inspect_symlink(resource: SymlinkResource, manifest: Manifest) -> ResourceHealth:
-    target = manifest.resolve_path(resource.workspace_path)
+def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
+    target = Path.cwd() / resource.workspace_path
     source = Path(resource.source).expanduser()
 
     if not source.exists():
@@ -41,11 +41,8 @@ def inspect_symlink(resource: SymlinkResource, manifest: Manifest) -> ResourceHe
         return ResourceHealth("unexpected", str(target))
     return ResourceHealth("missing", str(target))
 
-def inspect_remote(
-    resource: RemoteResource,
-    manifest: Manifest,
-) -> ResourceHealth:
-    host = manifest.hosts[resource.host]
+def inspect_remote(resource: RemoteResource) -> ResourceHealth:
+    host = resource._resolved_host
     try:
         result = run_ssh_command(
             host,
@@ -63,12 +60,9 @@ def inspect_remote(
         return ResourceHealth("missing", resource.path)
     return ResourceHealth("ok")
 
-def inspect_resource(
-    resource: SymlinkResource | RemoteResource,
-    manifest: Manifest,
-) -> ResourceHealth:
+def inspect_resource(resource: SymlinkResource | RemoteResource) -> ResourceHealth:
     if isinstance(resource, SymlinkResource):
-        return inspect_symlink(resource, manifest)
+        return inspect_symlink(resource)
     if isinstance(resource, RemoteResource):
-        return inspect_remote(resource, manifest)
+        return inspect_remote(resource)
     assert_never(resource)

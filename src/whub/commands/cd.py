@@ -7,7 +7,7 @@ import click
 from whub.commands import get_manifest
 from whub.models import Manifest, RemoteResource, SymlinkResource, project_names
 from whub.remote import build_ssh_command
-from whub.target import on_targets, resolve_target
+from whub.target import TargetItem, on_targets, resolve_target
 
 EXIT_SSH = 100
 
@@ -55,7 +55,7 @@ def cd(ctx: click.Context, project: str) -> None:
     """Jump to a project resource (local cd or SSH)."""
     m = get_manifest(ctx)
     resource = resolve_target(m, project)
-    on_targets([(resource, m)], local=_cd_local, remote=_cd_remote)
+    on_targets([TargetItem(resource, m)], local=_cd_local, remote=_cd_remote)
 
 
 @click.command("shell-init")

@@ -52,6 +52,7 @@ class RemoteResource(BaseResource):
     type: Literal["remote"]
     host: str
     path: str
+    _resolved_host: Host | None = PrivateAttr(default=None)
 
     @field_validator("path")
     @classmethod
@@ -89,6 +90,7 @@ class Manifest(SchemaModel):
                     f"project '{project.name}' references unknown host "
                     f"'{resource.host}'"
                 )
+            resource._resolved_host = self.hosts[resource.host]
         return self
 
     @property
