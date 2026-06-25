@@ -169,3 +169,6 @@ Phase 3-1でこの負債を先に解消した上で、Phase 3-2で⭐️案を�
 | `cd._cd_remote` | `manifest.hosts[r.host]` | `_resolved_host` |
 
 # 結果
+
+
+mdが長くなったのでここまでで一旦別mdに移譲。完了扱い

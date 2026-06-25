@@ -1,5 +1,6 @@
 """Manifest models and loader — Pydantic model is SSOT for the schema."""
 from __future__ import annotations
+from collections import Counter
 from typing import Annotated, Literal
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -65,9 +66,11 @@ class RemoteResource(BaseResource):
 
 Resource = Annotated[SymlinkResource | RemoteResource, Field(discriminator="type")]
 
+
 class Project(SchemaModel):
     name: str
     resource: Resource | None = None
+
 
 class Manifest(SchemaModel):
     version: Literal["2"] = "2"
@@ -76,8 +79,11 @@ class Manifest(SchemaModel):
 
     @model_validator(mode="after")
     def _validate_projects(self) -> Manifest:
-        names = [project.name for project in self.projects]
-        duplicates = sorted({name for name in names if names.count(name) > 1})
+        name_counts = Counter(project.name for project in self.projects)
+        duplicates = sorted(
+            name for name, count in name_counts.items()
+            if count > 1
+        )
         if duplicates:
             raise ValueError(f"duplicate project names: {', '.join(duplicates)}")
 
@@ -99,6 +105,7 @@ class Manifest(SchemaModel):
     def resolve_project(self, name: str) -> Project | None:
         return next((project for project in self.projects if project.name == name), None)
 
+
 def load_manifest() -> Manifest:
     text = MANIFEST_PATH.read_text()
     data = yaml.safe_load(text)
@@ -115,11 +122,3 @@ def project_names(ctx, param, incomplete: str) -> list[str]:
         for project in projects
         if project.name.startswith(incomplete)
     ]
-
-def host_names(ctx, param, incomplete: str) -> list[str]:
-    del ctx, param
-    try:
-        hosts = load_manifest().hosts
-    except Exception:
-        return []
-    return [name for name in hosts if name.startswith(incomplete)]

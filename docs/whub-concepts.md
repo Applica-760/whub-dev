@@ -9,7 +9,7 @@
     - `local`: `resource`が持つ属性で、このコンピュータにある`project`データを指す。シンボリックリンクでwhub以下に接続する
 - `workspace-hub`: whub自体の`project`。ただしmount/link対象ではないため、現時点では`resource`ではない
 - `manifest`: `project`、`resource`、接続情報を定義する設定ファイル
-- `target`: `resource`を操作するための実行対象。`local`/`remote`の差を一般操作として吸収する
+- `target`: `resource`を操作するための実行対象。現時点では`local`/`remote`の呼び分け層を指す
 - `roadmap`: `project`ごとの長期方針・思いつき・新機能案を置くドキュメント
 - `todo`: 実行可能な単発アクション。長期方針そのものは`roadmap`に置く
 - `task-planning`: 個別作業の実行計画と作業ログ（skills）
@@ -20,9 +20,12 @@
 # コマンド
 - `status`: whubでの接続状態、ヘルスチェックが目的
 - `cd`: `project`または`resource`へ移動することが目的。`local`ならパス移動、`remote`ならSSH接続
+- `link`: `symlink` resourceをworkspace-hub配下へ接続することが目的
 - `todo`: `project`横断のToDoを管理することが目的。これを見て、自分が次に何をすべきかを決定できるのが理想
-- `roadmap`: `project`ごとの`roadmap`へ未整理メモを追記することが目的
 - `boot`: whubのAgent設定・`Skill`・CodeGraph初期化を各`resource`へ配布することが目的
+
+# 未実装の予定コマンド
+- `roadmap`: `project`ごとの`roadmap`へ未整理メモを追記することが目的
 
 # データモデル制約
 - `project`は活動単位であり、必須フィールドは`name`のみ
@@ -35,9 +38,11 @@
 - Clickの`command callback`では`resource`が`remote`か`local`かを秘匿して記述する。条件分岐はローカル関数に移譲する
 - `target`は`resource`と処理データの列を受け取り、`local`/`remote`ごとの関数呼び分けを担う
 - 各コマンドは`target`の入力インターフェースへ処理対象を整形する責務を持つ
-- `target.py`は`resolve_target`など、入力インターフェースへ整形するための汎用ヘルパーを提供する
-- `target`は存在確認、ファイル書き込みのような、`resource`属性ごとに処理が変わるもののうち、一般操作だけを担う
+- `target.py`は`resolve_project_resource`など、入力インターフェースへ整形するための汎用ヘルパーを提供する
+- 現時点の`target`は`resource`と処理データの組み立て、`local`/`remote`関数の呼び分けを担う
+- 将来的に`target`は存在確認、ファイル書き込みのような、`resource`属性ごとに処理が変わる一般操作も担う
 - `roadmap`のテンプレート、`status`の表示、`boot`の配布手順などのドメイン処理は各コマンド側に置く
+- `boot`はworkspace-hub配布と複雑な配布手順を持つため、現時点ではcallback内の`local`/`remote`分岐を許容する
 - `remote.py`はSSH/rsyncの低レイヤーを担い、`project`や`roadmap`の意味は持たない
 - `Skill`は壁打ち、整理、昇格、仕様化など、CLIに持たせない判断処理を担う
 
@@ -47,5 +52,5 @@
 - `status`は接続状態、ヘルスチェック、git差分確認に責務を絞る
 - `status`は`resource`を持つ全`project`を対象にする
 - `todo`は`project`に紐づく単発アクションを管理する。`project`に`resource`がなくても`todo`は持てる
-- `roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する
+- 未実装の`roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する想定
 - `roadmap`の整理済み領域への昇格、`todo`や`specs`や`ADR`への分解は`Skill`/Agent側で行う

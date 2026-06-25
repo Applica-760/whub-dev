@@ -9,8 +9,7 @@ from whub.models import Manifest, Project, RemoteResource, Resource, SymlinkReso
 class TargetError(click.ClickException):
     pass
 
-# 🚨 resolve_resourceの方が適切では？
-def resolve_target(manifest: Manifest, project_name: str) -> Resource:
+def resolve_project_resource(manifest: Manifest, project_name: str) -> Resource:
     project = manifest.resolve_project(project_name)
     if project is None:
         raise TargetError(f"unknown project: {project_name}")

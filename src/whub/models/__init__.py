@@ -9,7 +9,6 @@ from whub.models.manifest import (
     Resource,
     RemoteResource,
     SymlinkResource,
-    host_names,
     load_manifest,
     project_names,
 )
@@ -27,7 +26,6 @@ __all__ = [
     "SymlinkResource",
     "Todo",
     "Todos",
-    "host_names",
     "load_manifest",
     "load_todos",
     "project_names",
