@@ -5,7 +5,7 @@ import shlex
 import sys
 import click
 from whub.commands import get_manifest
-from whub.models import Manifest, RemoteResource, SymlinkResource, project_names
+from whub.models import RemoteResource, SymlinkResource, project_names
 from whub.remote import build_ssh_command
 from whub.target import TargetItem, on_targets, resolve_target
 
@@ -29,15 +29,19 @@ source <(_WHUB_COMPLETE=zsh_source command whub)
 """
 
 
-def _cd_local(resource: SymlinkResource, manifest: Manifest) -> None:
-    path = manifest.resolve_path(resource.workspace_path)
+def _cd_local(resource: SymlinkResource, _data: None) -> None:
+    path = resource._resolved_workspace_path
+    if path is None:
+        raise click.ClickException("workspace path is unresolved")
     if not path.exists():
         raise click.ClickException(f"symlink target does not exist: {path}")
     click.echo(str(path))
 
 
-def _cd_remote(resource: RemoteResource, manifest: Manifest) -> None:
-    host = manifest.hosts[resource.host]
+def _cd_remote(resource: RemoteResource, _data: None) -> None:
+    host = resource._resolved_host
+    if host is None:
+        raise click.ClickException(f"remote host is unresolved: {resource.host}")
     cmd = build_ssh_command(
         host,
         f"cd {shlex.quote(resource.path)} && exec $SHELL -l",
@@ -55,7 +59,7 @@ def cd(ctx: click.Context, project: str) -> None:
     """Jump to a project resource (local cd or SSH)."""
     m = get_manifest(ctx)
     resource = resolve_target(m, project)
-    on_targets([TargetItem(resource, m)], local=_cd_local, remote=_cd_remote)
+    on_targets([TargetItem(resource, None)], local=_cd_local, remote=_cd_remote)
 
 
 @click.command("shell-init")

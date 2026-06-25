@@ -117,13 +117,13 @@ class ManifestTest(unittest.TestCase):
 
     def test_resolves_workspace_path(self) -> None:
         manifest = Manifest.model_validate(self.data)
-        manifest._root = Path("/workspace")
+        resource = manifest.projects[0].resource
 
+        self.assertIsNotNone(resource)
         self.assertEqual(
-            manifest.resolve_path("projects/local"),
-            Path("/workspace/projects/local"),
+            resource._resolved_workspace_path,
+            Path.cwd() / "projects/local",
         )
-        self.assertEqual(manifest.workspace_root, Path("/workspace"))
 
     def test_resolves_project(self) -> None:
         manifest = Manifest.model_validate(self.data)

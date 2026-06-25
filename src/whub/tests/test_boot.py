@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from whub.models import Manifest
+from whub.models import Manifest, SymlinkResource
 
 
 boot_module = importlib.import_module("whub.commands.boot")
@@ -58,7 +58,10 @@ class BootTest(unittest.TestCase):
                 for name in remotes
             ],
         })
-        manifest._root = root
+        for project in manifest.projects:
+            resource = project.resource
+            if isinstance(resource, SymlinkResource):
+                resource._resolved_workspace_path = root / resource.workspace_path
         return manifest
 
     def test_local_apply_is_idempotent_and_preserves_project_content(self) -> None:

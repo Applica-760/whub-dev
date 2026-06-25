@@ -6,7 +6,7 @@ local/remoteで処理が分かれる一般的なresource操作を、薄いTarget
 ## 前提
 - 正本は`docs/whub-concepts.md`
 - manifestはversion 2で、`Manifest.projects[]`の`Project.resource`に`symlink`または`remote`を任意で持つ
-- 現行APIとして`Manifest.resolve_project(project_name)`、`Manifest.resolve_path(relative)`、`remote.run_ssh_command`が使える
+- 現行APIとして`Manifest.resolve_project(project_name)`、resourceの解決済みPrivateAttr、`remote.run_ssh_command`が使える
 - Routerはproject名から`project.resource`をたどってlocal/remote targetを解決する
 - `resource`を持たないprojectはTarget/Routerの対象外とする
 - Targetは`exists` / `read_text` / `write_text` / `append_text` / `run`程度の一般操作だけを担う
@@ -21,7 +21,7 @@ local/remoteで処理が分かれる一般的なresource操作を、薄いTarget
 - `on_targets(targets, local=..., remote=...)`で、callback側のresource type分岐とループ呼び出しを減らす
 - `roadmap`は今回のスコープ外とする
 - 将来候補として`exists` / `read_text` / `write_text` / `append_text` / `run`をTargetへ寄せる
-- `Manifest.project_resources()`でresourceを持つproject一覧を提供する
+- `collect_targets()`でresourceを持つproject一覧をTargetItem化する
 - `status`は`boot`フラグで絞らず、全resourceを対象にする
 - 暫定候補として`ProjectResource`と`on_targets(items, target=...)`方式を検討する
 - `unhealthy`時の終了判定は現時点では`status`側に残す
@@ -31,7 +31,7 @@ local/remoteで処理が分かれる一般的なresource操作を、薄いTarget
 - `cd`はproject未定義を`unknown project: <name>`、resourceなしprojectを`project has no resource: <name>`で扱っている
 - `boot`はworkspace-hub配布を例外として扱っている
 - `ResourceInfo`はhealth/git差分を持つ実行結果でありmanifest modelでは代替しない
-- `_StatusData`は暫定実装であり、`ProjectResource`導入時に廃止候補とする
+- `_StatusData`は廃止し、`Project`をcallback dataとして渡す
 
 # 計画
 
@@ -56,28 +56,30 @@ local/remoteで処理が分かれる一般的なresource操作を、薄いTarget
 Phase 3の適用中に判明した負債。resourceデータクラスを自己完結させ、Manifestへの不要な依存を断つ。
 
 ### Step 1: RemoteResourceにHost注入
-- [ ] `RemoteResource._host_config: Host | None = PrivateAttr(default=None)` を追加
-- [ ] `Manifest._validate_projects`内で`resource._host_config = self.hosts[resource.host]`を注入
+- [x] `RemoteResource._resolved_host: Host | None = PrivateAttr(default=None)` を追加
+- [x] `Manifest._validate_projects`内で`resource._resolved_host = self.hosts[resource.host]`を注入
 
 ### Step 2: resolve_path / workspace_root の全箇所置換
-すべての呼び出し元を`Path.cwd()`に置換してから、Manifestの定義を削除する。
-- [ ] `health.py`: `inspect_symlink` / `inspect_remote` / `inspect_resource`からmanifest引数を除去
-- [ ] `cd.py`: `_cd_local` / `_cd_remote`からmanifest引数を除去
-- [ ] `link.py`: `m.workspace_root` / `m.resolve_path()`を`Path.cwd()`に置換
-- [ ] `boot.py`: `manifest.workspace_root` / `manifest.resolve_path()`を`Path.cwd()`に置換
+SymlinkResourceへ解決済みworkspace pathを注入し、Manifestの定義を削除する。
+- [x] `health.py`: `inspect_symlink` / `inspect_remote` / `inspect_resource`からmanifest引数を除去（呼び出し元: status.py, link.pyも修正済み）
+- [x] `SymlinkResource._resolved_workspace_path: Path | None = PrivateAttr(default=None)` を追加
+- [x] `Manifest._validate_projects`内で`resource._resolved_workspace_path = Path.cwd() / resource.workspace_path`を注入
+- [x] `cd.py`: `_cd_local` / `_cd_remote`からmanifest引数を除去
+- [x] `link.py`: `m.workspace_root` / `m.resolve_path()`を`resource._resolved_workspace_path`に置換
+- [x] `boot.py`: `manifest.workspace_root` / `manifest.resolve_path()`を`Path.cwd()`/`resource._resolved_workspace_path`に置換
 
 ### Step 3: Manifest._root系の廃止（Step 2完了後）
-- [ ] `Manifest._root` / `resolve_path()` / `workspace_root`プロパティを削除
-- [ ] `load_manifest()`の`m._root = Path.cwd()`を削除
-- [ ] テスト(`test_manifest.py`, `test_boot.py`)を更新
+- [x] `Manifest._root` / `resolve_path()` / `workspace_root`プロパティを削除
+- [x] `load_manifest()`の`m._root = Path.cwd()`を削除
+- [x] テスト(`test_manifest.py`, `test_boot.py`)を更新
 
 ## Phase 3-2: ⭐️案の実装（callbackの中間データクラス廃止）
 Phase 3の適用中に`_StatusData`等の詰め替えが冗長と判明。Phase 3-1でmanifest依存を除去済みのため、シグネチャ変更は1回で済む。
 
-- [ ] target.pyに新関数（仮: `collect_targets`）を追加: manifestを受け取り`list[TargetItem[Project]]`を返す
-- [ ] `status`: `_StatusData`廃止、callbackが`(Resource, Project)`を受ける形に修正
-- [ ] `cd`: callbackが`(Resource, Project)`を受ける形に修正
-- [ ] `Manifest.project_resources()`を廃止（呼び出し元が`collect_targets`に切り替わった後）
+- [x] target.pyに新関数`collect_targets`を追加: manifestを受け取り`list[TargetItem[Project]]`を返す
+- [x] `status`: `_StatusData`廃止、callbackが`(Resource, Project)`を受ける形に修正
+- [x] `Manifest.project_resources()`を廃止（呼び出し元が`collect_targets`に切り替わった後）
+- [x] `cd`: resource情報だけで足りるため`Project`渡しは不採用
 
 ## Phase 4: 検証
 - [ ] target解決と`on_targets`の単体テストを追加する
@@ -85,15 +87,16 @@ Phase 3の適用中に`_StatusData`等の詰め替えが冗長と判明。Phase 
 
 ## 決定事項
 
-### workspace_rootの渡し方 → `Path.cwd()`を直接使用し、Manifest._root / resolve_path()を廃止
+### workspace_rootの渡し方 → `SymlinkResource._resolved_workspace_path`を使用し、Manifest._root / resolve_path()を廃止
 - whubはuv仮想環境の制約でworkspace-hubディレクトリからしか起動しない
 - 現状すでに`MANIFEST_PATH = Path(".whub/manifest.yaml")`と`m._root = Path.cwd()`でcwd前提
-- `Path.cwd()`で全箇所代替可能。`Manifest._root` / `resolve_path()` / `workspace_root`を廃止する
+- `Path.cwd()`は`Manifest._validate_projects`で`SymlinkResource._resolved_workspace_path`へ注入する
+- `Manifest._root` / `resolve_path()` / `workspace_root`を廃止する
 - 対象箇所: health.py, cd.py, link.py, boot.py, テスト
 
 ### hosts解決 → RemoteResourceにPrivateAttrで注入
-- `RemoteResource._host_config: Host | None = PrivateAttr(default=None)` を追加
-- `Manifest._validate_projects`のmodel_validator内で、host検証と同時に`resource._host_config = self.hosts[resource.host]`を注入
+- `RemoteResource._resolved_host: Host | None = PrivateAttr(default=None)` を追加
+- `Manifest._validate_projects`のmodel_validator内で、host検証と同時に`resource._resolved_host = self.hosts[resource.host]`を注入
 - `host: str`（YAMLキー名）はそのまま残す
 - SSOTはYAMLの`hosts:`セクション。各RemoteResourceがHostインスタンスを持つだけで定義の重複なし
 
@@ -114,6 +117,11 @@ Phase 3の適用中に`_StatusData`等の詰め替えが冗長と判明。Phase 
 - 結果: `_StatusData`を廃止でき、manifestはresource付きproject要素の提供に集中できる見込み
 - 判断: 保留
 
+### 試行 4: `collect_targets`でProjectをcallback dataにする
+- 実施内容: `target.py`へ`collect_targets`を追加し、`status`の`_StatusData`と`Manifest.project_resources()`を廃止した
+- 結果: `status`は`Project`からnameを取得し、`cd`はresourceだけで足りるためProject渡し対象外とした
+- 判断: 続行
+
 ⭐️案
 ・_StatusDataデータクラスを廃止、project_resources関数の廃止
 ・（いい感じの名前を後で定めた上で）targetに関数を新設する。
@@ -132,8 +140,8 @@ _fetch_*_info()関数は、現時点ではリソースのデータクラス、na
 _fetch_*_info()は、あるプロジェクトの`Project`データクラスさえ受け取れば、nameを取得できるし、投入されるデータクラスも、on_targets()関数がソートするので、
 symlink, remoteいずれか、関数が要求するデータクラスが勝手に投入される
 
-target新設関数が、on_targetに投げるTargetItemのリストを作る。同時に投げるlocal, remote関数も修正する
-on_target内のループで、projectデータモデルが、そのリソースのデータクラスに応じた関数に渡される
+target新設関数が、on_targetsに投げるTargetItemのリストを作る。同時に投げるlocal, remote関数も修正する
+on_targets内のループで、projectデータモデルが、そのリソースのデータクラスに応じた関数に渡される
 
 ## ⭐️案の評価
 
@@ -144,20 +152,20 @@ on_target内のループで、projectデータモデルが、そのリソース�
 
 ### 前提として必要な負債解消
 health.py / cd.pyのcallbackがmanifestを丸ごと受け取っているが、実際に使うのは以下の2つだけ:
-- `workspace_root: Path` — symlink系が`resolve_path`経由で使用
-- `hosts[key] -> Host` — remote系がホスト情報取得に使用
+- `SymlinkResource._resolved_workspace_path` — symlink系のworkspace内path
+- `RemoteResource._resolved_host` — remote系のHostデータクラス
 
 これらはresourceデータクラスのフィールドでカバーできる情報であり、Manifestへの依存は不要。
-Phase 4でこの負債を先に解消した上で、Phase 5で⭐️案を実装する。
+Phase 3-1でこの負債を先に解消した上で、Phase 3-2で⭐️案を実装する。
 
 ### manifest依存の実態（確認済み）
 | 箇所 | manifest経由で取得 | 本質的に必要なもの |
 |------|------|------|
-| `inspect_symlink` | `manifest.resolve_path(workspace_path)` | `workspace_root` |
-| `inspect_remote` | `manifest.hosts[r.host]` | `Host`データクラス |
+| `inspect_symlink` | `manifest.resolve_path(workspace_path)` | `_resolved_workspace_path` |
+| `inspect_remote` | `manifest.hosts[r.host]` | `_resolved_host` |
 | `_fetch_symlink_info` | `inspect_symlink(r, m)` | 上記の間接依存 |
 | `_fetch_remote_info` | `m.hosts[r.host]` | 同上 |
-| `cd._cd_local` | `manifest.resolve_path(workspace_path)` | `workspace_root` |
-| `cd._cd_remote` | `manifest.hosts[r.host]` | `Host` |
+| `cd._cd_local` | `manifest.resolve_path(workspace_path)` | `_resolved_workspace_path` |
+| `cd._cd_remote` | `manifest.hosts[r.host]` | `_resolved_host` |
 
 # 結果

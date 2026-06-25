@@ -29,6 +29,7 @@ class SymlinkResource(BaseResource):
     type: Literal["symlink"]
     workspace_path: str
     source: str
+    _resolved_workspace_path: Path | None = PrivateAttr(default=None)
 
     @field_validator("workspace_path")
     @classmethod
@@ -72,7 +73,6 @@ class Manifest(SchemaModel):
     version: Literal["2"] = "2"
     hosts: dict[str, Host] = Field(default_factory=dict)
     projects: list[Project] = Field(default_factory=list)
-    _root: Path = PrivateAttr(default=Path("."))
 
     @model_validator(mode="after")
     def _validate_projects(self) -> Manifest:
@@ -83,6 +83,9 @@ class Manifest(SchemaModel):
 
         for project in self.projects:
             resource = project.resource
+            if isinstance(resource, SymlinkResource):
+                resource._resolved_workspace_path = Path.cwd() / resource.workspace_path
+                continue
             if not isinstance(resource, RemoteResource):
                 continue
             if resource.host not in self.hosts:
@@ -93,29 +96,13 @@ class Manifest(SchemaModel):
             resource._resolved_host = self.hosts[resource.host]
         return self
 
-    @property
-    def workspace_root(self) -> Path:
-        return self._root
-
-    def resolve_path(self, relative: str) -> Path:
-        return self._root / relative
-
     def resolve_project(self, name: str) -> Project | None:
         return next((project for project in self.projects if project.name == name), None)
-
-    def project_resources(self) -> list[tuple[str, Resource]]:
-        return [
-            (project.name, project.resource)
-            for project in self.projects
-            if project.resource is not None
-        ]
 
 def load_manifest() -> Manifest:
     text = MANIFEST_PATH.read_text()
     data = yaml.safe_load(text)
-    m = Manifest.model_validate(data)
-    m._root = Path.cwd()
-    return m
+    return Manifest.model_validate(data)
 
 def project_names(ctx, param, incomplete: str) -> list[str]:
     del ctx, param

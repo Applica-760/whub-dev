@@ -8,10 +8,10 @@ from pathlib import Path
 import click
 from whub.commands import get_manifest
 from whub.health import ResourceHealth
-from whub.models import Manifest, RemoteResource, SymlinkResource
+from whub.models import Project, RemoteResource, SymlinkResource
 from whub.remote import run_ssh_command
 from whub.render import render_table
-from whub.target import on_targets
+from whub.target import collect_targets, on_targets
 from whub.health import inspect_symlink
 
 @dataclass(frozen=True)
@@ -22,15 +22,8 @@ class _ResourceInfo:
     git_diff: str = "-"
 
 
-@dataclass(frozen=True)
-class _StatusData:
-    name: str
-    manifest: Manifest
-
-
-def _fetch_symlink_info(r: SymlinkResource, data: _StatusData) -> _ResourceInfo:
-    m = data.manifest
-    health = inspect_symlink(r, m)
+def _fetch_symlink_info(r: SymlinkResource, project: Project) -> _ResourceInfo:
+    health = inspect_symlink(r)
     git_diff = "-"
 
     if health.state == "ok" and r.git is not None:
@@ -49,19 +42,26 @@ def _fetch_symlink_info(r: SymlinkResource, data: _StatusData) -> _ResourceInfo:
             pass
 
     return _ResourceInfo(
-        name=data.name,
+        name=project.name,
         resource_type=r.type,
         health=health,
         git_diff=git_diff,
     )
 
-
-def _fetch_remote_info(r: RemoteResource, data: _StatusData) -> _ResourceInfo:
-    m = data.manifest
-    host = m.hosts[r.host]
+# 🚨エラーが発生したら失敗原因が伝わるInfoオブジェクトを返しているがこのフローは適切か？
+def _fetch_remote_info(r: RemoteResource, project: Project) -> _ResourceInfo:
+    host = r._resolved_host
     health: ResourceHealth
     git_diff = "-"
+    if host is None:
+        return _ResourceInfo(
+            name=project.name,
+            resource_type=r.type,
+            health=ResourceHealth("unexpected", "remote host is unresolved"),
+            git_diff=git_diff,
+        )
 
+    # このif elseは適切？　コマンド組み立てはここで直接持たせてもいいのかね
     if r.git is not None:
         cmd = (
             f"test -d {shlex.quote(r.path)}"
@@ -76,7 +76,7 @@ def _fetch_remote_info(r: RemoteResource, data: _StatusData) -> _ResourceInfo:
         )
     except (OSError, subprocess.TimeoutExpired) as error:
         return _ResourceInfo(
-            name=data.name,
+            name=project.name,
             resource_type=r.type,
             health=ResourceHealth("unreachable", str(error)),
             git_diff=git_diff,
@@ -94,7 +94,7 @@ def _fetch_remote_info(r: RemoteResource, data: _StatusData) -> _ResourceInfo:
             git_diff = f"{len(lines)} files"
 
     return _ResourceInfo(
-        name=data.name,
+        name=project.name,
         resource_type=r.type,
         health=health,
         git_diff=git_diff,
@@ -106,14 +106,12 @@ def _fetch_remote_info(r: RemoteResource, data: _StatusData) -> _ResourceInfo:
 def status(ctx: click.Context) -> None:
     """Show health of all resources."""
     m = get_manifest(ctx)
-    targets = [
-        (resource, _StatusData(name, m))
-        for name, resource in m.project_resources()
-    ]
+    targets = collect_targets(m)
     if not targets:
         click.echo("  (no resources)")
         return
 
+    # 🚨resource_infosの方が親切では？
     infos = on_targets(targets, local=_fetch_symlink_info, remote=_fetch_remote_info)
     rows = [
         (info.name, info.health.state, info.resource_type, info.git_diff)

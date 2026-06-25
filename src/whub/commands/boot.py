@@ -15,7 +15,7 @@ from importlib.resources import as_file, files
 from pathlib import Path
 from typing import Callable, Iterator
 from whub.commands import get_manifest
-from whub.models import Host, RemoteResource, SymlinkResource
+from whub.models import RemoteResource, SymlinkResource
 from whub.remote import run_rsync_command, run_ssh_command
 
 _MARKERS = {
@@ -180,10 +180,12 @@ def _apply_local_boot(
 def _apply_remote_boot(
     source: Path,
     targets: list[tuple[str, RemoteResource]],
-    hosts: dict[str, Host],
 ) -> None:
     for name, resource in targets:
-        host = hosts[resource.host]
+        host = resource._resolved_host
+        if host is None:
+            click.echo(f"  {'WARN':6s}  {name}: remote host is unresolved")
+            continue
         try:
             def read(rel: str) -> str | None:
                 full = shlex.quote(f"{resource.path}/{rel}")
@@ -244,14 +246,18 @@ def _apply_remote_boot(
 def boot(ctx: click.Context) -> None:
     """Deploy agent bootstrap config to target resources."""
     manifest = get_manifest(ctx)
-    local_targets = [("workspace-hub", manifest.workspace_root)]
+    local_targets = [("workspace-hub", Path.cwd())]
     remote_targets = []
     for project in manifest.projects:
         resource = project.resource
         if isinstance(resource, SymlinkResource) and resource.boot:
+            target = resource._resolved_workspace_path
+            if target is None:
+                click.echo(f"  {'WARN':6s}  {project.name}: workspace path is unresolved")
+                continue
             local_targets.append((
                 project.name,
-                manifest.resolve_path(resource.workspace_path),
+                target,
             ))
         elif isinstance(resource, RemoteResource) and resource.boot:
             remote_targets.append((project.name, resource))
@@ -262,4 +268,4 @@ def boot(ctx: click.Context) -> None:
             local_targets,
             shutil.which("codegraph"),
         )
-        _apply_remote_boot(source, remote_targets, manifest.hosts)
+        _apply_remote_boot(source, remote_targets)

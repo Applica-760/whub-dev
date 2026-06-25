@@ -4,12 +4,12 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Generic, TypeVar, assert_never
 import click
-from whub.models import Manifest, RemoteResource, Resource, SymlinkResource
+from whub.models import Manifest, Project, RemoteResource, Resource, SymlinkResource
 
 class TargetError(click.ClickException):
     pass
 
-
+# 🚨 resolve_resourceの方が適切では？
 def resolve_target(manifest: Manifest, project_name: str) -> Resource:
     project = manifest.resolve_project(project_name)
     if project is None:
@@ -27,6 +27,15 @@ class TargetItem(Generic[D]):
     resource: Resource
     data: D
 
+# resourceを持つprojectのTargetItemをreturn
+def collect_targets(manifest: Manifest) -> list[TargetItem[Project]]:
+    return [
+        TargetItem(project.resource, project)
+        for project in manifest.projects
+        if project.resource is not None
+    ]
+
+# Resource種別により異なる関数を実行
 def on_targets(
     targets: Iterable[TargetItem[D]],
     *,
