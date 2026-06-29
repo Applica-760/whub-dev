@@ -15,8 +15,9 @@ from importlib.resources import as_file, files
 from pathlib import Path
 from typing import Callable, Iterator
 from whub.commands import get_manifest
-from whub.models import RemoteResource, SymlinkResource
+from whub.models import Manifest, Project, RemoteResource, SymlinkResource
 from whub.remote import run_rsync_command, run_ssh_command
+from whub.target import TargetItem
 
 _MARKERS = {
     ".md": ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->"),
@@ -240,26 +241,41 @@ def _apply_remote_boot(
         click.echo(f"  {'init':6s}  {name} (CodeGraph)")
 
 
+def _collect_boot_targets(manifest: Manifest) -> list[TargetItem[Project]]:
+    targets: list[TargetItem[Project]] = []
+    for project in manifest.projects:
+        resource = project.resource
+        if resource is None or not resource.boot:
+            continue
+        if isinstance(resource, SymlinkResource) and resource._resolved_workspace_path is None:
+            click.echo(f"  {'WARN':6s}  {project.name}: workspace path is unresolved")
+            continue
+        targets.append(TargetItem(resource, project))
+    return targets
+
+
 # ── CLI ───────────────────────────────────────────────────────────
 @click.command()
 @click.pass_context
 def boot(ctx: click.Context) -> None:
     """Deploy agent bootstrap config to target resources."""
     manifest = get_manifest(ctx)
+    targets = _collect_boot_targets(manifest)
     local_targets = [("workspace-hub", Path.cwd())]
     remote_targets = []
-    for project in manifest.projects:
-        resource = project.resource
-        if isinstance(resource, SymlinkResource) and resource.boot:
-            target = resource._resolved_workspace_path
-            if target is None:
+    for item in targets:
+        project = item.data
+        resource = item.resource
+        if isinstance(resource, SymlinkResource):
+            local_path = resource._resolved_workspace_path
+            if local_path is None:
                 click.echo(f"  {'WARN':6s}  {project.name}: workspace path is unresolved")
                 continue
             local_targets.append((
                 project.name,
-                target,
+                local_path,
             ))
-        elif isinstance(resource, RemoteResource) and resource.boot:
+        elif isinstance(resource, RemoteResource):
             remote_targets.append((project.name, resource))
 
     with as_file(files("whub").joinpath("boot")) as source:

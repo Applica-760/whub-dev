@@ -2,7 +2,8 @@
 from __future__ import annotations
 from datetime import date, datetime
 import click
-from whub.models import load_manifest, project_names
+from whub.commands import get_manifest
+from whub.models import project_names
 from whub.models.todo import PRIORITIES, PRIORITY_EMOJI, Todo, load_todos, save_todos
 from whub.render import render_table
 
@@ -31,6 +32,23 @@ def _render_list(items: list[Todo], date_label: str, date_fn, *, empty: str) -> 
     render_table(rows, right_align={0})
 
 
+def _priority_rank(item: Todo) -> int:
+    return PRIORITIES.index(item.priority)
+
+
+def _pending_sort_key(item: Todo) -> tuple[bool, date, int, int]:
+    return (
+        item.due_date is None,
+        item.due_date or date.max,
+        _priority_rank(item),
+        item.id,
+    )
+
+
+def _completed_sort_key(item: Todo) -> tuple[date, int]:
+    return (item.done_at or date.max, item.id)
+
+
 @click.group(invoke_without_command=True)
 @click.option("-a", is_flag=True, help="Include completed todos.")
 @click.pass_context
@@ -39,11 +57,13 @@ def todo(ctx: click.Context, a: bool) -> None:
     if ctx.invoked_subcommand is not None:
         return
     todos = load_todos()
-    _render_list(todos.pending, "due", lambda t: t.due_date, empty="no pending todos")
+    pending = sorted(todos.pending, key=_pending_sort_key)
+    _render_list(pending, "due", lambda t: t.due_date, empty="no pending todos")
     if a:
         click.echo()
         click.echo("  done:")
-        _render_list(todos.completed, "done", lambda t: t.done_at, empty="no completed todos")
+        completed = sorted(todos.completed, key=_completed_sort_key)
+        _render_list(completed, "done", lambda t: t.done_at, empty="no completed todos")
 
 
 @todo.command()
@@ -51,7 +71,9 @@ def todo(ctx: click.Context, a: bool) -> None:
 @click.argument("project", shell_complete=_project_names)
 @click.argument("priority", type=click.Choice(PRIORITIES))
 @click.argument("due_date", required=False, type=click.DateTime(formats=["%Y-%m-%d"]))
+@click.pass_context
 def add(
+    ctx: click.Context,
     title: str,
     project: str,
     priority: str,
@@ -60,7 +82,7 @@ def add(
     """Add a todo."""
     project_name = None if project == "none" else project
     if project_name is not None:
-        if load_manifest().resolve_project(project_name) is None:
+        if get_manifest(ctx).resolve_project(project_name) is None:
             raise click.UsageError(f"unknown project: {project_name}")
 
     todos = load_todos()

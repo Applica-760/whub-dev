@@ -21,7 +21,7 @@ class _ResourceInfo:
     git_diff: str = "-"
 
 
-def _fetch_symlink_info(r: SymlinkResource, project: Project) -> _ResourceInfo:
+def _fetch_local_info(r: SymlinkResource, project: Project) -> _ResourceInfo:
     health = inspect_symlink(r)
     git_diff = "-"
 
@@ -85,7 +85,7 @@ def status(ctx: click.Context) -> None:
         click.echo("  (no resources)")
         return
 
-    resource_infos = on_targets(targets, local=_fetch_symlink_info, remote=_fetch_remote_info,)
+    resource_infos = on_targets(targets, local=_fetch_local_info, remote=_fetch_remote_info,)
     rows = [
         (info.name, info.health.state, info.resource_type, info.git_diff)
         for info in resource_infos
