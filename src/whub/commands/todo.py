@@ -1,6 +1,7 @@
 """whub todo — manage personal todos."""
 from __future__ import annotations
-from datetime import date, datetime
+import re
+from datetime import date
 import click
 from whub.commands import get_manifest
 from whub.models import project_names
@@ -25,6 +26,31 @@ def _format_date_cell(value: date | None, *, urgent: bool) -> object:
     if remaining_days <= 7:
         return TableCell(text, fg="yellow")
     return text
+
+
+def _parse_due_date(value: str | None, *, today: date | None = None) -> date | None:
+    if value is None:
+        return None
+
+    try:
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            return date.fromisoformat(value)
+
+        if re.fullmatch(r"\d{4}", value):
+            current = today or date.today()
+            month = int(value[:2])
+            day = int(value[2:])
+            candidate = date(current.year, month, day)
+            if candidate < current:
+                candidate = date(current.year + 1, month, day)
+            return candidate
+    except ValueError as error:
+        raise click.BadParameter(
+            "expected valid YYYY-MM-DD or MMDD",
+            param_hint="due_date",
+        ) from error
+
+    raise click.BadParameter("expected YYYY-MM-DD or MMDD", param_hint="due_date")
 
 
 def _render_list(
@@ -101,14 +127,14 @@ def todo(ctx: click.Context, a: bool) -> None:
 @click.argument("title")
 @click.argument("project", shell_complete=_project_names)
 @click.argument("priority", type=click.Choice(PRIORITIES))
-@click.argument("due_date", required=False, type=click.DateTime(formats=["%Y-%m-%d"]))
+@click.argument("due_date", required=False)
 @click.pass_context
 def add(
     ctx: click.Context,
     title: str,
     project: str,
     priority: str,
-    due_date: datetime | None,
+    due_date: str | None,
 ) -> None:
     """Add a todo."""
     project_name = None if project == "none" else project
@@ -124,7 +150,7 @@ def add(
         project=project_name,
         priority=priority,
         created_at=date.today(),
-        due_date=due_date.date() if due_date else None,
+        due_date=_parse_due_date(due_date),
     )
     todos.todos.append(item)
     save_todos(todos)
