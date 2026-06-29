@@ -12,12 +12,13 @@ import shlex
 import shutil
 import subprocess
 from importlib.resources import as_file, files
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Callable, Iterator
 from whub.commands import get_manifest
-from whub.models import Manifest, Project, RemoteResource, SymlinkResource
+from whub.models import Host, Manifest, Project, RemoteResource, SymlinkResource
 from whub.remote import run_rsync_command, run_ssh_command
-from whub.target import TargetItem
+from whub.target import TargetItem, on_targets
 
 _MARKERS = {
     ".md": ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->"),
@@ -91,24 +92,28 @@ def _merge_json(overlay_text: str, existing: str | None) -> str:
 ReadFn = Callable[[str], str | None]
 
 
+def _boot_assets() -> Traversable:
+    return files("whub").joinpath("boot")
+
+
 def _merged_files(
-    source: Path,
+    boot_assets: Path,
     read: ReadFn,
 ) -> Iterator[tuple[str, str]]:
-    for src in (source / "merge").rglob("*"):
+    for src in (boot_assets / "merge").rglob("*"):
         if not src.is_file():
             continue
-        rel = src.relative_to(source / "merge").as_posix()
+        rel = src.relative_to(boot_assets / "merge").as_posix()
         dst_rel = _RENAME.get(rel, rel)
         markers = next(m for s, m in _MARKERS.items() if dst_rel.endswith(s))
         existing = read(dst_rel)
         merged = _merge_section(src.read_text(), existing, markers)
         if merged != existing:
             yield dst_rel, merged
-    for src in (source / "json").rglob("*"):
+    for src in (boot_assets / "json").rglob("*"):
         if not src.is_file():
             continue
-        rel = src.relative_to(source / "json").as_posix()
+        rel = src.relative_to(boot_assets / "json").as_posix()
         existing = read(rel)
         merged = _merge_json(src.read_text(), existing)
         if merged != existing:
@@ -128,66 +133,109 @@ def _process_error(error: OSError | subprocess.SubprocessError) -> str:
     return str(error)
 
 
-def _apply_local_boot(
-    source: Path,
-    targets: list[tuple[str, Path]],
-    codegraph: str | None,
-) -> None:
+def _init_local_codegraph(name: str, target: Path) -> None:
+    codegraph = shutil.which("codegraph")
     if codegraph is None:
-        click.echo("  WARN    codegraph not found; skipped for local resources")
+        click.echo(f"  {'WARN':6s}  {name}: codegraph not found; skipped")
+        return
+    try:
+        subprocess.run(
+            [codegraph, "init", str(target)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        click.echo(
+            f"  {'WARN':6s}  {name}: CodeGraph init failed:"
+            f" {_process_error(error)}",
+        )
+        return
+    click.echo(f"  {'init':6s}  {name} (CodeGraph)")
 
-    for name, target in targets:
-        if not target.exists():
-            click.echo(f"  {'skip':6s}  {name} (not found)")
-            continue
-        try:
+
+def _init_remote_codegraph(
+    name: str,
+    resource: RemoteResource,
+    host: Host,
+) -> None:
+    try:
+        run_ssh_command(
+            host,
+            f'source "$HOME/.nvm/nvm.sh" 2>/dev/null;'
+            f" codegraph init {shlex.quote(resource.path)}",
+            timeout=60,
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        click.echo(
+            f"  {'WARN':6s}  {name}: CodeGraph init failed:"
+            f" {_process_error(error)}",
+        )
+        return
+    click.echo(f"  {'init':6s}  {name} (CodeGraph)")
+
+
+def _apply_local_boot(
+    resource: SymlinkResource,
+    project: Project,
+) -> None:
+    name = project.name
+    target = resource._resolved_workspace_path
+    if target is None:
+        click.echo(f"  {'WARN':6s}  {name}: workspace path is unresolved")
+        return
+    if not target.exists():
+        click.echo(f"  {'skip':6s}  {name} (not found)")
+        return
+
+    try:
+        with as_file(_boot_assets()) as boot_assets:
             def read(rel: str) -> str | None:
                 path = target / rel
                 return path.read_text() if path.exists() else None
 
-            for rel, content in _merged_files(source, read):
+            for rel, content in _merged_files(boot_assets, read):
                 destination = target / rel
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_text(content)
             for dest in _SKILLS_DESTS:
                 shutil.copytree(
-                    source / "skills",
+                    boot_assets / "skills",
                     target / dest,
                     dirs_exist_ok=True,
                 )
-        except (OSError, ValueError) as error:
-            click.echo(f"  {'WARN':6s}  {name}: deploy failed: {error}")
-            continue
-        click.echo(f"  {'done':6s}  {name}")
+    except (OSError, ValueError) as error:
+        click.echo(f"  {'WARN':6s}  {name}: deploy failed: {error}")
+        return
+    click.echo(f"  {'done':6s}  {name}")
+    _init_local_codegraph(name, target)
 
-        if codegraph is None:
-            continue
-        try:
-            subprocess.run(
-                [codegraph, "init", str(target)],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=True,
-            )
-        except (OSError, subprocess.SubprocessError) as error:
-            click.echo(
-                f"  {'WARN':6s}  {name}: CodeGraph init failed:"
-                f" {_process_error(error)}",
-            )
-            continue
-        click.echo(f"  {'init':6s}  {name} (CodeGraph)")
+
+def _apply_workspace_boot() -> None:
+    resource = SymlinkResource(
+        type="symlink",
+        workspace_path=".",
+        source=str(Path.cwd()),
+        boot=True,
+    )
+    resource._resolved_workspace_path = Path.cwd()
+    _apply_local_boot(resource, Project(name="workspace-hub", resource=resource))
+
 
 def _apply_remote_boot(
-    source: Path,
-    targets: list[tuple[str, RemoteResource]],
+    resource: RemoteResource,
+    project: Project,
 ) -> None:
-    for name, resource in targets:
-        host = resource._resolved_host
-        if host is None:
-            click.echo(f"  {'WARN':6s}  {name}: remote host is unresolved")
-            continue
-        try:
+    name = project.name
+    host = resource._resolved_host
+    if host is None:
+        click.echo(f"  {'WARN':6s}  {name}: remote host is unresolved")
+        return
+
+    try:
+        with as_file(_boot_assets()) as boot_assets:
             def read(rel: str) -> str | None:
                 full = shlex.quote(f"{resource.path}/{rel}")
                 result = run_ssh_command(
@@ -198,7 +246,7 @@ def _apply_remote_boot(
                 )
                 return result.stdout or None
 
-            for rel, content in _merged_files(source, read):
+            for rel, content in _merged_files(boot_assets, read):
                 full = f"{resource.path}/{rel}"
                 run_ssh_command(
                     host,
@@ -211,34 +259,19 @@ def _apply_remote_boot(
             for dest in _SKILLS_DESTS:
                 run_rsync_command(
                     host,
-                    str(source / "skills"),
+                    str(boot_assets / "skills"),
                     f"{resource.path}/{dest}",
                     timeout=30,
                     check=True,
                 )
-        except (OSError, ValueError, subprocess.SubprocessError) as error:
-            click.echo(
-                f"  {'WARN':6s}  {name}: deploy failed:"
-                f" {_process_error(error)}",
-            )
-            continue
-        click.echo(f"  {'done':6s}  {name}")
-
-        try:
-            run_ssh_command(
-                host,
-                f'source "$HOME/.nvm/nvm.sh" 2>/dev/null;'
-                f" codegraph init {shlex.quote(resource.path)}",
-                timeout=60,
-                check=True,
-            )
-        except (OSError, subprocess.SubprocessError) as error:
-            click.echo(
-                f"  {'WARN':6s}  {name}: CodeGraph init failed:"
-                f" {_process_error(error)}",
-            )
-            continue
-        click.echo(f"  {'init':6s}  {name} (CodeGraph)")
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        click.echo(
+            f"  {'WARN':6s}  {name}: deploy failed:"
+            f" {_process_error(error)}",
+        )
+        return
+    click.echo(f"  {'done':6s}  {name}")
+    _init_remote_codegraph(name, resource, host)
 
 
 def _collect_boot_targets(manifest: Manifest) -> list[TargetItem[Project]]:
@@ -246,9 +279,6 @@ def _collect_boot_targets(manifest: Manifest) -> list[TargetItem[Project]]:
     for project in manifest.projects:
         resource = project.resource
         if resource is None or not resource.boot:
-            continue
-        if isinstance(resource, SymlinkResource) and resource._resolved_workspace_path is None:
-            click.echo(f"  {'WARN':6s}  {project.name}: workspace path is unresolved")
             continue
         targets.append(TargetItem(resource, project))
     return targets
@@ -261,27 +291,5 @@ def boot(ctx: click.Context) -> None:
     """Deploy agent bootstrap config to target resources."""
     manifest = get_manifest(ctx)
     targets = _collect_boot_targets(manifest)
-    local_targets = [("workspace-hub", Path.cwd())]
-    remote_targets = []
-    for item in targets:
-        project = item.data
-        resource = item.resource
-        if isinstance(resource, SymlinkResource):
-            local_path = resource._resolved_workspace_path
-            if local_path is None:
-                click.echo(f"  {'WARN':6s}  {project.name}: workspace path is unresolved")
-                continue
-            local_targets.append((
-                project.name,
-                local_path,
-            ))
-        elif isinstance(resource, RemoteResource):
-            remote_targets.append((project.name, resource))
-
-    with as_file(files("whub").joinpath("boot")) as source:
-        _apply_local_boot(
-            source,
-            local_targets,
-            shutil.which("codegraph"),
-        )
-        _apply_remote_boot(source, remote_targets)
+    _apply_workspace_boot()
+    on_targets(targets, local=_apply_local_boot, remote=_apply_remote_boot)

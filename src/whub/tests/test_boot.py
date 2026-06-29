@@ -5,13 +5,12 @@ import json
 import subprocess
 import tempfile
 import unittest
-from importlib.resources import as_file, files
 from pathlib import Path
 from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from whub.models import Manifest, SymlinkResource
+from whub.models import Manifest, Project, SymlinkResource
 
 
 boot_module = importlib.import_module("whub.commands.boot")
@@ -81,20 +80,27 @@ class BootTest(unittest.TestCase):
                 "projectSetting": True,
             }))
 
-            with as_file(files("whub").joinpath("boot")) as source:
+            resource = SymlinkResource(
+                type="symlink",
+                workspace_path=".",
+                source=str(target),
+                boot=True,
+            )
+            resource._resolved_workspace_path = target
+            project = Project(name="target", resource=resource)
+
+            with patch.object(boot_module.shutil, "which", return_value=None):
                 boot_module._apply_local_boot(
-                    source,
-                    [("target", target)],
-                    codegraph=None,
+                    resource,
+                    project,
                 )
                 first = {
                     path.relative_to(target): path.read_bytes()
                     for path in target.rglob("*") if path.is_file()
                 }
                 boot_module._apply_local_boot(
-                    source,
-                    [("target", target)],
-                    codegraph=None,
+                    resource,
+                    project,
                 )
                 second = {
                     path.relative_to(target): path.read_bytes()
@@ -163,7 +169,7 @@ class BootTest(unittest.TestCase):
             self.assertIn("first: CodeGraph init failed: failed", result.output)
             self.assertIn("second (CodeGraph)", result.output)
 
-    def test_missing_codegraph_warns_once_and_keeps_deploying(self) -> None:
+    def test_missing_codegraph_warns_per_local_target_and_keeps_deploying(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "project").mkdir()
@@ -181,7 +187,7 @@ class BootTest(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0)
             self.assertEqual(copytree.call_count, 4)
-            self.assertEqual(result.output.count("codegraph not found"), 1)
+            self.assertEqual(result.output.count("codegraph not found"), 2)
 
     def test_remote_codegraph_failure_does_not_stop_later_targets(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

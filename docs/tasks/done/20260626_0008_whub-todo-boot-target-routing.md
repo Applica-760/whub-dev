@@ -40,31 +40,33 @@
 
 
 ## Phase 3: `boot`へのTarget導入
-- [x] `_collect_boot_targets()`を`boot: true` / resourceあり / local path解決可能な`TargetItem[Project]`だけ返す前処理へ変更する
-- [ ] local配布本体を`_apply_local_path_boot(source, name, target)`へ抽出し、CodeGraph検出・初期化も内部で行う
-- [ ] `_apply_local_boot(resource, project, source)`を`on_targets()` callback形式に合わせた単一target処理へ変更する
-- [ ] `_apply_workspace_boot(source)`を追加し、`_apply_local_path_boot(source, "workspace-hub", Path.cwd())`を呼ぶ
-- [ ] `_apply_remote_boot(resource, project, source)`を`on_targets()` callback形式に合わせた単一target処理へ変更する
-- [ ] `source`変数を`boot_assets`へ改名し、`src/whub/boot/`参照をboot.py内のhelperへ閉じる
-- [ ] `boot()` callbackを`manifest取得`、`targets準備`、`boot_assets取得`、`workspace-hub適用`、`on_targets()`呼び出しだけに薄くする
-- [ ] 既存bootテストを単一target applyとworkspace-hub例外の構成に合わせて更新する
+- [x] `_collect_boot_targets()`を`boot: true` / resourceありの`TargetItem[Project]`だけ返す前処理へ変更する
+- [x] `_apply_local_path_boot`は追加せず、`_apply_local_boot(resource, project)`へ単一target処理を集約する
+- [x] `_apply_local_boot(resource, project)`を`on_targets()` callback形式に合わせた単一target処理へ変更する
+- [x] `_apply_workspace_boot()`を追加し、仮`SymlinkResource`経由で`_apply_local_boot()`を呼ぶ
+- [x] `_apply_remote_boot(resource, project)`を`on_targets()` callback形式に合わせた単一target処理へ変更する
+- [x] `source`変数を`boot_assets`へ改名し、`src/whub/boot/`参照をboot.py内のhelperへ閉じる
+- [x] `boot()` callbackを`manifest取得`、`targets準備`、`workspace-hub適用`、`on_targets()`呼び出しだけに薄くする
+- [x] 既存bootテストを単一target applyとworkspace-hub例外の構成に合わせて更新する
 
 ## Phase 4: 構成見直し
-- [ ] `boot()` callbackをsource取得とapply呼び出し中心に薄くする
-- [ ] helper名・型・責務境界を見直す
-- [ ] concept未明文化の挙動をdocsへ追記するか判断する
+- [x] `boot()` callbackをworkspace-hub適用と`on_targets()`呼び出し中心に薄くする
+- [x] helper名・型・責務境界を見直し、CodeGraph初期化を`_init_*_codegraph()`へ抽出する
+- [x] concept未明文化の挙動は矛盾なしと判断し、docs追記は後続判断に回す
 
 ## Phase 5: 検証
 - [ ] `todo`のprojectなし/未知project/既知project/resourceなしproject/ソートのテストを追加する
-- [ ] bootでworkspace-hub配布が維持されることを確認する
+- [x] bootでworkspace-hub配布が維持されることを確認する
 - [ ] bootで`boot: false` resourceが配布対象外になることを確認する
-- [ ] bootのlocal/remote失敗継続テストが壊れていないことを確認する
-- [ ] `uv run python -m unittest discover -s src/whub/tests`を実行する
-- [ ] `docs/whub-concepts.md`との乖離が残っていないか確認する
+- [x] bootのlocal/remote失敗継続テストが壊れていないことを確認する
+- [x] `uv run python -m unittest discover -s src/whub/tests`を実行する
+- [x] `docs/whub-concepts.md`との乖離が残っていないか確認する
 
 # 実行ログ
 
 # 結果
+- Phase 4まで完了し、Phase 5の残検証は後続のtest系再構築でまとめて対応するため本タスクはここで閉じる
+- conceptとの矛盾はなし、`boot: true`対象化やWARN継続などの未明文化仕様は後続で必要に応じてdocs化する
 
 # 📝構成案
 
