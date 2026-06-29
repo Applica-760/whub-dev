@@ -11,7 +11,7 @@ from whub.health import ResourceHealth, inspect_remote, inspect_symlink
 from whub.models import Project, RemoteResource, SymlinkResource
 from whub.remote import run_ssh_command
 from whub.render import render_table
-from whub.target import collect_targets, on_targets
+from whub.target import TargetItem, collect_targets, on_targets
 
 @dataclass(frozen=True)
 class _ResourceInfo:
@@ -75,12 +75,19 @@ def _fetch_remote_info(r: RemoteResource, project: Project) -> _ResourceInfo:
     )
 
 
+def _filter_status_targets(
+    targets: list[TargetItem[Project]],
+) -> list[TargetItem[Project]]:
+    return [target for target in targets if target.resource.status]
+
+
 @click.command()
 @click.pass_context
 def status(ctx: click.Context) -> None:
     """Show health of all resources."""
     m = get_manifest(ctx)
     targets = collect_targets(m)
+    targets = _filter_status_targets(targets)
     if not targets:
         click.echo("  (no resources)")
         return
@@ -90,7 +97,7 @@ def status(ctx: click.Context) -> None:
         (info.name, info.health.state, info.resource_type, info.git_diff)
         for info in resource_infos
     ]
-    render_table(rows, right_align={3})
+    render_table(rows, headers=("project", "state", "type", "git"), right_align={3})
 
     if any(info.health.state != "ok" for info in resource_infos):
         raise click.exceptions.Exit(1)

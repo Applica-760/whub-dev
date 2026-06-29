@@ -103,6 +103,7 @@ projects:
       type: remote
       host: supercomputer
       path: 
+      status: false
       git:
         url: git@github.com:Applica-760/esn-lab.git
         branch: main

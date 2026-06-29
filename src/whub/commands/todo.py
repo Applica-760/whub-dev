@@ -5,7 +5,7 @@ import click
 from whub.commands import get_manifest
 from whub.models import project_names
 from whub.models.todo import PRIORITIES, PRIORITY_EMOJI, Todo, load_todos, save_todos
-from whub.render import render_table
+from whub.render import TableCell, render_table
 
 
 def _project_names(ctx, param, incomplete: str) -> list[str]:
@@ -13,12 +13,36 @@ def _project_names(ctx, param, incomplete: str) -> list[str]:
     return none + project_names(ctx, param, incomplete)
 
 
-def _render_list(items: list[Todo], date_label: str, date_fn, *, empty: str) -> None:
+def _format_date_cell(value: date | None, *, urgent: bool) -> object:
+    if value is None:
+        return "-"
+    text = value.isoformat()
+    if not urgent:
+        return text
+    remaining_days = (value - date.today()).days
+    if remaining_days <= 3:
+        return TableCell(text, fg="red")
+    if remaining_days <= 7:
+        return TableCell(text, fg="yellow")
+    return text
+
+
+def _render_list(
+    items: list[Todo],
+    date_label: str,
+    date_fn,
+    *,
+    empty: str,
+    urgent_dates: bool = False,
+) -> None:
     if not items:
         click.echo(f"  ({empty})")
         return
     rows = []
+    previous_priority = None
     for item in items:
+        if previous_priority is not None and item.priority != previous_priority:
+            rows.append(())
         project = item.project or "-"
         d = date_fn(item)
         rows.append((
@@ -26,10 +50,10 @@ def _render_list(items: list[Todo], date_label: str, date_fn, *, empty: str) -> 
             PRIORITY_EMOJI[item.priority],
             item.title,
             project,
-            date_label,
-            d.isoformat() if d else "-",
+            _format_date_cell(d, urgent=urgent_dates),
         ))
-    render_table(rows, right_align={0})
+        previous_priority = item.priority
+    render_table(rows, headers=("id", "pri", "title", "project", date_label), right_align={0})
 
 
 def _priority_rank(item: Todo) -> int:
@@ -49,6 +73,7 @@ def _completed_sort_key(item: Todo) -> tuple[date, int]:
     return (item.done_at or date.max, item.id)
 
 
+# ── CLI ───────────────────────────────────────────────────────────
 @click.group(invoke_without_command=True)
 @click.option("-a", is_flag=True, help="Include completed todos.")
 @click.pass_context
@@ -58,7 +83,13 @@ def todo(ctx: click.Context, a: bool) -> None:
         return
     todos = load_todos()
     pending = sorted(todos.pending, key=_pending_sort_key)
-    _render_list(pending, "due", lambda t: t.due_date, empty="no pending todos")
+    _render_list(
+        pending,
+        "due",
+        lambda t: t.due_date,
+        empty="no pending todos",
+        urgent_dates=True,
+    )
     if a:
         click.echo()
         click.echo("  done:")

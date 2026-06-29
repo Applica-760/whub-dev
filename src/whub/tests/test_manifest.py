@@ -125,6 +125,15 @@ class ManifestTest(unittest.TestCase):
             Path.cwd() / "projects/local",
         )
 
+    def test_resource_status_defaults_enabled_and_can_be_disabled(self) -> None:
+        data = copy.deepcopy(self.data)
+        data["projects"][1]["resource"]["status"] = False
+
+        manifest = Manifest.model_validate(data)
+
+        self.assertTrue(manifest.projects[0].resource.status)
+        self.assertFalse(manifest.projects[1].resource.status)
+
     def test_resolves_project(self) -> None:
         manifest = Manifest.model_validate(self.data)
 

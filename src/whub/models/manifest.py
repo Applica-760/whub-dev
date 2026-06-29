@@ -25,6 +25,7 @@ class GitInfo(SchemaModel):
 class BaseResource(SchemaModel):
     git: GitInfo | None = None
     boot: bool = False
+    status: bool = True
 
 class SymlinkResource(BaseResource):
     type: Literal["symlink"]
