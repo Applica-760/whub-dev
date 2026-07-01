@@ -51,6 +51,12 @@ class SymlinkResource(BaseResource):
             raise ValueError("source must be an absolute path")
         return value
 
+
+def workspace_hub_resource() -> SymlinkResource:
+    """workspace-hub自身をlocal targetとして扱う合成resource（manifest上はresource無し）。"""
+    return SymlinkResource(type="symlink", workspace_path=".", source=str(Path.cwd()))
+
+
 class RemoteResource(BaseResource):
     type: Literal["remote"]
     host: str

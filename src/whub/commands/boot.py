@@ -16,7 +16,14 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Callable, Iterator
 from whub.commands import get_manifest
-from whub.models import Host, Manifest, Project, RemoteResource, SymlinkResource
+from whub.models import (
+    Host,
+    Manifest,
+    Project,
+    RemoteResource,
+    SymlinkResource,
+    workspace_hub_resource,
+)
 from whub.remote import run_rsync_command, run_ssh_command
 from whub.target import TargetItem, on_targets
 
@@ -214,12 +221,7 @@ def _apply_local_boot(
 
 
 def _apply_workspace_boot() -> None:
-    resource = SymlinkResource(
-        type="symlink",
-        workspace_path=".",
-        source=str(Path.cwd()),
-        boot=True,
-    )
+    resource = workspace_hub_resource()
     resource._resolved_workspace_path = Path.cwd()
     _apply_local_boot(resource, Project(name="workspace-hub", resource=resource))
 

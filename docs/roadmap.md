@@ -1,17 +1,4 @@
-<!-- /task-planning Skills を補強する長期スパンでやりたいこと -->
-
-## 直近の整理順
-
-1. [x] 用語定義とCLI実装ポリシーをドキュメント化する
-    - Projects / Resources / Todo(tasks) / status / roadmap / specs / ADR / Skillの意味を固定する
-    - Click関数、コマンド固有処理、Target/Router、remote.pyの責務境界を明文化する
-    - 正本: `docs/whub-concepts.md`
-2. [ ] 共通Target/Routerを作る
-    - local/remote差分は`exists` / `read_text` / `write_text` / `append_text` / `run`などの一般操作だけで吸収する
-    - roadmap/status/fetch/editなどの業務ロジックは各コマンド側に残す
-3. [ ] `whub roadmap`を実装する
-    - `<project>/docs/roadmap.md`へ未整理メモを追記する最小CLIとして実装する
-    - roadmapの洗練・昇格はSkill/Agent側に任せる
+# workspace-hub Roadmap
 
 ## whub CLIの新機能・拡張
 
@@ -39,28 +26,8 @@
     - リモートリソース操作の実装は完了済み（SSHFS廃止、manifest分離、共通SSH基盤）
     - 残りはこのテスト追加のみ
 
-## 完了済み
-
-- [x] `whub todo` — プロジェクト横断のタスク管理
-    - 実装済み: `.whub/todos.yaml`のPydanticモデル + load/save、`add` / `done` / `rm` / 一覧表示、完了済み表示、project補完、priority表示
-    - `whub status`のpriority/statusテキストを廃止し、リンク・接続状態・git差分の確認に責務を絞った
-    - TUI(curses)は初期スコープ外。必要性はCLI運用後に再判断する
-    - 残課題: manifestの`projects`移行、todoの自動テスト追加
-
 ## whub アーキテクチャ・設定
 
-- [x] projectとresourceの概念・命名・関連付けを整理する
-    - `project`は活動単位、`resource`は接続先データリソースとして定義済み
-    - `project` 1 -- 0..1 `resource`、`resource` * -- 1 `project`で固定済み
-    - 残る実装課題はmanifestへの`projects`追加と既存コマンドの参照移行
-- [x] whub自身の扱いを整理する
-    - workspace-hubはprojectではあるが、mount/link対象ではないためresourceではない
-    - `workspace-hub`は明示的な`project`として扱い、`resource`なしの場合は移動先なしとする
-    - 残る実装課題はmanifestと`cd`/`todo`/`roadmap`のproject参照対応
-- [x] whub用語・責務ドキュメントを作る
-    - Projects, Resources, Todo/tasks, state/status, roadmap, specs, ADR, boot配布Skillなどの意味を定義する
-    - CLIコマンドと頒布Skillで同じ語を一貫して使い、AIコンテキストの誤解を減らす
-    - whub自身の位置づけもこのドキュメントで固定する
 - [ ] projectごとの長期計画ドキュメントとwhub導線を設計する
     - これまでの方針: `whub todo`で全体のタスクと優先度、`whub status`で接続状態を確認し、`whub cd`で対象projectへ移動する
     - todoは実行可能な単発アクション、roadmapはprojectごとの長期方針、`/task-planning`は個別作業の実行計画と記録を担う
@@ -87,6 +54,15 @@
     - 現状: Obsidianベースの個人ナレッジ（`00_inbox` → `02_Concept` → `03_Permanent`のZettelkasten的フロー）
     - whubとの関係は未決: 独立アプリ化するか、skillsで十分か、whubに統合するか
     - 上記「思考キャプチャ・練り上げ」の方針決定と連動する
+- [ ] 個人向け学問領域テキスト生成・知識整理プロジェクト（検討中）
+    - 目的: 自分が興味を持つ学問領域について、DeepResearch等で継続調査し、自分専用の教科書・知識体系として育てる
+    - 基本サイクル: 寝る前に1つの問いを調査依頼 → 翌朝に出典・論点・誤りを確認 → 修正・追加調査 → 週次で章立てや概念体系へ再編する
+    - 位置づけ: mindプロジェクトの`Literature`を拡張し、文献要約だけでなく、問い・概念・主張・論争・未解決問題・自分のレビューを扱う
+    - 方針: AIに直接「完成教科書」を書かせるのではなく、出典付き知識ベースを育て、その上に`Textbook`ビューを生成する
+    - 保存単位候補: `Questions`、`Concepts`、`Literature`、`Claims`、`Debates`、`Textbook`、`Review Notes`
+    - 必須メタ情報: 出典、信頼度、関連する問い、人間確認済みか、未検証仮説か、次に調べること
+    - 主なリスク: 重要文献の抜け、誤った重み付け、もっともらしい誤説明の蓄積、確認作業が受け身の読書ログになること
+    - MVP: まず1分野に限定し、毎晩1問だけ調査、翌朝に出典・重要概念・疑問点を確認し、週1で章構成へ反映する
 
 ## Agentルール・Skills体系
 
@@ -105,3 +81,6 @@
 - [ ] 壁打ちで確定した方向性やディテールをspecs・ADRへ昇華するトリガーを設計する
     - 重要な仕様や設計判断が確定した時点で、対話内容を永続的な仕様・意思決定記録へ変換する
 - [ ] /task-planningにおいて、過去に解決した課題とかに関する1行サマリーをMEMORY.mdに管理するのアリかも？
+
+<!-- hub:roadmap:appended:start -->
+<!-- hub:roadmap:appended:end -->

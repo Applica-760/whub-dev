@@ -11,6 +11,7 @@ from whub.models.manifest import (
     SymlinkResource,
     load_manifest,
     project_names,
+    workspace_hub_resource,
 )
 from whub.models.todo import PRIORITY_EMOJI, Todo, Todos, load_todos, save_todos
 
@@ -30,4 +31,5 @@ __all__ = [
     "load_todos",
     "project_names",
     "save_todos",
+    "workspace_hub_resource",
 ]
