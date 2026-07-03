@@ -19,6 +19,9 @@ AGENTS.md
 !src/whub/boot/AGENTS.md
 !src/whub/boot/.mcp.json
 
+# whub fetch
+.whub/downloads/
+
 # Python cache
 __pycache__/
 *.py[cod]

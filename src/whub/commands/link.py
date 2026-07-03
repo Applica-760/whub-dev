@@ -41,8 +41,6 @@ def link(ctx: click.Context) -> None:
             continue
         top_dirs.add(r.workspace_path.split("/")[0])
         target = r._resolved_workspace_path
-        if target is None:
-            raise click.ClickException("workspace path is unresolved")
         source = Path(r.source).expanduser()
         health = inspect_resource(r)
 

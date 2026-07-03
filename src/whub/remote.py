@@ -98,6 +98,21 @@ def build_sshfs_command(
     ]
 
 
+def build_scp_command(
+    host: Host,
+    remote_path: str,
+    local_dest: Path,
+) -> list[str]:
+    target, identity, port = ssh_target(host)
+    return [
+        "scp",
+        "-i", identity,
+        "-P", str(port),  # scpのポート指定はsshと違い大文字
+        f"{target}:{remote_path}",
+        str(local_dest),
+    ]
+
+
 def build_rsync_command(
     host: Host,
     local_src: str,

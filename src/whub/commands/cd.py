@@ -32,8 +32,6 @@ source <(_WHUB_COMPLETE=zsh_source command whub)
 
 def _cd_local(resource: SymlinkResource, _data: tuple[str, bool]) -> None:
     path = resource._resolved_workspace_path
-    if path is None:
-        raise click.ClickException("workspace path is unresolved")
     if not path.exists():
         raise click.ClickException(f"symlink target does not exist: {path}")
     click.echo(str(path))
@@ -42,8 +40,6 @@ def _cd_local(resource: SymlinkResource, _data: tuple[str, bool]) -> None:
 def _cd_remote(resource: RemoteResource, data: tuple[str, bool]) -> None:
     project, plain = data
     host = resource._resolved_host
-    if host is None:
-        raise click.ClickException(f"remote host is unresolved: {resource.host}")
     if plain:
         remote_command = f"cd {shlex.quote(resource.path)} && exec $SHELL -l"
     else:

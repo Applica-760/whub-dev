@@ -92,6 +92,21 @@ class RemoteTest(unittest.TestCase):
             "-o", "volname=whub-data",
         ])
 
+    def test_build_scp_command(self) -> None:
+        cmd = remote_module.build_scp_command(
+            self.host,
+            "/srv/data/out.nc",
+            Path("/ws/.whub/downloads/out.nc"),
+        )
+
+        self.assertEqual(cmd, [
+            "scp",
+            "-i", "/tmp/key",
+            "-P", "2222",
+            "user@example.com:/srv/data/out.nc",
+            "/ws/.whub/downloads/out.nc",
+        ])
+
     def test_run_rsync_command_builds_and_executes_command(self) -> None:
         completed = subprocess.CompletedProcess([], 0, "", "")
         with patch.object(

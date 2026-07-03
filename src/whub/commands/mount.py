@@ -35,8 +35,6 @@ def _select_targets(
 def _mount(project: Project, resource: RemoteResource) -> str:
     mountpoint = resource._resolved_workspace_path
     host = resource._resolved_host
-    if mountpoint is None or host is None:
-        return "FAIL: resource is unresolved"
     health = inspect_mount(resource)
     if health.state == "ok":
         return "skip"
@@ -61,8 +59,6 @@ def _mount(project: Project, resource: RemoteResource) -> str:
 
 def _unmount(resource: RemoteResource, force: bool) -> str:
     mountpoint = resource._resolved_workspace_path
-    if mountpoint is None:
-        return "FAIL: resource is unresolved"
     health = inspect_mount(resource)
     if health.state == "unmounted":
         return "skip"

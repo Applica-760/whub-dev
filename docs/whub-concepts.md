@@ -26,11 +26,12 @@
 - `roadmap`: `project`ごとの`roadmap`へ未整理メモを追記することが目的
 - `mount`/`unmount`: `remote` resourceをsshfsでwhubツリーへ接続/解除することが目的
 - `run`: `remote`でのワンショット実行が目的。対話セッションは`cd`が担う
+- `fetch`: workspace-hub相対パスで指定した`remote`のファイルを`.whub/downloads/`へ取得することが目的
 
 # リモート操作の用途分担
 - 編集・コード確認・`project`横断のコンテキスト参照は`mount`で行う
 - 走査系・長時間処理はリモート側で実行する（ワンショットは`run`、作業セッションは`cd`のtmux）
-- 大容量ファイルの手元確認は`fetch`で逐次取得する（予定）
+- 大容量ファイルの手元確認は`fetch`で逐次取得する
 - この参照と実行の分離により、SSHFSのレイテンシ弱点と双方向同期のコンフリクトを回避する
 
 # データモデル制約
@@ -63,6 +64,7 @@
 - `mount`は無引数で`mount: true`の`resource`のみを対象にし、名指し・`-a`はフラグを無視する
 - `todo`は`project`に紐づく単発アクションを管理する。`project`に`resource`がなくても`todo`は持てる
 - `roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する
+- `fetch`はworkspace-hub相対パス（VS Codeの相対パスコピーを想定）から`resource`を解決し、`.whub/downloads/`直下へフラットに保存する（同名は上書き）。単ファイル前提
 - `roadmap`の整理済み領域への昇格、`todo`や`specs`や`ADR`への分解は`Skill`/Agent側で行う
 
 ---

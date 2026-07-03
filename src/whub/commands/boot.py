@@ -190,9 +190,6 @@ def _apply_local_boot(
 ) -> None:
     name = project.name
     target = resource._resolved_workspace_path
-    if target is None:
-        click.echo(f"  {'WARN':6s}  {name}: workspace path is unresolved")
-        return
     if not target.exists():
         click.echo(f"  {'skip':6s}  {name} (not found)")
         return
@@ -222,7 +219,6 @@ def _apply_local_boot(
 
 def _apply_workspace_boot() -> None:
     resource = workspace_hub_resource()
-    resource._resolved_workspace_path = Path.cwd()
     _apply_local_boot(resource, Project(name="workspace-hub", resource=resource))
 
 
@@ -232,10 +228,6 @@ def _apply_remote_boot(
 ) -> None:
     name = project.name
     host = resource._resolved_host
-    if host is None:
-        click.echo(f"  {'WARN':6s}  {name}: remote host is unresolved")
-        return
-
     try:
         with as_file(_boot_assets()) as boot_assets:
             def read(rel: str) -> str | None:

@@ -44,7 +44,7 @@ class SymlinkResource(BaseResource):
     type: Literal["symlink"]
     workspace_path: WorkspacePath
     source: str
-    _resolved_workspace_path: Path | None = PrivateAttr(default=None)
+    _resolved_workspace_path: Path = PrivateAttr()
 
     @field_validator("source")
     @classmethod
@@ -55,23 +55,24 @@ class SymlinkResource(BaseResource):
 
 
 def workspace_hub_resource() -> SymlinkResource:
-    """workspace-hub自身をlocal targetとして扱う合成resource（manifest上はresource無し）。"""
-    return SymlinkResource(type="symlink", workspace_path=".", source=str(Path.cwd()))
+    """workspace-hub自身をlocal targetとして扱う合成resource"""
+    resource = SymlinkResource(type="symlink", workspace_path=".", source=str(Path.cwd()))
+    resource._resolved_workspace_path = Path.cwd()
+    return resource
 
 
 class RemoteResource(BaseResource):
     type: Literal["remote"]
     host: str
     path: str
-    workspace_path: WorkspacePath  # sshfs mount先（whubルート相対）
-    mount: bool = True  # falseで無引数mountの対象外（名指し・-aでは対象）
-    _resolved_host: Host | None = PrivateAttr(default=None)
-    _resolved_workspace_path: Path | None = PrivateAttr(default=None)
+    workspace_path: WorkspacePath 
+    mount: bool = True 
+    _resolved_host: Host = PrivateAttr()
+    _resolved_workspace_path: Path = PrivateAttr()
 
     @field_validator("path")
     @classmethod
     def _validate_path(cls, value: str) -> str:
-        # Remote paths are interpreted by a POSIX shell on the destination host.
         if value.startswith("~") or not PurePosixPath(value).is_absolute():
             raise ValueError("remote path must be an absolute path without '~'")
         return value

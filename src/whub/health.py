@@ -27,8 +27,6 @@ class ResourceHealth:
 
 def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
     target = resource._resolved_workspace_path
-    if target is None:
-        return ResourceHealth("unexpected", "workspace path is unresolved")
     source = Path(resource.source).expanduser()
 
     if not source.exists():
@@ -47,8 +45,6 @@ def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
 
 def inspect_remote(resource: RemoteResource) -> ResourceHealth:
     host = resource._resolved_host
-    if host is None:
-        return ResourceHealth("unexpected", "remote host is unresolved")
     try:
         result = run_ssh_command(
             host,
@@ -73,8 +69,6 @@ def _in_mount_table(mountpoint: Path) -> bool:
 
 def inspect_mount(resource: RemoteResource) -> ResourceHealth:
     mountpoint = resource._resolved_workspace_path
-    if mountpoint is None:
-        return ResourceHealth("unexpected", "workspace path is unresolved")
     if not _in_mount_table(mountpoint):
         return ResourceHealth("unmounted", str(mountpoint))
     try:

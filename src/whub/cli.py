@@ -3,6 +3,7 @@ from __future__ import annotations
 import click
 from whub.commands.boot import boot
 from whub.commands.cd import cd, shell_init
+from whub.commands.fetch import fetch
 from whub.commands.link import link
 from whub.commands.mount import mount, unmount
 from whub.commands.roadmap import roadmap
@@ -19,6 +20,7 @@ main.add_command(mount)
 main.add_command(unmount)
 main.add_command(cd)
 main.add_command(run)
+main.add_command(fetch)
 main.add_command(status)
 main.add_command(boot)
 main.add_command(shell_init)

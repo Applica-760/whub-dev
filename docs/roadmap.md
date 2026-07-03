@@ -44,6 +44,36 @@
     - リモートリソース操作の実装は完了済み（SSHFS廃止、manifest分離、共通SSH基盤）
     - 残りはこのテスト追加のみ
 
+## whub 実装改善（2026-07-03 コードレビューより）
+
+優先度順。1〜3は互いに独立で既存テストを壊さず導入可能。
+
+- [ ] whubルートの上方探索（CWD依存の解消）
+    - `MANIFEST_PATH`・`TODO_PATH`・`workspace_path`解決がすべてCWD前提で、`whub cd`した先でwhubが使えない
+    - gitと同様に`.whub/`を上方探索し、`WHUB_ROOT`環境変数をフォールバックにする。変更は`load_manifest()`と`TODO_PATH`に集約できる
+- [ ] manifest読み込みエラーの整形と`version`のcoerce
+    - manifest欠落・YAML不正・検証エラーで生tracebackが出る。`get_manifest`でClickExceptionに変換する
+    - `version: 2`（非引用）がint扱いで検証失敗する。`Literal[2, "2"]`で受けるか文字列にcoerceする
+- [ ] SSH ControlMaster導入（`build_ssh_command`に`-o ControlMaster=auto -o ControlPersist`）
+    - statusはremote 1件につき逐次2接続（health+git、最悪16s/件）、boot remoteはファイル毎に往復している
+    - 接続確立コストを初回1回に償却。あわせてstatusのhealth+gitの1コマンド結合、ThreadPool並列化も検討
+- [x] 解決済みリソースの非Optional化（2026-07-03完了）
+    - PrivateAttrのデフォルト除去で`_resolved_host`/`_resolved_workspace_path`を非Optional化し、到達不能なNoneガード13箇所を削除
+    - 残課題: 検証と実行環境解決の分離（`load_manifest()`が解決済みビューを返す構造）はCWD依存解消と合わせて検討
+- [ ] managed-blockロジックの統合（3実装 → 1モジュール）
+    - boot `_managed_range`・roadmap `_insert_memo`・link `_update_gitignore`が別実装
+    - link版は空行終端頼みで、ブロック直後に空行なしで行を足すと次回link時に消えるバグ候補。boot版ベースで統合する
+- [ ] boot skills配布の削除伝播
+    - local `copytree(dirs_exist_ok)` / remote `rsync -a`（--deleteなし）のため廃止Skillが残骸として残り続ける
+    - remoteは`--delete`、localは配布先を消してからcopyで揃える
+- [ ] 小粒の修正
+    - `build_rsync_command`のidentityパス未引用（空白入りパスで壊れる）
+    - roadmapのremote未対応がexit 0で成功風に終わる
+    - statusのgit列「-」が「git未設定」と「取得失敗」を区別できない
+    - shell-initの補完生成が毎シェル起動でPythonを起動する（ファイルキャッシュ化）
+    - `--version`未実装、`_parse_due_date`年またぎとlink gitignore編集のテスト未カバー
+    - roadmapのworkspace-hub特別扱いがコンセプト文書「bootだけ例外」と不整合（文書か実装を揃える）
+
 ## whub アーキテクチャ・設定
 
 - [ ] projectごとの長期計画ドキュメントとwhub導線を設計する

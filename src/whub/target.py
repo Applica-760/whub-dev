@@ -2,6 +2,7 @@
 from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import Generic, TypeVar, assert_never
 import click
 from whub.models import Manifest, Project, RemoteResource, Resource, SymlinkResource
@@ -16,6 +17,32 @@ def resolve_project_resource(manifest: Manifest, project_name: str) -> Resource:
     if project.resource is None:
         raise TargetError(f"project has no resource: {project_name}")
     return project.resource
+
+
+# workspace-hub相対パスから、それを含むresourceとresource内相対パスを解決
+def resolve_resource_by_workspace_path(
+    manifest: Manifest,
+    path: str,
+) -> tuple[Project, Resource, str]:
+    parts = PurePosixPath(path).parts
+    if PurePosixPath(path).is_absolute() or ".." in parts:
+        raise TargetError(f"path must be relative to the workspace root: {path}")
+
+    best: tuple[Project, Resource] | None = None
+    best_depth = -1
+    for project in manifest.projects:
+        resource = project.resource
+        if resource is None:
+            continue
+        base = PurePosixPath(resource.workspace_path).parts
+        if parts[: len(base)] == base and len(base) > best_depth:
+            best = (project, resource)
+            best_depth = len(base)
+    if best is None:
+        raise TargetError(f"no resource contains path: {path}")
+
+    project, resource = best
+    return project, resource, "/".join(parts[best_depth:])
 
 
 D = TypeVar("D")

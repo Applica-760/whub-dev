@@ -28,9 +28,6 @@ def run(
     if not isinstance(resource, RemoteResource):
         raise click.ClickException(f"not a remote resource: {project}")
     host = resource._resolved_host
-    if host is None:
-        raise click.ClickException(f"remote host is unresolved: {resource.host}")
-
     remote_command = build_remote_exec_command(resource.path, command)
     ssh_command = build_ssh_command(host, remote_command, tty=tty)
     result = subprocess.run(ssh_command)
