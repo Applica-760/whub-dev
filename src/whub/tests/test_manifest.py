@@ -35,6 +35,7 @@ class ManifestTest(unittest.TestCase):
                         "type": "remote",
                         "host": "home",
                         "path": "",
+                        "workspace_path": "projects/remote",
                     },
                 },
                 {
@@ -53,12 +54,13 @@ class ManifestTest(unittest.TestCase):
         self.assertIsNone(manifest.projects[2].resource)
 
     def test_rejects_workspace_path_outside_root(self) -> None:
-        for value in ("/absolute", "../outside", "projects/../../outside"):
-            with self.subTest(value=value):
-                data = copy.deepcopy(self.data)
-                data["projects"][0]["resource"]["workspace_path"] = value
-                with self.assertRaises(ValidationError):
-                    Manifest.model_validate(data)
+        for project_index in (0, 1):
+            for value in ("/absolute", "../outside", "projects/../../outside"):
+                with self.subTest(project_index=project_index, value=value):
+                    data = copy.deepcopy(self.data)
+                    data["projects"][project_index]["resource"]["workspace_path"] = value
+                    with self.assertRaises(ValidationError):
+                        Manifest.model_validate(data)
 
     def test_requires_absolute_source_and_remote_path(self) -> None:
         invalid_fields = (
@@ -117,12 +119,14 @@ class ManifestTest(unittest.TestCase):
 
     def test_resolves_workspace_path(self) -> None:
         manifest = Manifest.model_validate(self.data)
-        resource = manifest.projects[0].resource
 
-        self.assertIsNotNone(resource)
         self.assertEqual(
-            resource._resolved_workspace_path,
+            manifest.projects[0].resource._resolved_workspace_path,
             Path.cwd() / "projects/local",
+        )
+        self.assertEqual(
+            manifest.projects[1].resource._resolved_workspace_path,
+            Path.cwd() / "projects/remote",
         )
 
     def test_resource_status_defaults_enabled_and_can_be_disabled(self) -> None:

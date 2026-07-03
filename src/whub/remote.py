@@ -61,6 +61,33 @@ def run_ssh_command(
     )
 
 
+def build_sshfs_command(
+    host: Host,
+    remote_path: str,
+    mountpoint: Path,
+    volname: str,
+) -> list[str]:
+    target, identity, port = ssh_target(host)
+    options = [
+        f"IdentityFile={identity}",
+        f"port={port}",
+        "reconnect",
+        "ServerAliveInterval=15",
+        "ServerAliveCountMax=3",
+        "noappledouble",
+        "noapplexattr",
+        "defer_permissions",
+        f"volname={volname}",
+    ]
+    return [
+        "sshfs",
+        f"{target}:{remote_path}",
+        str(mountpoint),
+        "-s",  # ADR 0007: single-threaded
+        *(arg for option in options for arg in ("-o", option)),
+    ]
+
+
 def build_rsync_command(
     host: Host,
     local_src: str,

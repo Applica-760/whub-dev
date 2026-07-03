@@ -51,6 +51,7 @@ class BootTest(unittest.TestCase):
                         "type": "remote",
                         "host": "server",
                         "path": f"/srv/{name}",
+                        "workspace_path": f"remote/{name}",
                         "boot": True,
                     },
                 }

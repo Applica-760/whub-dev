@@ -93,6 +93,7 @@ projects:
       type: remote
       host: home-server
       path: 
+      workspace_path: projects/research/esn-lab
       git:
         url: git@github.com:Applica-760/esn-lab.git
         branch: main
@@ -103,7 +104,9 @@ projects:
       type: remote
       host: supercomputer
       path: 
+      workspace_path: projects/research/esn-lab-run
       status: false
+      mount: false
       git:
         url: git@github.com:Applica-760/esn-lab.git
         branch: main
@@ -113,6 +116,7 @@ projects:
       type: remote
       host: home-server
       path: 
+      workspace_path: projects/LAplust/IL
       git:
         url: git@github.com:Applica-760/lerobot-experiment.git
         branch: main
@@ -123,4 +127,5 @@ projects:
       type: remote
       host: home-server
       path: 
+      workspace_path: projects/personal/private
       boot: true

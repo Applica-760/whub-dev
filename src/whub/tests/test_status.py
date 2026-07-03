@@ -30,6 +30,7 @@ class StatusTest(unittest.TestCase):
                         "type": "remote",
                         "host": "server",
                         "path": "/srv/remote",
+                        "workspace_path": "remote/remote",
                         "git": {"url": "git@example.com:repo.git"},
                     },
                 },

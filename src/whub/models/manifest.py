@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pathlib import Path
 from pathlib import PurePosixPath
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 MANIFEST_PATH = Path(".whub/manifest.yaml")
 
@@ -27,22 +27,24 @@ class BaseResource(SchemaModel):
     boot: bool = False
     status: bool = True
 
+def _check_workspace_path(value: str) -> str:
+    path = Path(value)
+    if path.is_absolute():
+        raise ValueError("workspace_path must be relative")
+    # Attachment paths must stay inside workspace-hub without resolving symlinks.
+    if ".." in path.parts:
+        raise ValueError("workspace_path must not escape workspace root")
+    return value
+
+
+WorkspacePath = Annotated[str, AfterValidator(_check_workspace_path)]
+
+
 class SymlinkResource(BaseResource):
     type: Literal["symlink"]
-    workspace_path: str
+    workspace_path: WorkspacePath
     source: str
     _resolved_workspace_path: Path | None = PrivateAttr(default=None)
-
-    @field_validator("workspace_path")
-    @classmethod
-    def _validate_workspace_path(cls, value: str) -> str:
-        path = Path(value)
-        if path.is_absolute():
-            raise ValueError("workspace_path must be relative")
-        # Attachment paths must stay inside workspace-hub without resolving symlinks.
-        if ".." in path.parts:
-            raise ValueError("workspace_path must not escape workspace root")
-        return value
 
     @field_validator("source")
     @classmethod
@@ -61,7 +63,10 @@ class RemoteResource(BaseResource):
     type: Literal["remote"]
     host: str
     path: str
+    workspace_path: WorkspacePath  # sshfs mount先（whubルート相対）
+    mount: bool = True  # falseで無引数mountの対象外（名指し・-aでは対象）
     _resolved_host: Host | None = PrivateAttr(default=None)
+    _resolved_workspace_path: Path | None = PrivateAttr(default=None)
 
     @field_validator("path")
     @classmethod
@@ -107,6 +112,7 @@ class Manifest(SchemaModel):
                     f"'{resource.host}'"
                 )
             resource._resolved_host = self.hosts[resource.host]
+            resource._resolved_workspace_path = Path.cwd() / resource.workspace_path
         return self
 
     def resolve_project(self, name: str) -> Project | None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import subprocess
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from whub.models import Manifest
@@ -55,6 +56,30 @@ class RemoteTest(unittest.TestCase):
             timeout=30,
             check=True,
         )
+
+    def test_build_sshfs_command(self) -> None:
+        cmd = remote_module.build_sshfs_command(
+            self.host,
+            "/srv/data",
+            Path("/ws/remote/data"),
+            volname="whub-data",
+        )
+
+        self.assertEqual(cmd, [
+            "sshfs",
+            "user@example.com:/srv/data",
+            "/ws/remote/data",
+            "-s",
+            "-o", "IdentityFile=/tmp/key",
+            "-o", "port=2222",
+            "-o", "reconnect",
+            "-o", "ServerAliveInterval=15",
+            "-o", "ServerAliveCountMax=3",
+            "-o", "noappledouble",
+            "-o", "noapplexattr",
+            "-o", "defer_permissions",
+            "-o", "volname=whub-data",
+        ])
 
     def test_run_rsync_command_builds_and_executes_command(self) -> None:
         completed = subprocess.CompletedProcess([], 0, "", "")

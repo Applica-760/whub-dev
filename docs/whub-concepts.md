@@ -23,8 +23,6 @@
 - `link`: `symlink` resourceをworkspace-hub配下へ接続することが目的
 - `todo`: `project`横断のToDoを管理することが目的。これを見て、自分が次に何をすべきかを決定できるのが理想
 - `boot`: whubのAgent設定・`Skill`・CodeGraph初期化を各`resource`へ配布することが目的
-
-# 未実装の予定コマンド
 - `roadmap`: `project`ごとの`roadmap`へ未整理メモを追記することが目的
 
 # データモデル制約
@@ -44,6 +42,7 @@
 - `roadmap`のテンプレート、`status`の表示、`boot`の配布手順などのドメイン処理は各コマンド側に置く
 - `boot`はworkspace-hub配布と複雑な配布手順を持つため、現時点ではcallback内の`local`/`remote`分岐を許容する
 - `remote.py`はSSH/rsyncの低レイヤーを担い、`project`や`roadmap`の意味は持たない
+- `tmux.py`はセッション命名規約とリモートシェルスニペットの組み立てを担う
 - `Skill`は壁打ち、整理、昇格、仕様化など、CLIに持たせない判断処理を担う
 
 # CLI振る舞いポリシー（どのような挙動を想定するか）
@@ -52,5 +51,13 @@
 - `status`は接続状態、ヘルスチェック、git差分確認に責務を絞る
 - `status`は`resource`を持つ全`project`を対象にする
 - `todo`は`project`に紐づく単発アクションを管理する。`project`に`resource`がなくても`todo`は持てる
-- 未実装の`roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する想定
+- `roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する
 - `roadmap`の整理済み領域への昇格、`todo`や`specs`や`ADR`への分解は`Skill`/Agent側で行う
+
+---
+
+(me)---(MacBook)---(Linux Desktop)
+                 |
+                  -(supercomputer)
+
+MacBook、特にwhubを唯一のインターフェースとして、Macローカルも、自宅にホストしているLinuxのリソースにもシームレスに接続できるようにするのが目的

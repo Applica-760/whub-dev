@@ -4,6 +4,7 @@ import click
 from whub.commands.boot import boot
 from whub.commands.cd import cd, shell_init
 from whub.commands.link import link
+from whub.commands.mount import mount, unmount
 from whub.commands.roadmap import roadmap
 from whub.commands.status import status
 from whub.commands.todo import todo
@@ -13,6 +14,8 @@ def main() -> None:
     """workspace-hub: manage workspaces from a single manifest."""
 
 main.add_command(link)
+main.add_command(mount)
+main.add_command(unmount)
 main.add_command(cd)
 main.add_command(status)
 main.add_command(boot)
