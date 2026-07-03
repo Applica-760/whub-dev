@@ -1,8 +1,18 @@
 """Command builders for remote operations."""
 from __future__ import annotations
+import shlex
 import subprocess
 from pathlib import Path
 from whub.models import Host
+
+def build_remote_exec_command(
+    working_directory: str,
+    arguments: tuple[str, ...],
+) -> str:
+    return (
+        f"cd {shlex.quote(working_directory)}"
+        f" && exec {shlex.join(arguments)}"
+    )
 
 def ssh_target(host: Host) -> tuple[str, str, int]:
     target = f"{host.user}@{host.hostname}"

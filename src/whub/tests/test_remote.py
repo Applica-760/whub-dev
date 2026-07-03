@@ -57,6 +57,17 @@ class RemoteTest(unittest.TestCase):
             check=True,
         )
 
+    def test_build_remote_exec_command_quotes_arguments(self) -> None:
+        remote_command = remote_module.build_remote_exec_command(
+            "/srv/my project",
+            ("echo", "hello world"),
+        )
+
+        self.assertEqual(
+            remote_command,
+            "cd '/srv/my project' && exec echo 'hello world'",
+        )
+
     def test_build_sshfs_command(self) -> None:
         cmd = remote_module.build_sshfs_command(
             self.host,
