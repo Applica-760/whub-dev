@@ -36,10 +36,10 @@ def _check_workspace_path(value: str) -> str:
         raise ValueError("workspace_path must not escape workspace root")
     return value
 
-
 WorkspacePath = Annotated[str, AfterValidator(_check_workspace_path)]
 
 
+# ── Local ─────────────────────────────────────────────────────────────────────────────────
 class SymlinkResource(BaseResource):
     type: Literal["symlink"]
     workspace_path: WorkspacePath
@@ -61,6 +61,7 @@ def workspace_hub_resource() -> SymlinkResource:
     return resource
 
 
+# ── Remote ─────────────────────────────────────────────────────────────────────────────────
 class RemoteResource(BaseResource):
     type: Literal["remote"]
     host: str
@@ -77,14 +78,15 @@ class RemoteResource(BaseResource):
             raise ValueError("remote path must be an absolute path without '~'")
         return value
 
+# ── Project ─────────────────────────────────────────────────────────────────────────────────
 Resource = Annotated[SymlinkResource | RemoteResource, Field(discriminator="type")]
-
 
 class Project(SchemaModel):
     name: str
     resource: Resource | None = None
 
 
+# ── Manifest ─────────────────────────────────────────────────────────────────────────────────
 class Manifest(SchemaModel):
     version: Literal["2"] = "2"
     hosts: dict[str, Host] = Field(default_factory=dict)

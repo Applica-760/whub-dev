@@ -52,17 +52,16 @@ def _read_mount_table() -> str | None:
     return result.stdout
 
 
-def _in_mount_table(mountpoint: Path, table: str) -> bool:
-    return any(f" on {mountpoint} (" in line for line in table.splitlines())
-
-
 def inspect_mount(resource: RemoteResource) -> ResourceHealth:
     mountpoint = resource._resolved_workspace_path
     table = _read_mount_table()
     # テーブルを読めない＝状態不明。unmountがskipしないようstale扱い（fail-safe）
     if table is None:
         return ResourceHealth("stale", "mount table unreadable")
-    if not _in_mount_table(mountpoint, table):
+    in_mount_table = any(
+        f" on {mountpoint} (" in line for line in table.splitlines()
+    )
+    if not in_mount_table:
         return ResourceHealth("unmounted", str(mountpoint))
     try:
         # stale mountはstatがブロックするため、子プロセス＋timeoutで隔離する

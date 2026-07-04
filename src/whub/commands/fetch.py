@@ -6,7 +6,7 @@ import click
 from whub.commands import get_manifest
 from whub.models import RemoteResource
 from whub.remote import build_scp_command
-from whub.target import resolve_resource_by_workspace_path
+from whub.target import require_resource_type, resolve_resource_by_workspace_path
 
 DOWNLOADS_DIR = Path(".whub/downloads")
 
@@ -18,8 +18,7 @@ def fetch(ctx: click.Context, path: str) -> None:
     """Fetch a remote file by its workspace-relative PATH."""
     m = get_manifest(ctx)
     project, resource, rel = resolve_resource_by_workspace_path(m, path)
-    if not isinstance(resource, RemoteResource):
-        raise click.ClickException(f"not a remote resource: {project.name}")
+    resource = require_resource_type(resource, RemoteResource, project.name)
     if not rel:
         raise click.ClickException(f"path must point to a file inside the resource: {path}")
 

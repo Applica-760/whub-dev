@@ -45,6 +45,23 @@ def resolve_resource_by_workspace_path(
     return project, resource, "/".join(parts[best_depth:])
 
 
+ResourceT = TypeVar("ResourceT", bound=Resource)
+
+def require_resource_type(
+    resource: Resource,
+    expected: type[ResourceT],
+    name: str,
+) -> ResourceT:
+    if isinstance(resource, expected):
+        return resource
+    label = (
+        "remote" if expected is RemoteResource
+        else "symlink" if expected is SymlinkResource
+        else expected.__name__
+    )
+    raise TargetError(f"not a {label} resource: {name}")
+
+
 D = TypeVar("D")
 R = TypeVar("R")
 

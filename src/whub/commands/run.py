@@ -5,7 +5,7 @@ import click
 from whub.commands import get_manifest
 from whub.models import RemoteResource, project_names
 from whub.remote import build_remote_exec_command, build_ssh_command
-from whub.target import resolve_project_resource
+from whub.target import require_resource_type, resolve_project_resource
 
 
 @click.command(context_settings={
@@ -24,9 +24,11 @@ def run(
 ) -> None:
     """Run COMMAND in a remote PROJECT (use `whub cd` for interactive sessions)."""
     m = get_manifest(ctx)
-    resource = resolve_project_resource(m, project)
-    if not isinstance(resource, RemoteResource):
-        raise click.ClickException(f"not a remote resource: {project}")
+    resource = require_resource_type(
+        resolve_project_resource(m, project),
+        RemoteResource,
+        project,
+    )
     host = resource._resolved_host
     remote_command = build_remote_exec_command(resource.path, command)
     ssh_command = build_ssh_command(host, remote_command, tty=tty)
