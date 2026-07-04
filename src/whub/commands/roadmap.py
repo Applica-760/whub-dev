@@ -1,5 +1,7 @@
 """whub roadmap — append a raw memo to a project's roadmap."""
 from __future__ import annotations
+import shlex
+import subprocess
 from pathlib import Path
 import click
 from whub.commands import get_manifest
@@ -10,6 +12,7 @@ from whub.models import (
     project_names,
     workspace_hub_resource,
 )
+from whub.remote import run_ssh_command
 from whub.target import TargetItem, on_targets, resolve_project_resource
 
 _MARKER_START = "<!-- hub:roadmap:appended:start -->"
@@ -41,7 +44,7 @@ def _resolve_target_resource(
     return TargetItem(resolve_project_resource(manifest, project), data)
 
 
-def _local(resource: SymlinkResource, data: tuple[str, str]) -> None:
+def _local_roadmap(resource: SymlinkResource, data: tuple[str, str]) -> None:
     name, memo = data
     root = Path(resource.source)
     if not root.exists():
@@ -53,10 +56,72 @@ def _local(resource: SymlinkResource, data: tuple[str, str]) -> None:
     click.echo(f"  roadmap {name}: {memo}")
 
 
-def _remote(resource: RemoteResource, data: tuple[str, str]) -> None:
-    """remoteはPhase 4で対応。今は未対応を通知するだけ。"""
-    del resource, data
-    click.echo("  remote roadmap is not supported yet")
+def _remote_roadmap(resource: RemoteResource, data: tuple[str, str]) -> None:
+    name, memo = data
+    host = resource._resolved_host
+    root = resource.path
+    docs = f"{root}/docs"
+    path = f"{docs}/roadmap.md"
+
+    try:
+        root_check = run_ssh_command(
+            host,
+            f"test -d {shlex.quote(root)}",
+            timeout=10,
+            batch_mode=True,
+            connect_timeout=5,
+        )
+        if root_check.returncode == 1:
+            raise click.ClickException(
+                f"remote resource path does not exist: {root}"
+            )
+        if root_check.returncode != 0:
+            detail = (
+                root_check.stderr.strip()
+                or root_check.stdout.strip()
+                or f"exit status {root_check.returncode}"
+            )
+            raise click.ClickException(f"remote roadmap failed: {detail}")
+
+        state = run_ssh_command(
+            host,
+            (
+                f"if test -f {shlex.quote(path)}; then echo file; "
+                f"elif test -e {shlex.quote(path)}; then echo unexpected; "
+                "else echo missing; fi"
+            ),
+            timeout=10,
+            batch_mode=True,
+            connect_timeout=5,
+            check=True,
+        ).stdout.strip()
+
+        if state == "file":
+            content = run_ssh_command(
+                host,
+                f"cat {shlex.quote(path)}",
+                timeout=30,
+                batch_mode=True,
+                connect_timeout=5,
+                check=True,
+            ).stdout
+        elif state == "missing":
+            content = _seed(name)
+        else:
+            raise click.ClickException(f"unexpected remote roadmap path: {path}")
+
+        run_ssh_command(
+            host,
+            f"mkdir -p {shlex.quote(docs)} && cat > {shlex.quote(path)}",
+            input=_insert_memo(content, memo),
+            timeout=30,
+            batch_mode=True,
+            connect_timeout=5,
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise click.ClickException(f"remote roadmap failed: {error}") from error
+    click.echo(f"  roadmap {name}: {memo}")
 
 
 @click.command()
@@ -70,4 +135,4 @@ def roadmap(ctx: click.Context, project: str, text: tuple[str, ...]) -> None:
     if not memo:
         raise click.UsageError("memo text is required")
     target = _resolve_target_resource(manifest, project, (project, memo))
-    on_targets([target], local=_local, remote=_remote)
+    on_targets([target], local=_local_roadmap, remote=_remote_roadmap)

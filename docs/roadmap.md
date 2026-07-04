@@ -8,8 +8,6 @@
     - 自宅サーバのシャットダウンをwhubに組み込む
     - `cd`と`status`のSSH異常系・終了コードの自動テスト
     - SSHFS復活・tmux運用・Mutagen不採用などの経緯をADR化する
-- [ ] `whub boot`の保守用ドキュメントを書く
-    - 配布元、merge/json/skillsの処理、local/remote分岐、SSH・rsync・CodeGraph初期化の関係を記録する
 - [ ] 常設キャプチャWebアプリ / backlog・todo再設計
     - 解きたい問題: `whub todo`や`whub status`を都度実行するだけだと起動・確認の摩擦があり、思考・todo・AI指示の記録漏れが起きやすい
     - 検討ポイント: 「次に何をするか」の参照箇所を集約し、roadmap/backlog/todoの責務と昇格フローを見直す
