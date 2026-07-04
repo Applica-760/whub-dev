@@ -9,7 +9,7 @@ from unittest.mock import patch
 import click
 
 from whub import health
-from whub.commands.mount import _mount, _select_targets
+from whub.commands.mount import _mount_one, _select_targets
 from whub.models import Manifest
 
 
@@ -100,7 +100,7 @@ class MountCommandTest(unittest.TestCase):
                     return_value=subprocess.CompletedProcess([], 1, "", "failed"),
                 ),
             ):
-                status = _mount(project, resource)
+                status = _mount_one(project, resource)
 
             self.assertEqual(status, "FAIL: failed")
             self.assertTrue(mountpoint.exists())
@@ -122,7 +122,7 @@ class MountCommandTest(unittest.TestCase):
                     return_value=subprocess.CompletedProcess([], 1, "", "failed"),
                 ),
             ):
-                status = _mount(project, resource)
+                status = _mount_one(project, resource)
 
             self.assertEqual(status, "FAIL: failed")
             self.assertFalse(mountpoint.exists())

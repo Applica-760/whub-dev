@@ -9,6 +9,7 @@ from whub.commands import get_manifest
 from whub.health import inspect_mount
 from whub.models import Manifest, Project, RemoteResource, project_names
 from whub.remote import build_sshfs_command
+from whub.render import render_table
 
 
 def _select_targets(
@@ -33,7 +34,7 @@ def _select_targets(
     ]
 
 
-def _mount(project: Project, resource: RemoteResource) -> str:
+def _mount_one(project: Project, resource: RemoteResource) -> str:
     mountpoint = resource._resolved_workspace_path
     host = resource._resolved_host
     health = inspect_mount(resource)
@@ -65,7 +66,7 @@ def _mount(project: Project, resource: RemoteResource) -> str:
     return f"FAIL: {health.state}"
 
 
-def _unmount(resource: RemoteResource, force: bool) -> str:
+def _unmount_one(resource: RemoteResource, force: bool) -> str:
     mountpoint = resource._resolved_workspace_path
     health = inspect_mount(resource)
     if health.state == "unmounted":
@@ -90,12 +91,34 @@ def _unmount(resource: RemoteResource, force: bool) -> str:
 
 def _echo_results(results: list[tuple[str, str]]) -> None:
     ok_statuses = ("mount", "unmount", "skip")
-    for name, status in results:
-        click.echo(f"  {status:6s}  {name}")
     if not results:
         click.echo("  (no remote resources)")
+        return
+    render_table(
+        [(status, name) for name, status in results],
+        headers=("status", "project"),
+    )
     if any(status not in ok_statuses for _, status in results):
         raise click.exceptions.Exit(1)
+
+
+def _mount_targets(targets: list[tuple[Project, RemoteResource]]) -> None:
+    results: list[tuple[str, str]] = []
+    for project, resource in targets:
+        result = _mount_one(project, resource)
+        results.append((project.name, result))
+    _echo_results(results)
+
+
+def _unmount_targets(
+    targets: list[tuple[Project, RemoteResource]],
+    force: bool,
+) -> None:
+    results: list[tuple[str, str]] = []
+    for project, resource in targets:
+        result = _unmount_one(resource, force)
+        results.append((project.name, result))
+    _echo_results(results)
 
 
 @click.command()
@@ -108,7 +131,7 @@ def mount(ctx: click.Context, project: str | None, include_all: bool) -> None:
         raise click.ClickException("sshfs not found (brew install fuse-t sshfs-fuse-t)")
     m = get_manifest(ctx)
     targets = _select_targets(m, project, auto_only=not include_all)
-    _echo_results([(p.name, _mount(p, r)) for p, r in targets])
+    _mount_targets(targets)
 
 
 @click.command()
@@ -119,4 +142,4 @@ def unmount(ctx: click.Context, project: str | None, force: bool) -> None:
     """Unmount remote resources."""
     m = get_manifest(ctx)
     targets = _select_targets(m, project)
-    _echo_results([(p.name, _unmount(r, force)) for p, r in targets])
+    _unmount_targets(targets, force)
