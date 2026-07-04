@@ -87,6 +87,12 @@ class ManifestTest(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "duplicate project names"):
             Manifest.model_validate(data)
 
+    def test_rejects_duplicate_workspace_path(self) -> None:
+        data = copy.deepcopy(self.data)
+        data["projects"][1]["resource"]["workspace_path"] = "projects/local"
+        with self.assertRaisesRegex(ValidationError, "duplicate workspace_path"):
+            Manifest.model_validate(data)
+
     def test_rejects_legacy_and_unknown_fields(self) -> None:
         data = copy.deepcopy(self.data)
         data["hosts"]["home"]["auto_mount"] = True

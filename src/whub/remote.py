@@ -1,5 +1,6 @@
 """Command builders for remote operations."""
 from __future__ import annotations
+import re
 import shlex
 import subprocess
 from pathlib import Path
@@ -98,6 +99,11 @@ def build_sshfs_command(
     ]
 
 
+def _escape_scp_glob(path: str) -> str:
+    # scpはリモートパスをglobとして解釈するため、リテラルパス扱いにする
+    return re.sub(r"([\\*?\[\]])", r"\\\1", path)
+
+
 def build_scp_command(
     host: Host,
     remote_path: str,
@@ -106,9 +112,11 @@ def build_scp_command(
     target, identity, port = ssh_target(host)
     return [
         "scp",
+        "-o", "BatchMode=yes",
+        "-o", "ConnectTimeout=5",
         "-i", identity,
         "-P", str(port),  # scpのポート指定はsshと違い大文字
-        f"{target}:{remote_path}",
+        f"{target}:{_escape_scp_glob(remote_path)}",
         str(local_dest),
     ]
 

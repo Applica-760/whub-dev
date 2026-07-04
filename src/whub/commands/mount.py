@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import time
+import contextlib
 import click
 from whub.commands import get_manifest
 from whub.health import inspect_mount
@@ -41,19 +42,26 @@ def _mount(project: Project, resource: RemoteResource) -> str:
     if health.state == "stale":
         return "STALE: run `whub unmount --force` first"
 
+    created_mountpoint = not mountpoint.exists()
     mountpoint.mkdir(parents=True, exist_ok=True)
     cmd = build_sshfs_command(
         host, resource.path, mountpoint, volname=f"whub-{project.name}",
     )
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
+        if created_mountpoint:
+            with contextlib.suppress(OSError):
+                mountpoint.rmdir()
         return f"FAIL: {result.stderr.strip()}"
-    # fuse-t on macOS: mount table lags ~0.2-0.4s behind sshfs exit
+    # fuse-t on macOS: mount table lags ~0.2-0.4s behind sshfs exit.
     for _ in range(10):
         health = inspect_mount(resource)
         if health.state == "ok":
             return "mount"
         time.sleep(0.2)
+    if health.state == "unmounted" and created_mountpoint:
+        with contextlib.suppress(OSError):
+            mountpoint.rmdir()
     return f"FAIL: {health.state}"
 
 

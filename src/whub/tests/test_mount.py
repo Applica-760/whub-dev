@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import click
 
 from whub import health
-from whub.commands.mount import _select_targets
+from whub.commands.mount import _mount, _select_targets
 from whub.models import Manifest
 
 
@@ -79,6 +81,53 @@ class SelectTargetsTest(unittest.TestCase):
                     _select_targets(_manifest(), name)
 
 
+class MountCommandTest(unittest.TestCase):
+    def test_mount_failure_keeps_existing_mountpoint(self) -> None:
+        project = _manifest().projects[1]
+        resource = project.resource
+        with tempfile.TemporaryDirectory() as tmp:
+            mountpoint = Path(tmp) / "mountpoint"
+            mountpoint.mkdir()
+            resource._resolved_workspace_path = mountpoint
+            with (
+                patch(
+                    "whub.commands.mount.inspect_mount",
+                    return_value=health.ResourceHealth("unmounted"),
+                ),
+                patch("whub.commands.mount.build_sshfs_command", return_value=["sshfs"]),
+                patch(
+                    "whub.commands.mount.subprocess.run",
+                    return_value=subprocess.CompletedProcess([], 1, "", "failed"),
+                ),
+            ):
+                status = _mount(project, resource)
+
+            self.assertEqual(status, "FAIL: failed")
+            self.assertTrue(mountpoint.exists())
+
+    def test_mount_failure_removes_created_mountpoint(self) -> None:
+        project = _manifest().projects[1]
+        resource = project.resource
+        with tempfile.TemporaryDirectory() as tmp:
+            mountpoint = Path(tmp) / "mountpoint"
+            resource._resolved_workspace_path = mountpoint
+            with (
+                patch(
+                    "whub.commands.mount.inspect_mount",
+                    return_value=health.ResourceHealth("unmounted"),
+                ),
+                patch("whub.commands.mount.build_sshfs_command", return_value=["sshfs"]),
+                patch(
+                    "whub.commands.mount.subprocess.run",
+                    return_value=subprocess.CompletedProcess([], 1, "", "failed"),
+                ),
+            ):
+                status = _mount(project, resource)
+
+            self.assertEqual(status, "FAIL: failed")
+            self.assertFalse(mountpoint.exists())
+
+
 class InspectMountTest(unittest.TestCase):
     def setUp(self) -> None:
         self.resource = _manifest().projects[1].resource
@@ -113,6 +162,22 @@ class InspectMountTest(unittest.TestCase):
                 self._mount_table(mounted=True),
                 subprocess.TimeoutExpired(["stat"], 3),
             ],
+        ):
+            self.assertEqual(health.inspect_mount(self.resource).state, "stale")
+
+    def test_reports_stale_when_mount_listing_times_out(self) -> None:
+        with patch.object(
+            health.subprocess,
+            "run",
+            side_effect=subprocess.TimeoutExpired(["mount"], 5),
+        ):
+            self.assertEqual(health.inspect_mount(self.resource).state, "stale")
+
+    def test_reports_stale_when_mount_listing_fails(self) -> None:
+        with patch.object(
+            health.subprocess,
+            "run",
+            return_value=subprocess.CompletedProcess([], 1, "", "mount failed"),
         ):
             self.assertEqual(health.inspect_mount(self.resource).state, "stale")
 

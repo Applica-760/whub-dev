@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import click
 from whub.commands import get_manifest
-from whub.health import inspect_resource
+from whub.health import inspect_symlink
 from whub.models import SymlinkResource
 
 _GITIGNORE_MARKER = "# whub link (auto-generated)"
@@ -42,7 +42,7 @@ def link(ctx: click.Context) -> None:
         top_dirs.add(r.workspace_path.split("/")[0])
         target = r._resolved_workspace_path
         source = Path(r.source).expanduser()
-        health = inspect_resource(r)
+        health = inspect_symlink(r)
 
         if health.state == "ok":
             click.echo(f"  skip  {project.name}")
@@ -59,7 +59,7 @@ def link(ctx: click.Context) -> None:
                 click.echo(f"  WARN  {project.name}: link failed: {error}")
                 warnings += 1
                 continue
-            result = inspect_resource(r)
+            result = inspect_symlink(r)
             if result.state == "ok":
                 click.echo(f"  link  {project.name}: {target} -> {source}")
                 created += 1

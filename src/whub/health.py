@@ -1,12 +1,10 @@
 """Resource health inspection shared by commands."""
 from __future__ import annotations
-import shlex
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, assert_never
+from typing import Literal
 from whub.models import RemoteResource, SymlinkResource
-from whub.remote import run_ssh_command
 
 HealthState = Literal[
     "ok",
@@ -43,33 +41,28 @@ def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
         return ResourceHealth("unexpected", str(target))
     return ResourceHealth("missing", str(target))
 
-def inspect_remote(resource: RemoteResource) -> ResourceHealth:
-    host = resource._resolved_host
+def _read_mount_table() -> str | None:
+    """`mount(1)`の出力。ハングや失敗で読めないときはNone。"""
     try:
-        result = run_ssh_command(
-            host,
-            f"test -d {shlex.quote(resource.path)}",
-            batch_mode=True,
-            connect_timeout=5,
-            timeout=8,
-        )
-    except (OSError, subprocess.TimeoutExpired) as error:
-        return ResourceHealth("unreachable", str(error))
-    if result.returncode == 255:
-        detail = result.stderr.strip() or f"ssh exited with status {result.returncode}"
-        return ResourceHealth("unreachable", detail)
+        result = subprocess.run(["mount"], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
     if result.returncode != 0:
-        return ResourceHealth("missing", resource.path)
-    return ResourceHealth("ok")
+        return None
+    return result.stdout
 
-def _in_mount_table(mountpoint: Path) -> bool:
-    result = subprocess.run(["mount"], capture_output=True, text=True, timeout=5)
-    return any(f" on {mountpoint} (" in line for line in result.stdout.splitlines())
+
+def _in_mount_table(mountpoint: Path, table: str) -> bool:
+    return any(f" on {mountpoint} (" in line for line in table.splitlines())
 
 
 def inspect_mount(resource: RemoteResource) -> ResourceHealth:
     mountpoint = resource._resolved_workspace_path
-    if not _in_mount_table(mountpoint):
+    table = _read_mount_table()
+    # テーブルを読めない＝状態不明。unmountがskipしないようstale扱い（fail-safe）
+    if table is None:
+        return ResourceHealth("stale", "mount table unreadable")
+    if not _in_mount_table(mountpoint, table):
         return ResourceHealth("unmounted", str(mountpoint))
     try:
         # stale mountはstatがブロックするため、子プロセス＋timeoutで隔離する
@@ -84,11 +77,3 @@ def inspect_mount(resource: RemoteResource) -> ResourceHealth:
     except (OSError, subprocess.CalledProcessError) as error:
         return ResourceHealth("stale", str(error))
     return ResourceHealth("ok")
-
-
-def inspect_resource(resource: SymlinkResource | RemoteResource) -> ResourceHealth:
-    if isinstance(resource, SymlinkResource):
-        return inspect_symlink(resource)
-    if isinstance(resource, RemoteResource):
-        return inspect_remote(resource)
-    assert_never(resource)

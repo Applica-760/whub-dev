@@ -100,6 +100,21 @@ class Manifest(SchemaModel):
         if duplicates:
             raise ValueError(f"duplicate project names: {', '.join(duplicates)}")
 
+        # 重複するとmountのmountpoint衝突、fetchのパス解決が先勝ちになる
+        path_counts = Counter(
+            project.resource.workspace_path
+            for project in self.projects
+            if project.resource is not None
+        )
+        duplicate_paths = sorted(
+            path for path, count in path_counts.items()
+            if count > 1
+        )
+        if duplicate_paths:
+            raise ValueError(
+                f"duplicate workspace_path: {', '.join(duplicate_paths)}"
+            )
+
         for project in self.projects:
             resource = project.resource
             if isinstance(resource, SymlinkResource):

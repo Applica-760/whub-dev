@@ -84,6 +84,12 @@ class FetchRemoteInfoTest(unittest.TestCase):
 
         self.assertEqual(info.git_diff, "-")
 
+    def test_git_probe_failure_shows_question_mark(self) -> None:
+        info = self._info(self.remote, ("ok", "?", "-"))
+
+        self.assertEqual(info.health.state, "ok")
+        self.assertEqual(info.git_diff, "?")
+
     def test_missing_path_reports_missing(self) -> None:
         info = self._info(self.remote, ("missing", "0", "-"))
 
@@ -108,6 +114,18 @@ class ProbeHostTest(unittest.TestCase):
             )
 
         self.assertIsNone(probe)
+
+    def test_timeout_scales_with_item_count(self) -> None:
+        projects = _manifest().projects
+        items = [(project.resource, project) for project in projects]
+        with patch.object(
+            status_module,
+            "run_ssh_command",
+            return_value=subprocess.CompletedProcess([], 0, "", ""),
+        ) as execute:
+            status_module._probe_host(items[0][0]._resolved_host, items)
+
+        self.assertEqual(execute.call_args.kwargs["timeout"], 5 + 8 * 2)
 
 
 if __name__ == "__main__":

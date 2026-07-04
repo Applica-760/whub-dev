@@ -57,10 +57,12 @@ def _fetch_local_info(r: SymlinkResource, project: Project) -> _ResourceInfo:
 def _probe_line(index: int, path: str, session: str) -> str:
     p = shlex.quote(path)
     s = shlex.quote(session)
+    # git非リポジトリ・git未導入はカウント0と区別するため"?"を返す
     return (
         f'echo "R{index}'
         f' $(test -d {p} && echo ok || echo missing)'
-        f' $(git -C {p} status --porcelain 2>/dev/null | wc -l)'
+        f" $(git -C {p} rev-parse --is-inside-work-tree >/dev/null 2>&1"
+        f" && git -C {p} status --porcelain 2>/dev/null | wc -l || echo '?')"
         f' $(tmux has-session -t ={s} 2>/dev/null && echo on || echo -)"'
     )
 
@@ -93,7 +95,8 @@ def _probe_host(
             script,
             batch_mode=True,
             connect_timeout=5,
-            timeout=15,
+            # 旧実装のリソース毎8sをホスト単位に換算してスケールさせる
+            timeout=5 + 8 * len(items),
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -117,7 +120,12 @@ def _fetch_remote_info(
         health = ResourceHealth("missing", resource.path)
         return _ResourceInfo(project.name, resource.type, health, mount=mount, tmux=tmux)
 
-    git_diff = f"{git_count} files" if resource.git is not None else "-"
+    if resource.git is None:
+        git_diff = "-"
+    elif git_count == "?":
+        git_diff = "?"
+    else:
+        git_diff = f"{git_count} files"
     return _ResourceInfo(
         project.name,
         resource.type,

@@ -92,6 +92,8 @@ class FetchCommandTest(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         execute.assert_called_once_with([
             "scp",
+            "-o", "BatchMode=yes",
+            "-o", "ConnectTimeout=5",
             "-i", "/tmp/key",
             "-P", "2222",
             "user@example.com:/srv/remote/data/run1/out.nc",

@@ -28,12 +28,12 @@
     - 候補B: キャプチャ自体もskillに任せる（CLIコマンドは追加しない、`/brainstorm`的なskillで対話的に吐き出し→整理）
     - 候補C: mind側に独自アプリを構築し、whubとは疎結合にする
     - 関連: `whub todo`との境界、`/task-planning`・`/execution-spec`との責務分担も再検討が必要（下記参照）
-- [ ] 常設フォーカス画面（TUI/GUI風アプリ）の検討
-    - 解きたい問題: `whub todo`や`whub status`を都度実行するだけだと起動・確認の摩擦があり、Agent待ち時間に次の行動を見失いやすい
-    - 方針: `whub focus`または`whub app`として、ターミナル常設のTextual等TUIを第一候補にする。Tkinter等GUIはMacローカル専用補助として必要時に検討する
-    - 表示候補: 今やる1件、次候補、待ち状態、未整理roadmapメモ、project一覧、`whub status`の要約
-    - 注意: 一望性を上げるが情報過多にしない。次の1手を強く表示し、それ以外は薄く置く
-    - 初期スコープ: 読み取り専用ダッシュボード。編集・apply・Agent起動は後段で検討する
+- [ ] 常設キャプチャWebアプリの検討
+    - 解きたい問題: `whub todo`や`whub status`を都度実行するだけだと起動・確認の摩擦があり、思考・todo・AI指示の記録漏れが起きやすい
+    - 方針: `whub app`としてlocalhostのWeb UIを起動し、常設の入力口・一覧・軽い編集画面を提供する。TUI/Tkinterは主案から外し、必要時の補助に留める
+    - 表示/操作候補: todo追加/完了、未整理メモ、AI指示草稿、project一覧、`whub status`の要約、後でAgentへ渡すキュー
+    - 境界: ChatGPT/Codexの再実装はしない。GUIは捕まえる・並べる・軽く編集する・受け渡すまでを担い、解釈/分解/実装/整理はAgentやSkillへ委ねる
+    - 初期スコープ: ローカルWeb UIでtodoとメモ/AI指示を保存できる最小版。Agent起動や自動実行は後段で検討する
 - [ ] 常駐アプリで音声入力したい
 - [ ] Twitterからのソース取得を円滑化する機能ほしい
 - [ ] 自宅サーバのシャットダウンをwhubに組み込む

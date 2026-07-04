@@ -101,11 +101,25 @@ class RemoteTest(unittest.TestCase):
 
         self.assertEqual(cmd, [
             "scp",
+            "-o", "BatchMode=yes",
+            "-o", "ConnectTimeout=5",
             "-i", "/tmp/key",
             "-P", "2222",
             "user@example.com:/srv/data/out.nc",
             "/ws/.whub/downloads/out.nc",
         ])
+
+    def test_build_scp_command_escapes_glob_characters(self) -> None:
+        cmd = remote_module.build_scp_command(
+            self.host,
+            "/srv/data/run[1]/o*ut?.nc",
+            Path("/ws/.whub/downloads/out.nc"),
+        )
+
+        self.assertIn(
+            "user@example.com:/srv/data/run\\[1\\]/o\\*ut\\?.nc",
+            cmd,
+        )
 
     def test_run_rsync_command_builds_and_executes_command(self) -> None:
         completed = subprocess.CompletedProcess([], 0, "", "")
