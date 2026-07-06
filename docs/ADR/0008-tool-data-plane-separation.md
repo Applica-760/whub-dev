@@ -12,7 +12,8 @@
 ## Decision
 
 - **workspace-hub＝ツール・機能基盤（公開可能）、vault＝私の固有記述の貯蔵庫（private）** としてプレーンを分離する
-- vaultは旧mind repoを転用・改名し、知識プレーン（`inbox/` `literature/` `concepts/` `permanent/` `daily/`）と機械プレーン（`whub/`: `manifest.yaml`・`todos.yaml`・`literature-log.jsonl`）を収容する
+- vaultは旧mind repoを転用・改名し、知識プレーン（`inbox/` `literature/` `concepts/` `permanent/` `daily/`）と機械プレーン（`whub/`: `manifest.yaml`・`todos.yaml`）を収容する
+- 機械プレーン`whub/`は全project横断のwhub基盤（config・状態）に限る。単一ドメインのコンテンツ索引は当該知識ドメイン配下に置く（例: 外部ソース取り込みログは`literature/log.jsonl`）
 - workspace-hubの`.whub/`は`vault/whub/`への**symlink**とし、CLIは無改修とする
 - Obsidian互換は維持しない。プレーンなmarkdown＋相対リンクで管理し、特定エディタに依存しない
 - 今後whubの新機能が持つ自己データ（ログ・キャプチャ等）も原則vaultに置く。**whubはvaultを読み書きする入口に徹する**

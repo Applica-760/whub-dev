@@ -99,4 +99,9 @@
 - [ ] /task-planningにおいて、過去に解決した課題とかに関する1行サマリーをMEMORY.mdに管理するのアリかも？
 
 <!-- hub:roadmap:appended:start -->
+- aa
+- whubのコンテキストをスマホからもアクセスできるようにしたい。専用アプリとか作って、質問とかをとりあえずinboxに投げる機能とか作れたらいいな
+- skill, agent rulesをやはり1プロジェクトでも一元化したい。ClaudeとCodex設定を二箇所で管理しているが、シンボリックリンクとかで解決させたい
+- todo addとroadmapの引数順序を直感的に揃える
+- スライドにしろ、Webにしろ、私の固有コンポーネントを共通化して、bootと同様に頒布する仕組みを作りたい
 <!-- hub:roadmap:appended:end -->
