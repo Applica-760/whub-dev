@@ -8,6 +8,7 @@
     - `remote`: `resource`が持つ属性で、リモートのコンピュータに格納されている`project`データを指す。sshfs mountでwhub以下に接続し（参照・編集）、実行はSSHで行う
     - `local`: `resource`が持つ属性で、このコンピュータにある`project`データを指す。シンボリックリンクでwhub以下に接続する
 - `workspace-hub`: whub自体の`project`。ただしmount/link対象ではないため、現時点では`resource`ではない
+- `vault`: 私の固有記述（知識・信念・whub運用データ）を集約するprivateな貯蔵庫repo。知識プレーン（inbox/literature/concepts/permanent/daily）と機械プレーン（`vault/whub/`: manifest・todos・各種ログ）を持つ。whubの自己データは原則vaultに置き、workspace-hubの`.whub/`は`vault/whub/`へのsymlinkとする（ADR-0008）
 - `manifest`: `project`、`resource`、接続情報を定義する設定ファイル
 - `target`: `resource`を操作するための実行対象。現時点では`local`/`remote`の呼び分け層を指す
 - `roadmap`: `project`ごとの長期方針・思いつき・新機能案を置くドキュメント

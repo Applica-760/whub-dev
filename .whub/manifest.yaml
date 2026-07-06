@@ -14,13 +14,13 @@ projects:
   - name: workspace-hub
 
   # --------------- symlink ---------------
-  - name: mind
+  - name: vault
     resource:
       type: symlink
-      workspace_path: mind
+      workspace_path: vault
       source: 
       git:
-        url: git@github.com:Applica-760/mind.git
+        url: git@github.com:Applica-760/vault.git
         branch: main
       boot: true
 

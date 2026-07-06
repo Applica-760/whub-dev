@@ -27,9 +27,8 @@ __pycache__/
 *.py[cod]
 
 # whub link (auto-generated)
-mind
 portfolio
 projects
-
+vault
 .pytest_cache
 .venv

@@ -18,7 +18,7 @@
     - 境界: ChatGPT/Codexの再実装はしない。GUIは捕まえる・並べる・軽く編集する・受け渡すまでを担い、解釈/分解/実装/整理はAgentやSkillへ委ねる
     - 初期スコープ: ローカルWeb UIでtodoとメモ/AI指示を保存できる最小版。Agent起動や自動実行は後段で検討する
 - [ ] 常駐アプリで音声入力したい
-- [ ] Twitterからのソース取得を円滑化する機能ほしい
+- [x] Twitterからのソース取得を円滑化する機能ほしい → intake Skillとして対応（`docs/tasks/20260706_1609_literature-intake.md`）
 
 ## whub 実装改善（2026-07-03 コードレビューより）
 
@@ -66,12 +66,14 @@
     - `whub boot`で配布するCLAUDE.md/skillsに組み込めば、全リソースで統一的に使える
     - md2idx（npm）をそのまま使うか、同等のPython実装をwhubに内蔵するか要検討
 
-## mind — 思考整理（検討中）
+## vault（旧mind） — 私のデータの貯蔵庫
 
-- [ ] mindの位置づけと仕組みの決定
-    - 現状: Obsidianベースの個人ナレッジ（`00_inbox` → `02_Concept` → `03_Permanent`のZettelkasten的フロー）
-    - web app / capture導線と、mind側の独自アプリ・JSONL・Obsidian運用の境界を決める
-    - Literatureとの関係: JSONLは未整理・軽量な履歴、`Literature`は論文として読む/育てる価値が出た項目の昇格先とする
+- [x] mindの位置づけと仕組みの決定 → **ADR-0008で確定**: mind repoを`vault`へ転用・改名し、ツール（whub）とデータ（vault）のプレーンを分離。Obsidian互換は廃止。JSONL履歴＋md昇格の2層は`vault/whub/literature-log.jsonl`＋`vault/literature/sources/`で実現
+- [ ] ADR-0008の後続タスク
+    - `tasks.md`と`todos.yaml`の統合（whub todoのデータモデル見直しと合わせて）
+    - recruit由来文書（志向・自己分析）の整理: vaultに志向の本体、recruitに派生文書
+    - workspace-hub公開前のgit履歴scrub（過去のmanifest・todosが履歴に残存）
+    - キャプチャWebアプリのinboxを`vault/inbox/`に書く設計で統一（inbox×2の解消）
 - [ ] 個人向け学問領域テキスト生成・知識整理プロジェクト（検討中）
     - 目的: 自分が興味を持つ学問領域について、DeepResearch等で継続調査し、自分専用の教科書・知識体系として育てる
     - 基本サイクル: 寝る前に1つの問いを調査依頼 → 翌朝に出典・論点・誤りを確認 → 修正・追加調査 → 週次で章立てや概念体系へ再編する
