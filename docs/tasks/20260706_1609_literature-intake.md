@@ -54,7 +54,7 @@ vault/
 - [x] `whub init <data-dir>`を実装し、指定dirをworkspace-hubの`.whub/`へsymlink化（既存固定パス`.whub/manifest.yaml`・`.whub/todos.yaml`を活かす）
 - [x] `vault/whub/`へmanifest.yaml・todos.yamlを移設し、workspace-hub側でgit rm --cached＋gitignore追加（承認された場合）
 - [x] manifest.yamlのmindエントリを新repoエントリへ差し替え、`whub link`で接続確認
-- [ ] readme.mdに新構造とintakeフローを記載
+- [x] readme.mdに新構造とintakeフローを記載
 
 ## Phase 3: intake Skill実装（workspace-hub側）
 
@@ -77,6 +77,16 @@ vault/
 ### 試行 2: `whub init`でdata-dirを外部注入する
 - 実施内容: `whub init <data-dir>`を追加し、`.whub`を`vault/whub`へのsymlinkとして作成。manifest/todos/downloadsを`vault/whub/`へ移設
 - 結果: `whub init`初回・再実行skip・`whub status`・`whub todo`が成功。再実行時の自己参照チェック順序バグは修正済み
+- 判断: 続行
+
+### 試行 3: vaultを承認済み構造へ整理
+- 実施内容: `00_inbox`等の番号付きディレクトリを`inbox`/`literature`/`concepts`/`permanent`/`daily`へ移動し、`literature/sources`を新設
+- 結果: 旧LiteratureのBlogノートも`literature/books`直下へ統合し、`vault/readme.md`を新構造に更新
+- 判断: 続行
+
+### 試行 4: vaultをAgent配布対象から外す
+- 実施内容: vaultはprivate data storeとして扱うためmanifestの`boot`をfalseにし、vault内のAgent関連ファイルを削除
+- 結果: `.obsidian`・`.claudian`は残し、`whub status`でvaultのsymlink状態が正常であることを確認
 - 判断: 続行
 
 # 結果
