@@ -51,9 +51,9 @@ vault/
 ## Phase 2: プライベートデータrepo構築
 
 - [ ] repo作成（承認された方式・名前で）、旧mindノートを新構造へ移行、Obsidian残滓を整理
-- [ ] `whub init <data-dir>`を実装し、指定dirをworkspace-hubの`.whub/`へsymlink化（既存固定パス`.whub/manifest.yaml`・`.whub/todos.yaml`を活かす）
-- [ ] `vault/whub/`へmanifest.yaml・todos.yamlを移設し、workspace-hub側でgit rm --cached＋gitignore追加（承認された場合）
-- [ ] manifest.yamlのmindエントリを新repoエントリへ差し替え、`whub link`で接続確認
+- [x] `whub init <data-dir>`を実装し、指定dirをworkspace-hubの`.whub/`へsymlink化（既存固定パス`.whub/manifest.yaml`・`.whub/todos.yaml`を活かす）
+- [x] `vault/whub/`へmanifest.yaml・todos.yamlを移設し、workspace-hub側でgit rm --cached＋gitignore追加（承認された場合）
+- [x] manifest.yamlのmindエントリを新repoエントリへ差し替え、`whub link`で接続確認
 - [ ] readme.mdに新構造とintakeフローを記載
 
 ## Phase 3: intake Skill実装（workspace-hub側）
@@ -73,5 +73,10 @@ vault/
 - 実施内容: 貯蔵先をmind/01_Literature配下とするv2構造案を提示したところ、ユーザーから「Obsidian互換は不要」「whub＝ツール基盤、新repo＝manifest/todos/知識をすべて収める貯蔵庫」という再定義の提案
 - 結果: `.whub/manifest.yaml`・`todos.yaml`がworkspace-hub repoにコミット済み（個人データ混入）であることを確認。新repo案はこの問題を構造的に解決すると評価
 - 判断: 方針変更（モデルC → C'）。ブートストラップ問題は`.whub/`のsymlink化で無改修解決できる見込み
+
+### 試行 2: `whub init`でdata-dirを外部注入する
+- 実施内容: `whub init <data-dir>`を追加し、`.whub`を`vault/whub`へのsymlinkとして作成。manifest/todos/downloadsを`vault/whub/`へ移設
+- 結果: `whub init`初回・再実行skip・`whub status`・`whub todo`が成功。再実行時の自己参照チェック順序バグは修正済み
+- 判断: 続行
 
 # 結果

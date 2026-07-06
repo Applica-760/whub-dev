@@ -7,6 +7,7 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 
 - 用語・CLI設計方針は `docs/whub-concepts.md` を正とする
 - `.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
+- `.whub/` は `whub init <data-dir>` で外部のprivate data-dirへ接続できる
 - ローカル`resource`はsymlink、リモート`resource`はsshfs mount（参照・編集）とSSH（実行）で操作する
 - whubパッケージ内の共通Agent設定を`whub boot`で対象`resource`に配布
 
@@ -14,13 +15,17 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 
 ```sh
 uv tool install -e .
+whub init /path/to/whub-data
 source <(whub shell-init)   # .zshrc に追記
 ```
+
+`/path/to/whub-data` には `manifest.yaml` と `todos.yaml` を置く。workspace-hub直下の `.whub` はこのdata-dirへのsymlinkになる。
 
 ## コマンド一覧
 
 | コマンド | 概要 |
 |---|---|
+| `whub init <DATA_DIR> [--force]` | `.whub` を外部data-dirへのsymlinkとして初期化 |
 | `whub status` | 接続状態、ヘルスチェック、git差分を表示 |
 | `whub link` | manifest の symlink を一括作成（`.gitignore` も自動更新） |
 | `whub mount [PROJECT] [-a]` | remote `resource`をsshfsでツリーへマウント（`mount: false`は`-a`か名指しのみ） |
