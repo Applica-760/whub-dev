@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
-import unittest
 from pathlib import Path
 from unittest.mock import patch
 
@@ -54,14 +53,14 @@ def _remote_resource(mountpoint: Path) -> RemoteResource:
     return resource
 
 
-class SymlinkHealthSpecTest(unittest.TestCase):
+class TestSymlinkHealthSpec:
     def test_source_missing_reports_source_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース1
             root = Path(tmp)
             health = inspect_symlink(_symlink_resource(root / "missing-source", root / "target"))
 
-        self.assertEqual(health.state, "source-missing")
+        assert health.state == "source-missing"
 
     def test_correct_symlink_reports_ok(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -73,7 +72,7 @@ class SymlinkHealthSpecTest(unittest.TestCase):
             target.symlink_to(source)
             health = inspect_symlink(_symlink_resource(source, target))
 
-        self.assertEqual(health.state, "ok")
+        assert health.state == "ok"
 
     def test_broken_symlink_reports_broken(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -85,7 +84,7 @@ class SymlinkHealthSpecTest(unittest.TestCase):
             target.symlink_to(root / "missing-target")
             health = inspect_symlink(_symlink_resource(source, target))
 
-        self.assertEqual(health.state, "broken")
+        assert health.state == "broken"
 
     def test_wrong_symlink_target_reports_wrong_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -99,7 +98,7 @@ class SymlinkHealthSpecTest(unittest.TestCase):
             target.symlink_to(other)
             health = inspect_symlink(_symlink_resource(source, target))
 
-        self.assertEqual(health.state, "wrong-target")
+        assert health.state == "wrong-target"
 
     def test_existing_non_symlink_target_reports_unexpected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -111,7 +110,7 @@ class SymlinkHealthSpecTest(unittest.TestCase):
             target.write_text("file")
             health = inspect_symlink(_symlink_resource(source, target))
 
-        self.assertEqual(health.state, "unexpected")
+        assert health.state == "unexpected"
 
     def test_missing_target_reports_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -122,15 +121,15 @@ class SymlinkHealthSpecTest(unittest.TestCase):
             source.mkdir()
             health = inspect_symlink(_symlink_resource(source, target))
 
-        self.assertEqual(health.state, "missing")
+        assert health.state == "missing"
 
 
-class MountHealthSpecTest(unittest.TestCase):
+class TestMountHealthSpec:
     def test_read_mount_table_returns_stdout_when_mount_succeeds(self) -> None:
         # ケース7
         completed = subprocess.CompletedProcess(["mount"], 0, "mount output", "")
         with patch.object(health_module.subprocess, "run", return_value=completed):
-            self.assertEqual(_read_mount_table(), "mount output")
+            assert _read_mount_table() == "mount output"
 
     def test_read_mount_table_returns_none_when_mount_cannot_be_read(self) -> None:
         # ケース8
@@ -140,13 +139,12 @@ class MountHealthSpecTest(unittest.TestCase):
             OSError("missing mount"),
         )
         for case in cases:
-            with self.subTest(case=type(case).__name__):
-                if isinstance(case, subprocess.CompletedProcess):
-                    patcher = patch.object(health_module.subprocess, "run", return_value=case)
-                else:
-                    patcher = patch.object(health_module.subprocess, "run", side_effect=case)
-                with patcher:
-                    self.assertIsNone(_read_mount_table())
+            if isinstance(case, subprocess.CompletedProcess):
+                patcher = patch.object(health_module.subprocess, "run", return_value=case)
+            else:
+                patcher = patch.object(health_module.subprocess, "run", side_effect=case)
+            with patcher:
+                assert _read_mount_table() is None
 
     def test_mount_table_unreadable_reports_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -155,7 +153,7 @@ class MountHealthSpecTest(unittest.TestCase):
             with patch.object(health_module, "_read_mount_table", return_value=None):
                 health = inspect_mount(resource)
 
-        self.assertEqual(health.state, "stale")
+        assert health.state == "stale"
 
     def test_mountpoint_absent_from_table_reports_unmounted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -165,7 +163,7 @@ class MountHealthSpecTest(unittest.TestCase):
             with patch.object(health_module, "_read_mount_table", return_value=table):
                 health = inspect_mount(resource)
 
-        self.assertEqual(health.state, "unmounted")
+        assert health.state == "unmounted"
 
     def test_mountpoint_in_table_and_stat_success_reports_ok(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -180,7 +178,7 @@ class MountHealthSpecTest(unittest.TestCase):
             ):
                 health = inspect_mount(resource)
 
-        self.assertEqual(health.state, "ok")
+        assert health.state == "ok"
 
     def test_mountpoint_in_table_and_stat_failure_reports_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -194,14 +192,9 @@ class MountHealthSpecTest(unittest.TestCase):
                 subprocess.CalledProcessError(1, ["stat"], stderr="failed"),
             )
             for case in cases:
-                with self.subTest(case=type(case).__name__):
-                    with (
-                        patch.object(health_module, "_read_mount_table", return_value=table),
-                        patch.object(health_module.subprocess, "run", side_effect=case),
-                    ):
-                        health = inspect_mount(resource)
-                    self.assertEqual(health.state, "stale")
-
-
-if __name__ == "__main__":
-    unittest.main()
+                with (
+                    patch.object(health_module, "_read_mount_table", return_value=table),
+                    patch.object(health_module.subprocess, "run", side_effect=case),
+                ):
+                    health = inspect_mount(resource)
+                assert health.state == "stale"

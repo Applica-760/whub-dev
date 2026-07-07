@@ -20,6 +20,7 @@
 
 ## Phase 2: テスト基盤の再設計
 - [x] 旧テストを`src/whub/tests_old`へ退避し、新`tests`を作る
+- [x] 新`tests`を`models`/`commands`/`core`へ分割し、対象責務と対応させる
 - [ ] manifest/resource/todo/temp workspaceの共通fixtureを作る
 - [ ] SSH/sshfs/rsync/subprocess/ファイル書込のmock境界を統一する
 - [ ] CLIは`CliRunner`、純粋関数は直接検証に分ける
@@ -41,8 +42,8 @@
 
 ## Phase 5: 旧テストの参照と検証
 - [ ] 旧テストを参照し、仕様根拠が確認できるものだけ新テストへ流用する
-- [ ] `uv run python -m unittest discover -s src/whub/tests`を標準検証にする
-- [ ] テスト名と配置を責務単位に整理する
+- [x] `uv run pytest`を標準検証にする
+- [x] テスト名と配置を責務単位に整理する
 
 # 実行ログ
 
@@ -110,6 +111,11 @@
 ### 試行 11: healthテストを実装・実行する
 - 実施内容: 合意済み12ケースで`src/whub/tests/test_health.py`を追加
 - 結果: `uv run python -m unittest discover -s src/whub/tests`で59件OK
+- 判断: 続行
+
+### 試行 12: テスト配置とランナーを整理する
+- 実施内容: `tests/models`/`tests/core`へ既存テストを移動し、pytest形式へ移行
+- 結果: `uv run pytest`で59件OK
 - 判断: 続行
 
 # 結果

@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import io
-import unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
@@ -30,32 +29,32 @@ def _render(*args, **kwargs) -> str:
     return output.getvalue()
 
 
-class RenderSpecTest(unittest.TestCase):
+class TestRenderSpec:
     def test_empty_table_outputs_nothing(self) -> None:
         # ケース1
-        self.assertEqual(_render([]), "")
+        assert _render([]) == ""
 
     def test_headers_emit_separator_and_rows(self) -> None:
         # ケース2
         output = _render([("ok", "local")], headers=("state", "project"))
 
-        self.assertIn("state  project", output)
-        self.assertIn("--------------", output)
-        self.assertIn("ok     local", output)
+        assert "state  project" in output
+        assert "--------------" in output
+        assert "ok     local" in output
 
     def test_right_align_applies_to_selected_columns(self) -> None:
         # ケース3
         output = _render([(1, "a"), (20, "b")], headers=("id", "name"), right_align={0})
 
-        self.assertIn("  1  a", output)
-        self.assertIn("  20  b", output)
+        assert "  1  a" in output
+        assert "  20  b" in output
 
     def test_east_asian_width_is_used_for_padding(self) -> None:
         # ケース4
         output = _render([("状態", "ok"), ("x", "ng")])
 
-        self.assertIn("状態  ok", output)
-        self.assertIn("x     ng", output)
+        assert "状態  ok" in output
+        assert "x     ng" in output
 
     def test_table_cell_displays_value_and_applies_style(self) -> None:
         # ケース5
@@ -66,9 +65,5 @@ class RenderSpecTest(unittest.TestCase):
         ) as style:
             output = _render([(TableCell("warn", fg="yellow"),)])
 
-        self.assertIn("warn", output)
+        assert "warn" in output
         style.assert_called_with("warn", fg="yellow", bold=False)
-
-
-if __name__ == "__main__":
-    unittest.main()

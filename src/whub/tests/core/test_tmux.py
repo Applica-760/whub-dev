@@ -15,51 +15,45 @@
 """
 from __future__ import annotations
 
-import unittest
-
 from whub.tmux import build_shell_command, session_name
 
 
-class TmuxSpecTest(unittest.TestCase):
+class TestTmuxSpec:
     def test_session_name_adds_prefix(self) -> None:
         # ケース1
-        self.assertEqual(session_name("project"), "whub-project")
+        assert session_name("project") == "whub-project"
 
     def test_session_name_replaces_tmux_unsafe_characters(self) -> None:
         # ケース2
-        self.assertEqual(session_name("project.name:task"), "whub-project-name-task")
+        assert session_name("project.name:task") == "whub-project-name-task"
 
     def test_build_shell_command_falls_back_when_tmux_is_missing(self) -> None:
         # ケース3
         command = build_shell_command("whub-project", "/srv/project")
 
-        self.assertIn("if ! command -v tmux", command)
-        self.assertIn("cd /srv/project && exec $SHELL -l", command)
+        assert "if ! command -v tmux" in command
+        assert "cd /srv/project && exec $SHELL -l" in command
 
     def test_build_shell_command_attaches_existing_session(self) -> None:
         # ケース4
         command = build_shell_command("whub-project", "/srv/project")
 
-        self.assertIn("tmux has-session -t =whub-project", command)
-        self.assertIn("exec tmux new-session -t whub-project", command)
+        assert "tmux has-session -t =whub-project" in command
+        assert "exec tmux new-session -t whub-project" in command
 
     def test_build_shell_command_creates_configured_new_session(self) -> None:
         # ケース5
         command = build_shell_command("whub-project", "/srv/project")
 
-        self.assertIn("set-option -g mouse on", command)
-        self.assertIn("set-option -g history-limit 50000", command)
-        self.assertIn("set-option destroy-unattached on", command)
-        self.assertIn("new-session -s whub-project -c /srv/project", command)
+        assert "set-option -g mouse on" in command
+        assert "set-option -g history-limit 50000" in command
+        assert "set-option destroy-unattached on" in command
+        assert "new-session -s whub-project -c /srv/project" in command
 
     def test_build_shell_command_quotes_session_and_workdir(self) -> None:
         # ケース6
         command = build_shell_command("whub project", "/srv/project path")
 
-        self.assertIn("tmux has-session -t ='whub project'", command)
-        self.assertIn("cd '/srv/project path' && exec $SHELL -l", command)
-        self.assertIn("new-session -s 'whub project' -c '/srv/project path'", command)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert "tmux has-session -t ='whub project'" in command
+        assert "cd '/srv/project path' && exec $SHELL -l" in command
+        assert "new-session -s 'whub project' -c '/srv/project path'" in command

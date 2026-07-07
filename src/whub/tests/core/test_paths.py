@@ -12,15 +12,15 @@
 from __future__ import annotations
 import os
 import tempfile
-import unittest
 from pathlib import Path
 from unittest.mock import patch
 import click
+import pytest
 from whub.paths import downloads_dir, manifest_path, todo_path, whub_data_dir
 from whub.tests.helpers import write_config
 
 
-class PathsSpecTest(unittest.TestCase):
+class TestPathsSpec:
     def test_environment_data_dir_overrides_config(self) -> None:
         with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as data:
             # ケース1,3
@@ -30,23 +30,23 @@ class PathsSpecTest(unittest.TestCase):
                 clear=True,
             ):
                 expected = Path(data).resolve()
-                self.assertEqual(whub_data_dir(), expected)
-                self.assertEqual(manifest_path(), expected / "manifest.yaml")
-                self.assertEqual(todo_path(), expected / "todos.yaml")
-                self.assertEqual(downloads_dir(), expected / "downloads")
+                assert whub_data_dir() == expected
+                assert manifest_path() == expected / "manifest.yaml"
+                assert todo_path() == expected / "todos.yaml"
+                assert downloads_dir() == expected / "downloads"
 
     def test_config_data_dir_is_used_without_environment_override(self) -> None:
         with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as data:
             # ケース2
             write_config(Path(root), Path(data))
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
-                self.assertEqual(whub_data_dir(), Path(data).resolve())
+                assert whub_data_dir() == Path(data).resolve()
 
     def test_missing_or_invalid_config_is_click_error(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             # ケース4
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
-                with self.assertRaisesRegex(click.ClickException, "data_dir is not configured"):
+                with pytest.raises(click.ClickException, match="data_dir is not configured"):
                     whub_data_dir()
 
             # ケース4
@@ -54,15 +54,11 @@ class PathsSpecTest(unittest.TestCase):
             config_dir.mkdir()
             (config_dir / "config.toml").write_text("data_dir = [")
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
-                with self.assertRaisesRegex(click.ClickException, "invalid whub config"):
+                with pytest.raises(click.ClickException, match="invalid whub config"):
                     whub_data_dir()
 
             # ケース4
             (config_dir / "config.toml").write_text("other = 'value'\n")
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
-                with self.assertRaisesRegex(click.ClickException, "missing data_dir"):
+                with pytest.raises(click.ClickException, match="missing data_dir"):
                     whub_data_dir()
-
-
-if __name__ == "__main__":
-    unittest.main()

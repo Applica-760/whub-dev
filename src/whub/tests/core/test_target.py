@@ -18,7 +18,7 @@
 """
 from __future__ import annotations
 
-import unittest
+import pytest
 
 from whub.models import RemoteResource, SymlinkResource
 from whub.target import (
@@ -33,22 +33,22 @@ from whub.target import (
 from whub.tests.helpers import manifest
 
 
-class TargetSpecTest(unittest.TestCase):
+class TestTargetSpec:
     def test_resolve_project_resource_returns_known_project_resource(self) -> None:
         # ケース1
         resource = resolve_project_resource(manifest(), "local")
 
-        self.assertIsInstance(resource, SymlinkResource)
-        self.assertEqual(resource.workspace_path, "projects/local")
+        assert isinstance(resource, SymlinkResource)
+        assert resource.workspace_path == "projects/local"
 
     def test_resolve_project_resource_rejects_unknown_project(self) -> None:
         # ケース2
-        with self.assertRaisesRegex(TargetError, "unknown project"):
+        with pytest.raises(TargetError, match="unknown project"):
             resolve_project_resource(manifest(), "missing")
 
     def test_resolve_project_resource_rejects_project_without_resource(self) -> None:
         # ケース3
-        with self.assertRaisesRegex(TargetError, "project has no resource"):
+        with pytest.raises(TargetError, match="project has no resource"):
             resolve_project_resource(manifest(), "no-resource")
 
     def test_resolve_resource_by_workspace_path_returns_resource_and_relative_path(self) -> None:
@@ -58,9 +58,9 @@ class TargetSpecTest(unittest.TestCase):
             "projects/remote/data/out.nc",
         )
 
-        self.assertEqual(project.name, "remote")
-        self.assertIsInstance(resource, RemoteResource)
-        self.assertEqual(relative_path, "data/out.nc")
+        assert project.name == "remote"
+        assert isinstance(resource, RemoteResource)
+        assert relative_path == "data/out.nc"
 
     def test_resolve_resource_by_workspace_path_prefers_longest_match(self) -> None:
         # ケース5
@@ -69,9 +69,9 @@ class TargetSpecTest(unittest.TestCase):
             "projects/remote/nested/log.txt",
         )
 
-        self.assertEqual(project.name, "nested")
-        self.assertIsInstance(resource, RemoteResource)
-        self.assertEqual(relative_path, "log.txt")
+        assert project.name == "nested"
+        assert isinstance(resource, RemoteResource)
+        assert relative_path == "log.txt"
 
     def test_resolve_resource_by_workspace_path_rejects_invalid_or_uncontained_paths(self) -> None:
         # ケース6
@@ -81,25 +81,24 @@ class TargetSpecTest(unittest.TestCase):
             "projects/../outside",
             "unknown/file.txt",
         ):
-            with self.subTest(path=path):
-                with self.assertRaises(TargetError):
-                    resolve_resource_by_workspace_path(manifest(), path)
+            with pytest.raises(TargetError):
+                resolve_resource_by_workspace_path(manifest(), path)
 
     def test_require_resource_type_returns_expected_type_and_rejects_mismatch(self) -> None:
         # ケース7
         local = resolve_project_resource(manifest(), "local")
         remote = resolve_project_resource(manifest(), "remote")
 
-        self.assertIs(require_resource_type(local, SymlinkResource, "local"), local)
-        with self.assertRaisesRegex(TargetError, "not a remote resource"):
+        assert require_resource_type(local, SymlinkResource, "local") is local
+        with pytest.raises(TargetError, match="not a remote resource"):
             require_resource_type(local, RemoteResource, "local")
-        self.assertIs(require_resource_type(remote, RemoteResource, "remote"), remote)
+        assert require_resource_type(remote, RemoteResource, "remote") is remote
 
     def test_collect_targets_includes_only_projects_with_resources(self) -> None:
         # ケース8
         targets = collect_targets(manifest())
 
-        self.assertEqual([target.data.name for target in targets], ["local", "remote", "nested"])
+        assert [target.data.name for target in targets] == ["local", "remote", "nested"]
 
     def test_on_targets_dispatches_by_resource_type(self) -> None:
         # ケース9
@@ -125,9 +124,5 @@ class TargetSpecTest(unittest.TestCase):
             remote=handle_remote,
         )
 
-        self.assertEqual(results, ["local:a", "remote:b"])
-        self.assertEqual(calls, [("local", "projects/local"), ("remote", "projects/remote")])
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert results == ["local:a", "remote:b"]
+        assert calls == [("local", "projects/local"), ("remote", "projects/remote")]

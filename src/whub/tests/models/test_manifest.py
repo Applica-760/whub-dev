@@ -20,29 +20,28 @@ from __future__ import annotations
 import copy
 import os
 import tempfile
-import unittest
 from pathlib import Path
 from unittest.mock import patch
 import click
+import pytest
 from pydantic import ValidationError
 from whub.models import Manifest, RemoteResource, SymlinkResource, load_manifest
 from whub.tests.helpers import manifest_data
 
 
-class ManifestSpecTest(unittest.TestCase):
+class TestManifestSpec:
     def test_project_without_resource_is_valid(self) -> None:
         # ケース1
         manifest = Manifest.model_validate(manifest_data())
 
         project = manifest.resolve_project("no-resource")
-        self.assertIsNotNone(project)
-        self.assertIsNone(project.resource)
+        assert project is not None
+        assert project.resource is None
 
     def test_symlink_resource_requires_safe_workspace_path_and_absolute_source(self) -> None:
         # ケース2
         data = manifest_data()
-        resource = data["projects"][0]["resource"]
-        self.assertIsInstance(Manifest.model_validate(data).projects[0].resource, SymlinkResource)
+        assert isinstance(Manifest.model_validate(data).projects[0].resource, SymlinkResource)
 
         for field, value in (
             ("workspace_path", "/absolute"),
@@ -52,15 +51,13 @@ class ManifestSpecTest(unittest.TestCase):
         ):
             invalid = copy.deepcopy(data)
             invalid["projects"][0]["resource"][field] = value
-            with self.subTest(field=field, value=value):
-                with self.assertRaises(ValidationError):
-                    Manifest.model_validate(invalid)
+            with pytest.raises(ValidationError):
+                Manifest.model_validate(invalid)
 
     def test_remote_resource_requires_safe_workspace_path_absolute_path_and_known_host(self) -> None:
         # ケース3
         data = manifest_data()
-        resource = data["projects"][1]["resource"]
-        self.assertIsInstance(Manifest.model_validate(data).projects[1].resource, RemoteResource)
+        assert isinstance(Manifest.model_validate(data).projects[1].resource, RemoteResource)
 
         for field, value in (
             ("workspace_path", "/absolute"),
@@ -71,16 +68,15 @@ class ManifestSpecTest(unittest.TestCase):
         ):
             invalid = copy.deepcopy(data)
             invalid["projects"][1]["resource"][field] = value
-            with self.subTest(field=field, value=value):
-                with self.assertRaises(ValidationError):
-                    Manifest.model_validate(invalid)
+            with pytest.raises(ValidationError):
+                Manifest.model_validate(invalid)
 
     def test_duplicate_project_names_are_rejected(self) -> None:
         # ケース4
         data = manifest_data()
         data["projects"][1]["name"] = "local"
 
-        with self.assertRaisesRegex(ValidationError, "duplicate project names"):
+        with pytest.raises(ValidationError, match="duplicate project names"):
             Manifest.model_validate(data)
 
     def test_duplicate_workspace_paths_are_rejected(self) -> None:
@@ -88,7 +84,7 @@ class ManifestSpecTest(unittest.TestCase):
         data = manifest_data()
         data["projects"][1]["resource"]["workspace_path"] = "projects/local"
 
-        with self.assertRaisesRegex(ValidationError, "duplicate workspace_path"):
+        with pytest.raises(ValidationError, match="duplicate workspace_path"):
             Manifest.model_validate(data)
 
     def test_legacy_shape_and_unknown_fields_are_rejected(self) -> None:
@@ -105,12 +101,12 @@ class ManifestSpecTest(unittest.TestCase):
                 ],
             },
         }
-        with self.assertRaises(ValidationError):
+        with pytest.raises(ValidationError):
             Manifest.model_validate(legacy)
 
         data = manifest_data()
         data["hosts"]["home"]["auto_mount"] = True
-        with self.assertRaises(ValidationError):
+        with pytest.raises(ValidationError):
             Manifest.model_validate(data)
 
     def test_validation_sets_resolved_resource_attributes(self) -> None:
@@ -121,21 +117,21 @@ class ManifestSpecTest(unittest.TestCase):
 
         local = manifest.resolve_project("local").resource
         remote = manifest.resolve_project("remote").resource
-        self.assertEqual(local._resolved_workspace_path, Path(root).resolve() / "projects/local")
-        self.assertEqual(remote._resolved_workspace_path, Path(root).resolve() / "projects/remote")
-        self.assertEqual(remote._resolved_host.hostname, "home.example.com")
+        assert local._resolved_workspace_path == Path(root).resolve() / "projects/local"
+        assert remote._resolved_workspace_path == Path(root).resolve() / "projects/remote"
+        assert remote._resolved_host.hostname == "home.example.com"
 
     def test_load_manifest_reports_user_facing_errors(self) -> None:
         with tempfile.TemporaryDirectory() as data_dir:
             # ケース8
             with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
-                with self.assertRaisesRegex(click.ClickException, "manifest.yaml not found"):
+                with pytest.raises(click.ClickException, match="manifest.yaml not found"):
                     load_manifest()
 
             # ケース8
             Path(data_dir, "manifest.yaml").write_text("version: [")
             with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
-                with self.assertRaisesRegex(click.ClickException, "invalid manifest YAML"):
+                with pytest.raises(click.ClickException, match="invalid manifest YAML"):
                     load_manifest()
 
             # ケース8
@@ -149,9 +145,5 @@ class ManifestSpecTest(unittest.TestCase):
                 "    source: relative\n"
             )
             with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
-                with self.assertRaisesRegex(click.ClickException, "invalid manifest"):
+                with pytest.raises(click.ClickException, match="invalid manifest"):
                     load_manifest()
-
-
-if __name__ == "__main__":
-    unittest.main()

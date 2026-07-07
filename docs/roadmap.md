@@ -17,18 +17,15 @@
     - 表示/操作候補: todo追加/完了、未整理メモ、AI指示草稿、project一覧、`whub status`の要約、後でAgentへ渡すキュー
     - 境界: ChatGPT/Codexの再実装はしない。GUIは捕まえる・並べる・軽く編集する・受け渡すまでを担い、解釈/分解/実装/整理はAgentやSkillへ委ねる
     - 初期スコープ: ローカルWeb UIでtodoとメモ/AI指示を保存できる最小版。Agent起動や自動実行は後段で検討する
+    - スマホ対応: 専用アプリ等で質問・思いつきをとりあえずinboxへ投げられるようにし、whubのコンテキストへスマホからもアクセスできるようにする
+    - discourse連携ビュー: discourseの解説結果をHTML/GUIで眺め、skip/keep/noteやinbox/roadmap/todo/literatureへの昇格を行う一時判断ビューとして統合する（永続化はmd/jsonlをSSOTに）
 - [ ] 常駐アプリで音声入力したい
+- [ ] `todo add`と`roadmap`の引数順序を直感的に揃える
 
 ## whub 実装改善（2026-07-03 コードレビューより）
 
-優先度順。1〜3は互いに独立で既存テストを壊さず導入可能。
+優先度順。上位項目は互いに独立で既存テストを壊さず導入可能。
 
-- [x] whubパス解決のCWD依存解消 → `paths.py`と`.whub/config.toml`のdata_dir登録で対応
-    - `MANIFEST_PATH`・`TODO_PATH`・`workspace_path`解決のCWD前提を廃止
-    - rootはパッケージ位置、data_dirは`WHUB_DATA_DIR`または`.whub/config.toml`で解決する
-- [ ] manifest読み込みエラーの整形と`version`のcoerce
-    - manifest欠落・YAML不正・検証エラーで生tracebackが出る。`get_manifest`でClickExceptionに変換する
-    - `version: 2`（非引用）がint扱いで検証失敗する。`Literal[2, "2"]`で受けるか文字列にcoerceする
 - [ ] SSH ControlMaster導入（`build_ssh_command`に`-o ControlMaster=auto -o ControlPersist`）
     - statusはremote 1件につき逐次2接続（health+git、最悪16s/件）、boot remoteはファイル毎に往復している
     - 接続確立コストを初回1回に償却。あわせてstatusのhealth+gitの1コマンド結合、ThreadPool並列化も検討
@@ -54,9 +51,6 @@
     - 候補: 各projectに短いindexファイルを置き、1行サマリ、主要ドキュメント、現在の主タスク、roadmap/todo/specsへの導線を定義する
     - whub側の役割: `whub status`や常設フォーカス画面でこのサマリを表示し、Agent起動時の入口として参照させる
     - 未決: ファイル名、配置場所、manifestへ持たせるか各project内に置くか、bootでテンプレート配布するか
-- [x] `whub`をMac内グローバルコマンド化（CWD依存の解消）→ `docs/tasks/20260706_2208_whub-mac-global-root.md`
-    - 決定: リモートcd先でのwhub利用は不要と割り切る（グローバル化・配布はしない）。Mac内ではどこからでも叩けるようにする。理由は`docs/whub-concepts.md`「スコープ境界」を参照
-    - 実装: `paths.py`へroot/data_dir解決を集約し、`whub init <data_dir>`は`.whub/config.toml`にパスを登録する
 
 ## AIコンテキスト整備（boot / codegraph）
 
@@ -66,6 +60,7 @@
     - 5000行のAPI仕様書でも目次→該当セクションのみ取得で80〜98%のトークン削減が見込める
     - `whub boot`で配布するCLAUDE.md/skillsに組み込めば、全リソースで統一的に使える
     - md2idx（npm）をそのまま使うか、同等のPython実装をwhubに内蔵するか要検討
+- [ ] 私の固有コンポーネント（スライド・Web等）を共通化し、bootと同様に頒布する仕組みを作る
 
 ## vault（旧mind） — 私のデータの貯蔵庫
 
@@ -82,9 +77,13 @@
     - 必須メタ情報: 出典、信頼度、関連する問い、人間確認済みか、未検証仮説か、次に調べること
     - 主なリスク: 重要文献の抜け、誤った重み付け、もっともらしい誤説明の蓄積、確認作業が受け身の読書ログになること
     - MVP: まず1分野に限定し、毎晩1問だけ調査、翌朝に出典・重要概念・疑問点を確認し、週1で章構成へ反映する
+- [ ] レートリミットの有効活用: 寝る前にルールベースのinbox自動整理を走らせる案
+    - 複雑な設計判断はAgentに委ねず、ルールベースで安全に処理できる範囲（分類・振り分け候補提示など）に留める
 
 ## Agentルール・Skills体系
 
+- [ ] skill・agent rulesを1プロジェクト内でも一元化する
+    - ClaudeとCodexの設定を二箇所で管理している状態を、シンボリックリンク等で解消したい
 - [ ] `source: human | ai | ai-edited` フラグをドキュメントに導入
     - AIによる勝手な仕様変更を防いで、人間が指定した仕様を忠実に守るようにしたい
 - [ ] Skills体系の再設計（検討中）
@@ -98,10 +97,4 @@
 - [ ] /task-planningにおいて、過去に解決した課題とかに関する1行サマリーをMEMORY.mdに管理するのアリかも？
 
 <!-- hub:roadmap:appended:start -->
-- whubのコンテキストをスマホからもアクセスできるようにしたい。専用アプリとか作って、質問とかをとりあえずinboxに投げる機能とか作れたらいいな
-- skill, agent rulesをやはり1プロジェクトでも一元化したい。ClaudeとCodex設定を二箇所で管理しているが、シンボリックリンクとかで解決させたい
-- todo addとroadmapの引数順序を直感的に揃える
-- スライドにしろ、Webにしろ、私の固有コンポーネントを共通化して、bootと同様に頒布する仕組みを作りたい
-- discourseの解説結果をHTML/GUIで眺められるようにする案。永続化はmd/jsonlをSSOTにし、HTMLはwhub web app上の一時判断ビュー（skip/keep/note、inbox/roadmap/todo/literatureへの昇格UI）として統合できるか検討する
-- レートリミットがあるから、有効活用するために寝る前にinbox自動整理を走らせたらいい可能性ないかね　複雑な設計とかは勝手に進められると困るが、ルールベースのinbox整理は割といけそう
 <!-- hub:roadmap:appended:end -->
