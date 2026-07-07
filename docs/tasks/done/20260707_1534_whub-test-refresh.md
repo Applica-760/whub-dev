@@ -36,12 +36,24 @@
 - [x] `health.py`のmount/symlink判定を副作用mockで再検証する
 
 ## Phase 4: コマンド層の再作成
-- [ ] `init/link/cd/run/fetch/mount/status/boot/roadmap/todo`の代表CLI振る舞いを検証する
-- [ ] リモート系は実SSHを使わずargv・入力・失敗時表示を検証する
-- [ ] 破壊的操作や実環境依存操作は一切実行しない
+- [x] コマンドごとのテストケースを列挙し合意する（計58ケース）
+- [x] `test_init.py`（7ケース）：正常系・skip・各種エラー・--force
+- [x] `test_link.py`（5ケース）：作成・skip・非symlink無視・失敗WARN・gitignore更新
+- [x] `test_cd.py`（5ケース）：localパス出力・未存在エラー・remote非TTY EXIT_SSH・未知project・shell-init
+- [x] `test_run.py`（4ケース）：remote正常系・local拒否・--tty・exit code伝搬
+- [x] `test_fetch.py`（3ケース）：正常系scp・local拒否・リソース外パスエラー
+- [x] `test_mount.py`（7ケース）：mount/unmount正常系・skip・stale・sshfs未導入・名指し・-a
+- [x] `test_status.py`（6ケース）：混在テーブル・空manifest・unhealthy exit 1・unreachable・_parse_probe正常・不正行無視
+- [x] `test_boot.py`（9ケース）：local配布・未存在skip・workspace-hub自身・boot=false除外・_merge_section×3・_merge_json×2
+- [x] `test_roadmap.py`（5ケース）：local追記・新規作成・remote mock・workspace-hub・メモ空エラー
+- [x] `test_todo_cmd.py`（12ケース）：一覧・-a・add正常/未知project/none・done正常/未存在/既完了・rm・_parse_due_date×3
+- [x] リモート系は実SSHを使わずargv・入力・失敗時表示をmockで検証する
+- [x] 破壊的操作や実環境依存操作は一切実行しない
 
 ## Phase 5: 旧テストの参照と検証
-- [ ] 旧テストを参照し、仕様根拠が確認できるものだけ新テストへ流用する
+- [x] 旧テストを参照し、仕様根拠が確認できるものだけ新テストへ流用する
+- [x] 副作用境界の取りこぼし4観点を新testsへ補完（mount後始末・fetch exit code・boot不正マーカー・boot codegraph fail-safe）
+- [x] `src/whub/tests_old`を削除し移行完了とする
 - [x] `uv run pytest`を標準検証にする
 - [x] テスト名と配置を責務単位に整理する
 
@@ -118,4 +130,25 @@
 - 結果: `uv run pytest`で59件OK
 - 判断: 続行
 
+### 試行 13: Phase 4 コマンド層テストを実装する
+- 実施内容: 合意済み10コマンド分のテストを`tests/commands/`に作成（63ケース）
+- 結果: `uv run pytest`で全122件OK（Phase 3: 59件 + Phase 4: 63件）
+- 判断: 続行
+- 補足: cd remote→CliRunnerは非TTYのためEXIT_SSH(100)検証に変更、run hostnameはuser@host形式のためany()検証に変更
+
+### 試行 14: 旧テストとの突き合わせで取りこぼしを検出する
+- 実施内容: 旧62件と新testsを対比し、副作用境界で新testsが拾えていない観点を抽出
+- 結果: mount失敗後始末・fetch exit code伝搬・boot不正マーカー・boot codegraph fail-safeの4観点を補完（127件OK）
+- 判断: 続行（低優先のstatus表示分岐・roadmap remoteエラー系は割り切って除外）
+
+### 試行 15: 旧テストを削除し移行を完了する
+- 実施内容: `src/whub/tests_old`を削除
+- 結果: 削除後も`uv run pytest`で127件OK。旧テストへの依存なしを確認
+- 判断: 完了
+
 # 結果
+
+- whubテストをAI無検証承認の旧構造から、ADR-0009準拠の仕様検証テストへ全面刷新した
+- 配置: `tests/models`（manifest/todo）・`tests/core`（paths/remote/render/target/tmux/health）・`tests/commands`（10コマンド）
+- 全127件が`uv run pytest`で通過。実SSH/sshfs/rsync/umount等の副作用は全てmock境界に封じた
+- 旧`tests_old`は削除済み。取りこぼしていた副作用境界4観点は新testsへ補完済み

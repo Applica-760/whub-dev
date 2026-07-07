@@ -1,0 +1,197 @@
+"""`whub boot`コマンドのCLI振る舞いテスト。
+
+検証するケース:
+1. localリソースへmerge/skills配布で"done"出力
+2. リソース未存在でskip出力
+3. workspace-hub自身への配布（_apply_workspace_boot）
+4. boot=falseは_collect_boot_targetsで除外される
+5. _merge_section：マーカー挿入・既存マーカー置換・新規ファイル（ADR-0009例外：複雑分岐）
+6. _merge_json：再帰マージ・リスト重複排除（ADR-0009例外：複雑分岐）
+7. _merge_section：不正マーカー（unpaired）を拒否する
+8. CodeGraph init失敗が後続ターゲットの配布を止めない（fail-safe）
+
+検証しないケース:
+- 実際のrsync/SSH実行
+- 実際のCodeGraph init実行
+- boot assetsの具体的な内容（パッケージリソース依存）
+- remote版codegraph fail-safe（localと共通のon_targets構造で代表検証）
+"""
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+from click.testing import CliRunner
+
+from whub.commands.boot import (
+    boot,
+    _collect_boot_targets,
+    _merge_json,
+    _merge_section,
+)
+from whub.models import Manifest, SymlinkResource
+from whub.tests.helpers import manifest
+
+
+class TestBootSpec:
+    def test_local_deploy(self, tmp_path):
+        # ケース1
+        m = manifest()
+        local = m.resolve_project("local")
+        local.resource.boot = True
+        local.resource._resolved_workspace_path = tmp_path / "projects" / "local"
+        local.resource._resolved_workspace_path.mkdir(parents=True)
+
+        with (
+            patch("whub.commands.boot.get_manifest", return_value=m),
+            patch("whub.commands.boot._apply_workspace_boot"),
+            patch("whub.commands.boot.shutil.which", return_value=None),
+        ):
+            result = CliRunner().invoke(boot, catch_exceptions=False)
+
+        assert "done" in result.output
+        assert "local" in result.output
+
+    def test_skip_when_target_not_found(self, tmp_path):
+        # ケース2
+        m = manifest()
+        local = m.resolve_project("local")
+        local.resource.boot = True
+        local.resource._resolved_workspace_path = tmp_path / "nonexistent"
+
+        with (
+            patch("whub.commands.boot.get_manifest", return_value=m),
+            patch("whub.commands.boot._apply_workspace_boot"),
+        ):
+            result = CliRunner().invoke(boot, catch_exceptions=False)
+
+        assert "skip" in result.output
+
+    def test_workspace_boot_called(self):
+        # ケース3
+        m = manifest()
+        with (
+            patch("whub.commands.boot.get_manifest", return_value=m),
+            patch("whub.commands.boot._apply_workspace_boot") as mock_ws,
+        ):
+            CliRunner().invoke(boot, catch_exceptions=False)
+
+        mock_ws.assert_called_once()
+
+    def test_collect_excludes_boot_false(self):
+        # ケース4
+        m = manifest()
+        targets = _collect_boot_targets(m)
+
+        assert all(t.resource.boot for t in targets)
+
+    def test_codegraph_failure_does_not_stop_later_targets(self, tmp_path):
+        # ケース8
+        (tmp_path / "first").mkdir()
+        (tmp_path / "second").mkdir()
+        data = {
+            "version": "2",
+            "projects": [
+                {
+                    "name": "first",
+                    "resource": {
+                        "type": "symlink", "workspace_path": "first",
+                        "source": str(tmp_path / "src1"), "boot": True,
+                    },
+                },
+                {
+                    "name": "second",
+                    "resource": {
+                        "type": "symlink", "workspace_path": "second",
+                        "source": str(tmp_path / "src2"), "boot": True,
+                    },
+                },
+            ],
+        }
+        m = Manifest.model_validate(data)
+        m.projects[0].resource._resolved_workspace_path = tmp_path / "first"
+        m.projects[1].resource._resolved_workspace_path = tmp_path / "second"
+
+        with (
+            patch("whub.commands.boot.get_manifest", return_value=m),
+            patch("whub.commands.boot._apply_workspace_boot"),
+            patch("whub.commands.boot._merged_files", side_effect=lambda *_: iter(())),
+            patch("whub.commands.boot.shutil.copytree"),
+            patch("whub.commands.boot.shutil.which", return_value="/bin/codegraph"),
+            patch(
+                "whub.commands.boot.subprocess.run",
+                side_effect=[
+                    subprocess.CalledProcessError(1, [], stderr="failed"),
+                    subprocess.CompletedProcess([], 0),
+                ],
+            ),
+        ):
+            result = CliRunner().invoke(boot, catch_exceptions=False)
+
+        assert result.exit_code == 0
+        assert "first: CodeGraph init failed" in result.output
+        assert "second (CodeGraph)" in result.output
+
+
+class TestMergeSectionSpec:
+    _MARKERS = ("<!-- start -->", "<!-- end -->")
+
+    def test_new_file(self):
+        # ケース5a
+        source = "<!-- start -->\nhello\n<!-- end -->\n"
+        result = _merge_section(source, None, self._MARKERS)
+
+        assert result == source
+
+    def test_existing_without_markers_prepends(self):
+        # ケース5b
+        source = "<!-- start -->\nhello\n<!-- end -->\n"
+        existing = "old content\n"
+        result = _merge_section(source, existing, self._MARKERS)
+
+        assert result.startswith("<!-- start -->")
+        assert "old content" in result
+
+    def test_existing_with_markers_replaces(self):
+        # ケース5c
+        source = "<!-- start -->\nnew\n<!-- end -->\n"
+        existing = "before\n<!-- start -->\nold\n<!-- end -->\nafter\n"
+        result = _merge_section(source, existing, self._MARKERS)
+
+        assert "new" in result
+        assert "old" not in result
+        assert "before" in result
+        assert "after" in result
+
+    def test_rejects_unpaired_markers(self):
+        # ケース7
+        source = "<!-- start -->\nnew\n<!-- end -->\n"
+        existing = "<!-- start -->\nmissing end\n"
+        with pytest.raises(ValueError, match="duplicate or unpaired"):
+            _merge_section(source, existing, self._MARKERS)
+
+
+class TestMergeJsonSpec:
+    def test_recursive_merge(self):
+        # ケース6a
+        overlay = '{"a": {"x": 1}, "b": 2}'
+        existing = '{"a": {"y": 2}, "c": 3}'
+        result = _merge_json(overlay, existing)
+
+        import json
+        data = json.loads(result)
+        assert data["a"] == {"x": 1, "y": 2}
+        assert data["b"] == 2
+        assert data["c"] == 3
+
+    def test_list_deduplication(self):
+        # ケース6b
+        overlay = '{"items": [1, 2, 3]}'
+        existing = '{"items": [2, 3, 4]}'
+        result = _merge_json(overlay, existing)
+
+        import json
+        data = json.loads(result)
+        assert data["items"] == [2, 3, 4, 1]

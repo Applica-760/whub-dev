@@ -1,0 +1,112 @@
+"""`whub link`コマンドのCLI振る舞いテスト。
+
+検証するケース:
+1. health=missingでシンボリックリンク作成、"link"出力
+2. health=okで"skip"出力
+3. RemoteResourceはスキップされる
+4. symlink作成失敗時にWARN出力
+5. .gitignoreにトップディレクトリがマーカー付きで追記される
+
+検証しないケース:
+- 実ファイルシステム上のsymlink作成（inspect_symlinkのmockで境界を閉じる）
+- .gitignoreの既存マーカー置換の全パターン（_update_gitignoreは薄いglue）
+"""
+from __future__ import annotations
+
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+from click.testing import CliRunner
+
+from whub.commands.link import link
+from whub.health import ResourceHealth
+from whub.tests.helpers import manifest
+
+
+def _invoke_link(m, health_side_effect, *, symlink_to_side_effect=None, cwd=None):
+    """linkコマンドを共通mock付きで実行する。"""
+    with (
+        patch("whub.commands.link.get_manifest", return_value=m),
+        patch("whub.commands.link.inspect_symlink", side_effect=health_side_effect),
+        patch.object(Path, "symlink_to", side_effect=symlink_to_side_effect),
+        patch.object(Path, "cwd", return_value=cwd or Path("/tmp/test-cwd")),
+    ):
+        return CliRunner().invoke(link, catch_exceptions=False)
+
+
+class TestLinkSpec:
+    def test_creates_symlink_when_missing(self, tmp_path):
+        # ケース1
+        m = manifest()
+        health_seq = [
+            ResourceHealth("missing"),
+            ResourceHealth("ok"),
+        ]
+        with (
+            patch("whub.commands.link.get_manifest", return_value=m),
+            patch("whub.commands.link.inspect_symlink", side_effect=health_seq),
+            patch.object(Path, "symlink_to"),
+            patch.object(Path, "cwd", return_value=tmp_path),
+        ):
+            result = CliRunner().invoke(link, catch_exceptions=False)
+
+        assert result.exit_code == 0
+        assert "link" in result.output
+        assert "1 created" in result.output
+
+    def test_skips_when_ok(self, tmp_path):
+        # ケース2
+        m = manifest()
+        with (
+            patch("whub.commands.link.get_manifest", return_value=m),
+            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
+            patch.object(Path, "cwd", return_value=tmp_path),
+        ):
+            result = CliRunner().invoke(link, catch_exceptions=False)
+
+        assert result.exit_code == 0
+        assert "skip" in result.output
+        assert "1 skipped" in result.output
+
+    def test_ignores_non_symlink_resources(self, tmp_path):
+        # ケース3
+        m = manifest()
+        with (
+            patch("whub.commands.link.get_manifest", return_value=m),
+            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
+            patch.object(Path, "cwd", return_value=tmp_path),
+        ):
+            result = CliRunner().invoke(link, catch_exceptions=False)
+
+        assert "remote" not in result.output.lower().split("done")[0]
+
+    def test_warns_on_symlink_failure(self, tmp_path):
+        # ケース4
+        m = manifest()
+        with (
+            patch("whub.commands.link.get_manifest", return_value=m),
+            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("missing")),
+            patch.object(Path, "symlink_to", side_effect=OSError("permission denied")),
+            patch.object(Path, "cwd", return_value=tmp_path),
+        ):
+            result = CliRunner().invoke(link, catch_exceptions=False)
+
+        assert "WARN" in result.output
+        assert "1 warnings" in result.output
+
+    def test_updates_gitignore(self, tmp_path):
+        # ケース5
+        m = manifest()
+        with (
+            patch("whub.commands.link.get_manifest", return_value=m),
+            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
+            patch.object(Path, "cwd", return_value=tmp_path),
+        ):
+            CliRunner().invoke(link, catch_exceptions=False)
+
+        gitignore = tmp_path / ".gitignore"
+        assert gitignore.exists()
+        content = gitignore.read_text()
+        assert "# whub link (auto-generated)" in content
+        assert "projects" in content
