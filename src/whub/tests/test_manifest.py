@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import copy
+import os
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+import click
 from pydantic import ValidationError
 
-from whub.models import Manifest
+from whub.models import Manifest, load_manifest
 from whub.paths import whub_root
 
 
@@ -149,6 +154,34 @@ class ManifestTest(unittest.TestCase):
 
         self.assertEqual(manifest.resolve_project("local").name, "local")
         self.assertIsNone(manifest.resolve_project("missing"))
+
+    def test_load_manifest_reports_missing_file(self) -> None:
+        with tempfile.TemporaryDirectory() as data_dir:
+            with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
+                with self.assertRaisesRegex(click.ClickException, "manifest.yaml not found"):
+                    load_manifest()
+
+    def test_load_manifest_reports_invalid_yaml(self) -> None:
+        with tempfile.TemporaryDirectory() as data_dir:
+            Path(data_dir, "manifest.yaml").write_text("version: [")
+            with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
+                with self.assertRaisesRegex(click.ClickException, "invalid manifest YAML"):
+                    load_manifest()
+
+    def test_load_manifest_reports_invalid_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as data_dir:
+            Path(data_dir, "manifest.yaml").write_text(
+                "version: '2'\n"
+                "projects:\n"
+                "- name: broken\n"
+                "  resource:\n"
+                "    type: symlink\n"
+                "    workspace_path: /absolute\n"
+                "    source: relative\n"
+            )
+            with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
+                with self.assertRaisesRegex(click.ClickException, "invalid manifest"):
+                    load_manifest()
 
 
 if __name__ == "__main__":
