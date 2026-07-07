@@ -44,6 +44,7 @@
     - statusのgit列「-」が「git未設定」と「取得失敗」を区別できない
     - shell-initの補完生成が毎シェル起動でPythonを起動する（ファイルキャッシュ化）
     - `--version`未実装、`_parse_due_date`年またぎとlink gitignore編集のテスト未カバー
+    - グローバルコマンド化後、`whub link`をworkspace-hub外で実行すると別repoの`.gitignore`を書き換える可能性がある
     - roadmapのworkspace-hub特別扱いがコンセプト文書「bootだけ例外」と不整合（文書か実装を揃える）
 
 ## whub アーキテクチャ・設定

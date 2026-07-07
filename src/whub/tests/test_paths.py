@@ -10,15 +10,12 @@
 1. 環境変数なしでパッケージ位置からworkspace rootを推定する挙動。
 """
 from __future__ import annotations
-
 import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-
 import click
-
 from whub.paths import downloads_dir, manifest_path, todo_path, whub_data_dir
 from whub.tests.helpers import write_config
 

@@ -27,9 +27,12 @@
 
 ## Phase 3: 意味的基盤の再作成
 - [x] `paths.py`の正常系・異常系を仕様から再検証する
-- [ ] manifest/todo modelの正常系・異常系を仕様から再検証する
-- [ ] `target.py`/`remote.py`/`tmux.py`/`render.py`の純粋関数テストを追加する
-- [ ] `health.py`のmount/symlink判定を副作用mockで再検証する
+- [x] manifest modelの正常系・異常系を仕様から再検証する
+- [x] todo modelの正常系・異常系を仕様から再検証する
+- [x] `tmux.py`/`render.py`の純粋関数テストを追加する
+- [x] `remote.py`の純粋関数テストを追加する
+- [x] `target.py`の純粋関数テストを追加する
+- [x] `health.py`のmount/symlink判定を副作用mockで再検証する
 
 ## Phase 4: コマンド層の再作成
 - [ ] `init/link/cd/run/fetch/mount/status/boot/roadmap/todo`の代表CLI振る舞いを検証する
@@ -72,6 +75,41 @@
 ### 試行 4: pathsテストを実行する
 - 実施内容: `uv run python -m unittest src.whub.tests.test_paths`
 - 結果: 3件OK
+- 判断: 続行
+
+### 試行 5: linkのcwd依存を既知問題としてroadmapへ記録する
+- 実施内容: workspace-hub外で`whub link`が別repoの`.gitignore`を書き換える可能性を追記
+- 結果: `docs/roadmap.md`の小粒の修正に記録
+- 判断: 続行
+
+### 試行 6: manifestテストを実装・実行する
+- 実施内容: 合意済み8ケースで`src/whub/tests/test_manifest.py`を追加
+- 結果: `uv run python -m unittest discover -s src/whub/tests`で11件OK
+- 判断: 続行
+
+### 試行 7: todo modelテストを実装・実行する
+- 実施内容: storageを除く合意済み6ケースで`src/whub/tests/test_todo_model.py`を追加
+- 結果: `uv run python -m unittest discover -s src/whub/tests`で17件OK
+- 判断: 続行
+
+### 試行 8: targetテストを実装・実行する
+- 実施内容: 合意済み9ケースで`src/whub/tests/test_target.py`を追加
+- 結果: `uv run python -m unittest discover -s src/whub/tests`で26件OK
+- 判断: 続行
+
+### 試行 9: remoteテストを実装・実行する
+- 実施内容: 合意済み10ケースで`src/whub/tests/test_remote.py`を追加
+- 結果: `uv run python -m unittest discover -s src/whub/tests`で36件OK
+- 判断: 続行
+
+### 試行 10: tmux/renderテストを実装・実行する
+- 実施内容: 合意済み6ケースの`test_tmux.py`と最小5ケースの`test_render.py`を追加
+- 結果: renderのANSI直接確認は非TTYで失敗したため`click.style`呼び出し確認へ変更し、全体47件OK
+- 判断: 続行
+
+### 試行 11: healthテストを実装・実行する
+- 実施内容: 合意済み12ケースで`src/whub/tests/test_health.py`を追加
+- 結果: `uv run python -m unittest discover -s src/whub/tests`で59件OK
 - 判断: 続行
 
 # 結果

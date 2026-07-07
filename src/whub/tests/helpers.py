@@ -1,9 +1,6 @@
 from __future__ import annotations
-
 from pathlib import Path
-
 from whub.models import Manifest
-
 
 def manifest_data() -> dict:
     return {
