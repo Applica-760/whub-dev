@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import subprocess
 import unittest
-from pathlib import Path
 from unittest.mock import patch
 
 from click.testing import CliRunner
 
 from whub.commands import fetch as fetch_module
 from whub.models import Manifest
+from whub.paths import downloads_dir
 from whub.target import TargetError, resolve_resource_by_workspace_path
 
 
@@ -97,7 +97,7 @@ class FetchCommandTest(unittest.TestCase):
             "-i", "/tmp/key",
             "-P", "2222",
             "user@example.com:/srv/remote/data/run1/out.nc",
-            str(Path(".whub/downloads/out.nc")),
+            str(downloads_dir() / "out.nc"),
         ])
 
     def test_rejects_local_resource(self) -> None:

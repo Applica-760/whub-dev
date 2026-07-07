@@ -1,14 +1,13 @@
-"""whub fetch — fetch a remote file into .whub/downloads/."""
+"""whub fetch — fetch a remote file into the whub downloads directory."""
 from __future__ import annotations
 import subprocess
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 import click
 from whub.commands import get_manifest
 from whub.models import RemoteResource
+from whub.paths import downloads_dir
 from whub.remote import build_scp_command
 from whub.target import require_resource_type, resolve_resource_by_workspace_path
-
-DOWNLOADS_DIR = Path(".whub/downloads")
 
 
 @click.command()
@@ -22,8 +21,9 @@ def fetch(ctx: click.Context, path: str) -> None:
     if not rel:
         raise click.ClickException(f"path must point to a file inside the resource: {path}")
 
-    DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
-    dest = DOWNLOADS_DIR / PurePosixPath(rel).name
+    downloads = downloads_dir()
+    downloads.mkdir(parents=True, exist_ok=True)
+    dest = downloads / PurePosixPath(rel).name
     result = subprocess.run(
         build_scp_command(resource._resolved_host, f"{resource.path}/{rel}", dest),
     )

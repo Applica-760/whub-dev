@@ -8,7 +8,7 @@
     - `remote`: `resource`が持つ属性で、リモートのコンピュータに格納されている`project`データを指す。sshfs mountでwhub以下に接続し（参照・編集）、実行はSSHで行う
     - `local`: `resource`が持つ属性で、このコンピュータにある`project`データを指す。シンボリックリンクでwhub以下に接続する
 - `workspace-hub`: whub自体の`project`。ただしmount/link対象ではないため、現時点では`resource`ではない
-- `vault`: 私の固有記述（知識・信念・whub運用データ）を集約するprivateな貯蔵庫repo。知識プレーン（inbox/literature/concepts/permanent/daily）と機械プレーン（`vault/whub/`: manifest・todos・各種ログ）を持つ。whubの自己データは原則vaultに置き、workspace-hubの`.whub/`は`vault/whub/`へのsymlinkとする（ADR-0008）
+- `vault`: 私の固有記述（知識・信念・whub運用データ）を集約するprivateな貯蔵庫repo。知識プレーン（inbox/literature/concepts/permanent/daily）と機械プレーン（manifest・todos・各種ログ）を持つ。whubの自己データは原則vaultに置き、workspace-hubの`.whub/config.toml`にdata_dirとして登録する（ADR-0008）
 - `manifest`: `project`、`resource`、接続情報を定義する設定ファイル
 - `target`: `resource`を操作するための実行対象。現時点では`local`/`remote`の呼び分け層を指す
 - `roadmap`: `project`ごとの長期方針・思いつき・新機能案を置くドキュメント
@@ -27,7 +27,7 @@
 - `roadmap`: `project`ごとの`roadmap`へ未整理メモを追記することが目的
 - `mount`/`unmount`: `remote` resourceをsshfsでwhubツリーへ接続/解除することが目的
 - `run`: `remote`でのワンショット実行が目的。対話セッションは`cd`が担う
-- `fetch`: workspace-hub相対パスで指定した`remote`のファイルを`.whub/downloads/`へ取得することが目的
+- `fetch`: workspace-hub相対パスで指定した`remote`のファイルをwhub data_dirの`downloads/`へ取得することが目的
 
 # リモート操作の用途分担
 - 編集・コード確認・`project`横断のコンテキスト参照は`mount`で行う
@@ -56,6 +56,9 @@
 - `health.py`はsymlink/mountの健全性検査を集約する（remoteの健全性は`status`のホスト単位プローブが担う）
 - `tmux.py`はセッション命名規約とリモートシェルスニペットの組み立てを担う
 - `Skill`は壁打ち、整理、昇格、仕様化など、CLIに持たせない判断処理を担う
+- `paths.py`はwhub rootとdata_dir、およびmanifest/todo/downloadsのパス解決を一元的に担う
+- whub rootは`WHUB_ROOT`があれば優先し、通常はインストール済みパッケージ位置からworkspace-hub rootを導出する
+- data_dirは`WHUB_DATA_DIR`があれば優先し、通常は`<workspace-hub>/.whub/config.toml`の`data_dir`をSSOTとする
 
 # CLI振る舞いポリシー（どのような挙動を想定するか）
 - とにかく`whub`を特別扱いしない。ただし`boot`は例外。
@@ -65,7 +68,7 @@
 - `mount`は無引数で`mount: true`の`resource`のみを対象にし、名指し・`-a`はフラグを無視する
 - `todo`は`project`に紐づく単発アクションを管理する。`project`に`resource`がなくても`todo`は持てる
 - `roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する
-- `fetch`はworkspace-hub相対パス（VS Codeの相対パスコピーを想定）から`resource`を解決し、`.whub/downloads/`直下へフラットに保存する（同名は上書き）。単ファイル前提
+- `fetch`はworkspace-hub相対パス（VS Codeの相対パスコピーを想定）から`resource`を解決し、data_dirの`downloads/`直下へフラットに保存する（同名は上書き）。単ファイル前提
 - `roadmap`の整理済み領域への昇格、`todo`や`specs`や`ADR`への分解は`Skill`/Agent側で行う
 
 ---
@@ -75,3 +78,10 @@
                   -(supercomputer)
 
 MacBook、特にwhubを唯一のインターフェースとして、Macローカルも、自宅にホストしているLinuxのリソースにもシームレスに接続できるようにするのが目的
+
+# スコープ境界: whubはMacローカル専用ツール
+- whubはMacBook上でのみ動作するCLIであり、リモート先（Linux Desktop/supercomputer）へはインストール・配布しない
+- そのため`cd`で`remote` resourceへSSH接続した先ではwhubコマンドは使えない。これは意図した割り切りである
+    - 理由: 唯一のインターフェースはMacBookであり、リモートcd先でwhubを使いたい場面ではVS Codeで新しいターミナルタブを開き、Macローカルのwhubを叩けば足りる
+    - リモート先でwhubを動かすためのグローバル化・配布は対応コストに見合わず、本質的に不要と判断する
+- 一方、Mac内ではどのディレクトリからでもwhubを叩けるようにする（パッケージ位置からrootを導出し、`.whub/config.toml`のdata_dirを読む）。`whub cd`でMacローカルの`local` resourceへ移動した先でもwhubが動くことは、この範囲で保証する

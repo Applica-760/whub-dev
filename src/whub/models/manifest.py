@@ -7,7 +7,7 @@ from pathlib import PurePosixPath
 import yaml
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
-MANIFEST_PATH = Path(".whub/manifest.yaml")
+from whub.paths import manifest_path, whub_root
 
 class SchemaModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -56,8 +56,9 @@ class SymlinkResource(BaseResource):
 
 def workspace_hub_resource() -> SymlinkResource:
     """workspace-hub自身をlocal targetとして扱う合成resource"""
-    resource = SymlinkResource(type="symlink", workspace_path=".", source=str(Path.cwd()))
-    resource._resolved_workspace_path = Path.cwd()
+    root = whub_root()
+    resource = SymlinkResource(type="symlink", workspace_path=".", source=str(root))
+    resource._resolved_workspace_path = root
     return resource
 
 
@@ -117,10 +118,11 @@ class Manifest(SchemaModel):
                 f"duplicate workspace_path: {', '.join(duplicate_paths)}"
             )
 
+        root = whub_root()
         for project in self.projects:
             resource = project.resource
             if isinstance(resource, SymlinkResource):
-                resource._resolved_workspace_path = Path.cwd() / resource.workspace_path
+                resource._resolved_workspace_path = root / resource.workspace_path
                 continue
             if not isinstance(resource, RemoteResource):
                 continue
@@ -130,7 +132,7 @@ class Manifest(SchemaModel):
                     f"'{resource.host}'"
                 )
             resource._resolved_host = self.hosts[resource.host]
-            resource._resolved_workspace_path = Path.cwd() / resource.workspace_path
+            resource._resolved_workspace_path = root / resource.workspace_path
         return self
 
     def resolve_project(self, name: str) -> Project | None:
@@ -138,7 +140,7 @@ class Manifest(SchemaModel):
 
 
 def load_manifest() -> Manifest:
-    text = MANIFEST_PATH.read_text()
+    text = manifest_path().read_text()
     data = yaml.safe_load(text)
     return Manifest.model_validate(data)
 

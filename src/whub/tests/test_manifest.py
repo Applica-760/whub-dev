@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import copy
 import unittest
-from pathlib import Path
 
 from pydantic import ValidationError
 
 from whub.models import Manifest
+from whub.paths import whub_root
 
 
 class ManifestTest(unittest.TestCase):
@@ -128,11 +128,11 @@ class ManifestTest(unittest.TestCase):
 
         self.assertEqual(
             manifest.projects[0].resource._resolved_workspace_path,
-            Path.cwd() / "projects/local",
+            whub_root() / "projects/local",
         )
         self.assertEqual(
             manifest.projects[1].resource._resolved_workspace_path,
-            Path.cwd() / "projects/remote",
+            whub_root() / "projects/remote",
         )
 
     def test_resource_status_defaults_enabled_and_can_be_disabled(self) -> None:

@@ -96,7 +96,7 @@ class RemoteTest(unittest.TestCase):
         cmd = remote_module.build_scp_command(
             self.host,
             "/srv/data/out.nc",
-            Path("/ws/.whub/downloads/out.nc"),
+            Path("/tmp/downloads/out.nc"),
         )
 
         self.assertEqual(cmd, [
@@ -106,14 +106,14 @@ class RemoteTest(unittest.TestCase):
             "-i", "/tmp/key",
             "-P", "2222",
             "user@example.com:/srv/data/out.nc",
-            "/ws/.whub/downloads/out.nc",
+            "/tmp/downloads/out.nc",
         ])
 
     def test_build_scp_command_escapes_glob_characters(self) -> None:
         cmd = remote_module.build_scp_command(
             self.host,
             "/srv/data/run[1]/o*ut?.nc",
-            Path("/ws/.whub/downloads/out.nc"),
+            Path("/tmp/downloads/out.nc"),
         )
 
         self.assertIn(

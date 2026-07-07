@@ -1,10 +1,10 @@
 """Personal todos stored in .whub/todos.yaml."""
 from __future__ import annotations
 from datetime import date
-from pathlib import Path
 from typing import Literal, get_args
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from whub.paths import todo_path
 
 Priority = Literal["red", "yellow", "blue", "none"]
 PRIORITIES: list[str] = list(get_args(Priority))
@@ -16,8 +16,6 @@ PRIORITY_EMOJI: dict[str | None, str] = {
     "none": "─",
     None: "─",
 }
-
-TODO_PATH = Path(".whub/todos.yaml")
 
 class Todo(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -79,17 +77,19 @@ class Todos(BaseModel):
 
 
 def load_todos() -> Todos:
-    if not TODO_PATH.exists():
+    path = todo_path()
+    if not path.exists():
         return Todos()
-    data = yaml.safe_load(TODO_PATH.read_text())
+    data = yaml.safe_load(path.read_text())
     if not data:
         return Todos()
     return Todos.model_validate(data)
 
 
 def save_todos(todos: Todos) -> None:
-    TODO_PATH.parent.mkdir(parents=True, exist_ok=True)
-    TODO_PATH.write_text(
+    path = todo_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
         yaml.safe_dump(
             todos.model_dump(mode="json", exclude_none=True),
             allow_unicode=True,

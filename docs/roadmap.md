@@ -18,15 +18,14 @@
     - 境界: ChatGPT/Codexの再実装はしない。GUIは捕まえる・並べる・軽く編集する・受け渡すまでを担い、解釈/分解/実装/整理はAgentやSkillへ委ねる
     - 初期スコープ: ローカルWeb UIでtodoとメモ/AI指示を保存できる最小版。Agent起動や自動実行は後段で検討する
 - [ ] 常駐アプリで音声入力したい
-- [x] Twitterからのソース取得を円滑化する機能ほしい → intake Skillとして対応（`docs/tasks/20260706_1609_literature-intake.md`）
 
 ## whub 実装改善（2026-07-03 コードレビューより）
 
 優先度順。1〜3は互いに独立で既存テストを壊さず導入可能。
 
-- [ ] whubルートの上方探索（CWD依存の解消）
-    - `MANIFEST_PATH`・`TODO_PATH`・`workspace_path`解決がすべてCWD前提で、`whub cd`した先でwhubが使えない
-    - gitと同様に`.whub/`を上方探索し、`WHUB_ROOT`環境変数をフォールバックにする。変更は`load_manifest()`と`TODO_PATH`に集約できる
+- [x] whubパス解決のCWD依存解消 → `paths.py`と`.whub/config.toml`のdata_dir登録で対応
+    - `MANIFEST_PATH`・`TODO_PATH`・`workspace_path`解決のCWD前提を廃止
+    - rootはパッケージ位置、data_dirは`WHUB_DATA_DIR`または`.whub/config.toml`で解決する
 - [ ] manifest読み込みエラーの整形と`version`のcoerce
     - manifest欠落・YAML不正・検証エラーで生tracebackが出る。`get_manifest`でClickExceptionに変換する
     - `version: 2`（非引用）がint扱いで検証失敗する。`Literal[2, "2"]`で受けるか文字列にcoerceする
@@ -54,8 +53,9 @@
     - 候補: 各projectに短いindexファイルを置き、1行サマリ、主要ドキュメント、現在の主タスク、roadmap/todo/specsへの導線を定義する
     - whub側の役割: `whub status`や常設フォーカス画面でこのサマリを表示し、Agent起動時の入口として参照させる
     - 未決: ファイル名、配置場所、manifestへ持たせるか各project内に置くか、bootでテンプレート配布するか
-- [ ] `whub`をグローバルコマンドとして登録すべきか検討
-    - 現状はリポジトリ内でのみ動作。`~/.whub/`に設定を集約するなら、どこからでも叩けるようにする方が自然
+- [x] `whub`をMac内グローバルコマンド化（CWD依存の解消）→ `docs/tasks/20260706_2208_whub-mac-global-root.md`
+    - 決定: リモートcd先でのwhub利用は不要と割り切る（グローバル化・配布はしない）。Mac内ではどこからでも叩けるようにする。理由は`docs/whub-concepts.md`「スコープ境界」を参照
+    - 実装: `paths.py`へroot/data_dir解決を集約し、`whub init <data_dir>`は`.whub/config.toml`にパスを登録する
 
 ## AIコンテキスト整備（boot / codegraph）
 
@@ -68,9 +68,7 @@
 
 ## vault（旧mind） — 私のデータの貯蔵庫
 
-- [x] mindの位置づけと仕組みの決定 → **ADR-0008で確定**: mind repoを`vault`へ転用・改名し、ツール（whub）とデータ（vault）のプレーンを分離。Obsidian互換は廃止。JSONL履歴＋md昇格の2層は`vault/whub/literature-log.jsonl`＋`vault/literature/sources/`で実現
 - [ ] ADR-0008の後続タスク
-    - `tasks.md`と`todos.yaml`の統合（whub todoのデータモデル見直しと合わせて）
     - recruit由来文書（志向・自己分析）の整理: vaultに志向の本体、recruitに派生文書
     - workspace-hub公開前のgit履歴scrub（過去のmanifest・todosが履歴に残存）
     - キャプチャWebアプリのinboxを`vault/inbox/`に書く設計で統一（inbox×2の解消）
@@ -104,4 +102,6 @@
 - skill, agent rulesをやはり1プロジェクトでも一元化したい。ClaudeとCodex設定を二箇所で管理しているが、シンボリックリンクとかで解決させたい
 - todo addとroadmapの引数順序を直感的に揃える
 - スライドにしろ、Webにしろ、私の固有コンポーネントを共通化して、bootと同様に頒布する仕組みを作りたい
+- discourseの解説結果をHTML/GUIで眺められるようにする案。永続化はmd/jsonlをSSOTにし、HTMLはwhub web app上の一時判断ビュー（skip/keep/note、inbox/roadmap/todo/literatureへの昇格UI）として統合できるか検討する
+- レートリミットがあるから、有効活用するために寝る前にinbox自動整理を走らせたらいい可能性ないかね　複雑な設計とかは勝手に進められると困るが、ルールベースのinbox整理は割といけそう
 <!-- hub:roadmap:appended:end -->

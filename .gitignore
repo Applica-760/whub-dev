@@ -19,17 +19,13 @@ AGENTS.md
 !src/whub/boot/AGENTS.md
 !src/whub/boot/.mcp.json
 
-# whub fetch
+# whub local config
 .whub
-.whub/downloads/
 
 # Python cache
 __pycache__/
 *.py[cod]
 
 # whub link (auto-generated)
-portfolio
 projects
 vault
-.pytest_cache
-.venv
