@@ -13,7 +13,7 @@
 - [ ] 解決策: `manifest.yaml`をSSOTにし、localはsymlink、remoteはsshfs mountで接続する。
 - [ ] CLI設計: `status`、`link`、`mount`、`boot`、`fetch`などの役割を説明する。
 - [ ] AI Agent連携: 共通AGENTS/Skills配布、横断参照、作業分離の利点を書く。
-- [ ] まとめ: よかった点、限界、todo/roadmap/spec/ADR連携の今後を書く。
+- [ ] まとめ: よかった点、限界、todo/backlog/spec/ADR連携の今後を書く。
 
 ## Phase 2: ブログ化
 - [ ] 作成済みスライドから課題、解決策、設計判断だけ抜き出す。

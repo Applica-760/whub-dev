@@ -12,8 +12,8 @@
 - `vault`: 私の固有記述（知識・信念・whub運用データ）を集約するprivateな貯蔵庫repo。知識プレーン（inbox/literature/concepts/permanent/daily）と機械プレーン（manifest・todos・各種ログ）を持つ。whubの自己データは原則vaultに置き、workspace-hubの`.whub/config.toml`にdata_dirとして登録する（ADR-0008）
 - `manifest`: `project`、`resource`、接続情報を定義する設定ファイル
 - `target`: `resource`を操作するための実行対象。現時点では`local`/`remote`の呼び分け層を指す
-- `roadmap`: `project`ごとの長期方針・思いつき・新機能案を置くドキュメント
-- `todo`: 実行可能な単発アクション。project紐付けは任意。長期方針そのものは`roadmap`に置く
+- `backlog`: `project`ごとの未整理入力・構想・作業候補を置くドキュメント
+- `todo`: 実行可能な単発アクション。project紐付けは任意。未整理入力や作業候補は`backlog`に置く
 
 # コマンド
 - `status`: whubでの接続状態、ヘルスチェックが目的
@@ -21,7 +21,7 @@
 - `link`: `symlink` resourceをworkspace-hub配下へ接続することが目的
 - `todo`: `project`横断のToDoを管理することが目的
 - `boot`: whubのAgent設定・`Skill`・CodeGraph初期化を各`resource`へ配布することが目的
-- `roadmap`: `project`ごとの`roadmap`へ未整理メモを追記することが目的
+- `backlog`: `project`ごとの`backlog`へ未整理メモを追記することが目的
 - `mount`/`unmount`: `remote` resourceをsshfsでwhubツリーへ接続/解除することが目的
 - `run`: `remote`でのワンショット実行が目的。対話セッションは`cd`が担う
 - `fetch`: workspace-hub相対パスで指定した`remote`のファイルをwhub data_dirの`downloads/`へ取得することが目的
@@ -47,9 +47,9 @@
 - `target.py`は`resolve_project_resource`など、入力インターフェースへ整形するための汎用ヘルパーを提供する
 - 現時点の`target`は`resource`と処理データの組み立て、`local`/`remote`関数の呼び分けを担う
 - 将来的に`target`は存在確認、ファイル書き込みのような、`resource`属性ごとに処理が変わる一般操作も担う
-- `roadmap`のテンプレート、`status`の表示、`boot`の配布手順などのドメイン処理は各コマンド側に置く
+- `backlog`のテンプレート、`status`の表示、`boot`の配布手順などのドメイン処理は各コマンド側に置く
 - `boot`はworkspace-hub配布と複雑な配布手順を持つため、現時点ではcallback内の`local`/`remote`分岐を許容する
-- `remote.py`はSSH/rsync/sshfsのargvビルダー等の低レイヤーを担い、`project`や`roadmap`の意味は持たない
+- `remote.py`はSSH/rsync/sshfsのargvビルダー等の低レイヤーを担い、`project`や`backlog`の意味は持たない
 - `health.py`はsymlink/mountの健全性検査を集約する（remoteの健全性は`status`のホスト単位プローブが担う）
 - `tmux.py`はセッション命名規約とリモートシェルスニペットの組み立てを担う
 - `paths.py`はwhub rootとdata_dir、およびmanifest/todo/downloadsのパス解決を一元的に担う
@@ -63,7 +63,7 @@
 - `status`は`resource`を持つ全`project`を対象にする
 - `mount`は無引数で`mount: true`の`resource`のみを対象にし、名指し・`-a`はフラグを無視する
 - `todo`は実行可能な単発アクションを管理する。project紐付けは任意
-- `roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する
+- `backlog`は`<project>/docs/backlog.md`へ未整理メモを追記する
 - `fetch`はworkspace-hub相対パス（VS Codeの相対パスコピーを想定）から`resource`を解決し、data_dirの`downloads/`直下へフラットに保存する（同名は上書き）。単ファイル前提
 
 ---

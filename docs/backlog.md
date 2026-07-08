@@ -1,4 +1,4 @@
-# workspace-hub Roadmap
+# workspace-hub Backlog
 
 ## whub CLIの新機能・拡張
 
@@ -11,14 +11,14 @@
 - [ ] 常設Webアプリ / 投入口・todo・FOCUSビュー
     - 解きたい問題: `whub todo`や`whub status`を都度実行するだけだと起動・確認の摩擦があり、思考・todo・AI指示の記録漏れが起きやすい
     - 方針: `whub app`としてlocalhostのWeb UIを起動し、常設の入力口・一覧・軽い編集画面を提供する
-    - 投入口: project非依存の思想・外部情報・一般ナレッジは`vault/inbox/`、project固有の構想は各`roadmap`へ直接書く
-    - 表示/操作候補: todo追加/完了、inbox、roadmap、project一覧、FOCUSビュー
+    - 投入口: project非依存の思想・外部情報・一般ナレッジは`vault/inbox/`、project固有の構想は各`backlog`へ直接書く
+    - 表示/操作候補: todo追加/完了、inbox、backlog、project一覧、FOCUSビュー
     - 境界: ChatGPT/Codexの再実装はしない。GUIは捕まえる・並べる・軽く編集する・受け渡すまでを担い、解釈/分解/実装/整理はAgentやSkillへ委ねる
-    - 初期スコープ: inbox書込、roadmap書込、todo表示/追加、FOCUSビュー
-    - スマホ対応: 質問・思いつきをinboxまたはroadmapへ投げられるようにする
-    - discourse連携ビュー: discourseの解説結果をHTML/GUIで眺め、skip/keep/noteやinbox/roadmap/todo/literatureへの振り分けを行う
+    - 初期スコープ: inbox書込、backlog書込、todo表示/追加、FOCUSビュー
+    - スマホ対応: 質問・思いつきをinboxまたはbacklogへ投げられるようにする
+    - discourse連携ビュー: discourseの解説結果をHTML/GUIで眺め、skip/keep/noteやinbox/backlog/todo/literatureへの振り分けを行う
 - [ ] 常駐アプリで音声入力したい
-- [ ] `todo add`と`roadmap`の引数順序を直感的に揃える
+- [ ] `todo add`と`backlog`の引数順序を直感的に揃える
 
 ## whub 実装改善（2026-07-03 コードレビューより）
 
@@ -28,19 +28,19 @@
     - statusはremote 1件につき逐次2接続（health+git、最悪16s/件）、boot remoteはファイル毎に往復している
     - 接続確立コストを初回1回に償却。あわせてstatusのhealth+gitの1コマンド結合、ThreadPool並列化も検討
 - [ ] managed-blockロジックの統合（3実装 → 1モジュール）
-    - boot `_managed_range`・roadmap `_insert_memo`・link `_update_gitignore`が別実装
+    - boot `_managed_range`・backlog `_insert_memo`・link `_update_gitignore`が別実装
     - link版は空行終端頼みで、ブロック直後に空行なしで行を足すと次回link時に消えるバグ候補。boot版ベースで統合する
 - [ ] boot skills配布の削除伝播
     - local `copytree(dirs_exist_ok)` / remote `rsync -a`（--deleteなし）のため廃止Skillが残骸として残り続ける
     - remoteは`--delete`、localは配布先を消してからcopyで揃える
 - [ ] 小粒の修正
     - `build_rsync_command`のidentityパス未引用（空白入りパスで壊れる）
-    - roadmapのremote未対応がexit 0で成功風に終わる
+    - backlogのremote未対応がexit 0で成功風に終わる
     - statusのgit列「-」が「git未設定」と「取得失敗」を区別できない
     - shell-initの補完生成が毎シェル起動でPythonを起動する（ファイルキャッシュ化）
     - `--version`未実装、`_parse_due_date`年またぎとlink gitignore編集のテスト未カバー
     - グローバルコマンド化後、`whub link`をworkspace-hub外で実行すると別repoの`.gitignore`を書き換える可能性がある
-    - roadmapのworkspace-hub特別扱いがコンセプト文書「bootだけ例外」と不整合（文書か実装を揃える）
+    - backlogのworkspace-hub特別扱いがコンセプト文書「bootだけ例外」と不整合（文書か実装を揃える）
 
 ## whub アーキテクチャ・設定
 
@@ -79,7 +79,7 @@
     - 複雑な設計判断はAgentに委ねず、ルールベースで安全に処理できる範囲（分類・振り分け候補提示など）に留める
 - [ ] daily / FOCUS の日次振り返り運用
     - 解きたい問題: vault dailyの運用方法とFOCUSの定期更新タイミングが浮いている
-    - 方針: その日の終わりにgit差分、todo、roadmapの消化度合いからサマリーと感想を作る
+    - 方針: その日の終わりにgit差分、todo、backlogの消化度合いからサマリーと感想を作る
     - 期待: 蓄積により前進感・達成感を得られるようにする
     - 発展: Web appで履歴を見られるようにし、グラフ等で成長を可視化する
 
@@ -91,7 +91,7 @@
     - AIによる勝手な仕様変更を防いで、人間が指定した仕様を忠実に守るようにしたい
 - [ ] Skills体系の再設計（検討中）
     - 現行: `/task-planning`（計画・記録）、`/execution-spec`（仕様書）、`/issue-log`（issue記録）
-    - web appのinbox/roadmap/todoフローと連動して、壁打ち・仕様化・実装計画の担当を決める
+    - web appのinbox/backlog/todoフローと連動して、壁打ち・仕様化・実装計画の担当を決める
     - `/brainstorm`的な前段Skillや、whub固有Skillのboot配布を検討する
 - [ ] コンセプト・位置づけ・責務を対話で固める壁打ちSkillを作る
     - todo着手後、task-planningや実装計画へ進む前に使い、目的・境界・用語・トレードオフを整理する
@@ -99,5 +99,5 @@
     - 重要な仕様や設計判断が確定した時点で、対話内容を永続的な仕様・意思決定記録へ変換する
 - [ ] /task-planningにおいて、過去に解決した課題とかに関する1行サマリーをMEMORY.mdに管理するのアリかも？
 
-<!-- hub:roadmap:appended:start -->
-<!-- hub:roadmap:appended:end -->
+<!-- hub:backlog:appended:start -->
+<!-- hub:backlog:appended:end -->

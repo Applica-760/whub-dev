@@ -33,7 +33,7 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub cd <PROJECT>` | localならパス移動、remoteならtmuxセッションへSSH接続（`--plain`で素シェル） |
 | `whub run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
 | `whub todo` | `project`横断の単発アクションを管理 |
-| `whub roadmap <PROJECT> <TEXT...>` | projectのroadmap末尾の未整理メモへ追記 |
+| `whub backlog <PROJECT> <TEXT...>` | projectのbacklog末尾の未整理メモへ追記 |
 | `whub boot` | パッケージ内のAgent設定を`boot: true`な`resource`へ配布 |
 | `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
 

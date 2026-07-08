@@ -7,22 +7,22 @@ CLIの用語・責務は `docs/whub-concepts.md`、vaultの構造と配置判断
 
 - inbox: project非依存の思いつき・思想・外部情報・一般ナレッジの疑問を投げる場所
 - todo: 実行可能な単発アクション。project紐付けは任意
-- roadmap: project固有の構想・次にやりたいことを投げる場所
+- backlog: project固有の未整理入力・構想・作業候補を投げる場所
 - task-planning: 個別作業の実行計画と作業ログ
 - FOCUS.md: 次に何へ注力するかを相談するための集約ビュー
 
 ## 昇格
 
 - inbox → todo / vault知識プレーン
-- roadmap → task-planning / execution-spec / ADR
+- backlog → task-planning / execution-spec / ADR
 - 外部ソース → discourse → literature/log.jsonl / literature/sources
-- roadmap / task-planning の開始・完了は FOCUS.md の更新材料にする
+- backlog / task-planning の開始・完了は FOCUS.md の更新材料にする
 
 ## FOCUS.md
 
 - whubから全projectの現在地を得るための地図
 - projectごとに1つの現在状態サマリーを持つ
-- 詳細な進捗や構想はroadmap（新backlog）, task mdに置き、FOCUS.mdは要約に留める
+- 詳細な進捗や構想はbacklog, task mdに置き、FOCUS.mdは要約に留める
 - FOCUS.mdを材料に、AI Agentへ次に着手すべきことを相談する
 
 ## Skill分担

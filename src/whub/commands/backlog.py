@@ -1,4 +1,4 @@
-"""whub roadmap — append a raw memo to a project's roadmap."""
+"""whub backlog — append a raw memo to a project's backlog."""
 from __future__ import annotations
 import shlex
 import subprocess
@@ -15,23 +15,23 @@ from whub.models import (
 from whub.remote import run_ssh_command
 from whub.target import TargetItem, on_targets, resolve_project_resource
 
-_MARKER_START = "<!-- hub:roadmap:appended:start -->"
-_MARKER_END = "<!-- hub:roadmap:appended:end -->"
+_MARKER_START = "<!-- hub:backlog:appended:start -->"
+_MARKER_END = "<!-- hub:backlog:appended:end -->"
 
 
 def _seed(project_name: str) -> str:
     return (
-        f"# {project_name} Roadmap\n\n"
+        f"# {project_name} Backlog\n\n"
         f"{_MARKER_START}\n{_MARKER_END}\n"
     )
 
 
 def _insert_memo(content: str, memo: str) -> str:
     if content.count(_MARKER_START) != 1 or content.count(_MARKER_END) != 1:
-        raise click.ClickException("roadmap markers are missing or duplicated")
+        raise click.ClickException("backlog markers are missing or duplicated")
     start, end = content.index(_MARKER_START), content.index(_MARKER_END)
     if start > end:
-        raise click.ClickException("roadmap start marker appears after end marker")
+        raise click.ClickException("backlog start marker appears after end marker")
     return content[:end] + f"- {memo}\n" + content[end:]
 
 
@@ -44,24 +44,24 @@ def _resolve_target_resource(
     return TargetItem(resolve_project_resource(manifest, project), data)
 
 
-def _local_roadmap(resource: SymlinkResource, data: tuple[str, str]) -> None:
+def _local_backlog(resource: SymlinkResource, data: tuple[str, str]) -> None:
     name, memo = data
     root = Path(resource.source)
     if not root.exists():
         raise click.ClickException(f"resource source does not exist: {root}")
-    path = root / "docs" / "roadmap.md"
+    path = root / "docs" / "backlog.md"
     content = path.read_text() if path.exists() else _seed(name)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(_insert_memo(content, memo))
-    click.echo(f"  roadmap {name}: {memo}")
+    click.echo(f"  backlog {name}: {memo}")
 
 
-def _remote_roadmap(resource: RemoteResource, data: tuple[str, str]) -> None:
+def _remote_backlog(resource: RemoteResource, data: tuple[str, str]) -> None:
     name, memo = data
     host = resource._resolved_host
     root = resource.path
     docs = f"{root}/docs"
-    path = f"{docs}/roadmap.md"
+    path = f"{docs}/backlog.md"
 
     try:
         root_check = run_ssh_command(
@@ -81,7 +81,7 @@ def _remote_roadmap(resource: RemoteResource, data: tuple[str, str]) -> None:
                 or root_check.stdout.strip()
                 or f"exit status {root_check.returncode}"
             )
-            raise click.ClickException(f"remote roadmap failed: {detail}")
+            raise click.ClickException(f"remote backlog failed: {detail}")
 
         state = run_ssh_command(
             host,
@@ -108,7 +108,7 @@ def _remote_roadmap(resource: RemoteResource, data: tuple[str, str]) -> None:
         elif state == "missing":
             content = _seed(name)
         else:
-            raise click.ClickException(f"unexpected remote roadmap path: {path}")
+            raise click.ClickException(f"unexpected remote backlog path: {path}")
 
         run_ssh_command(
             host,
@@ -120,19 +120,19 @@ def _remote_roadmap(resource: RemoteResource, data: tuple[str, str]) -> None:
             check=True,
         )
     except (OSError, subprocess.SubprocessError) as error:
-        raise click.ClickException(f"remote roadmap failed: {error}") from error
-    click.echo(f"  roadmap {name}: {memo}")
+        raise click.ClickException(f"remote backlog failed: {error}") from error
+    click.echo(f"  backlog {name}: {memo}")
 
 
 @click.command()
 @click.argument("project", shell_complete=project_names)
 @click.argument("text", nargs=-1, required=True)
 @click.pass_context
-def roadmap(ctx: click.Context, project: str, text: tuple[str, ...]) -> None:
-    """Append a raw memo to a project's roadmap."""
+def backlog(ctx: click.Context, project: str, text: tuple[str, ...]) -> None:
+    """Append a raw memo to a project's backlog."""
     manifest = get_manifest(ctx)
     memo = " ".join(text).strip()
     if not memo:
         raise click.UsageError("memo text is required")
     target = _resolve_target_resource(manifest, project, (project, memo))
-    on_targets([target], local=_local_roadmap, remote=_remote_roadmap)
+    on_targets([target], local=_local_backlog, remote=_remote_backlog)

@@ -1,8 +1,8 @@
-"""`whub roadmap`コマンドのCLI振る舞いテスト。
+"""`whub backlog`コマンドのCLI振る舞いテスト。
 
 検証するケース:
-1. localリソースの既存roadmap.mdにメモ追記
-2. roadmap.md未存在で新規作成+追記
+1. localリソースの既存backlog.mdにメモ追記
+2. backlog.md未存在で新規作成+追記
 3. remoteリソースへSSH mock経由で追記
 4. workspace-hubへの追記
 5. メモ空 → エラー
@@ -13,22 +13,21 @@
 """
 from __future__ import annotations
 
-from pathlib import Path
 from subprocess import CompletedProcess
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from whub.commands.roadmap import roadmap, _MARKER_START, _MARKER_END
-from whub.models import Manifest, Project, SymlinkResource
+from whub.commands.backlog import backlog, _MARKER_START, _MARKER_END
+from whub.models import Manifest, SymlinkResource
 from whub.tests.helpers import manifest, manifest_data
 
 
 def _seed(name: str) -> str:
-    return f"# {name} Roadmap\n\n{_MARKER_START}\n{_MARKER_END}\n"
+    return f"# {name} Backlog\n\n{_MARKER_START}\n{_MARKER_END}\n"
 
 
-class TestRoadmapSpec:
+class TestBacklogSpec:
     def test_local_appends_to_existing(self, tmp_path):
         # ケース1
         m = manifest()
@@ -40,20 +39,20 @@ class TestRoadmapSpec:
         )
         local.resource._resolved_workspace_path = tmp_path / "projects" / "local"
         (tmp_path / "src" / "docs").mkdir(parents=True)
-        roadmap_file = tmp_path / "src" / "docs" / "roadmap.md"
-        roadmap_file.write_text(_seed("local"))
+        backlog_file = tmp_path / "src" / "docs" / "backlog.md"
+        backlog_file.write_text(_seed("local"))
 
-        with patch("whub.commands.roadmap.get_manifest", return_value=m):
+        with patch("whub.commands.backlog.get_manifest", return_value=m):
             result = CliRunner().invoke(
-                roadmap, ["local", "add", "feature", "X"], catch_exceptions=False,
+                backlog, ["local", "add", "feature", "X"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
-        assert "roadmap" in result.output
-        content = roadmap_file.read_text()
+        assert "backlog" in result.output
+        content = backlog_file.read_text()
         assert "- add feature X" in content
 
-    def test_local_creates_new_roadmap(self, tmp_path):
+    def test_local_creates_new_backlog(self, tmp_path):
         # ケース2
         m = manifest()
         local = m.resolve_project("local")
@@ -65,22 +64,19 @@ class TestRoadmapSpec:
         local.resource._resolved_workspace_path = tmp_path / "projects" / "local"
         (tmp_path / "src").mkdir(parents=True)
 
-        with patch("whub.commands.roadmap.get_manifest", return_value=m):
+        with patch("whub.commands.backlog.get_manifest", return_value=m):
             result = CliRunner().invoke(
-                roadmap, ["local", "first", "memo"], catch_exceptions=False,
+                backlog, ["local", "first", "memo"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
-        content = (tmp_path / "src" / "docs" / "roadmap.md").read_text()
+        content = (tmp_path / "src" / "docs" / "backlog.md").read_text()
         assert _MARKER_START in content
         assert "- first memo" in content
 
     def test_remote_appends_via_ssh(self):
         # ケース3
         m = manifest()
-        mock_ssh = MagicMock()
-        mock_ssh.return_value = CompletedProcess([], 0, stdout="file", stderr="")
-        mock_ssh.return_value.stdout = "file"
 
         def ssh_side_effect(host, cmd, **kwargs):
             if "test -d" in cmd:
@@ -92,15 +88,15 @@ class TestRoadmapSpec:
             return CompletedProcess([], 0)
 
         with (
-            patch("whub.commands.roadmap.get_manifest", return_value=m),
-            patch("whub.commands.roadmap.run_ssh_command", side_effect=ssh_side_effect),
+            patch("whub.commands.backlog.get_manifest", return_value=m),
+            patch("whub.commands.backlog.run_ssh_command", side_effect=ssh_side_effect),
         ):
             result = CliRunner().invoke(
-                roadmap, ["remote", "remote", "memo"], catch_exceptions=False,
+                backlog, ["remote", "remote", "memo"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
-        assert "roadmap" in result.output
+        assert "backlog" in result.output
 
     def test_workspace_hub_appends(self, tmp_path):
         # ケース4
@@ -110,7 +106,7 @@ class TestRoadmapSpec:
 
         ws_root = tmp_path / "ws"
         (ws_root / "docs").mkdir(parents=True)
-        (ws_root / "docs" / "roadmap.md").write_text(_seed("workspace-hub"))
+        (ws_root / "docs" / "backlog.md").write_text(_seed("workspace-hub"))
 
         def fake_ws_resource():
             r = SymlinkResource(
@@ -120,21 +116,21 @@ class TestRoadmapSpec:
             return r
 
         with (
-            patch("whub.commands.roadmap.get_manifest", return_value=m),
-            patch("whub.commands.roadmap.workspace_hub_resource", fake_ws_resource),
+            patch("whub.commands.backlog.get_manifest", return_value=m),
+            patch("whub.commands.backlog.workspace_hub_resource", fake_ws_resource),
         ):
             result = CliRunner().invoke(
-                roadmap, ["workspace-hub", "ws", "memo"], catch_exceptions=False,
+                backlog, ["workspace-hub", "ws", "memo"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
-        content = (ws_root / "docs" / "roadmap.md").read_text()
+        content = (ws_root / "docs" / "backlog.md").read_text()
         assert "- ws memo" in content
 
     def test_empty_memo_errors(self):
         # ケース5
         m = manifest()
-        with patch("whub.commands.roadmap.get_manifest", return_value=m):
-            result = CliRunner().invoke(roadmap, ["local"])
+        with patch("whub.commands.backlog.get_manifest", return_value=m):
+            result = CliRunner().invoke(backlog, ["local"])
 
         assert result.exit_code != 0
