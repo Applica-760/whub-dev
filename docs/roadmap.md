@@ -8,17 +8,15 @@
     - 自宅サーバのシャットダウンをwhubに組み込む
     - `cd`と`status`のSSH異常系・終了コードの自動テスト
     - SSHFS復活・tmux運用・Mutagen不採用などの経緯をADR化する
-- [ ] 常設キャプチャWebアプリ / backlog・todo再設計
+- [ ] 常設Webアプリ / 投入口・todo・FOCUSビュー
     - 解きたい問題: `whub todo`や`whub status`を都度実行するだけだと起動・確認の摩擦があり、思考・todo・AI指示の記録漏れが起きやすい
-    - 検討ポイント: 「次に何をするか」の参照箇所を集約し、roadmap/backlog/todoの責務と昇格フローを見直す
-    - 方針: `whub app`としてlocalhostのWeb UIを起動し、常設の入力口・一覧・軽い編集画面を提供する。TUI/Tkinterは主案から外し、必要時の補助に留める
-    - 想定フロー: capture/inbox → backlog → todo → task-planning/spec/ADR
-    - capture候補: 会話メモ、思いつき、論文・ニュース候補、AI指示草稿
-    - 表示/操作候補: todo追加/完了、未整理メモ、AI指示草稿、project一覧、`whub status`の要約、後でAgentへ渡すキュー
+    - 方針: `whub app`としてlocalhostのWeb UIを起動し、常設の入力口・一覧・軽い編集画面を提供する
+    - 投入口: project非依存の思想・外部情報・一般ナレッジは`vault/inbox/`、project固有の構想は各`roadmap`へ直接書く
+    - 表示/操作候補: todo追加/完了、inbox、roadmap、project一覧、FOCUSビュー
     - 境界: ChatGPT/Codexの再実装はしない。GUIは捕まえる・並べる・軽く編集する・受け渡すまでを担い、解釈/分解/実装/整理はAgentやSkillへ委ねる
-    - 初期スコープ: ローカルWeb UIでtodoとメモ/AI指示を保存できる最小版。Agent起動や自動実行は後段で検討する
-    - スマホ対応: 専用アプリ等で質問・思いつきをとりあえずinboxへ投げられるようにし、whubのコンテキストへスマホからもアクセスできるようにする
-    - discourse連携ビュー: discourseの解説結果をHTML/GUIで眺め、skip/keep/noteやinbox/roadmap/todo/literatureへの昇格を行う一時判断ビューとして統合する（永続化はmd/jsonlをSSOTに）
+    - 初期スコープ: inbox書込、roadmap書込、todo表示/追加、FOCUSビュー
+    - スマホ対応: 質問・思いつきをinboxまたはroadmapへ投げられるようにする
+    - discourse連携ビュー: discourseの解説結果をHTML/GUIで眺め、skip/keep/noteやinbox/roadmap/todo/literatureへの振り分けを行う
 - [ ] 常駐アプリで音声入力したい
 - [ ] `todo add`と`roadmap`の引数順序を直感的に揃える
 
@@ -46,11 +44,11 @@
 
 ## whub アーキテクチャ・設定
 
-- [ ] projectごとの1行サマリ/indexファイルを検討する
+- [ ] FOCUS.mdによるproject代表状態の集約
     - 解きたい問題: whubからprojectへ入るAgentが、リポジトリ全体を読む前に「何のprojectか」「今どこを見るべきか」を短時間で把握できる入口がほしい
-    - 候補: 各projectに短いindexファイルを置き、1行サマリ、主要ドキュメント、現在の主タスク、roadmap/todo/specsへの導線を定義する
-    - whub側の役割: `whub status`や常設フォーカス画面でこのサマリを表示し、Agent起動時の入口として参照させる
-    - 未決: ファイル名、配置場所、manifestへ持たせるか各project内に置くか、bootでテンプレート配布するか
+    - 方針: projectごとのindexファイルは当面持たず、`FOCUS.md`のproject代表状態へ吸収する
+    - 配置: `whub_data_dir()`直下の単一ファイル
+    - 保留: project視点の細かさが必要になったら独立indexを再検討する
 
 ## AIコンテキスト整備（boot / codegraph）
 
@@ -67,7 +65,7 @@
 - [ ] ADR-0008の後続タスク
     - recruit由来文書（志向・自己分析）の整理: vaultに志向の本体、recruitに派生文書
     - workspace-hub公開前のgit履歴scrub（過去のmanifest・todosが履歴に残存）
-    - キャプチャWebアプリのinboxを`vault/inbox/`に書く設計で統一（inbox×2の解消）
+    - 常設Webアプリのinboxを`vault/inbox/`に書く設計で統一（inbox×2の解消）
 - [ ] 個人向け学問領域テキスト生成・知識整理プロジェクト（検討中）
     - 目的: 自分が興味を持つ学問領域について、DeepResearch等で継続調査し、自分専用の教科書・知識体系として育てる
     - 基本サイクル: 寝る前に1つの問いを調査依頼 → 翌朝に出典・論点・誤りを確認 → 修正・追加調査 → 週次で章立てや概念体系へ再編する
@@ -88,7 +86,7 @@
     - AIによる勝手な仕様変更を防いで、人間が指定した仕様を忠実に守るようにしたい
 - [ ] Skills体系の再設計（検討中）
     - 現行: `/task-planning`（計画・記録）、`/execution-spec`（仕様書）、`/issue-log`（issue記録）
-    - web appのcapture/backlog/todoフローと連動して、壁打ち・仕様化・実装計画の担当を決める
+    - web appのinbox/roadmap/todoフローと連動して、壁打ち・仕様化・実装計画の担当を決める
     - `/brainstorm`的な前段Skillや、whub固有Skillのboot配布を検討する
 - [ ] コンセプト・位置づけ・責務を対話で固める壁打ちSkillを作る
     - todo着手後、task-planningや実装計画へ進む前に使い、目的・境界・用語・トレードオフを整理する

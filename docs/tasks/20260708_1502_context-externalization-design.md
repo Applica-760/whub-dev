@@ -1,13 +1,13 @@
-# 文脈外部化トラックの設計整理（状態文書・キャプチャWebアプリ・語彙再設計）
+# 文脈外部化トラックの設計整理（状態文書・投入口Webアプリ・語彙再設計）
 
 ## 目的・前提・方針案
-- 目的: 「次に何をするか」の判断材料を外部化する一連の構想（旧称STATUS.md・キャプチャWebアプリ・projectごとのindex）を1つの設計トラックとして整理し、実装可能な状態まで固める
+- 目的: 「次に何をするか」の判断材料を外部化する一連の構想（旧称STATUS.md・投入口Webアプリ・projectごとのindex）を1つの設計トラックとして整理し、実装可能な状態まで固める
 - 前提（壁打ち2ラウンドで確定済み）:
     - SSOTは二層: 個人横断（inbox・todo・マインド系・状態文書）はvault、プロジェクト固有（roadmap）は各プロジェクトリソース内
     - 状態文書はwhub側が持つ「各projectの代表的な状態」の集約で、mount/link不要で参照できる。各roadmapはより細粒度で、必要時・作業中のみ参照
     - 状態文書の用途は「Agentに次に着手すべきことを相談する」機能の材料。推薦＋理由＋タイムボックス提示、人間は承認/拒否のみ
     - 更新・相談はSkill起動で行う（whubコマンドは噛ませない）。ただしSkill作成は概念・命名確定後
-    - backlogという段は導入しない。inbox→todo / inbox→roadmapの2経路で開始
+    - backlogやcaptureという中間段は導入しない。project非依存はinbox、project固有はroadmapへ直接投げる
     - Web appはstatus/todo/roadmap/状態文書を統合表示するフロントエンド。md/jsonlがソース、HTMLはビュー。手動`whub app`起動、スマホはtailscale＋ブラウザ
     - Node系依存は許容。超長期的にはwhubをWeb/Pythonコンポーネントの共通化・エクスポート基盤にする（boot方式の拡張。portfolio等が逆にwhubへ依存する形も許容）
 - 方針: 概念・語彙 → 文書反映 → 運用実験 → Web app方針、の順で確定させる。「STATUS」の命名は不適切として再考する
@@ -24,14 +24,14 @@
 - [x] task-planning/roadmapの定義確定 → **project紐付き・FOCUS状態に影響する**。両者の起動/完了が**FOCUS更新トリガー**になるべき（下記トリガー設計）
 - [x] FOCUS更新トリガーの設計決定 → **(b)プル型: 相談Skill1本が起動時にgit履歴＋roadmap差分＋todoから代表状態を再生成→推薦**。既存コマンド改造不要で実験を回せる。プッシュ型(a)は有効性が見えたら追加（→(c)）
 - [x] 相談Skillの判断基準 → whub-concepts.md／workflow.mdに判断基準・機能の上下関係を文書化し、Skillは再定義せず参照（refileが`vault/readme.md`を参照するのと同型）
-- [x] 昇格フロー確定 → capture（投入）→ inbox → refile仕分け（知識系: permanent/literature ／ 作業系: todo・task-planning・roadmap）。todoはproject紐付け任意で即閉じ、task-planning/roadmapはproject紐付きでFOCUSへ反映。FOCUSは集約ビューで昇格チェーンには乗らない
+- [x] 投入口の粒度確定 → project非依存の思想・外部情報・一般ナレッジはinbox、project固有の構想・次にやりたいことはroadmapへ直接投げる。todoはproject紐付け任意で即閉じ、task-planning/roadmapはproject紐付きでFOCUSへ反映
 
-### Phase 2: 文書反映（設計確定・実装は再実行待ち。試行4参照）
-- [ ] whub-concepts.mdを実装の正に整理（運用専用用語をworkflowへ移し、todo定義を修正、workflow委譲リンクを追加）
-- [ ] docs/workflow.md新規作成（運用の正: 運用専用用語＋情報の昇格フロー＋vault知識プレーンの配置判断・昇格フロー＋Skill役割分担）
-- [ ] vault/readme.mdを構造定義に絞る（配置判断・昇格フローをworkflowへ委譲、SSOT宣言を構造定義に修正）
-- [ ] refile SKILL.mdの参照先をvault/readme.md→workflow.mdへ付け替え（構造はreadmeを継続参照）
-- [ ] docs/roadmapの「常設キャプチャWebアプリ」「文脈付きStatus（→focus）」「projectごとのindex」を確定内容で書き直し
+### Phase 2: 文書反映（完了）
+- [x] whub-concepts.mdを実装の正に整理（運用専用用語をworkflowへ移し、todo定義を修正、workflow委譲リンクを追加）
+- [x] docs/workflow.md新規作成（運用の正: inbox/roadmapの投入口分担＋情報フロー＋Skill役割分担）
+- [x] vault/readme.mdを構造と配置判断の正に整理（昇格・移動はworkflow/Skillへ委譲）
+- [x] refile SKILL.mdの参照先をvault/readme.md＋workflow.mdへ付け替え（.agents/.claude両方）
+- [x] docs/roadmapの「常設Webアプリ」「文脈付きStatus（→focus）」「projectごとのindex」を確定内容で書き直し
 
 ### Phase 3: 状態文書の運用実験（1〜2週間）
 - [ ] FOCUS.md初版を手動作成（Phase 1の2層構造に従う）
@@ -40,19 +40,19 @@
 
 ### Phase 4: Web app最小版の方針決定
 - [ ] 技術選定（Node許容前提。案: リポジトリ内`web/`を分離しVite系front＋Python APIサーバ、uv側の純正性は維持）
-- [ ] 最小スコープ（capture→vault/inbox書込、todo表示/追加、FOCUSビュー）を/execution-specで仕様化
+- [ ] 最小スコープ（inbox書込、roadmap書込、todo表示/追加、FOCUSビュー）を/execution-specで仕様化
 - [ ] コンポーネント共通化・エクスポート基盤（roadmap「固有コンポーネント頒布」項目）との関係整理。portfolioのMarkdownRenderer.tsx流用可否もここで判断
 
 ## 実行ログ
 
 ### 試行 1: 壁打ちラウンド1〜2（2026-07-08）
-- 実施内容: roadmap 3項目（キャプチャWebアプリ・文脈付きStatus・projectごとのindex）の統合可否と未決点をQ&A形式で整理
+- 実施内容: roadmap 3項目（投入口Webアプリ・文脈付きStatus・projectごとのindex）の統合可否と未決点をQ&A形式で整理
 - 結果: 前提欄の各項目が確定。未決は命名・配置・構造・index統合・技術選定
 - 判断: 続行（Phase 1の残り論点を壁打ちで確定させる）
 
 ### 試行 2: 命名・配置確定と基盤項目の発掘（2026-07-08）
 - 実施内容: FOCUS命名決定、data-dir配置確定（実装のwhub_data_dir()と照合）、既存refile Skill・Fable活用法mdの現状確認
-- 結果: 発散で3つの基盤項目が判明しroadmapへ追記（capture Skill新設／unknowns-field-guide統合／AGENTS・CLAUDE.md導線整備）。refileが既にinbox→todo/roadmapを逃がしている事実を確認、欠けているのは投入口captureとtask-planning導線と判明。todo定義（project紐付け任意・即閉じ）とtask-planning/roadmap（project紐付き→FOCUS影響）を確定
+- 結果: 発散で3つの基盤項目が判明しroadmapへ追記（投入口整理／unknowns-field-guide統合／AGENTS・CLAUDE.md導線整備）。refileが既にinbox→todo/roadmapを逃がしている事実を確認。todo定義（project紐付け任意・即閉じ）とtask-planning/roadmap（project紐付き→FOCUS影響）を確定
 - 判断: 続行（残るPhase 1論点はFOCUS構造とFOCUS更新トリガー設計の2点）
 
 ### 試行 3: FOCUS構造とトリガー確定・Phase 1クローズ（2026-07-08）
@@ -61,8 +61,13 @@
 - 判断: Phase 1（概念設計）完了。Phase 2（文書化）へ
 
 ### 試行 4: 文書整理の設計（Phase 2実施→汚染テストによりリバート）（2026-07-08）
-- 実施内容: whub-concepts.md肥大化を評価し、3文書分担を決定。concepts=実装の正（用語＋設計/振る舞いポリシー）、workflow.md（新規）=運用の正（capture/inbox/refile/discourse/focus・昇格フロー・vault配置判断・Skill役割分担）、vault/readme.md=構造の正。refileの判断基準参照先をworkflowへ付け替え、vaultの構造定義はreadmeを継続参照する方針
+- 実施内容: whub-concepts.md肥大化を評価し、3文書分担を決定。concepts=実装の正（用語＋設計/振る舞いポリシー）、workflow.md（新規）=運用の正（inbox/roadmap/refile/discourse/focus・昇格フロー・vault配置判断・Skill役割分担）、vault/readme.md=構造の正。refileの判断基準参照先をworkflowへ付け替え、vaultの構造定義はreadmeを継続参照する方針
 - 結果: 上記をファイルへ反映したが、コンテキスト汚染耐性テストの一環だったため全変更をリバート（roadmap.md／whub-concepts.md／本計画md／作成したworkflow.md・readme編集・refile編集）。slidesは別プロセスのため維持。本計画md自体は資産として復元
 - 判断: 設計判断（3文書分担）は確定済み。クリーンなセッションでPhase 2を再実行する
+
+### 試行 5: Phase 2文書反映の再実行（2026-07-08）
+- 実施内容: workflow新設、whub-concepts整理、vault/readme整理、refile参照更新、roadmap旧語彙更新
+- 結果: capture/backlog中間段を廃止し、project非依存はinbox、project固有はroadmapへ直接投げる方針へ統一
+- 判断: Phase 2完了。Phase 3（FOCUS.md初版と相談Skill実験）へ
 
 ## 結果

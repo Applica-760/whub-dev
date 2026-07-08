@@ -1,6 +1,7 @@
 > この文書はwhubの用語・責務・CLI設計ポリシーの現時点の正とする。
 > 他のドキュメントに異なる記述がある場合、この文書を優先する。
 > ただし用語や設計は発展中であり、変更する場合はこの文書を先に更新する。
+> 運用フローは`docs/workflow.md`、vaultの構造と配置判断は`vault/readme.md`を正とする。
 
 # 用語定義
 - `project`: 私が抱えているプロジェクトのこと
@@ -12,17 +13,13 @@
 - `manifest`: `project`、`resource`、接続情報を定義する設定ファイル
 - `target`: `resource`を操作するための実行対象。現時点では`local`/`remote`の呼び分け層を指す
 - `roadmap`: `project`ごとの長期方針・思いつき・新機能案を置くドキュメント
-- `todo`: 実行可能な単発アクション。長期方針そのものは`roadmap`に置く
-- `task-planning`: 個別作業の実行計画と作業ログ（skills）
-- `specs`: 実装前に固めた仕様（skills）
-- `ADR`: 重要な設計判断の記録
-- `Skill`: AI/Agentに特定の作業手順を担わせるための指示セット
+- `todo`: 実行可能な単発アクション。project紐付けは任意。長期方針そのものは`roadmap`に置く
 
 # コマンド
 - `status`: whubでの接続状態、ヘルスチェックが目的
 - `cd`: `project`または`resource`へ移動することが目的。`local`ならパス移動、`remote`ならSSH接続
 - `link`: `symlink` resourceをworkspace-hub配下へ接続することが目的
-- `todo`: `project`横断のToDoを管理することが目的。これを見て、自分が次に何をすべきかを決定できるのが理想
+- `todo`: `project`横断のToDoを管理することが目的
 - `boot`: whubのAgent設定・`Skill`・CodeGraph初期化を各`resource`へ配布することが目的
 - `roadmap`: `project`ごとの`roadmap`へ未整理メモを追記することが目的
 - `mount`/`unmount`: `remote` resourceをsshfsでwhubツリーへ接続/解除することが目的
@@ -55,7 +52,6 @@
 - `remote.py`はSSH/rsync/sshfsのargvビルダー等の低レイヤーを担い、`project`や`roadmap`の意味は持たない
 - `health.py`はsymlink/mountの健全性検査を集約する（remoteの健全性は`status`のホスト単位プローブが担う）
 - `tmux.py`はセッション命名規約とリモートシェルスニペットの組み立てを担う
-- `Skill`は壁打ち、整理、昇格、仕様化など、CLIに持たせない判断処理を担う
 - `paths.py`はwhub rootとdata_dir、およびmanifest/todo/downloadsのパス解決を一元的に担う
 - whub rootは`WHUB_ROOT`があれば優先し、通常はインストール済みパッケージ位置からworkspace-hub rootを導出する
 - data_dirは`WHUB_DATA_DIR`があれば優先し、通常は`<workspace-hub>/.whub/config.toml`の`data_dir`をSSOTとする
@@ -66,10 +62,9 @@
 - `status`は接続状態、ヘルスチェック、git差分確認に責務を絞る
 - `status`は`resource`を持つ全`project`を対象にする
 - `mount`は無引数で`mount: true`の`resource`のみを対象にし、名指し・`-a`はフラグを無視する
-- `todo`は`project`に紐づく単発アクションを管理する。`project`に`resource`がなくても`todo`は持てる
+- `todo`は実行可能な単発アクションを管理する。project紐付けは任意
 - `roadmap`は`<project>/docs/roadmap.md`へ未整理メモを追記する
 - `fetch`はworkspace-hub相対パス（VS Codeの相対パスコピーを想定）から`resource`を解決し、data_dirの`downloads/`直下へフラットに保存する（同名は上書き）。単ファイル前提
-- `roadmap`の整理済み領域への昇格、`todo`や`specs`や`ADR`への分解は`Skill`/Agent側で行う
 
 ---
 
