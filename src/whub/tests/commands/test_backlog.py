@@ -6,6 +6,9 @@
 3. remoteリソースへSSH mock経由で追記
 4. workspace-hubへの追記
 5. メモ空 → エラー
+6. remote root確認失敗 → エラー
+7. remote state取得失敗 → エラー
+8. remote書き込み失敗 → エラー
 
 検証しないケース:
 - 実際のSSH実行
@@ -13,7 +16,7 @@
 """
 from __future__ import annotations
 
-from subprocess import CompletedProcess
+from subprocess import CalledProcessError, CompletedProcess
 from unittest.mock import patch
 
 from click.testing import CliRunner
@@ -41,7 +44,7 @@ class TestBacklogSpec:
 
         with patch("whub.commands.backlog.get_manifest", return_value=m):
             result = CliRunner().invoke(
-                backlog, ["local", "add", "feature", "X"], catch_exceptions=False,
+                backlog, ["add feature X", "local"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
@@ -63,7 +66,7 @@ class TestBacklogSpec:
 
         with patch("whub.commands.backlog.get_manifest", return_value=m):
             result = CliRunner().invoke(
-                backlog, ["local", "first", "memo"], catch_exceptions=False,
+                backlog, ["first memo", "local"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
@@ -89,7 +92,7 @@ class TestBacklogSpec:
             patch("whub.commands.backlog.run_ssh_command", side_effect=ssh_side_effect),
         ):
             result = CliRunner().invoke(
-                backlog, ["remote", "remote", "memo"], catch_exceptions=False,
+                backlog, ["remote memo", "remote"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
@@ -117,7 +120,7 @@ class TestBacklogSpec:
             patch("whub.commands.backlog.workspace_hub_resource", fake_ws_resource),
         ):
             result = CliRunner().invoke(
-                backlog, ["workspace-hub", "ws", "memo"], catch_exceptions=False,
+                backlog, ["ws memo", "workspace-hub"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
@@ -128,6 +131,59 @@ class TestBacklogSpec:
         # ケース5
         m = manifest()
         with patch("whub.commands.backlog.get_manifest", return_value=m):
-            result = CliRunner().invoke(backlog, ["local"])
+            result = CliRunner().invoke(backlog, ["", "local"])
 
         assert result.exit_code != 0
+
+    def test_remote_root_check_failure_errors(self):
+        # ケース6
+        m = manifest()
+        with (
+            patch("whub.commands.backlog.get_manifest", return_value=m),
+            patch(
+                "whub.commands.backlog.run_ssh_command",
+                return_value=CompletedProcess([], 255, stderr="ssh failed"),
+            ),
+        ):
+            result = CliRunner().invoke(backlog, ["memo", "remote"])
+
+        assert result.exit_code != 0
+        assert "remote backlog failed: ssh failed" in result.output
+
+    def test_remote_state_failure_errors(self):
+        # ケース7
+        m = manifest()
+
+        def ssh_side_effect(host, cmd, **kwargs):
+            if "test -d" in cmd:
+                return CompletedProcess([], 0)
+            raise CalledProcessError(1, [], stderr="state failed")
+
+        with (
+            patch("whub.commands.backlog.get_manifest", return_value=m),
+            patch("whub.commands.backlog.run_ssh_command", side_effect=ssh_side_effect),
+        ):
+            result = CliRunner().invoke(backlog, ["memo", "remote"])
+
+        assert result.exit_code != 0
+        assert "remote backlog failed: state failed" in result.output
+
+    def test_remote_write_failure_errors(self):
+        # ケース8
+        m = manifest()
+
+        def ssh_side_effect(host, cmd, **kwargs):
+            if "test -d" in cmd:
+                return CompletedProcess([], 0)
+            if "test -f" in cmd:
+                return CompletedProcess([], 0, stdout="missing")
+            raise CalledProcessError(1, [], stderr="write failed")
+
+        with (
+            patch("whub.commands.backlog.get_manifest", return_value=m),
+            patch("whub.commands.backlog.run_ssh_command", side_effect=ssh_side_effect),
+        ):
+            result = CliRunner().invoke(backlog, ["memo", "remote"])
+
+        assert result.exit_code != 0
+        assert "remote backlog failed: write failed" in result.output

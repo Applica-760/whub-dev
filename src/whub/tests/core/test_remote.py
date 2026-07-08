@@ -15,8 +15,6 @@
 検証しないケース:
 1. 実SSH接続・実scp・実rsync・実sshfsの成功失敗。
 2. OpenSSHやrsync自体のquote解釈。
-3. identity pathに空白がある場合のshell安全性改善。
-4. `build_rsync_command()`のidentity path未quote問題の修正。
 """
 from __future__ import annotations
 
@@ -38,12 +36,12 @@ from whub.remote import (
 )
 
 
-def _host() -> Host:
+def _host(identity_file: str = "~/.ssh/id_home") -> Host:
     return Host(
         hostname="home.example.com",
         user="takumi",
         port=2222,
-        identity_file="~/.ssh/id_home",
+        identity_file=identity_file,
     )
 
 
@@ -172,6 +170,16 @@ class TestRemoteSpec:
             "/tmp/skills/",
             "takumi@home.example.com:/srv/project/.agents/skills/",
         ]
+
+    def test_build_rsync_command_quotes_identity_path(self) -> None:
+        # ケース9b
+        host = _host("~/Library/Application Support/whub/id home")
+        command = build_rsync_command(host, "/tmp/skills", "/srv/project")
+
+        assert (
+            f"ssh -i '{Path('~/Library/Application Support/whub/id home').expanduser()}' -p 2222"
+            in command
+        )
 
     def test_run_rsync_command_delegates_to_subprocess_run(self) -> None:
         # ケース10

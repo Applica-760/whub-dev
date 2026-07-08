@@ -7,6 +7,8 @@
 4. SSHプローブ失敗でunreachable
 5. _parse_probeが正常出力を解析する
 6. _parse_probeが不正行を無視する
+7. local git取得失敗はfailed表示
+8. remote git取得失敗はfailed表示
 
 検証しないケース:
 - 実際のSSH接続
@@ -21,7 +23,7 @@ from click.testing import CliRunner
 
 from whub.commands.status import status, _parse_probe
 from whub.health import ResourceHealth
-from whub.models import Manifest
+from whub.models import GitInfo, Manifest
 from whub.tests.helpers import manifest
 
 
@@ -105,3 +107,33 @@ class TestStatusSpec:
 
         assert 0 in parsed
         assert 1 not in parsed
+
+    def test_local_git_failure_displays_failed(self):
+        # ケース7
+        m = manifest()
+        m.resolve_project("local").resource.git = GitInfo(url="git@example.com:local.git")
+        with (
+            patch("whub.commands.status.get_manifest", return_value=m),
+            patch("whub.commands.status.inspect_symlink", _stub_inspect_symlink),
+            patch("whub.commands.status.inspect_mount", _stub_inspect_mount),
+            patch("whub.commands.status._probe_host", return_value={0: ("ok", "0", "-")}),
+            patch("whub.commands.status.subprocess.run", return_value=CompletedProcess([], 1, stdout="")),
+        ):
+            result = CliRunner().invoke(status, catch_exceptions=False)
+
+        assert "failed" in result.output
+
+    def test_remote_git_failure_displays_failed(self):
+        # ケース8
+        m = manifest()
+        m.resolve_project("remote").resource.git = GitInfo(url="git@example.com:remote.git")
+        with (
+            patch("whub.commands.status.get_manifest", return_value=m),
+            patch("whub.commands.status.inspect_symlink", _stub_inspect_symlink),
+            patch("whub.commands.status.inspect_mount", _stub_inspect_mount),
+            patch("whub.commands.status._probe_host", return_value={0: ("ok", "?", "-")}),
+            patch("whub.commands.status.subprocess.run", return_value=CompletedProcess([], 0, stdout="")),
+        ):
+            result = CliRunner().invoke(status, catch_exceptions=False)
+
+        assert "failed" in result.output

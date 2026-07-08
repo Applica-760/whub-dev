@@ -129,7 +129,7 @@ def build_rsync_command(
     target, identity, port = ssh_target(host)
     return [
         "rsync", "-a",
-        "-e", f"ssh -i {identity} -p {port}",
+        "-e", f"ssh -i {shlex.quote(identity)} -p {port}",
         f"{local_src}/",
         f"{target}:{remote_dest}/",
     ]

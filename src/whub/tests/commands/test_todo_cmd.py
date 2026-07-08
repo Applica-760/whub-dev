@@ -187,6 +187,8 @@ class TestParseDueDateSpec:
         # ケース11
         today = date(2026, 7, 7)
         assert _parse_due_date("0815", today=today) == date(2026, 8, 15)
+        assert _parse_due_date("0707", today=today) == date(2026, 7, 7)
+        assert _parse_due_date("0706", today=today) == date(2027, 7, 6)
         assert _parse_due_date("0101", today=today) == date(2027, 1, 1)
 
     def test_invalid_format_raises(self):

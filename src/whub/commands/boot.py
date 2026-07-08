@@ -27,6 +27,7 @@ from whub.models import (
 from whub.remote import run_rsync_command, run_ssh_command
 from whub.target import TargetItem, on_targets
 from whub.utils.managed_block import replace_or_prepend_block
+from whub.utils.process import format_process_error
 
 _MARKERS = {
     ".md": ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->"),
@@ -101,19 +102,6 @@ def _merged_files(
             yield rel, merged
 
 
-# ── Apply ─────────────────────────────────────────────────────────
-def _process_error(error: OSError | subprocess.SubprocessError) -> str:
-    if isinstance(error, subprocess.TimeoutExpired):
-        return f"timeout ({error.timeout}s)"
-    if isinstance(error, subprocess.CalledProcessError):
-        return (
-            (error.stderr or "").strip()
-            or (error.stdout or "").strip()
-            or f"exit status {error.returncode}"
-        )
-    return str(error)
-
-
 def _init_local_codegraph(name: str, target: Path) -> None:
     codegraph = shutil.which("codegraph")
     if codegraph is None:
@@ -130,7 +118,7 @@ def _init_local_codegraph(name: str, target: Path) -> None:
     except (OSError, subprocess.SubprocessError) as error:
         click.echo(
             f"  {'WARN':6s}  {name}: CodeGraph init failed:"
-            f" {_process_error(error)}",
+            f" {format_process_error(error)}",
         )
         return
     click.echo(f"  {'init':6s}  {name} (CodeGraph)")
@@ -152,7 +140,7 @@ def _init_remote_codegraph(
     except (OSError, subprocess.SubprocessError) as error:
         click.echo(
             f"  {'WARN':6s}  {name}: CodeGraph init failed:"
-            f" {_process_error(error)}",
+            f" {format_process_error(error)}",
         )
         return
     click.echo(f"  {'init':6s}  {name} (CodeGraph)")
@@ -235,7 +223,7 @@ def _apply_remote_boot(
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         click.echo(
             f"  {'WARN':6s}  {name}: deploy failed:"
-            f" {_process_error(error)}",
+            f" {format_process_error(error)}",
         )
         return
     click.echo(f"  {'done':6s}  {name}")

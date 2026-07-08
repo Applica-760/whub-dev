@@ -18,7 +18,6 @@
     - スマホ対応: 質問・思いつきをinboxまたはbacklogへ投げられるようにする
     - discourse連携ビュー: discourseの解説結果をHTML/GUIで眺め、skip/keep/noteやinbox/backlog/todo/literatureへの振り分けを行う
 - [ ] 常駐アプリで音声入力したい
-- [ ] `todo add`と`backlog`の引数順序を直感的に揃える
 
 ## whub 実装改善（2026-07-03 コードレビューより）
 
@@ -27,19 +26,11 @@
 - [ ] SSH ControlMaster導入（`build_ssh_command`に`-o ControlMaster=auto -o ControlPersist`）
     - statusはremote 1件につき逐次2接続（health+git、最悪16s/件）、boot remoteはファイル毎に往復している
     - 接続確立コストを初回1回に償却。あわせてstatusのhealth+gitの1コマンド結合、ThreadPool並列化も検討
-- [ ] managed-blockロジックの統合（3実装 → 1モジュール）
-    - boot `_managed_range`・backlog `_insert_memo`・link `_update_gitignore`が別実装
-    - link版は空行終端頼みで、ブロック直後に空行なしで行を足すと次回link時に消えるバグ候補。boot版ベースで統合する
 - [ ] boot skills配布の削除伝播
     - local `copytree(dirs_exist_ok)` / remote `rsync -a`（--deleteなし）のため廃止Skillが残骸として残り続ける
     - remoteは`--delete`、localは配布先を消してからcopyで揃える
 - [ ] 小粒の修正
-    - `build_rsync_command`のidentityパス未引用（空白入りパスで壊れる）
-    - backlogのremote未対応がexit 0で成功風に終わる
-    - statusのgit列「-」が「git未設定」と「取得失敗」を区別できない
     - shell-initの補完生成が毎シェル起動でPythonを起動する（ファイルキャッシュ化）
-    - `--version`未実装、`_parse_due_date`年またぎとlink gitignore編集のテスト未カバー
-    - グローバルコマンド化後、`whub link`をworkspace-hub外で実行すると別repoの`.gitignore`を書き換える可能性がある
     - backlogのworkspace-hub特別扱いがコンセプト文書「bootだけ例外」と不整合（文書か実装を揃える）
 
 ## whub アーキテクチャ・設定

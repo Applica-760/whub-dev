@@ -31,6 +31,7 @@ def _invoke_link(m, health_side_effect, *, symlink_to_side_effect=None, cwd=None
         patch("whub.commands.link.inspect_symlink", side_effect=health_side_effect),
         patch.object(Path, "symlink_to", side_effect=symlink_to_side_effect),
         patch.object(Path, "cwd", return_value=cwd or Path("/tmp/test-cwd")),
+        patch("whub.commands.link.whub_root", return_value=cwd or Path("/tmp/test-cwd")),
     ):
         return CliRunner().invoke(link, catch_exceptions=False)
 
@@ -48,6 +49,7 @@ class TestLinkSpec:
             patch("whub.commands.link.inspect_symlink", side_effect=health_seq),
             patch.object(Path, "symlink_to"),
             patch.object(Path, "cwd", return_value=tmp_path),
+            patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
 
@@ -62,6 +64,7 @@ class TestLinkSpec:
             patch("whub.commands.link.get_manifest", return_value=m),
             patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
             patch.object(Path, "cwd", return_value=tmp_path),
+            patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
 
@@ -76,6 +79,7 @@ class TestLinkSpec:
             patch("whub.commands.link.get_manifest", return_value=m),
             patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
             patch.object(Path, "cwd", return_value=tmp_path),
+            patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
 
@@ -89,6 +93,7 @@ class TestLinkSpec:
             patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("missing")),
             patch.object(Path, "symlink_to", side_effect=OSError("permission denied")),
             patch.object(Path, "cwd", return_value=tmp_path),
+            patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
 
@@ -102,6 +107,7 @@ class TestLinkSpec:
             patch("whub.commands.link.get_manifest", return_value=m),
             patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
             patch.object(Path, "cwd", return_value=tmp_path),
+            patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
             CliRunner().invoke(link, catch_exceptions=False)
 
@@ -122,6 +128,7 @@ class TestLinkSpec:
             patch("whub.commands.link.get_manifest", return_value=m),
             patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
             patch.object(Path, "cwd", return_value=tmp_path),
+            patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
             CliRunner().invoke(link, catch_exceptions=False)
 
@@ -129,3 +136,14 @@ class TestLinkSpec:
         assert _GITIGNORE_MARKERS[0] in content
         assert _GITIGNORE_MARKERS[1] in content
         assert ".keep" in content
+
+    def test_errors_outside_workspace_hub_root(self, tmp_path):
+        # ケース7
+        with (
+            patch.object(Path, "cwd", return_value=tmp_path / "other"),
+            patch("whub.commands.link.whub_root", return_value=tmp_path),
+        ):
+            result = CliRunner().invoke(link)
+
+        assert result.exit_code != 0
+        assert "workspace-hub root" in result.output

@@ -15,6 +15,7 @@ from whub.models import (
 from whub.remote import run_ssh_command
 from whub.target import TargetItem, on_targets, resolve_project_resource
 from whub.utils.managed_block import format_block, insert_before_end_marker
+from whub.utils.process import format_process_error
 
 _MARKERS = ("<!-- hub:backlog:appended:start -->", "<!-- hub:backlog:appended:end -->")
 
@@ -112,18 +113,20 @@ def _remote_backlog(resource: RemoteResource, data: tuple[str, str]) -> None:
             check=True,
         )
     except (OSError, subprocess.SubprocessError) as error:
-        raise click.ClickException(f"remote backlog failed: {error}") from error
+        raise click.ClickException(
+            f"remote backlog failed: {format_process_error(error)}"
+        ) from error
     click.echo(f"  backlog {name}: {memo}")
 
 
 @click.command()
+@click.argument("text")
 @click.argument("project", shell_complete=project_names)
-@click.argument("text", nargs=-1, required=True)
 @click.pass_context
-def backlog(ctx: click.Context, project: str, text: tuple[str, ...]) -> None:
+def backlog(ctx: click.Context, text: str, project: str) -> None:
     """Append a raw memo to a project's backlog."""
     manifest = get_manifest(ctx)
-    memo = " ".join(text).strip()
+    memo = text.strip()
     if not memo:
         raise click.UsageError("memo text is required")
     target = _resolve_target_resource(manifest, project, (project, memo))

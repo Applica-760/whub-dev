@@ -25,13 +25,13 @@
 - [ ] （任意・別コミット可）statusのhealth+gitの1コマンド結合、ThreadPool並列化
 
 ### Phase 3: 小粒修正バッチ
-- [ ] `build_rsync_command`のidentityパスをshlex.quoteで引用
-- [ ] backlogのremote失敗系がexit 0で終わる経路を特定し非ゼロ終了に修正
-- [ ] statusのgit列「-」を「git未設定」と「取得失敗」で表示区別
-- [ ] `--version`実装
-- [ ] `_parse_due_date`年またぎ・link gitignore編集のテスト追加（後者はPhase 1で実施済みなら省略）
-- [ ] `whub link`をworkspace-hub外で実行した際のガード（別repoの.gitignore書き換え防止）
-- [ ] `todo add`と`backlog`の引数順序統一（backlog「新機能」節より合流）
+- [x] `build_rsync_command`のidentityパスをshlex.quoteで引用
+- [x] backlogのremote失敗系がexit 0で終わる経路を特定し非ゼロ終了に修正
+- [x] statusのgit列「-」を「git未設定」と「取得失敗」で表示区別
+- [x] `--version`実装は低重要度のため今回スキップ
+- [x] `_parse_due_date`年またぎ・link gitignore編集のテスト追加（後者はPhase 1で実施済み）
+- [x] `whub link`をworkspace-hub外で実行した際のガード（別repoの.gitignore書き換え防止）
+- [x] `backlog`の引数順序をtext-firstへ変更（`todo add`は変更不要と判断）
 
 ### Phase 4（保留・要判断）
 - [ ] shell-init補完のファイルキャッシュ化（設計判断が要るため小粒から分離）
@@ -41,6 +41,34 @@
 ### 試行 1: managed-blockをutilsへ統合
 - 実施内容: `utils/managed_block.py`新設、`render.py`移動、boot/backlog/linkの管理ブロック処理をマーカーペアAPIへ統合
 - 結果: link旧形式.gitignoreの後続行保持テストを追加し、`uv run pytest` 129件全パス
+- 判断: 続行
+### 試行 2: rsync identity path quote
+- 実施内容: `build_rsync_command`のssh transport内identity pathを`shlex.quote`で引用し、空白入りパスのテストを追加
+- 結果: `uv run pytest src/whub/tests/core/test_remote.py` 11件全パス
+- 判断: 続行
+### 試行 3: backlog remote失敗系の確認
+- 実施内容: remote root/state/write失敗テストを追加し、`utils/process.py`でsubprocessエラー整形をboot/backlog共通化
+- 結果: 非ゼロ終了とstderr/stdout由来メッセージを確認、`uv run pytest src/whub/tests/commands/test_backlog.py src/whub/tests/commands/test_boot.py` 15件全パス
+- 判断: 続行
+### 試行 4: status git取得失敗表示
+- 実施内容: git未設定は`-`維持、local/remoteのgit取得失敗を`failed`表示へ変更
+- 結果: `uv run pytest src/whub/tests/commands/test_status.py` 8件全パス
+- 判断: 続行
+### 試行 5: `--version`実装の要否確認
+- 実施内容: CLI versionはmanifest schema versionとは別物であり、現時点の運用価値を再評価
+- 結果: 低重要度のため今回スキップ
+- 判断: 続行
+### 試行 6: `_parse_due_date`年またぎテスト追加
+- 実施内容: MMDDが今日と同日なら今年、過去日なら翌年になる境界テストを追加
+- 結果: `uv run pytest src/whub/tests/commands/test_todo_cmd.py` 12件全パス
+- 判断: 続行
+### 試行 7: `whub link`実行場所ガード
+- 実施内容: `Path.cwd() != whub_root()`ならClickExceptionで停止し、別repoの`.gitignore`更新を防止
+- 結果: `uv run pytest src/whub/tests/commands/test_link.py` 7件全パス
+- 判断: 続行
+### 試行 8: `backlog`引数順序変更
+- 実施内容: `whub backlog <text> <project>`へ変更し、複数語textはquote前提に整理（`todo add`は変更なし）
+- 結果: `uv run pytest src/whub/tests/commands/test_backlog.py` 8件全パス
 - 判断: 続行
 
 ## 結果

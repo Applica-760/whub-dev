@@ -42,8 +42,10 @@ def _fetch_local_info(r: SymlinkResource, project: Project) -> _ResourceInfo:
             if result.returncode == 0:
                 lines = [l for l in result.stdout.splitlines() if l.strip()]
                 git_diff = f"{len(lines)} files"
+            else:
+                git_diff = "failed"
         except (OSError, subprocess.TimeoutExpired):
-            pass
+            git_diff = "failed"
 
     return _ResourceInfo(
         name=project.name,
@@ -123,7 +125,7 @@ def _fetch_remote_info(
     if resource.git is None:
         git_diff = "-"
     elif git_count == "?":
-        git_diff = "?"
+        git_diff = "failed"
     else:
         git_diff = f"{git_count} files"
     return _ResourceInfo(

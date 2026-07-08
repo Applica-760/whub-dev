@@ -5,6 +5,7 @@ import click
 from whub.commands import get_manifest
 from whub.health import inspect_symlink
 from whub.models import SymlinkResource
+from whub.paths import whub_root
 from whub.utils.managed_block import format_block, replace_or_prepend_block
 
 _GITIGNORE_MARKERS = (
@@ -43,6 +44,8 @@ def _update_gitignore(top_dirs: set[str]) -> None:
 @click.pass_context
 def link(ctx: click.Context) -> None:
     """Create symlinks declared in the manifest."""
+    if Path.cwd() != whub_root():
+        raise click.ClickException("whub link must be run from the workspace-hub root")
     m = get_manifest(ctx)
     created = skipped = warnings = 0
     top_dirs: set[str] = set()
