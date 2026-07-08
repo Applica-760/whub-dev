@@ -76,3 +76,6 @@
 - 判断: 続行（次は更新・相談Skillの設計）
 
 ## 結果
+- 用語整理とworkflow作成を完了し、inbox/roadmap（新backlog）/todo/task-planning/FOCUSの責務を分離した
+- FOCUS.md初版とfocus-update Skill試作は作成したが、判断材料としては文脈が薄いためFOCUS運用は一旦除外する
+- FOCUS再構成は`docs/tasks/20260708_2106_focus-reconstruction.md`、既存機能のHTMLビュー作成は`docs/tasks/20260708_2108_existing-features-html-view.md`へ分離した

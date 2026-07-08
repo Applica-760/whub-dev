@@ -5,6 +5,11 @@
 - 前提: pytest移行済み・127件全パス（0.24s）。各項目は独立で既存テストを壊さず導入可能
 - 方針: バグ候補を含むmanaged-block統合を最優先、次に効果の大きいControlMaster、最後に小粒修正を1バッチで
 
+ $task-planning docs/tasks/20260708_1435_whub-review-backlog.md
+  を進めたい
+
+  3つのmanaged sectionをロジック統合したいが、かなり汎用的で、別にリッチな機能でもないのでwhub/utils/managed_block.py はどうすかね
+
 ## 計画
 
 ### Phase 1: managed-blockロジック統合（3実装 → 1モジュール）
