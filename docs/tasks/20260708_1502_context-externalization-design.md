@@ -34,7 +34,7 @@
 - [x] docs/roadmapの「常設Webアプリ」「文脈付きStatus（→focus）」「projectごとのindex」を確定内容で書き直し
 
 ### Phase 3: 状態文書の運用実験（1〜2週間）
-- [ ] FOCUS.md初版を手動作成（Phase 1の2層構造に従う）
+- [x] FOCUS.md初版を手動作成（Phase 1の2層構造に従う）
 - [ ] 更新・相談Skill作成（git履歴・vault/todo・各roadmap参照→文書更新→推薦提示→承認/拒否を計画md実行ログに1行記録）
 - [ ] 実験終了時にログで振り返り、半自動更新の要件と「推薦に従った率」を評価
 
@@ -69,5 +69,10 @@
 - 実施内容: workflow新設、whub-concepts整理、vault/readme整理、refile参照更新、roadmap旧語彙更新
 - 結果: capture/backlog中間段を廃止し、project非依存はinbox、project固有はroadmapへ直接投げる方針へ統一
 - 判断: Phase 2完了。Phase 3（FOCUS.md初版と相談Skill実験）へ
+
+### 試行 6: FOCUS.md初版作成（2026-07-08）
+- 実施内容: manifest projectsを元に`vault/whub/FOCUS.md`を作成し、各projectの現在状態サマリー欄を未記入で用意
+- 結果: 推測の状態補完はせず、FOCUSの器だけ作成
+- 判断: 続行（次は更新・相談Skillの設計）
 
 ## 結果

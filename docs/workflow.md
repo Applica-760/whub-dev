@@ -18,9 +18,16 @@ CLIの用語・責務は `docs/whub-concepts.md`、vaultの構造と配置判断
 - 外部ソース → discourse → literature/log.jsonl / literature/sources
 - roadmap / task-planning の開始・完了は FOCUS.md の更新材料にする
 
+## FOCUS.md
+
+- whubから全projectの現在地を得るための地図
+- projectごとに1つの現在状態サマリーを持つ
+- 詳細な進捗や構想はroadmap（新backlog）, task mdに置き、FOCUS.mdは要約に留める
+- FOCUS.mdを材料に、AI Agentへ次に着手すべきことを相談する
+
 ## Skill分担
 
-- discourse: 外部ソースの取得・解説・literature記録
-- refile: inbox内mdの配置提案・分割・移動
-- task-planning: 実行計画と実行ログの記録
-- execution-spec: 実装前に固める仕様書の作成
+- discourse:        外部ソースの取得・解説・literature記録
+- refile:           inbox内mdの配置提案・分割・移動
+- task-planning:    実行計画と実行ログの記録
+- execution-spec:   実装前に固める仕様書の作成
