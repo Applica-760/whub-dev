@@ -5,10 +5,8 @@
 2. リソース未存在でskip出力
 3. workspace-hub自身への配布（_apply_workspace_boot）
 4. boot=falseは_collect_boot_targetsで除外される
-5. _merge_section：マーカー挿入・既存マーカー置換・新規ファイル（ADR-0009例外：複雑分岐）
-6. _merge_json：再帰マージ・リスト重複排除（ADR-0009例外：複雑分岐）
-7. _merge_section：不正マーカー（unpaired）を拒否する
-8. CodeGraph init失敗が後続ターゲットの配布を止めない（fail-safe）
+5. _merge_json：再帰マージ・リスト重複排除（ADR-0009例外：複雑分岐）
+6. CodeGraph init失敗が後続ターゲットの配布を止めない（fail-safe）
 
 検証しないケース:
 - 実際のrsync/SSH実行
@@ -22,14 +20,12 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 from click.testing import CliRunner
 
 from whub.commands.boot import (
     boot,
     _collect_boot_targets,
     _merge_json,
-    _merge_section,
 )
 from whub.models import Manifest, SymlinkResource
 from whub.tests.helpers import manifest
@@ -133,44 +129,6 @@ class TestBootSpec:
         assert result.exit_code == 0
         assert "first: CodeGraph init failed" in result.output
         assert "second (CodeGraph)" in result.output
-
-
-class TestMergeSectionSpec:
-    _MARKERS = ("<!-- start -->", "<!-- end -->")
-
-    def test_new_file(self):
-        # ケース5a
-        source = "<!-- start -->\nhello\n<!-- end -->\n"
-        result = _merge_section(source, None, self._MARKERS)
-
-        assert result == source
-
-    def test_existing_without_markers_prepends(self):
-        # ケース5b
-        source = "<!-- start -->\nhello\n<!-- end -->\n"
-        existing = "old content\n"
-        result = _merge_section(source, existing, self._MARKERS)
-
-        assert result.startswith("<!-- start -->")
-        assert "old content" in result
-
-    def test_existing_with_markers_replaces(self):
-        # ケース5c
-        source = "<!-- start -->\nnew\n<!-- end -->\n"
-        existing = "before\n<!-- start -->\nold\n<!-- end -->\nafter\n"
-        result = _merge_section(source, existing, self._MARKERS)
-
-        assert "new" in result
-        assert "old" not in result
-        assert "before" in result
-        assert "after" in result
-
-    def test_rejects_unpaired_markers(self):
-        # ケース7
-        source = "<!-- start -->\nnew\n<!-- end -->\n"
-        existing = "<!-- start -->\nmissing end\n"
-        with pytest.raises(ValueError, match="duplicate or unpaired"):
-            _merge_section(source, existing, self._MARKERS)
 
 
 class TestMergeJsonSpec:

@@ -14,25 +14,17 @@ from whub.models import (
 )
 from whub.remote import run_ssh_command
 from whub.target import TargetItem, on_targets, resolve_project_resource
+from whub.utils.managed_block import format_block, insert_before_end_marker
 
-_MARKER_START = "<!-- hub:backlog:appended:start -->"
-_MARKER_END = "<!-- hub:backlog:appended:end -->"
-
-
-def _seed(project_name: str) -> str:
-    return (
-        f"# {project_name} Backlog\n\n"
-        f"{_MARKER_START}\n{_MARKER_END}\n"
-    )
+_MARKERS = ("<!-- hub:backlog:appended:start -->", "<!-- hub:backlog:appended:end -->")
 
 
 def _insert_memo(content: str, memo: str) -> str:
-    if content.count(_MARKER_START) != 1 or content.count(_MARKER_END) != 1:
+    if content.count(_MARKERS[0]) != 1 or content.count(_MARKERS[1]) != 1:
         raise click.ClickException("backlog markers are missing or duplicated")
-    start, end = content.index(_MARKER_START), content.index(_MARKER_END)
-    if start > end:
+    if content.index(_MARKERS[0]) > content.index(_MARKERS[1]):
         raise click.ClickException("backlog start marker appears after end marker")
-    return content[:end] + f"- {memo}\n" + content[end:]
+    return insert_before_end_marker(content, f"- {memo}\n", _MARKERS)
 
 
 def _resolve_target_resource(
@@ -50,7 +42,7 @@ def _local_backlog(resource: SymlinkResource, data: tuple[str, str]) -> None:
     if not root.exists():
         raise click.ClickException(f"resource source does not exist: {root}")
     path = root / "docs" / "backlog.md"
-    content = path.read_text() if path.exists() else _seed(name)
+    content = path.read_text() if path.exists() else format_block(_MARKERS, "")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(_insert_memo(content, memo))
     click.echo(f"  backlog {name}: {memo}")
@@ -106,7 +98,7 @@ def _remote_backlog(resource: RemoteResource, data: tuple[str, str]) -> None:
                 check=True,
             ).stdout
         elif state == "missing":
-            content = _seed(name)
+            content = format_block(_MARKERS, "")
         else:
             raise click.ClickException(f"unexpected remote backlog path: {path}")
 

@@ -19,7 +19,7 @@ from unittest.mock import patch
 import pytest
 from click.testing import CliRunner
 
-from whub.commands.link import link
+from whub.commands.link import _GITIGNORE_MARKERS, link
 from whub.health import ResourceHealth
 from whub.tests.helpers import manifest
 
@@ -108,5 +108,24 @@ class TestLinkSpec:
         gitignore = tmp_path / ".gitignore"
         assert gitignore.exists()
         content = gitignore.read_text()
-        assert "# whub link (auto-generated)" in content
+        assert _GITIGNORE_MARKERS[0] in content
+        assert _GITIGNORE_MARKERS[1] in content
         assert "projects" in content
+
+    def test_updates_legacy_gitignore_without_dropping_next_line(self, tmp_path):
+        # ケース6
+        (tmp_path / ".gitignore").write_text(
+            "# whub link (auto-generated)\nprojects\n.keep\n"
+        )
+        m = manifest()
+        with (
+            patch("whub.commands.link.get_manifest", return_value=m),
+            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
+            patch.object(Path, "cwd", return_value=tmp_path),
+        ):
+            CliRunner().invoke(link, catch_exceptions=False)
+
+        content = (tmp_path / ".gitignore").read_text()
+        assert _GITIGNORE_MARKERS[0] in content
+        assert _GITIGNORE_MARKERS[1] in content
+        assert ".keep" in content

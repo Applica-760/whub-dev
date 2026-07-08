@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 import click
 
+
 @dataclass(frozen=True)
 class TableCell:
     value: object

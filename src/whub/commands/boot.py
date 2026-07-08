@@ -26,6 +26,7 @@ from whub.models import (
 )
 from whub.remote import run_rsync_command, run_ssh_command
 from whub.target import TargetItem, on_targets
+from whub.utils.managed_block import replace_or_prepend_block
 
 _MARKERS = {
     ".md": ("<!-- hub:managed:start -->", "<!-- hub:managed:end -->"),
@@ -37,33 +38,6 @@ _SKILLS_DESTS = (".claude/skills", ".agents/skills")
 
 
 # ── Merge ─────────────────────────────────────────────────────────
-def _managed_range(text: str, markers: tuple[str, str]) -> tuple[int, int] | None:
-    start, end = markers
-    if start not in text and end not in text:
-        return None
-    if text.count(start) != 1 or text.count(end) != 1:
-        raise ValueError("duplicate or unpaired managed markers")
-    s, e = text.index(start), text.index(end)
-    if s > e:
-        raise ValueError("start marker appears after end marker")
-    e += len(end)
-    nl = "\r\n" if text[e : e + 2] == "\r\n" else "\n"
-    if text[e : e + len(nl)] == nl:
-        e += len(nl)
-    return s, e
-
-
-def _merge_section(new: str, existing: str | None, markers: tuple[str, str]) -> str:
-    if _managed_range(new, markers) is None:
-        raise ValueError("source content missing managed markers")
-    if existing is None:
-        return new
-    rng = _managed_range(existing, markers)
-    if rng is None:
-        return new + "\n" + existing
-    return existing[: rng[0]] + new + existing[rng[1] :]
-
-
 def _merge_json(overlay_text: str, existing: str | None) -> str:
     dump = lambda d: json.dumps(d, indent=2, ensure_ascii=False) + "\n"
 
@@ -114,7 +88,7 @@ def _merged_files(
         dst_rel = _RENAME.get(rel, rel)
         markers = next(m for s, m in _MARKERS.items() if dst_rel.endswith(s))
         existing = read(dst_rel)
-        merged = _merge_section(src.read_text(), existing, markers)
+        merged = replace_or_prepend_block(src.read_text(), existing, markers)
         if merged != existing:
             yield dst_rel, merged
     for src in (boot_assets / "json").rglob("*"):

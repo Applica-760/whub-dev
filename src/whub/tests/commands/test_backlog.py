@@ -18,13 +18,10 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from whub.commands.backlog import backlog, _MARKER_START, _MARKER_END
+from whub.commands.backlog import backlog, _MARKERS
 from whub.models import Manifest, SymlinkResource
 from whub.tests.helpers import manifest, manifest_data
-
-
-def _seed(name: str) -> str:
-    return f"# {name} Backlog\n\n{_MARKER_START}\n{_MARKER_END}\n"
+from whub.utils.managed_block import format_block
 
 
 class TestBacklogSpec:
@@ -40,7 +37,7 @@ class TestBacklogSpec:
         local.resource._resolved_workspace_path = tmp_path / "projects" / "local"
         (tmp_path / "src" / "docs").mkdir(parents=True)
         backlog_file = tmp_path / "src" / "docs" / "backlog.md"
-        backlog_file.write_text(_seed("local"))
+        backlog_file.write_text(format_block(_MARKERS, ""))
 
         with patch("whub.commands.backlog.get_manifest", return_value=m):
             result = CliRunner().invoke(
@@ -71,7 +68,7 @@ class TestBacklogSpec:
 
         assert result.exit_code == 0
         content = (tmp_path / "src" / "docs" / "backlog.md").read_text()
-        assert _MARKER_START in content
+        assert _MARKERS[0] in content
         assert "- first memo" in content
 
     def test_remote_appends_via_ssh(self):
@@ -84,7 +81,7 @@ class TestBacklogSpec:
             if "test -f" in cmd:
                 return CompletedProcess([], 0, stdout="file")
             if "cat >" not in cmd:
-                return CompletedProcess([], 0, stdout=_seed("remote"))
+                return CompletedProcess([], 0, stdout=format_block(_MARKERS, ""))
             return CompletedProcess([], 0)
 
         with (
@@ -106,7 +103,7 @@ class TestBacklogSpec:
 
         ws_root = tmp_path / "ws"
         (ws_root / "docs").mkdir(parents=True)
-        (ws_root / "docs" / "backlog.md").write_text(_seed("workspace-hub"))
+        (ws_root / "docs" / "backlog.md").write_text(format_block(_MARKERS, ""))
 
         def fake_ws_resource():
             r = SymlinkResource(

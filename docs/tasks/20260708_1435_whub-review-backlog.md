@@ -9,12 +9,13 @@
 
 ## 計画
 
-### Phase 1: managed-blockロジック統合（3実装 → 1モジュール）
-- [ ] `src/whub/managed_block.py`新設。boot `_managed_range`をベースに範囲検出＋置換/末尾挿入APIを提供（CRLF対応・重複マーカー検査を継承）
-- [ ] boot `_merge_section`を新モジュール利用に置換（挙動不変、既存test_bootで担保）
-- [ ] backlog `_insert_memo`を新モジュール利用に置換（ClickException変換はコマンド層で実施）
-- [ ] link `_update_gitignore`をstart/endマーカー形式へ移行。旧形式（startのみ＋空行終端）ブロックは次回link時に新形式へ書き換え
-- [ ] link版バグ（ブロック直後に空行なしの行が消える）の再現テスト→修正確認テストを追加
+### Phase 1: managed-blockロジック統合（3実装 → utils共通化）
+- [x] `src/whub/utils/`新設。`render.py`もutilsへ移動し、補助責務の置き場を明確化
+- [x] `src/whub/utils/managed_block.py`新設。boot `_managed_range`をベースに範囲検出＋置換/末尾挿入APIを提供（CRLF対応・重複マーカー検査を継承）
+- [x] boot merge処理を新モジュール直接利用に置換（挙動不変、managed_block testで担保）
+- [x] backlog `_insert_memo`を新モジュール利用に置換（ClickExceptionはコマンド層で維持）
+- [x] link `_update_gitignore`をstart/endマーカー形式へ移行。旧形式（startのみ）ブロックは次回link時に新形式へ書き換え
+- [x] link版バグ（ブロック直後に空行なしの行が消える）の再現テスト→修正確認テストを追加
 
 ### Phase 2: SSH ControlMaster導入
 - [ ] `build_ssh_command`に`-o ControlMaster=auto -o ControlPath=<socket> -o ControlPersist=60s`を追加（ControlPath配置先は実装時に決定）
@@ -37,5 +38,9 @@
 - [ ] backlogのworkspace-hub特別扱いとコンセプト文書の整合（文書修正か実装修正かの判断待ち）
 
 ## 実行ログ
+### 試行 1: managed-blockをutilsへ統合
+- 実施内容: `utils/managed_block.py`新設、`render.py`移動、boot/backlog/linkの管理ブロック処理をマーカーペアAPIへ統合
+- 結果: link旧形式.gitignoreの後続行保持テストを追加し、`uv run pytest` 129件全パス
+- 判断: 続行
 
 ## 結果

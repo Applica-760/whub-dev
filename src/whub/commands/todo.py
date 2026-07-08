@@ -6,7 +6,7 @@ import click
 from whub.commands import get_manifest
 from whub.models import project_names
 from whub.models.todo import PRIORITIES, PRIORITY_EMOJI, Todo, load_todos, save_todos
-from whub.render import TableCell, render_table
+from whub.utils.render import TableCell, render_table
 
 
 def _project_names(ctx, param, incomplete: str) -> list[str]:

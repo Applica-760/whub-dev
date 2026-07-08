@@ -5,27 +5,39 @@ import click
 from whub.commands import get_manifest
 from whub.health import inspect_symlink
 from whub.models import SymlinkResource
+from whub.utils.managed_block import format_block, replace_or_prepend_block
 
-_GITIGNORE_MARKER = "# whub link (auto-generated)"
+_GITIGNORE_MARKERS = (
+    "# whub link (auto-generated): start",
+    "# whub link (auto-generated): end",
+)
+_LEGACY_GITIGNORE_MARKER = "# whub link (auto-generated)"
+
 
 def _update_gitignore(top_dirs: set[str]) -> None:
     if not top_dirs:
         return
     gitignore = Path.cwd() / ".gitignore"
-    existing = gitignore.read_text() if gitignore.exists() else ""
+    existing = gitignore.read_text() if gitignore.exists() else None
 
-    block = _GITIGNORE_MARKER + "\n" + "\n".join(sorted(top_dirs)) + "\n"
+    has_legacy_block = (
+        existing
+        and _GITIGNORE_MARKERS[0] not in existing
+        and _LEGACY_GITIGNORE_MARKER in existing
+    )
+    if has_legacy_block:
+        lines = existing.splitlines()
+        start = lines.index(_LEGACY_GITIGNORE_MARKER)
+        end = start + 1
+        while end < len(lines) and lines[end] in top_dirs:
+            end += 1
+        existing = "\n".join(lines[:start] + lines[end:]) + "\n"
 
-    if _GITIGNORE_MARKER in existing:
-        start = existing.index(_GITIGNORE_MARKER)
-        rest_start = existing.find("\n\n", start)
-        before = existing[:start]
-        after = existing[rest_start:] if rest_start != -1 else ""
-        text = before.rstrip("\n") + "\n\n" + block + after.lstrip("\n")
-    else:
-        text = existing.rstrip("\n") + "\n\n" + block
+    block = format_block(_GITIGNORE_MARKERS, "\n".join(sorted(top_dirs)))
+    text = replace_or_prepend_block(block, existing, _GITIGNORE_MARKERS)
 
     gitignore.write_text(text)
+
 
 @click.command()
 @click.pass_context

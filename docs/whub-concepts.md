@@ -53,6 +53,7 @@
 - `health.py`はsymlink/mountの健全性検査を集約する（remoteの健全性は`status`のホスト単位プローブが担う）
 - `tmux.py`はセッション命名規約とリモートシェルスニペットの組み立てを担う
 - `paths.py`はwhub rootとdata_dir、およびmanifest/todo/downloadsのパス解決を一元的に担う
+- `utils/`は複数コマンドで共有する薄い補助処理を置く。`project`/`resource`のドメイン判断は持たせない
 - whub rootは`WHUB_ROOT`があれば優先し、通常はインストール済みパッケージ位置からworkspace-hub rootを導出する
 - data_dirは`WHUB_DATA_DIR`があれば優先し、通常は`<workspace-hub>/.whub/config.toml`の`data_dir`をSSOTとする
 

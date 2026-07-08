@@ -1,4 +1,4 @@
-"""`whub.render`の仕様テスト。
+"""`whub.utils.render`の仕様テスト。
 
 検証するケース:
 1. 行もheaderもなければ何も出力しない。
@@ -18,8 +18,8 @@ import io
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
-import whub.render as render_module
-from whub.render import TableCell, render_table
+import whub.utils.render as render_module
+from whub.utils.render import TableCell, render_table
 
 
 def _render(*args, **kwargs) -> str:

@@ -11,9 +11,9 @@ from whub.commands import get_manifest
 from whub.health import ResourceHealth, inspect_mount, inspect_symlink
 from whub.models import Host, Project, RemoteResource, SymlinkResource
 from whub.remote import run_ssh_command
-from whub.render import render_table
 from whub.target import collect_targets
 from whub.tmux import session_name
+from whub.utils.render import render_table
 
 
 @dataclass(frozen=True)
