@@ -31,8 +31,9 @@
 
 ### Phase 2: 仕様書の分割発行（ロードマップ）
 - [x] S1: server基盤設計 — `docs/specs/20260710_0947_whub-app-s1-server-foundation.md`（ポート8710・自動オープン・127.0.0.1固定で確定）
-- [ ] S1.5: inbox投函のservices層 — `services/inbox.py`のみを仕様書化（execution-spec発行予定）。APIエンドポイントはS2bへ、UIフォームはS4へ組み込む
+- [x] S1.5: inbox投函のservices層 — `docs/specs/20260710_1630_whub-app-s1.5-inbox-service.md`（title必須・日時プレフィックス自動付与・空body不許容・manifest経由でvault解決）。APIはS2bへ、UIフォームはS4へ組み込む
     - 役割整理済み（2026-07-10）: inboxは対話抜きで思いつきを書き殴る摩擦ゼロの投函口。project非紐付けでbacklogとは別軸。CLIコマンドは作らない。会話・整理は投函後のSkill（refile等）が担う
+    - [x] 実装: `services/inbox.py`と単体テストを追加（`uv run pytest`: 164 passed）
 - [x] S2a: サービス層抽出 — `services/`新設（todo・backlog・errors）、commands痩身化。CLI振る舞い不変の純粋リファクタ。concepts docの責務境界更新を含む
 - [ ] S2b: リソースAPI設計 — S2aのservicesを呼ぶtodo/projects/backlogエンドポイント・スキーマ定義
 - [ ] S3: フロント基盤設計 — `app/`雛形・ルーティング・APIクライアント・テーマ方針
