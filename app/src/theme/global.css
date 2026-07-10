@@ -1,0 +1,17 @@
+:root {
+  background: #f2f2f7;
+  color: #1c1c1e;
+  font-synthesis: none;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}

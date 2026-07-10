@@ -23,6 +23,7 @@ AGENTS.md
 .whub
 
 # Python cache
+.pytest_cache
 __pycache__/
 *.py[cod]
 
