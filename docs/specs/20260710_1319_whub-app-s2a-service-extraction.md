@@ -47,12 +47,12 @@
 - テストに必要なdev依存の追加は実装者の裁量で可
 
 ## 受け入れ基準
-- [ ] `uv run pytest`が全件通る
-- [ ] `whub todo`系・`whub backlog`の出力・挙動がリファクタ前と一致する
-- [ ] `services/`が`click`をimportしていない
-- [ ] `commands/todo.py`・`commands/backlog.py`に採番・状態遷移・ファイル書込ロジックが残っていない
-- [ ] services単体テスト（採番・done切替・削除・マーカー挿入・`NotFoundError`/`ServiceError`）が追加されている
-- [ ] `docs/whub-concepts.md`の責務境界が更新されている
+- [x] `uv run pytest`が全件通る
+- [x] `whub todo`系・`whub backlog`の出力・挙動がリファクタ前と一致する
+- [x] `services/`が`click`をimportしていない
+- [x] `commands/todo.py`・`commands/backlog.py`に採番・状態遷移・ファイル書込ロジックが残っていない
+- [x] services単体テスト（採番・done切替・削除・マーカー挿入・`NotFoundError`/`ServiceError`）が追加されている
+- [x] `docs/whub-concepts.md`の責務境界が更新されている
 
 ## 検証条件
 - 自動: `uv run pytest`。services単体テストは一時ディレクトリをデータ置き場に注入してファイル実体を検証する

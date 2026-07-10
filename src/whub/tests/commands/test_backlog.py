@@ -1,189 +1,86 @@
 """`whub backlog`コマンドのCLI振る舞いテスト。
 
 検証するケース:
-1. localリソースの既存backlog.mdにメモ追記
-2. backlog.md未存在で新規作成+追記
-3. remoteリソースへSSH mock経由で追記
-4. workspace-hubへの追記
-5. メモ空 → エラー
-6. remote root確認失敗 → エラー
-7. remote state取得失敗 → エラー
-8. remote書き込み失敗 → エラー
+1. serviceへの正常な追記依頼と成功表示
+2. 入力メモの前後空白除去
+3. 空メモの拒否
+4. ServiceErrorのClickException化
 
 検証しないケース:
-- 実際のSSH実行
-- マーカー不正パターン（_insert_memoの防御は薄いglue）
+- local/remoteの書込・マーカー検証（serviceでカバー）
 """
 from __future__ import annotations
 
-from subprocess import CalledProcessError, CompletedProcess
 from unittest.mock import patch
 
+import pytest
 from click.testing import CliRunner
 
-from whub.commands.backlog import backlog, _MARKERS
-from whub.models import Manifest, SymlinkResource
-from whub.tests.helpers import manifest, manifest_data
-from whub.utils.managed_block import format_block
+from whub.commands.backlog import backlog
+from whub.services.errors import ServiceError
+from whub.tests.helpers import manifest
 
 
-class TestBacklogSpec:
-    def test_local_appends_to_existing(self, tmp_path):
+class TestBacklogCmdSpec:
+    def test_appends_memo(self):
         # ケース1
         m = manifest()
-        local = m.resolve_project("local")
-        local.resource = SymlinkResource(
-            type="symlink",
-            workspace_path="projects/local",
-            source=str(tmp_path / "src"),
-        )
-        local.resource._resolved_workspace_path = tmp_path / "projects" / "local"
-        (tmp_path / "src" / "docs").mkdir(parents=True)
-        backlog_file = tmp_path / "src" / "docs" / "backlog.md"
-        backlog_file.write_text(format_block(_MARKERS, ""))
-
-        with patch("whub.commands.backlog.get_manifest", return_value=m):
+        with (
+            patch("whub.commands.backlog.get_manifest", return_value=m),
+            patch("whub.commands.backlog.append_backlog") as mock_append,
+        ):
             result = CliRunner().invoke(
                 backlog, ["add feature X", "local"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
-        assert "backlog" in result.output
-        content = backlog_file.read_text()
-        assert "- add feature X" in content
+        assert "backlog local: add feature X" in result.output
+        mock_append.assert_called_once_with(m, "local", "add feature X")
 
-    def test_local_creates_new_backlog(self, tmp_path):
+    def test_strips_memo(self):
         # ケース2
         m = manifest()
-        local = m.resolve_project("local")
-        local.resource = SymlinkResource(
-            type="symlink",
-            workspace_path="projects/local",
-            source=str(tmp_path / "src"),
-        )
-        local.resource._resolved_workspace_path = tmp_path / "projects" / "local"
-        (tmp_path / "src").mkdir(parents=True)
-
-        with patch("whub.commands.backlog.get_manifest", return_value=m):
-            result = CliRunner().invoke(
-                backlog, ["first memo", "local"], catch_exceptions=False,
-            )
-
-        assert result.exit_code == 0
-        content = (tmp_path / "src" / "docs" / "backlog.md").read_text()
-        assert _MARKERS[0] in content
-        assert "- first memo" in content
-
-    def test_remote_appends_via_ssh(self):
-        # ケース3
-        m = manifest()
-
-        def ssh_side_effect(host, cmd, **kwargs):
-            if "test -d" in cmd:
-                return CompletedProcess([], 0)
-            if "test -f" in cmd:
-                return CompletedProcess([], 0, stdout="file")
-            if "cat >" not in cmd:
-                return CompletedProcess([], 0, stdout=format_block(_MARKERS, ""))
-            return CompletedProcess([], 0)
-
         with (
             patch("whub.commands.backlog.get_manifest", return_value=m),
-            patch("whub.commands.backlog.run_ssh_command", side_effect=ssh_side_effect),
+            patch("whub.commands.backlog.append_backlog") as mock_append,
         ):
             result = CliRunner().invoke(
-                backlog, ["remote memo", "remote"], catch_exceptions=False,
+                backlog, ["  first memo  ", "local"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
-        assert "backlog" in result.output
-
-    def test_workspace_hub_appends(self, tmp_path):
-        # ケース4
-        data = manifest_data()
-        data["projects"].append({"name": "workspace-hub"})
-        m = Manifest.model_validate(data)
-
-        ws_root = tmp_path / "ws"
-        (ws_root / "docs").mkdir(parents=True)
-        (ws_root / "docs" / "backlog.md").write_text(format_block(_MARKERS, ""))
-
-        def fake_ws_resource():
-            r = SymlinkResource(
-                type="symlink", workspace_path=".", source=str(ws_root),
-            )
-            r._resolved_workspace_path = ws_root
-            return r
-
-        with (
-            patch("whub.commands.backlog.get_manifest", return_value=m),
-            patch("whub.commands.backlog.workspace_hub_resource", fake_ws_resource),
-        ):
-            result = CliRunner().invoke(
-                backlog, ["ws memo", "workspace-hub"], catch_exceptions=False,
-            )
-
-        assert result.exit_code == 0
-        content = (ws_root / "docs" / "backlog.md").read_text()
-        assert "- ws memo" in content
+        mock_append.assert_called_once_with(m, "local", "first memo")
 
     def test_empty_memo_errors(self):
-        # ケース5
-        m = manifest()
-        with patch("whub.commands.backlog.get_manifest", return_value=m):
+        # ケース3
+        with (
+            patch("whub.commands.backlog.get_manifest", return_value=manifest()),
+            patch("whub.commands.backlog.append_backlog") as mock_append,
+        ):
             result = CliRunner().invoke(backlog, ["", "local"])
 
         assert result.exit_code != 0
+        assert "memo text is required" in result.output
+        mock_append.assert_not_called()
 
-    def test_remote_root_check_failure_errors(self):
-        # ケース6
-        m = manifest()
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "backlog markers are missing or duplicated",
+            "remote backlog failed: ssh failed",
+            "resource source does not exist: /tmp/source",
+        ],
+    )
+    def test_service_error_is_rendered(self, message: str):
+        # ケース4
         with (
-            patch("whub.commands.backlog.get_manifest", return_value=m),
+            patch("whub.commands.backlog.get_manifest", return_value=manifest()),
             patch(
-                "whub.commands.backlog.run_ssh_command",
-                return_value=CompletedProcess([], 255, stderr="ssh failed"),
+                "whub.commands.backlog.append_backlog",
+                side_effect=ServiceError(message),
             ),
         ):
-            result = CliRunner().invoke(backlog, ["memo", "remote"])
+            result = CliRunner().invoke(backlog, ["memo", "local"])
 
         assert result.exit_code != 0
-        assert "remote backlog failed: ssh failed" in result.output
-
-    def test_remote_state_failure_errors(self):
-        # ケース7
-        m = manifest()
-
-        def ssh_side_effect(host, cmd, **kwargs):
-            if "test -d" in cmd:
-                return CompletedProcess([], 0)
-            raise CalledProcessError(1, [], stderr="state failed")
-
-        with (
-            patch("whub.commands.backlog.get_manifest", return_value=m),
-            patch("whub.commands.backlog.run_ssh_command", side_effect=ssh_side_effect),
-        ):
-            result = CliRunner().invoke(backlog, ["memo", "remote"])
-
-        assert result.exit_code != 0
-        assert "remote backlog failed: state failed" in result.output
-
-    def test_remote_write_failure_errors(self):
-        # ケース8
-        m = manifest()
-
-        def ssh_side_effect(host, cmd, **kwargs):
-            if "test -d" in cmd:
-                return CompletedProcess([], 0)
-            if "test -f" in cmd:
-                return CompletedProcess([], 0, stdout="missing")
-            raise CalledProcessError(1, [], stderr="write failed")
-
-        with (
-            patch("whub.commands.backlog.get_manifest", return_value=m),
-            patch("whub.commands.backlog.run_ssh_command", side_effect=ssh_side_effect),
-        ):
-            result = CliRunner().invoke(backlog, ["memo", "remote"])
-
-        assert result.exit_code != 0
-        assert "remote backlog failed: write failed" in result.output
+        assert message in result.output

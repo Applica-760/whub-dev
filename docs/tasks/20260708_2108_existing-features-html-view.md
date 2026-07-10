@@ -31,8 +31,9 @@
 
 ### Phase 2: 仕様書の分割発行（ロードマップ）
 - [x] S1: server基盤設計 — `docs/specs/20260710_0947_whub-app-s1-server-foundation.md`（ポート8710・自動オープン・127.0.0.1固定で確定）
-- [ ] S1.5（検討中）: inbox — Web appと同等に重要。**whubコマンドではなくSkillとしての実装を見越す**ため、Web appからの書込経路（直接ファイル書込か、Skill経由か）の整理が先
-- [ ] S2a: サービス層抽出 — `services/`新設（todo・backlog・errors）、commands痩身化。CLI振る舞い不変の純粋リファクタ。concepts docの責務境界更新を含む
+- [ ] S1.5: inbox投函のservices層 — `services/inbox.py`のみを仕様書化（execution-spec発行予定）。APIエンドポイントはS2bへ、UIフォームはS4へ組み込む
+    - 役割整理済み（2026-07-10）: inboxは対話抜きで思いつきを書き殴る摩擦ゼロの投函口。project非紐付けでbacklogとは別軸。CLIコマンドは作らない。会話・整理は投函後のSkill（refile等）が担う
+- [x] S2a: サービス層抽出 — `services/`新設（todo・backlog・errors）、commands痩身化。CLI振る舞い不変の純粋リファクタ。concepts docの責務境界更新を含む
 - [ ] S2b: リソースAPI設計 — S2aのservicesを呼ぶtodo/projects/backlogエンドポイント・スキーマ定義
 - [ ] S3: フロント基盤設計 — `app/`雛形・ルーティング・APIクライアント・テーマ方針
 - [ ] S4: ビュー設計 — Todoビュー・Backlogビューのコンポーネント構成
@@ -52,7 +53,8 @@
 
 ### 完成までの残作業（仕様書化前の候補）
 - Apple風テーマの具体化（S3で方針、深掘りは必要なら別仕様書）
-- inbox運用形式の確定（1トピック1md等）とSkill化の設計 → S1.5の前提
+- inbox投函フォームの仕様（タイトル要否・ファイル名規則）→ S1.5の仕様書化で確定
+- refile Skillの拡張構想: 配置相談だけでなく内容の議論・セッションも担う（別途Skill改修として検討）
 - discourse連携の実行モデル設計（同期/非同期・結果の受け渡し場所）→ S5の前提
 - 後続の別タスク: FOCUSビュー・スマホ対応（Tailscale）
 

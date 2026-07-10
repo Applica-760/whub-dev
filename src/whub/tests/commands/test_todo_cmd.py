@@ -3,25 +3,25 @@
 検証するケース:
 1. pending一覧表示（デフォルト）
 2. -aで完了済みも表示
-3. add正常系：save_todosが新todo付きで呼ばれる
+3. add正常系：serviceが入力を受け取る
 4. add＋未知project → エラー
-5. add＋project=none → project_nameがNoneで保存
-6. done正常系：done=True, done_at設定
+5. add＋project=none → project_nameがNoneでserviceへ渡る
+6. done正常系：serviceを呼ぶ
 7. done＋未存在ID → エラー
 8. done＋既完了 → エラー
-9. rm正常系：todosからitem削除
+9. rm正常系：serviceを呼ぶ
 10. _parse_due_date：YYYY-MM-DD形式でdateを返す
 11. _parse_due_date：MMDD形式で今年or翌年のdateを返す
 12. _parse_due_date：不正値 → BadParameter
 
 検証しないケース:
-- 実際のファイルI/O（load_todos/save_todos mock）
+- 実際のファイルI/O（serviceでカバー）
 - render_tableの描画詳細（test_renderでカバー）
 """
 from __future__ import annotations
 
 from datetime import date
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import click
 import pytest
@@ -29,6 +29,7 @@ from click.testing import CliRunner
 
 from whub.commands.todo import todo, _parse_due_date
 from whub.models.todo import Todo, Todos
+from whub.services.errors import NotFoundError, ServiceError
 from whub.tests.helpers import manifest
 
 
@@ -54,8 +55,8 @@ def _done_todo(id: int = 10, **kwargs) -> Todo:
 class TestTodoCmdSpec:
     def test_list_pending(self):
         # ケース1
-        todos = _make_todos(_pending_todo(1, title="buy milk"))
-        with patch("whub.commands.todo.load_todos", return_value=todos):
+        items = [_pending_todo(1, title="buy milk")]
+        with patch("whub.commands.todo.list_pending", return_value=items):
             result = CliRunner().invoke(todo, catch_exceptions=False)
 
         assert result.exit_code == 0
@@ -63,11 +64,12 @@ class TestTodoCmdSpec:
 
     def test_list_all_with_a_flag(self):
         # ケース2
-        todos = _make_todos(
-            _pending_todo(1, title="pending-task"),
-            _done_todo(2, title="completed-task"),
-        )
-        with patch("whub.commands.todo.load_todos", return_value=todos):
+        pending = [_pending_todo(1, title="pending-task")]
+        completed = [_done_todo(2, title="completed-task")]
+        with (
+            patch("whub.commands.todo.list_pending", return_value=pending),
+            patch("whub.commands.todo.list_completed", return_value=completed),
+        ):
             result = CliRunner().invoke(todo, ["-a"], catch_exceptions=False)
 
         assert "pending-task" in result.output
@@ -75,13 +77,11 @@ class TestTodoCmdSpec:
 
     def test_add_creates_todo(self):
         # ケース3
-        todos = _make_todos()
         m = manifest()
-        mock_save = MagicMock()
+        item = _pending_todo(1, title="new task", project="local", priority="red")
         with (
-            patch("whub.commands.todo.load_todos", return_value=todos),
-            patch("whub.commands.todo.save_todos", mock_save),
             patch("whub.commands.todo.get_manifest", return_value=m),
+            patch("whub.commands.todo.add_todo", return_value=item) as mock_add,
         ):
             result = CliRunner().invoke(
                 todo, ["add", "new task", "local", "red"], catch_exceptions=False,
@@ -89,18 +89,17 @@ class TestTodoCmdSpec:
 
         assert result.exit_code == 0
         assert "added" in result.output
-        saved = mock_save.call_args[0][0]
-        assert len(saved.todos) == 1
-        assert saved.todos[0].title == "new task"
-        assert saved.todos[0].project == "local"
+        mock_add.assert_called_once_with(m, "new task", "local", "red", None)
 
     def test_add_unknown_project_errors(self):
         # ケース4
-        todos = _make_todos()
         m = manifest()
         with (
-            patch("whub.commands.todo.load_todos", return_value=todos),
             patch("whub.commands.todo.get_manifest", return_value=m),
+            patch(
+                "whub.commands.todo.add_todo",
+                side_effect=ServiceError("unknown project: nonexistent"),
+            ),
         ):
             result = CliRunner().invoke(todo, ["add", "task", "nonexistent", "none"])
 
@@ -109,42 +108,36 @@ class TestTodoCmdSpec:
 
     def test_add_none_project(self):
         # ケース5
-        todos = _make_todos()
-        mock_save = MagicMock()
+        item = _pending_todo(1, title="orphan task", priority="blue")
         with (
-            patch("whub.commands.todo.load_todos", return_value=todos),
-            patch("whub.commands.todo.save_todos", mock_save),
+            patch("whub.commands.todo.get_manifest", return_value=manifest()),
+            patch("whub.commands.todo.add_todo", return_value=item) as mock_add,
         ):
             result = CliRunner().invoke(
                 todo, ["add", "orphan task", "none", "blue"], catch_exceptions=False,
-            )
+        )
 
         assert result.exit_code == 0
-        saved = mock_save.call_args[0][0]
-        assert saved.todos[0].project is None
+        assert mock_add.call_args.args[2] is None
 
     def test_done_marks_complete(self):
         # ケース6
-        item = _pending_todo(1, title="finish it")
-        todos = _make_todos(item)
-        mock_save = MagicMock()
-        with (
-            patch("whub.commands.todo.load_todos", return_value=todos),
-            patch("whub.commands.todo.save_todos", mock_save),
-        ):
+        item = _done_todo(1, title="finish it")
+        with patch("whub.commands.todo.complete_todo", return_value=item) as mock_complete:
             result = CliRunner().invoke(
                 todo, ["done", "1"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
         assert "done" in result.output
-        assert item.done is True
-        assert item.done_at is not None
+        mock_complete.assert_called_once_with(1)
 
     def test_done_not_found_errors(self):
         # ケース7
-        todos = _make_todos()
-        with patch("whub.commands.todo.load_todos", return_value=todos):
+        with patch(
+            "whub.commands.todo.complete_todo",
+            side_effect=NotFoundError("todo not found: 999"),
+        ):
             result = CliRunner().invoke(todo, ["done", "999"])
 
         assert result.exit_code != 0
@@ -152,8 +145,10 @@ class TestTodoCmdSpec:
 
     def test_done_already_done_errors(self):
         # ケース8
-        todos = _make_todos(_done_todo(1))
-        with patch("whub.commands.todo.load_todos", return_value=todos):
+        with patch(
+            "whub.commands.todo.complete_todo",
+            side_effect=ServiceError("already done: 1"),
+        ):
             result = CliRunner().invoke(todo, ["done", "1"])
 
         assert result.exit_code != 0
@@ -161,20 +156,15 @@ class TestTodoCmdSpec:
 
     def test_rm_removes_todo(self):
         # ケース9
-        todos = _make_todos(_pending_todo(1, title="remove me"))
-        mock_save = MagicMock()
-        with (
-            patch("whub.commands.todo.load_todos", return_value=todos),
-            patch("whub.commands.todo.save_todos", mock_save),
-        ):
+        item = _pending_todo(1, title="remove me")
+        with patch("whub.commands.todo.remove_todo", return_value=item) as mock_remove:
             result = CliRunner().invoke(
                 todo, ["rm", "1"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
         assert "removed" in result.output
-        saved = mock_save.call_args[0][0]
-        assert len(saved.todos) == 0
+        mock_remove.assert_called_once_with(1)
 
 
 class TestParseDueDateSpec:

@@ -63,7 +63,7 @@ class TestCdSpec:
         with patch("whub.commands.cd.get_manifest", return_value=m):
             result = CliRunner().invoke(cd, ["nonexistent"])
 
-        assert result.exit_code != 0
+        assert result.exit_code == 1
         assert "unknown project" in result.output
 
     def test_shell_init_outputs_zsh_snippet(self):

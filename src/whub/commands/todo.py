@@ -2,10 +2,20 @@
 from __future__ import annotations
 import re
 from datetime import date
+
 import click
+
 from whub.commands import get_manifest
 from whub.models import project_names
-from whub.models.todo import PRIORITIES, PRIORITY_EMOJI, Todo, load_todos, save_todos
+from whub.models.todo import PRIORITIES, PRIORITY_EMOJI, Todo
+from whub.services.errors import ServiceError
+from whub.services.todo import (
+    add_todo,
+    complete_todo,
+    list_completed,
+    list_pending,
+    remove_todo,
+)
 from whub.utils.render import TableCell, render_table
 
 
@@ -82,23 +92,6 @@ def _render_list(
     render_table(rows, headers=("id", "pri", "title", "project", date_label), right_align={0})
 
 
-def _priority_rank(item: Todo) -> int:
-    return PRIORITIES.index(item.priority)
-
-
-def _pending_sort_key(item: Todo) -> tuple[bool, date, int, int]:
-    return (
-        item.due_date is None,
-        item.due_date or date.max,
-        _priority_rank(item),
-        item.id,
-    )
-
-
-def _completed_sort_key(item: Todo) -> tuple[date, int]:
-    return (item.done_at or date.max, item.id)
-
-
 # ── CLI ───────────────────────────────────────────────────────────
 @click.group(invoke_without_command=True)
 @click.option("-a", is_flag=True, help="Include completed todos.")
@@ -107,8 +100,7 @@ def todo(ctx: click.Context, a: bool) -> None:
     """Manage personal todos."""
     if ctx.invoked_subcommand is not None:
         return
-    todos = load_todos()
-    pending = sorted(todos.pending, key=_pending_sort_key)
+    pending = list_pending()
     _render_list(
         pending,
         "due",
@@ -119,7 +111,7 @@ def todo(ctx: click.Context, a: bool) -> None:
     if a:
         click.echo()
         click.echo("  done:")
-        completed = sorted(todos.completed, key=_completed_sort_key)
+        completed = list_completed()
         _render_list(completed, "done", lambda t: t.done_at, empty="no completed todos")
 
 
@@ -138,22 +130,16 @@ def add(
 ) -> None:
     """Add a todo."""
     project_name = None if project == "none" else project
-    if project_name is not None:
-        if get_manifest(ctx).resolve_project(project_name) is None:
-            raise click.UsageError(f"unknown project: {project_name}")
-
-    todos = load_todos()
-    todo_id = max((item.id for item in todos.todos), default=0) + 1
-    item = Todo(
-        id=todo_id,
-        title=title,
-        project=project_name,
-        priority=priority,
-        created_at=date.today(),
-        due_date=_parse_due_date(due_date),
-    )
-    todos.todos.append(item)
-    save_todos(todos)
+    try:
+        item = add_todo(
+            get_manifest(ctx),
+            title,
+            project_name,
+            priority,
+            _parse_due_date(due_date),
+        )
+    except ServiceError as error:
+        raise click.UsageError(str(error)) from error
     click.echo(f"  added {item.id}: {item.title}")
 
 
@@ -161,15 +147,10 @@ def add(
 @click.argument("todo_id", type=int)
 def done(todo_id: int) -> None:
     """Mark a todo as done."""
-    todos = load_todos()
-    item = next((t for t in todos.todos if t.id == todo_id), None)
-    if item is None:
-        raise click.UsageError(f"todo not found: {todo_id}")
-    if item.done:
-        raise click.UsageError(f"already done: {todo_id}")
-    item.done = True
-    item.done_at = date.today()
-    save_todos(todos)
+    try:
+        item = complete_todo(todo_id)
+    except ServiceError as error:
+        raise click.UsageError(str(error)) from error
     click.echo(f"  done {item.id}: {item.title}")
 
 
@@ -177,10 +158,8 @@ def done(todo_id: int) -> None:
 @click.argument("todo_id", type=int)
 def rm(todo_id: int) -> None:
     """Remove a todo."""
-    todos = load_todos()
-    item = next((t for t in todos.todos if t.id == todo_id), None)
-    if item is None:
-        raise click.UsageError(f"todo not found: {todo_id}")
-    todos.todos.remove(item)
-    save_todos(todos)
+    try:
+        item = remove_todo(todo_id)
+    except ServiceError as error:
+        raise click.UsageError(str(error)) from error
     click.echo(f"  removed {item.id}: {item.title}")

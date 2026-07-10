@@ -1,122 +1,12 @@
 """whub backlog — append a raw memo to a project's backlog."""
 from __future__ import annotations
-import shlex
-import subprocess
-from pathlib import Path
+
 import click
+
 from whub.commands import get_manifest
-from whub.models import (
-    Manifest,
-    RemoteResource,
-    SymlinkResource,
-    project_names,
-    workspace_hub_resource,
-)
-from whub.remote import run_ssh_command
-from whub.target import TargetItem, on_targets, resolve_project_resource
-from whub.utils.managed_block import format_block, insert_before_end_marker
-from whub.utils.process import format_process_error
-
-_MARKERS = ("<!-- hub:backlog:appended:start -->", "<!-- hub:backlog:appended:end -->")
-
-
-def _insert_memo(content: str, memo: str) -> str:
-    if content.count(_MARKERS[0]) != 1 or content.count(_MARKERS[1]) != 1:
-        raise click.ClickException("backlog markers are missing or duplicated")
-    if content.index(_MARKERS[0]) > content.index(_MARKERS[1]):
-        raise click.ClickException("backlog start marker appears after end marker")
-    return insert_before_end_marker(content, f"- {memo}\n", _MARKERS)
-
-
-def _resolve_target_resource(
-    manifest: Manifest, project: str, data: tuple[str, str]
-) -> TargetItem[tuple[str, str]]:
-    proj = manifest.resolve_project(project)
-    if proj is not None and proj.resource is None and proj.name == "workspace-hub":
-        return TargetItem(workspace_hub_resource(), data)
-    return TargetItem(resolve_project_resource(manifest, project), data)
-
-
-def _local_backlog(resource: SymlinkResource, data: tuple[str, str]) -> None:
-    name, memo = data
-    root = Path(resource.source)
-    if not root.exists():
-        raise click.ClickException(f"resource source does not exist: {root}")
-    path = root / "docs" / "backlog.md"
-    content = path.read_text() if path.exists() else format_block(_MARKERS, "")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_insert_memo(content, memo))
-    click.echo(f"  backlog {name}: {memo}")
-
-
-def _remote_backlog(resource: RemoteResource, data: tuple[str, str]) -> None:
-    name, memo = data
-    host = resource._resolved_host
-    root = resource.path
-    docs = f"{root}/docs"
-    path = f"{docs}/backlog.md"
-
-    try:
-        root_check = run_ssh_command(
-            host,
-            f"test -d {shlex.quote(root)}",
-            timeout=10,
-            batch_mode=True,
-            connect_timeout=5,
-        )
-        if root_check.returncode == 1:
-            raise click.ClickException(
-                f"remote resource path does not exist: {root}"
-            )
-        if root_check.returncode != 0:
-            detail = (
-                root_check.stderr.strip()
-                or root_check.stdout.strip()
-                or f"exit status {root_check.returncode}"
-            )
-            raise click.ClickException(f"remote backlog failed: {detail}")
-
-        state = run_ssh_command(
-            host,
-            (
-                f"if test -f {shlex.quote(path)}; then echo file; "
-                f"elif test -e {shlex.quote(path)}; then echo unexpected; "
-                "else echo missing; fi"
-            ),
-            timeout=10,
-            batch_mode=True,
-            connect_timeout=5,
-            check=True,
-        ).stdout.strip()
-
-        if state == "file":
-            content = run_ssh_command(
-                host,
-                f"cat {shlex.quote(path)}",
-                timeout=30,
-                batch_mode=True,
-                connect_timeout=5,
-                check=True,
-            ).stdout
-        elif state == "missing":
-            content = format_block(_MARKERS, "")
-        else:
-            raise click.ClickException(f"unexpected remote backlog path: {path}")
-
-        run_ssh_command(
-            host,
-            f"mkdir -p {shlex.quote(docs)} && cat > {shlex.quote(path)}",
-            input=_insert_memo(content, memo),
-            timeout=30,
-            batch_mode=True,
-            connect_timeout=5,
-            check=True,
-        )
-    except (OSError, subprocess.SubprocessError) as error:
-        raise click.ClickException(
-            f"remote backlog failed: {format_process_error(error)}"
-        ) from error
-    click.echo(f"  backlog {name}: {memo}")
+from whub.models import project_names
+from whub.services.backlog import append_backlog
+from whub.services.errors import ServiceError
 
 
 @click.command()
@@ -129,5 +19,8 @@ def backlog(ctx: click.Context, text: str, project: str) -> None:
     memo = text.strip()
     if not memo:
         raise click.UsageError("memo text is required")
-    target = _resolve_target_resource(manifest, project, (project, memo))
-    on_targets([target], local=_local_backlog, remote=_remote_backlog)
+    try:
+        append_backlog(manifest, project, memo)
+    except ServiceError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"  backlog {project}: {memo}")

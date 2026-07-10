@@ -43,7 +43,7 @@ class TestRunSpec:
         with patch("whub.commands.run.get_manifest", return_value=m):
             result = CliRunner().invoke(run, ["local", "ls"])
 
-        assert result.exit_code != 0
+        assert result.exit_code == 1
         assert "not a remote resource" in result.output
 
     def test_tty_flag_adds_ssh_t(self):

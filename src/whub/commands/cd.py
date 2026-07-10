@@ -8,7 +8,7 @@ from whub.commands import get_manifest
 from whub.models import RemoteResource, SymlinkResource, project_names
 from whub.remote import build_ssh_command
 from whub.tmux import build_shell_command, session_name
-from whub.target import TargetItem, on_targets, resolve_project_resource
+from whub.target import TargetError, TargetItem, on_targets, resolve_project_resource
 
 EXIT_SSH = 100
 
@@ -57,7 +57,10 @@ def _cd_remote(resource: RemoteResource, data: tuple[str, bool]) -> None:
 def cd(ctx: click.Context, project: str, plain: bool) -> None:
     """Jump to a project resource (local cd or SSH)."""
     m = get_manifest(ctx)
-    resource = resolve_project_resource(m, project)
+    try:
+        resource = resolve_project_resource(m, project)
+    except TargetError as error:
+        raise click.ClickException(str(error)) from error
     on_targets(
         [TargetItem(resource, (project, plain))],
         local=_cd_local,

@@ -18,6 +18,7 @@
 """
 from __future__ import annotations
 
+import click
 import pytest
 
 from whub.models import RemoteResource, SymlinkResource
@@ -34,6 +35,9 @@ from whub.tests.helpers import manifest
 
 
 class TestTargetSpec:
+    def test_target_error_is_pure_exception(self) -> None:
+        assert not issubclass(TargetError, click.ClickException)
+
     def test_resolve_project_resource_returns_known_project_resource(self) -> None:
         # ケース1
         resource = resolve_project_resource(manifest(), "local")

@@ -46,7 +46,7 @@ class TestFetchSpec:
         with patch("whub.commands.fetch.get_manifest", return_value=m):
             result = CliRunner().invoke(fetch, ["projects/local/file.txt"])
 
-        assert result.exit_code != 0
+        assert result.exit_code == 1
         assert "not a remote resource" in result.output
 
     def test_resource_root_path_errors(self):

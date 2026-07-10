@@ -4,10 +4,9 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Generic, TypeVar, assert_never
-import click
 from whub.models import Manifest, Project, RemoteResource, Resource, SymlinkResource
 
-class TargetError(click.ClickException):
+class TargetError(Exception):
     pass
 
 def resolve_project_resource(manifest: Manifest, project_name: str) -> Resource:
