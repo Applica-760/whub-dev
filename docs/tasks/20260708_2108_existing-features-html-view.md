@@ -32,11 +32,20 @@
 ### Phase 2: 仕様書の分割発行（ロードマップ）
 - [x] S1: server基盤設計 — `docs/specs/20260710_0947_whub-app-s1-server-foundation.md`（ポート8710・自動オープン・127.0.0.1固定で確定）
 - [ ] S1.5（検討中）: inbox — Web appと同等に重要。**whubコマンドではなくSkillとしての実装を見越す**ため、Web appからの書込経路（直接ファイル書込か、Skill経由か）の整理が先
-- [ ] S2: リソースAPI設計 — todo/projects/backlogのエンドポイント・スキーマ・既存関数への対応付け。肥大化するならtodo系とbacklog/projects系に分割
+- [ ] S2a: サービス層抽出 — `services/`新設（todo・backlog・errors）、commands痩身化。CLI振る舞い不変の純粋リファクタ。concepts docの責務境界更新を含む
+- [ ] S2b: リソースAPI設計 — S2aのservicesを呼ぶtodo/projects/backlogエンドポイント・スキーマ定義
 - [ ] S3: フロント基盤設計 — `app/`雛形・ルーティング・APIクライアント・テーマ方針
 - [ ] S4: ビュー設計 — Todoビュー・Backlogビューのコンポーネント構成
 - [ ] S5（検討中）: Agent連携ブリッジ — Web UIからdiscourse Skill呼び出し（URL渡し→回答取得）。headless Claude起動・非同期実行・タイムアウト・権限の設計が必要で、単純なファイルAPIとは別次元の部品
 - 発行順の理由: S2のAPI契約が前後端の境界のため、S1→S2で契約を固めてからS3/S4へ進む。S1.5/S5は仕様議論が先行
+
+### S2の層分離方針（2026-07-10 決定）
+- CLIとwebappは、`services/`の業務処理を呼ぶ別々のアダプタとして分離する
+- 配置規則: modelsはデータ・検証・load/save、servicesは操作（採番・状態遷移・target振り分け等のI/Oを伴う手順）
+- servicesはClick/HTTP非依存のドメイン例外を投げ、CLIはClickException、webはHTTPExceptionへ変換する
+- webappから内部操作のためにCLI・シェルを実行しない。外部プロセス実行はS5で別途設計する
+- 既存平置きモジュールのcore/移設は別タスクへ分離 → `docs/tasks/20260710_1319_core-package-restructure.md`
+- concepts docの「ドメイン処理は各コマンド側に置く」記述はS2aで責務境界を更新する
 
 ### Phase 3: 実装（仕様書ごとに実施・検証）
 - [ ] 各仕様書単位で実装し、受け入れ基準で検証する
@@ -48,5 +57,10 @@
 - 後続の別タスク: FOCUSビュー・スマホ対応（Tailscale）
 
 ## 実行ログ
+
+### 試行 1: S1 server基盤のTestClient検証
+- 実施内容: FastAPI・uvicorn追加後に新規テストを実行
+- 結果: Starlette TestClientが開発依存`httpx2`を要求
+- 判断: `httpx2`をdev依存へ追加して継続
 
 ## 結果

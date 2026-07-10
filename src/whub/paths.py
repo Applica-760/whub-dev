@@ -58,6 +58,10 @@ def downloads_dir() -> Path:
     return whub_data_dir() / "downloads"
 
 
+def app_dist_path() -> Path:
+    return whub_root() / "app" / "dist"
+
+
 def _package_workspace_root() -> Path:
     current = Path(__file__).resolve()
     for parent in current.parents:

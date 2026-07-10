@@ -26,6 +26,9 @@ AGENTS.md
 __pycache__/
 *.py[cod]
 
+# Web app build output
+app/dist/
+
 # whub link (auto-generated)
 projects
 vault

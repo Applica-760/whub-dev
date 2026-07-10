@@ -1,6 +1,7 @@
 """whub CLI entry point."""
 from __future__ import annotations
 import click
+from whub.commands.app import app
 from whub.commands.backlog import backlog
 from whub.commands.boot import boot
 from whub.commands.cd import cd, shell_init
@@ -28,3 +29,4 @@ main.add_command(boot)
 main.add_command(shell_init)
 main.add_command(todo)
 main.add_command(backlog)
+main.add_command(app)
