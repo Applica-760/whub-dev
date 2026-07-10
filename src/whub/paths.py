@@ -62,6 +62,10 @@ def app_dist_path() -> Path:
     return whub_root() / "app" / "dist"
 
 
+def app_pid_path() -> Path:
+    return whub_config_dir() / "app.pid"
+
+
 def _package_workspace_root() -> Path:
     current = Path(__file__).resolve()
     for parent in current.parents:

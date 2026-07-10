@@ -22,6 +22,7 @@
 - `todo`: `project`横断のToDoを管理することが目的
 - `boot`: whubのAgent設定・`Skill`・CodeGraph初期化を各`resource`へ配布することが目的
 - `backlog`: `project`ごとの`backlog`へ未整理メモを追記することが目的
+- `app`: ローカルWeb appサーバーを常駐起動・停止することが目的
 - `mount`/`unmount`: `remote` resourceをsshfsでwhubツリーへ接続/解除することが目的
 - `run`: `remote`でのワンショット実行が目的。対話セッションは`cd`が担う
 - `fetch`: workspace-hub相対パスで指定した`remote`のファイルをwhub data_dirの`downloads/`へ取得することが目的
@@ -70,6 +71,7 @@
 - `mount`は無引数で`mount: true`の`resource`のみを対象にし、名指し・`-a`はフラグを無視する
 - `todo`は実行可能な単発アクションを管理する。project紐付けは任意
 - `backlog`は`<project>/docs/backlog.md`へ未整理メモを追記する
+- `app`は`.whub/app.pid`で常駐サーバーを管理し、無引数で起動、`app down`で停止する
 - `fetch`はworkspace-hub相対パス（VS Codeの相対パスコピーを想定）から`resource`を解決し、data_dirの`downloads/`直下へフラットに保存する（同名は上書き）。単ファイル前提
 
 ---

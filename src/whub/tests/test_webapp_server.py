@@ -6,24 +6,27 @@
 3. 非APIの未マッチパスはSPAフォールバックする
 4. 未定義のAPIパスはSPAフォールバックしない
 5. dist欠如時にビルド手順を案内する
-6. デフォルトでブラウザを開く
-7. --no-openでブラウザを開かない
-8. ブラウザ起動失敗がサーバー起動を妨げない
-9. --portでポートを変更できる
-10. app_dist_pathがWHUB_ROOT配下のdistを返す
+6. 常駐子プロセスを指定portで起動する
+7. 起動済みサーバーを再利用する
+8. downが管理PIDを停止する
+9. downが必要に応じてSIGKILLへ昇格する
+10. downが未起動時に成功する
+11. app_pid_pathがWHUB_ROOT配下のPIDファイルを返す
 
 検証しないケース:
-- 実際のuvicornサーバー起動とブラウザ起動
+- 実際の常駐プロセス起動・停止（統合確認で検証）
 """
 from __future__ import annotations
 
-from unittest.mock import patch
+import signal
+from unittest.mock import call, patch
 
 from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
 from whub.commands.app import app
-from whub.paths import app_dist_path
+from whub.paths import app_dist_path, app_pid_path
+from whub.webapp.runner import AppProcessRecord
 from whub.webapp.server import create_app
 
 
@@ -41,6 +44,7 @@ class TestWebappServer:
         monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
 
         assert app_dist_path() == tmp_path / "app" / "dist"
+        assert app_pid_path() == tmp_path / ".whub" / "app.pid"
 
     def test_health(self, tmp_path):
         # ケース1
@@ -79,45 +83,86 @@ class TestAppCommand:
         assert result.exit_code != 0
         assert "cd app && npm install && npm run build" in result.output
 
-    def test_opens_browser_and_uses_requested_port(self, tmp_path):
+    def test_starts_detached_server_with_requested_port(self, tmp_path):
         # ケース6,9
         dist_dir = _dist_dir(tmp_path)
         with (
             patch("whub.commands.app.app_dist_path", return_value=dist_dir),
-            patch("whub.commands.app.webbrowser.open") as mock_open,
-            patch("whub.commands.app.uvicorn.run") as mock_run,
+            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch("whub.commands.app._read_running_process", return_value=None),
+            patch("whub.commands.app.subprocess.Popen") as mock_popen,
         ):
             result = CliRunner().invoke(app, ["--port", "9000"])
 
         assert result.exit_code == 0
-        mock_open.assert_called_once_with("http://127.0.0.1:9000")
-        assert mock_run.call_args.kwargs == {"host": "127.0.0.1", "port": 9000}
+        assert "app starting: http://127.0.0.1:9000" in result.output
+        assert mock_popen.call_args.kwargs == {"start_new_session": True}
+        assert mock_popen.call_args.args[0][1:3] == ["-m", "whub.webapp.runner"]
 
-    def test_no_open_skips_browser(self, tmp_path):
+    def test_reuses_running_server(self, tmp_path):
         # ケース7
         dist_dir = _dist_dir(tmp_path)
         with (
             patch("whub.commands.app.app_dist_path", return_value=dist_dir),
-            patch("whub.commands.app.webbrowser.open") as mock_open,
-            patch("whub.commands.app.uvicorn.run"),
-        ):
-            result = CliRunner().invoke(app, ["--no-open"])
-
-        assert result.exit_code == 0
-        mock_open.assert_not_called()
-
-    def test_browser_failure_does_not_stop_server(self, tmp_path):
-        # ケース8
-        dist_dir = _dist_dir(tmp_path)
-        with (
-            patch("whub.commands.app.app_dist_path", return_value=dist_dir),
+            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
             patch(
-                "whub.commands.app.webbrowser.open",
-                side_effect=RuntimeError("browser unavailable"),
+                "whub.commands.app._read_running_process",
+                return_value=AppProcessRecord(pid=42, port=9000),
             ),
-            patch("whub.commands.app.uvicorn.run") as mock_run,
+            patch("whub.commands.app.subprocess.Popen") as mock_popen,
         ):
             result = CliRunner().invoke(app)
 
         assert result.exit_code == 0
-        mock_run.assert_called_once()
+        assert "app already running: http://127.0.0.1:9000" in result.output
+        mock_popen.assert_not_called()
+
+    def test_down_stops_managed_server(self, tmp_path):
+        # ケース8
+        with (
+            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch(
+                "whub.commands.app._read_running_process",
+                return_value=AppProcessRecord(pid=42, port=8710),
+            ),
+            patch("whub.commands.app._is_running", return_value=False),
+            patch("whub.commands.app.os.kill") as mock_kill,
+            patch("whub.commands.app.time.sleep"),
+            patch("whub.commands.app.remove_pid_record") as mock_remove,
+        ):
+            result = CliRunner().invoke(app, ["down"])
+
+        assert result.exit_code == 0
+        assert "app stopped" in result.output
+        mock_kill.assert_called_once_with(42, signal.SIGTERM)
+        mock_remove.assert_called_once_with(tmp_path / "app.pid", expected_pid=42)
+
+    def test_down_escalates_to_sigkill(self, tmp_path):
+        with (
+            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch(
+                "whub.commands.app._read_running_process",
+                return_value=AppProcessRecord(pid=42, port=8710),
+            ),
+            patch("whub.commands.app._is_running", return_value=True),
+            patch("whub.commands.app.os.kill") as mock_kill,
+            patch("whub.commands.app.time.sleep"),
+            patch("whub.commands.app.remove_pid_record"),
+        ):
+            result = CliRunner().invoke(app, ["down"])
+
+        assert result.exit_code == 0
+        assert mock_kill.call_args_list == [
+            call(42, signal.SIGTERM),
+            call(42, signal.SIGKILL),
+        ]
+
+    def test_down_skips_when_not_running(self, tmp_path):
+        with (
+            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch("whub.commands.app._read_running_process", return_value=None),
+        ):
+            result = CliRunner().invoke(app, ["down"])
+
+        assert result.exit_code == 0
+        assert "app not running" in result.output

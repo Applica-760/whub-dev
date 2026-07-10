@@ -36,7 +36,8 @@
     - [x] 実装: `services/inbox.py`と単体テストを追加（`uv run pytest`: 164 passed）
 - [x] S2a: サービス層抽出 — `services/`新設（todo・backlog・errors）、commands痩身化。CLI振る舞い不変の純粋リファクタ。concepts docの責務境界更新を含む
 - [x] S2b: リソースAPI設計 — `docs/specs/20260710_1853_whub-app-s2b-resource-api.md`（todo一覧はpending/completed同梱、backlog未作成は空文字列200、todo削除は204で確定）
-- [x] S3: フロント基盤設計 — `docs/specs/20260710_2153_whub-app-s3-frontend-foundation.md`（npm・openapi-typescript・生成型コミット・React Router導入で確定）
+- [x] S3: フロント基盤設計・実装・検証完了 — `docs/specs/20260710_2153_whub-app-s3-frontend-foundation.md`（npm・openapi-typescript・生成型コミット・React Router導入）
+- [x] S1補完: 常駐サーバー化 — `.whub/app.pid`で管理し、`whub app`で起動・`whub app down`で停止
 - [ ] S4: ビュー設計 — Todoビュー・Backlogビューのコンポーネント構成
 - [ ] S5（検討中）: Agent連携ブリッジ — Web UIからdiscourse Skill呼び出し（URL渡し→回答取得）。headless Claude起動・非同期実行・タイムアウト・権限の設計が必要で、単純なファイルAPIとは別次元の部品
 - 発行順の理由: S2のAPI契約が前後端の境界のため、S1→S2で契約を固めてからS3/S4へ進む。S1.5/S5は仕様議論が先行

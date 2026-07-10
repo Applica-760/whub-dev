@@ -51,13 +51,13 @@
 - lint/formatはテンプレート既定の範囲に留め、sns-lab流のeslint共通化は統合検討時に行う
 
 ## 受け入れ基準
-- [ ] `cd app && npm install && npm run build`が成功し、`whub app`でブラウザ表示できる
-- [ ] `/todos`・`/backlog`へ直接URLアクセスしても表示される（SPAフォールバック経由）
-- [ ] devサーバ経由で`/api/health`が200を返す（プロキシ動作）
-- [ ] 型生成scriptが`openapi.json`出力から型生成まで一括で成功し、生成型にS2bの全エンドポイントが含まれる
-- [ ] fetchラッパがAPIエラーの`detail`を例外として扱える
-- [ ] `tsc`（typecheck）が通る
-- [ ] 背景グレー+白カードのテーマが両ルートに適用されている
+- [x] `cd app && npm install && npm run build`が成功し、`whub app`でブラウザ表示できる
+- [x] `/todos`・`/backlog`へ直接URLアクセスしても表示される（SPAフォールバック経由）
+- [x] devサーバ経由で`/api/health`が200を返す（プロキシ動作）
+- [x] 型生成scriptが`openapi.json`出力から型生成まで一括で成功し、生成型にS2bの全エンドポイントが含まれる
+- [x] fetchラッパがAPIエラーの`detail`を例外として扱える
+- [x] `tsc`（typecheck）が通る
+- [x] 背景グレー+白カードのテーマが両ルートに適用されている
 
 ## 検証条件
 - 自動: `npm run build`・typecheck・型生成scriptの成功。既存`uv run pytest`が全件通ること（whub側にスキーマ出力手段を足すため）

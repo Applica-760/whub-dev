@@ -29,6 +29,7 @@ __pycache__/
 
 # Web app build output
 app/dist/
+app/node_modules
 
 # whub link (auto-generated)
 projects

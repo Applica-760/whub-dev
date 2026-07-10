@@ -11,6 +11,7 @@
 
 ## 対象範囲
 - `src/whub/webapp/server.py`（新規）
+- `src/whub/webapp/runner.py`（常駐子プロセス）
 - `src/whub/commands/app.py`（新規）
 - `src/whub/paths.py`（関数追加）
 - `src/whub/cli.py`（コマンド登録）
@@ -26,6 +27,7 @@
 ## 変更要件
 - `paths.py`
     - `app_dist_path() -> Path`: `whub_root() / "app" / "dist"`を返す
+    - `app_pid_path() -> Path`: `whub_root() / ".whub" / "app.pid"`を返す
 - `webapp/server.py`
     - `create_app(dist_dir: Path) -> FastAPI`: アプリファクトリ
         - `GET /api/health`が`{"status": "ok"}`を返す
@@ -33,34 +35,38 @@
         - `/api`以外の未マッチGETパスへ`index.html`を返す（SPAフォールバック）
         - S2以降のリソースルータを登録できる受け口を持つ
 - `commands/app.py`
-    - `app`（Click command）: オプションは`--port`（int・デフォルト8710）と`--no-open`（flag）
+    - `app`（Click group）: `--port`（int・デフォルト8710）で常駐子プロセスを起動し、URLを表示する
+    - `app down`: PID記録のプロセスへSIGTERMを送り、残ればSIGKILLで停止する
     - `app_dist_path()`に`index.html`が無ければ、ビルド手順（`cd app && npm install && npm run build`）を含む`ClickException`で終了する
-    - bind先は`127.0.0.1`固定でuvicornを起動する
-    - 起動時にデフォルトでブラウザを開き、`--no-open`で抑止できる
+    - 起動済みPIDは再利用し、stale PIDは削除する
+- `webapp/runner.py`
+    - `python -m whub.webapp.runner`で起動し、PIDとportを`.whub/app.pid`へ記録する
+    - bind先は`127.0.0.1`固定でuvicornを起動し、終了時に自分のPID記録を削除する
 - `cli.py`: `main.add_command(app)`を追加
 - `pyproject.toml`: `fastapi`・`uvicorn`をdependenciesへ追加
 
 ## 実装方針
 - `webapp/`は`remote.py`等と同列のドメイン低レイヤーとし、`commands/app.py`は引数整形・案内・起動のみ担う（`docs/whub-concepts.md`のCLI設計ポリシー踏襲）
 - `create_app`が`dist_dir`を引数で受けるのは、テストで一時ディレクトリを注入するため
-- ブラウザオープンは標準ライブラリの薄い呼び出しとし、失敗してもサーバ起動を妨げない
+- 常駐子プロセスはrunnerに閉じ、CLIは起動・PID参照・停止だけを担う
 - SPAフォールバックはS3以降のクライアントルーティングを想定した仕様である
 
 ## 受け入れ基準
 - [x] dist存在時に`whub app`でサーバが起動し、`http://127.0.0.1:8710/api/health`が`{"status": "ok"}`を返す
 - [x] 非APIパスへのGETが`index.html`の内容を返す
 - [x] dist欠如時にビルド手順の案内を表示して終了する（スタックトレースを出さない）
-- [x] デフォルトでブラウザが開き、`--no-open`で抑止できる
+- [x] `whub app`が常駐起動し、URLを表示して呼び出し元を直ちに解放する
+- [x] `whub app down`がPID記録のサーバーを停止し、PID記録を削除する
 - [x] `--port`でポートを変更できる
 - [x] `uv run pytest`が全件通る（新規テストを含む）
 
 ## 検証条件
 - 自動: TestClientでhealth・静的配信・SPAフォールバックを検証。dist欠如時の案内はClickのテストランナーで検証。一時ディレクトリをdist_dirとして注入する
-- 手動: ダミーの`app/dist/index.html`を置いて`whub app`を起動し、ブラウザ表示とhealth応答を確認する
+- 手動: `whub app`起動後にhealth応答とPID記録を確認し、`whub app down`後に8710番解放とPID削除を確認する
 
 ## リスク・注意点
-- ポート使用中の起動失敗はuvicornのエラー表示に委ねる（追加ハンドリングはしない）
+- PID記録がないプロセスがポートを使用中の場合、`app down`は停止しない
 - `app/dist`はgitignore対象のため、S3完了まではdist欠如案内が出るのが正常動作である
 
 ## 不明点・確認事項
-- なし（ポート8710・ブラウザ自動オープン・127.0.0.1固定・分割粒度は相談済み決定事項）
+- なし（ポート8710・URL表示のみ・127.0.0.1固定・PID管理は相談済み決定事項）

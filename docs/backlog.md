@@ -10,7 +10,6 @@
     - SSHFS復活・tmux運用・Mutagen不採用などの経緯をADR化する
 - [ ] 常設Webアプリ / 投入口・todo・FOCUSビュー
     - 解きたい問題: `whub todo`や`whub status`を都度実行するだけだと起動・確認の摩擦があり、思考・todo・AI指示の記録漏れが起きやすい
-    - 方針: `whub app`としてlocalhostのWeb UIを起動し、常設の入力口・一覧・軽い編集画面を提供する
     - 投入口: project非依存の思想・外部情報・一般ナレッジは`vault/inbox/`、project固有の構想は各`backlog`へ直接書く
     - 表示/操作候補: todo追加/完了、inbox、backlog、project一覧、FOCUSビュー
     - 境界: ChatGPT/Codexの再実装はしない。GUIは捕まえる・並べる・軽く編集する・受け渡すまでを担い、解釈/分解/実装/整理はAgentやSkillへ委ねる
@@ -93,4 +92,6 @@
 <!-- hub:backlog:appended:start -->
 - 傾聴モード、単純な調べごとモードのSkill欲しい。プロジェクトの文脈がいらない場合がある
 - 相談系Skillを作る。これに関しては会話の履歴をvaultに蓄積できるようにする
+- statusにwhub appの起動状況のモニタ入れてもいいかも？
+- mountに関して、LAplustのILマウントだけ動作が不安定
 <!-- hub:backlog:appended:end -->
