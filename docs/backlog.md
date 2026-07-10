@@ -91,4 +91,5 @@
 - [ ] /task-planningにおいて、過去に解決した課題とかに関する1行サマリーをMEMORY.mdに管理するのアリかも？
 
 <!-- hub:backlog:appended:start -->
+- 傾聴モード、単純な調べごとモードのSkill欲しい。プロジェクトの文脈がいらない場合がある
 <!-- hub:backlog:appended:end -->
