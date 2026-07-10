@@ -92,4 +92,5 @@
 
 <!-- hub:backlog:appended:start -->
 - 傾聴モード、単純な調べごとモードのSkill欲しい。プロジェクトの文脈がいらない場合がある
+- 相談系Skillを作る。これに関しては会話の履歴をvaultに蓄積できるようにする
 <!-- hub:backlog:appended:end -->

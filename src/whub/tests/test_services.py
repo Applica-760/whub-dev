@@ -5,6 +5,7 @@
 2. todoの未知project・未存在ID・既完了エラー
 3. local backlogの追記とマーカー不正エラー
 4. remote backlogのSSH経由書込内容
+5. local/remote backlogの読取とmount未済エラー
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ from unittest.mock import patch
 import pytest
 
 from whub.models.todo import Todo, Todos, load_todos, save_todos
-from whub.services.backlog import MARKERS, append_backlog
+from whub.services.backlog import MARKERS, append_backlog, read_backlog
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.todo import (
     add_todo,
@@ -140,3 +141,40 @@ def test_remote_backlog_writes_marker_content() -> None:
 
     write = mock_ssh.call_args_list[-1]
     assert write.kwargs["input"] == format_block(MARKERS, "existing\n- new memo")
+
+
+def test_read_local_backlog_returns_content_or_empty(tmp_path: Path) -> None:
+    # ケース5
+    m = manifest()
+    project = m.resolve_project("local")
+    assert project is not None
+    assert project.resource is not None
+    project.resource.source = str(tmp_path)
+
+    assert read_backlog(m, "local") == ""
+
+    backlog = tmp_path / "docs" / "backlog.md"
+    backlog.parent.mkdir()
+    backlog.write_text("local memo\n")
+
+    assert read_backlog(m, "local") == "local memo\n"
+
+
+def test_read_remote_backlog_uses_mounted_workspace(tmp_path: Path) -> None:
+    # ケース5
+    m = manifest()
+    project = m.resolve_project("remote")
+    assert project is not None
+    assert project.resource is not None
+    resource = project.resource
+    resource._resolved_workspace_path = tmp_path / "remote-mount"
+
+    with pytest.raises(ServiceError, match="remote workspace path is not available"):
+        read_backlog(m, "remote")
+
+    resource._resolved_workspace_path.mkdir()
+    backlog = resource._resolved_workspace_path / "docs" / "backlog.md"
+    backlog.parent.mkdir()
+    backlog.write_text("remote memo\n")
+
+    assert read_backlog(m, "remote") == "remote memo\n"

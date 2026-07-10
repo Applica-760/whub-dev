@@ -5,11 +5,15 @@ from typing import Annotated, Literal
 from pathlib import Path
 from pathlib import PurePosixPath
 import yaml
-import click
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 from pydantic import ValidationError
 
 from whub.paths import manifest_path, whub_root
+
+
+class ManifestError(Exception):
+    """Raised when the manifest cannot be loaded or validated."""
+
 
 class SchemaModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -146,15 +150,15 @@ def load_manifest() -> Manifest:
     try:
         text = path.read_text()
     except FileNotFoundError as error:
-        raise click.ClickException(f"manifest.yaml not found: {path}") from error
+        raise ManifestError(f"manifest.yaml not found: {path}") from error
     try:
         data = yaml.safe_load(text)
     except yaml.YAMLError as error:
-        raise click.ClickException(f"invalid manifest YAML: {path}: {error}") from error
+        raise ManifestError(f"invalid manifest YAML: {path}: {error}") from error
     try:
         return Manifest.model_validate(data)
     except ValidationError as error:
-        raise click.ClickException(f"invalid manifest: {path}: {error}") from error
+        raise ManifestError(f"invalid manifest: {path}: {error}") from error
 
 def project_names(ctx, param, incomplete: str) -> list[str]:
     del ctx, param

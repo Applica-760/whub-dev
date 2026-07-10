@@ -65,7 +65,7 @@ class TestWebappServer:
         # ケース4
         client = TestClient(create_app(_dist_dir(tmp_path)))
 
-        response = client.get("/api/todos")
+        response = client.get("/api/unknown")
 
         assert response.status_code == 404
 

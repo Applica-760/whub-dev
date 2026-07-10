@@ -35,8 +35,8 @@
     - 役割整理済み（2026-07-10）: inboxは対話抜きで思いつきを書き殴る摩擦ゼロの投函口。project非紐付けでbacklogとは別軸。CLIコマンドは作らない。会話・整理は投函後のSkill（refile等）が担う
     - [x] 実装: `services/inbox.py`と単体テストを追加（`uv run pytest`: 164 passed）
 - [x] S2a: サービス層抽出 — `services/`新設（todo・backlog・errors）、commands痩身化。CLI振る舞い不変の純粋リファクタ。concepts docの責務境界更新を含む
-- [ ] S2b: リソースAPI設計 — S2aのservicesを呼ぶtodo/projects/backlogエンドポイント・スキーマ定義
-- [ ] S3: フロント基盤設計 — `app/`雛形・ルーティング・APIクライアント・テーマ方針
+- [x] S2b: リソースAPI設計 — `docs/specs/20260710_1853_whub-app-s2b-resource-api.md`（todo一覧はpending/completed同梱、backlog未作成は空文字列200、todo削除は204で確定）
+- [x] S3: フロント基盤設計 — `docs/specs/20260710_2153_whub-app-s3-frontend-foundation.md`（npm・openapi-typescript・生成型コミット・React Router導入で確定）
 - [ ] S4: ビュー設計 — Todoビュー・Backlogビューのコンポーネント構成
 - [ ] S5（検討中）: Agent連携ブリッジ — Web UIからdiscourse Skill呼び出し（URL渡し→回答取得）。headless Claude起動・非同期実行・タイムアウト・権限の設計が必要で、単純なファイルAPIとは別次元の部品
 - 発行順の理由: S2のAPI契約が前後端の境界のため、S1→S2で契約を固めてからS3/S4へ進む。S1.5/S5は仕様議論が先行
@@ -49,8 +49,32 @@
 - 既存平置きモジュールのcore/移設は別タスクへ分離 → `docs/tasks/20260710_1319_core-package-restructure.md`
 - concepts docの「ドメイン処理は各コマンド側に置く」記述はS2aで責務境界を更新する
 
+### S2bのAPI設計方針（2026-07-10 決定）
+- エンドポイント: GET/POST `/api/todos`、PATCH `/api/todos/{id}`（done化のみ）、DELETE `/api/todos/{id}`、GET `/api/projects`、GET/POST `/api/backlog/{project}`、POST `/api/inbox`（S1.5のservice公開）
+- GET `/api/projects`はTab補完と同じmanifest由来の名前一覧のみ返す（名前一意・resource無しはworkspace-hubのみのため属性不要）
+- backlog読取はservicesに読取関数を新設し、mount前提で`_resolved_workspace_path`から読む（SSHしない）
+- manifest境界: `load_manifest`を純粋例外`ManifestError`化し、CLIは`get_manifest`の1箇所で変換（TargetError純化`done/20260710_1411`の前例踏襲）
+- エラー変換はFastAPIの`exception_handler`で一括（`ServiceError`→400、`NotFoundError`→404、`ManifestError`→500）。各エンドポイントにtry/exceptは書かない
+- 構成は`webapp/routers/`にリソース別ルータ（todos/projects/backlog/inbox）。スキーマは各ルータ内に置き、共有が生じるまで`schemas.py`は作らない
+- APIルータはSPA catch-allより先に登録する（Starletteは登録順マッチのため）
+
+### S3のフロント基盤方針（2026-07-10 決定）
+- 配置はリポジトリ直下`app/`（確定事項どおり）。`src/whub`へは含めない（Pythonパッケージ境界・npm/uvツールチェーン分離のため）
+- 型生成はopenapi-typescript。FastAPIの`openapi.json`をサーバ起動なしでexportし、TS型を生成。クライアントは薄い手書きfetchラッパ（orvalはsns-labと共通化できるが周辺選定を引き連れるため見送り）
+- ルーティングはReact Routerを雛形から導入（S1のSPAフォールバックが前提済み）。初期ルートは`/todos`・`/backlog`
+- 再利用方針: sns-lab基盤（pnpm workspace+Turbo）の移植はしない。ただし統合を見越し`theme/`・`components/`（ドメイン非依存）と`features/`・`api/`（whub固有）を分離し、2つ目の利用者が現れた時点でパッケージ抽出する
+- テーマはiOS設定画面風grouped listイメージ（背景#f2f2f7・白カード・角丸10〜12px・影なし・`-apple-system`フォント）をMantineテーマ層で定義。grouped list部品はS4で作る
+- 開発時はVite devサーバの`/api`プロキシで`127.0.0.1:8710`へ転送
+- パッケージマネージャはnpm（S1のdist欠如案内文言と一致・追加ツール不要）
+- 生成型はコミット対象（プライベートリポのためclone即ビルド可を優先。API変更時は再生成とセットでコミット）
+
 ### Phase 3: 実装（仕様書ごとに実施・検証）
 - [ ] 各仕様書単位で実装し、受け入れ基準で検証する
+
+### S2b 実装計画（2026-07-10 確定）
+- [x] Phase 1: manifest例外境界とbacklog読取serviceを追加し、既存CLI挙動をテストで固定する
+- [x] Phase 2: todo・projects・backlog・inboxのAPIルータと共通例外変換を追加する
+- [x] Phase 3: TestClient・CLI・全件テストでAPI契約を検証する（S3前のため手動curlは未実施）
 
 ### 完成までの残作業（仕様書化前の候補）
 - Apple風テーマの具体化（S3で方針、深掘りは必要なら別仕様書）
@@ -65,5 +89,10 @@
 - 実施内容: FastAPI・uvicorn追加後に新規テストを実行
 - 結果: Starlette TestClientが開発依存`httpx2`を要求
 - 判断: `httpx2`をdev依存へ追加して継続
+
+### 試行 2: S2b APIテスト
+- 実施内容: 新規`/api/todos`に合わせ、SPAフォールバック禁止テストの未定義APIを変更
+- 結果: 対象31件・全体177件が通過
+- 判断: 続行
 
 ## 結果

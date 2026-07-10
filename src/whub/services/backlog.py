@@ -23,26 +23,24 @@ def _insert_memo(content: str, memo: str) -> str:
     return insert_before_end_marker(content, f"- {memo}\n", MARKERS)
 
 
-def _resolve_target_resource(
+def _resolve_resource(
     manifest: Manifest,
     project: str,
-    memo: str,
-) -> TargetItem[tuple[str, str]]:
+) -> SymlinkResource | RemoteResource:
     resolved_project = manifest.resolve_project(project)
     if resolved_project is None:
         raise ServiceError(f"unknown project: {project}")
     if resolved_project.resource is None:
         if resolved_project.name == "workspace-hub":
-            return TargetItem(workspace_hub_resource(), (project, memo))
+            return workspace_hub_resource()
         raise ServiceError(f"project has no resource: {project}")
-    return TargetItem(resolved_project.resource, (project, memo))
+    return resolved_project.resource
 
 
 def _append_local_backlog(
     resource: SymlinkResource,
-    data: tuple[str, str],
+    memo: str,
 ) -> None:
-    _, memo = data
     root = Path(resource.source)
     if not root.exists():
         raise ServiceError(f"resource source does not exist: {root}")
@@ -54,9 +52,8 @@ def _append_local_backlog(
 
 def _append_remote_backlog(
     resource: RemoteResource,
-    data: tuple[str, str],
+    memo: str,
 ) -> None:
-    _, memo = data
     host = resource._resolved_host
     root = resource.path
     docs = f"{root}/docs"
@@ -124,9 +121,45 @@ def _append_remote_backlog(
 
 def append_backlog(manifest: Manifest, project: str, memo: str) -> None:
     """Append MEMO to PROJECT's local or remote backlog."""
-    target = _resolve_target_resource(manifest, project, memo)
+    target = TargetItem(_resolve_resource(manifest, project), memo)
     on_targets(
         [target],
         local=_append_local_backlog,
         remote=_append_remote_backlog,
     )
+
+
+def _read_local_backlog(resource: SymlinkResource, data: None) -> str:
+    del data
+    root = Path(resource.source)
+    if not root.is_dir():
+        raise ServiceError(f"resource source does not exist: {root}")
+    path = root / "docs" / "backlog.md"
+    if not path.exists():
+        return ""
+    if not path.is_file():
+        raise ServiceError(f"unexpected backlog path: {path}")
+    return path.read_text()
+
+
+def _read_remote_backlog(resource: RemoteResource, data: None) -> str:
+    del data
+    root = resource._resolved_workspace_path
+    if not root.is_dir():
+        raise ServiceError(f"remote workspace path is not available: {root}")
+    path = root / "docs" / "backlog.md"
+    if not path.exists():
+        return ""
+    if not path.is_file():
+        raise ServiceError(f"unexpected backlog path: {path}")
+    return path.read_text()
+
+
+def read_backlog(manifest: Manifest, project: str) -> str:
+    """Return PROJECT's local or mounted backlog content."""
+    target = TargetItem(_resolve_resource(manifest, project), None)
+    return on_targets(
+        [target],
+        local=_read_local_backlog,
+        remote=_read_remote_backlog,
+    )[0]

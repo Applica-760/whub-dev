@@ -8,7 +8,7 @@
 5. `resource.workspace_path`の重複を拒否する。
 6. legacy形式や未知フィールドを拒否する。
 7. validation後、resourceの解決済み属性を設定する。
-8. `load_manifest()`はmanifest欠落・YAML不正・schema不正を`ClickException`にする。
+8. `load_manifest()`はmanifest欠落・YAML不正・schema不正を`ManifestError`にする。
 
 検証しないケース:
 1. Pydanticの全エラーメッセージ本文の完全一致。
@@ -22,10 +22,9 @@ import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import click
 import pytest
 from pydantic import ValidationError
-from whub.models import Manifest, RemoteResource, SymlinkResource, load_manifest
+from whub.models import Manifest, ManifestError, RemoteResource, SymlinkResource, load_manifest
 from whub.tests.helpers import manifest_data
 
 
@@ -125,13 +124,13 @@ class TestManifestSpec:
         with tempfile.TemporaryDirectory() as data_dir:
             # ケース8
             with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
-                with pytest.raises(click.ClickException, match="manifest.yaml not found"):
+                with pytest.raises(ManifestError, match="manifest.yaml not found"):
                     load_manifest()
 
             # ケース8
             Path(data_dir, "manifest.yaml").write_text("version: [")
             with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
-                with pytest.raises(click.ClickException, match="invalid manifest YAML"):
+                with pytest.raises(ManifestError, match="invalid manifest YAML"):
                     load_manifest()
 
             # ケース8
@@ -145,5 +144,5 @@ class TestManifestSpec:
                 "    source: relative\n"
             )
             with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
-                with pytest.raises(click.ClickException, match="invalid manifest"):
+                with pytest.raises(ManifestError, match="invalid manifest"):
                     load_manifest()
