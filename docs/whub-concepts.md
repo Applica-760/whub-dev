@@ -25,6 +25,7 @@
 - `mount`/`unmount`: `remote` resourceをsshfsでwhubツリーへ接続/解除することが目的
 - `run`: `remote`でのワンショット実行が目的。対話セッションは`cd`が担う
 - `fetch`: workspace-hub相対パスで指定した`remote`のファイルをwhub data_dirの`downloads/`へ取得することが目的
+- `vscode`: manifestのsymlinkとmount対象をVS Codeの走査対象から除外する設定を生成することが目的
 
 # リモート操作の用途分担
 - 編集・コード確認・`project`横断のコンテキスト参照は`mount`で行う

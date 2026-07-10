@@ -12,6 +12,7 @@ from whub.commands.mount import mount, unmount
 from whub.commands.run import run
 from whub.commands.status import status
 from whub.commands.todo import todo
+from whub.commands.vscode import vscode
 
 @click.group()
 def main() -> None:
@@ -30,3 +31,4 @@ main.add_command(shell_init)
 main.add_command(todo)
 main.add_command(backlog)
 main.add_command(app)
+main.add_command(vscode)
