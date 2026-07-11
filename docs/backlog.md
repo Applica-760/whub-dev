@@ -1,5 +1,3 @@
-# workspace-hub Backlog
-
 ## whub CLIの新機能・拡張
 
 - [ ] リモート運用の残課題

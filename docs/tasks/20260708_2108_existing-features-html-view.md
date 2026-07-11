@@ -38,9 +38,17 @@
 - [x] S2b: リソースAPI設計 — `docs/specs/20260710_1853_whub-app-s2b-resource-api.md`（todo一覧はpending/completed同梱、backlog未作成は空文字列200、todo削除は204で確定）
 - [x] S3: フロント基盤設計・実装・検証完了 — `docs/specs/20260710_2153_whub-app-s3-frontend-foundation.md`（npm・openapi-typescript・生成型コミット・React Router導入）
 - [x] S1補完: 常駐サーバー化 — `.whub/app.pid`で管理し、`whub app`で起動・`whub app down`で停止
-- [ ] S4: ビュー設計 — Todoビュー・Backlogビューのコンポーネント構成
+- [ ] S4a: grouped list部品＋Todoビュー — `docs/specs/20260711_1020_whub-app-s4a-grouped-list-todo-view.md`
+- [ ] S4b: Backlogビュー＋Inboxページ — `docs/specs/20260711_1021_whub-app-s4b-backlog-inbox-view.md`（S4a完了後に着手・部品再利用）
 - [ ] S5（検討中）: Agent連携ブリッジ — Web UIからdiscourse Skill呼び出し（URL渡し→回答取得）。headless Claude起動・非同期実行・タイムアウト・権限の設計が必要で、単純なファイルAPIとは別次元の部品
 - 発行順の理由: S2のAPI契約が前後端の境界のため、S1→S2で契約を固めてからS3/S4へ進む。S1.5/S5は仕様議論が先行
+
+### S4のUI方針（2026-07-11 決定）
+- Todoリスト: iOSリマインダー風1本リスト（pending＋折りたたみcompleted）を基本とし、container/presentational分離で後から別ビューパターン（project別・テーブル等）を追加・切替できる構造にする
+- Todo追加: クイック追加バー（title＋Enter即追加）＋展開式詳細（project/priority/due）
+- Backlog: 左paneでproject切替＋本文markdownレンダリング（react-markdown系を1つ追加）＋下部追記フォーム
+- Inbox投函: 独立ページ`/inbox`（ナビ3タブ目）。title＋body必須、成功でクリア＋filename通知
+- 仕様書は2分割（S4a: 部品＋Todo / S4b: Backlog＋Inbox）。S4bはS4aの部品を再利用するため直列
 
 ### S2の層分離方針（2026-07-10 決定）
 - CLIとwebappは、`services/`の業務処理を呼ぶ別々のアダプタとして分離する

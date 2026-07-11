@@ -15,3 +15,107 @@ input,
 textarea {
   font: inherit;
 }
+
+.whub-header {
+  background: #e5e5ea;
+  border-bottom: 1px solid #c7c7cc;
+}
+
+.whub-tabs {
+  align-items: flex-end;
+  align-self: stretch;
+  display: flex;
+  gap: 2px;
+}
+
+.whub-tab {
+  align-items: center;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  color: #636366;
+  display: flex;
+  font-weight: 600;
+  height: 38px;
+  padding: 0 18px;
+  text-decoration: none;
+}
+
+.whub-tab:hover {
+  text-decoration: none;
+}
+
+.whub-tab[data-active='true'] {
+  background: #f2f2f7;
+  border-color: #c7c7cc;
+  color: #1c1c1e;
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+}
+
+.backlog-markdown > :first-child {
+  margin-top: 0;
+}
+
+.backlog-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.backlog-markdown h1,
+.backlog-markdown h2,
+.backlog-markdown h3 {
+  color: #1c1c1e;
+  line-height: 1.25;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.backlog-markdown h1 {
+  font-size: 1.5rem;
+}
+
+.backlog-markdown h2 {
+  font-size: 1.25rem;
+}
+
+.backlog-markdown h3 {
+  font-size: 1.1rem;
+}
+
+.backlog-markdown p,
+.backlog-markdown li {
+  line-height: 1.65;
+}
+
+.backlog-markdown a {
+  color: #007aff;
+}
+
+.backlog-markdown code {
+  background: #e5e5ea;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.3em;
+}
+
+.backlog-markdown pre {
+  background: #1c1c1e;
+  border-radius: 8px;
+  color: #f2f2f7;
+  overflow-x: auto;
+  padding: 0.9rem;
+}
+
+.backlog-markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.backlog-appended {
+  color: #8e8e93;
+}
+
+.backlog-appended a {
+  color: #8e8e93;
+}

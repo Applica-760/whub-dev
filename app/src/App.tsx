@@ -13,24 +13,24 @@ export function App() {
   const location = useLocation();
 
   return (
-    <AppShell header={{ height: 56 }} padding="md">
-      <AppShell.Header>
-        <Group h="100%" justify="space-between" px="md">
-          <Text fw={700}>whub</Text>
-          <Group gap="md">
+    <AppShell header={{ height: 56 }} padding={0}>
+      <AppShell.Header className="whub-header">
+        <Group align="end" gap="xl" h="100%" px="md">
+          <Text fw={700} pb={10}>whub</Text>
+          <div className="whub-tabs">
             {navigation.map((item) => (
               <Anchor
-                c={location.pathname === item.to ? 'blue' : 'dimmed'}
+                aria-current={location.pathname === item.to ? 'page' : undefined}
+                className="whub-tab"
                 component={NavLink}
-                fw={600}
+                data-active={location.pathname === item.to}
                 key={item.to}
                 to={item.to}
-                underline="never"
               >
                 {item.label}
               </Anchor>
             ))}
-          </Group>
+          </div>
         </Group>
       </AppShell.Header>
 
