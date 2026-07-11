@@ -10,6 +10,7 @@
 7. unmount正常系：umountコマンド実行で"unmount"出力
 8. mount失敗時、作成したmountpointはrmdirされる（副作用境界）
 9. mount失敗時、既存のmountpointは保持される（副作用境界）
+10. stale mountはsshfsを起動せず、force unmountで解除する
 
 検証しないケース:
 - 実際のsshfs/umount/diskutil実行
@@ -62,14 +63,18 @@ class TestMountSpec:
     def test_stale_shows_error(self):
         # ケース3
         m = manifest()
+        mock_run = MagicMock()
         with (
             patch("whub.commands.mount.get_manifest", return_value=m),
             patch("whub.commands.mount.inspect_mount", return_value=ResourceHealth("stale")),
             patch("whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"),
+            patch("whub.commands.mount.subprocess.run", mock_run),
         ):
             result = CliRunner().invoke(mount, ["remote"])
 
+        assert result.exit_code != 0
         assert "STALE" in result.output
+        mock_run.assert_not_called()
 
     def test_sshfs_not_found_errors(self):
         # ケース4
@@ -114,6 +119,27 @@ class TestMountSpec:
 
         assert result.exit_code == 0
         assert "unmount" in result.output
+
+    def test_force_unmounts_stale_resource(self):
+        # ケース10
+        m = manifest()
+        remote = m.resolve_project("remote").resource
+        health_seq = [ResourceHealth("stale"), ResourceHealth("unmounted")]
+        mock_run = MagicMock(return_value=CompletedProcess([], 0))
+        with (
+            patch("whub.commands.mount.get_manifest", return_value=m),
+            patch("whub.commands.mount.inspect_mount", side_effect=health_seq),
+            patch("whub.commands.mount.subprocess.run", mock_run),
+        ):
+            result = CliRunner().invoke(unmount, ["remote", "--force"], catch_exceptions=False)
+
+        assert result.exit_code == 0
+        assert "unmount" in result.output
+        mock_run.assert_called_once_with(
+            ["umount", "-f", str(remote._resolved_workspace_path)],
+            capture_output=True,
+            text=True,
+        )
 
     def test_mount_failure_removes_created_mountpoint(self, tmp_path):
         # ケース8

@@ -11,8 +11,9 @@
 8. `_read_mount_table()`は`mount`失敗・timeout・OSError時に`None`を返す。
 9. `inspect_mount()`はmount tableが読めなければfail-safeで`stale`を返す。
 10. `inspect_mount()`はmount tableにmountpointがなければ`unmounted`を返す。
-11. `inspect_mount()`はmount tableにmountpointがあり、`stat`成功なら`ok`を返す。
-12. `inspect_mount()`は`stat` timeout/OSError/CalledProcessErrorなら`stale`を返す。
+11. `inspect_mount()`はmount tableにmountpointがあり、sshfsプロセスと`stat`が成功なら`ok`を返す。
+12. `inspect_mount()`はsshfsプロセス不在・検査失敗なら`stale`を返す。
+13. `inspect_mount()`は`stat` timeout/OSError/CalledProcessErrorなら`stale`を返す。
 
 検証しないケース:
 1. 実mount tableのOSごとの差異。
@@ -151,7 +152,7 @@ class TestMountHealthSpec:
             # ケース9
             resource = _remote_resource(Path(tmp) / "remote")
             with patch.object(health_module, "_read_mount_table", return_value=None):
-                health = inspect_mount(resource)
+                health = inspect_mount(resource, "remote")
 
         assert health.state == "stale"
 
@@ -161,7 +162,7 @@ class TestMountHealthSpec:
             resource = _remote_resource(Path(tmp) / "remote")
             table = "/dev/disk1 on /other/path (apfs, local)\n"
             with patch.object(health_module, "_read_mount_table", return_value=table):
-                health = inspect_mount(resource)
+                health = inspect_mount(resource, "remote")
 
         assert health.state == "unmounted"
 
@@ -171,18 +172,54 @@ class TestMountHealthSpec:
             mountpoint = Path(tmp) / "remote"
             resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
-            completed = subprocess.CompletedProcess(["stat"], 0, "", "")
+            process = subprocess.CompletedProcess(["pgrep"], 0, "", "")
+            stat = subprocess.CompletedProcess(["stat"], 0, "", "")
             with (
                 patch.object(health_module, "_read_mount_table", return_value=table),
-                patch.object(health_module.subprocess, "run", return_value=completed),
+                patch.object(health_module.subprocess, "run", side_effect=[process, stat]),
             ):
-                health = inspect_mount(resource)
+                health = inspect_mount(resource, "remote")
 
         assert health.state == "ok"
 
-    def test_mountpoint_in_table_and_stat_failure_reports_stale(self) -> None:
+    def test_mountpoint_in_table_and_missing_sshfs_process_reports_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース12
+            mountpoint = Path(tmp) / "remote"
+            resource = _remote_resource(mountpoint)
+            table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
+            missing = subprocess.CompletedProcess(["pgrep"], 1, "", "")
+            with (
+                patch.object(health_module, "_read_mount_table", return_value=table),
+                patch.object(health_module.subprocess, "run", return_value=missing) as run,
+            ):
+                health = inspect_mount(resource, "remote")
+
+        assert health.state == "stale"
+        run.assert_called_once_with(
+            ["pgrep", "-f", "volname=whub-remote"],
+            capture_output=True,
+            timeout=3,
+        )
+
+    def test_mountpoint_in_table_and_sshfs_process_check_failure_reports_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            # ケース12
+            mountpoint = Path(tmp) / "remote"
+            resource = _remote_resource(mountpoint)
+            table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
+            cases = (OSError("pgrep failed"), subprocess.TimeoutExpired(["pgrep"], 3))
+            for case in cases:
+                with (
+                    patch.object(health_module, "_read_mount_table", return_value=table),
+                    patch.object(health_module.subprocess, "run", side_effect=case),
+                ):
+                    health = inspect_mount(resource, "remote")
+                assert health.state == "stale"
+
+    def test_mountpoint_in_table_and_stat_failure_reports_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            # ケース13
             mountpoint = Path(tmp) / "remote"
             resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
@@ -194,7 +231,11 @@ class TestMountHealthSpec:
             for case in cases:
                 with (
                     patch.object(health_module, "_read_mount_table", return_value=table),
-                    patch.object(health_module.subprocess, "run", side_effect=case),
+                    patch.object(
+                        health_module.subprocess,
+                        "run",
+                        side_effect=[subprocess.CompletedProcess(["pgrep"], 0, "", ""), case],
+                    ),
                 ):
-                    health = inspect_mount(resource)
+                    health = inspect_mount(resource, "remote")
                 assert health.state == "stale"

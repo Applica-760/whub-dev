@@ -52,7 +52,7 @@ def _read_mount_table() -> str | None:
     return result.stdout
 
 
-def inspect_mount(resource: RemoteResource) -> ResourceHealth:
+def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth:
     mountpoint = resource._resolved_workspace_path
     table = _read_mount_table()
     # テーブルを読めない＝状態不明。unmountがskipしないようstale扱い（fail-safe）
@@ -63,6 +63,16 @@ def inspect_mount(resource: RemoteResource) -> ResourceHealth:
     )
     if not in_mount_table:
         return ResourceHealth("unmounted", str(mountpoint))
+    try:
+        process = subprocess.run(
+            ["pgrep", "-f", f"volname=whub-{project_name}"],
+            capture_output=True,
+            timeout=3,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return ResourceHealth("stale", str(error))
+    if process.returncode != 0:
+        return ResourceHealth("stale", f"sshfs process missing: whub-{project_name}")
     try:
         # stale mountはstatがブロックするため、子プロセス＋timeoutで隔離する
         subprocess.run(

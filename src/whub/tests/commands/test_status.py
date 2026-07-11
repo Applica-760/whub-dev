@@ -31,7 +31,7 @@ def _stub_inspect_symlink(_resource):
     return ResourceHealth("ok")
 
 
-def _stub_inspect_mount(_resource):
+def _stub_inspect_mount(_resource, _project_name):
     return ResourceHealth("ok")
 
 
@@ -77,6 +77,22 @@ class TestStatusSpec:
             result = CliRunner().invoke(status)
 
         assert result.exit_code != 0
+
+    def test_stale_mount_exits_nonzero(self):
+        m = manifest()
+        with (
+            patch("whub.commands.status.get_manifest", return_value=m),
+            patch("whub.commands.status.inspect_symlink", _stub_inspect_symlink),
+            patch(
+                "whub.commands.status.inspect_mount",
+                return_value=ResourceHealth("stale"),
+            ),
+            patch("whub.commands.status._probe_host", return_value={0: ("ok", "0", "-")}),
+        ):
+            result = CliRunner().invoke(status)
+
+        assert result.exit_code != 0
+        assert "stale" in result.output
 
     def test_unreachable_on_probe_failure(self):
         # ケース4

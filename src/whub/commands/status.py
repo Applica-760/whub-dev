@@ -112,7 +112,7 @@ def _fetch_remote_info(
     project: Project,
     probe: tuple[str, str, str] | None,
 ) -> _ResourceInfo:
-    mount = inspect_mount(resource).state
+    mount = inspect_mount(resource, project.name).state
     if probe is None:
         health = ResourceHealth("unreachable", str(resource._resolved_host.hostname))
         return _ResourceInfo(project.name, resource.type, health, mount=mount)

@@ -19,12 +19,17 @@
 # 計画
 
 ## Phase 1: 検知修正
-- [ ] `health.py` `inspect_mount`にvolnameベースのプロセス生存チェックを追加（呼び出し元のシグネチャ変更含む）
-- [ ] stale再現状態でのテスト追加（`uv run pytest`）
+- [x] `health.py`の`inspect_mount`でstatより先にvolnameベースのsshfsプロセス生存を確認する
+- [x] `status`・`mount`・`unmount`からproject名を渡し、プロセス消失を`stale`として扱う
+- [x] プロセス生存・消失・検査失敗とCLIのstale導線をunit testで回帰確認する
 
 ## Phase 2: 修復導線
-- [ ] `whub mount --repair`（stale時にforce unmount→remount）を追加するか判断・実装
+- [x] 既存の`whub unmount --force <project>`→`whub mount <project>`を修復導線として検証する（`--repair`は追加しない）
 
 # 実行ログ
 
 # 結果
+
+- `inspect_mount`がsshfsプロセス消失を`stale`として検知し、`stat`の属性キャッシュによる誤判定を防止
+- `status`はstaleで終了コード1、`mount`はsshfsを起動せず、`unmount --force`で明示的に修復可能
+- `uv run pytest -q`: 188 passed

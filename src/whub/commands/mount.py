@@ -37,7 +37,7 @@ def _select_targets(
 def _mount_one(project: Project, resource: RemoteResource) -> str:
     mountpoint = resource._resolved_workspace_path
     host = resource._resolved_host
-    health = inspect_mount(resource)
+    health = inspect_mount(resource, project.name)
     if health.state == "ok":
         return "skip"
     if health.state == "stale":
@@ -56,7 +56,7 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
         return f"FAIL: {result.stderr.strip()}"
     # fuse-t on macOS: mount table lags ~0.2-0.4s behind sshfs exit.
     for _ in range(10):
-        health = inspect_mount(resource)
+        health = inspect_mount(resource, project.name)
         if health.state == "ok":
             return "mount"
         time.sleep(0.2)
@@ -66,9 +66,9 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
     return f"FAIL: {health.state}"
 
 
-def _unmount_one(resource: RemoteResource, force: bool) -> str:
+def _unmount_one(project: Project, resource: RemoteResource, force: bool) -> str:
     mountpoint = resource._resolved_workspace_path
-    health = inspect_mount(resource)
+    health = inspect_mount(resource, project.name)
     if health.state == "unmounted":
         return "skip"
     if health.state == "stale" and not force:
@@ -84,7 +84,7 @@ def _unmount_one(resource: RemoteResource, force: bool) -> str:
         )
     if result.returncode != 0:
         return f"FAIL: {result.stderr.strip()}"
-    if inspect_mount(resource).state == "unmounted":
+    if inspect_mount(resource, project.name).state == "unmounted":
         return "unmount"
     return "FAIL: still mounted"
 
@@ -116,7 +116,7 @@ def _unmount_targets(
 ) -> None:
     results: list[tuple[str, str]] = []
     for project, resource in targets:
-        result = _unmount_one(resource, force)
+        result = _unmount_one(project, resource, force)
         results.append((project.name, result))
     _echo_results(results)
 
