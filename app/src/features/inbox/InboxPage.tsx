@@ -1,4 +1,4 @@
-import { Alert, Button, Paper, Stack, TextInput, Textarea, Title } from '@mantine/core';
+import { Alert, Button, Paper, Stack, TextInput, Textarea } from '@mantine/core';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
@@ -43,10 +43,6 @@ export function InboxPage() {
   return (
     <PageFrame>
       <Stack gap="md">
-        <Stack gap={0}>
-          <Title order={1}>Inbox</Title>
-        </Stack>
-
         <Paper p="md" radius="md" shadow="xs" withBorder>
           <form onSubmit={handleSubmit}>
             <Stack gap="sm">

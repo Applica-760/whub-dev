@@ -3,11 +3,11 @@ import {
   Button,
   Group,
   Paper,
+  Radio,
   Select,
   Stack,
   Text,
   TextInput,
-  Title,
 } from '@mantine/core';
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -22,11 +22,11 @@ type Priority = components['schemas']['CreateTodoRequest']['priority'];
 type Mutation = 'create' | number | null;
 
 const priorityOptions = [
-  { value: 'none', label: 'none' },
-  { value: 'red', label: 'red' },
-  { value: 'yellow', label: 'yellow' },
-  { value: 'blue', label: 'blue' },
-];
+  { value: 'none', color: 'gray' },
+  { value: 'red', color: 'red' },
+  { value: 'yellow', color: 'yellow' },
+  { value: 'blue', color: 'blue' },
+] as const;
 
 export function TodosPage() {
   const [todos, setTodos] = useState<TodoListResponse>({ pending: [], completed: [] });
@@ -139,11 +139,6 @@ export function TodosPage() {
   return (
     <PageFrame>
       <Stack gap="md">
-        <Group align="baseline" gap="sm">
-          <Title order={1}>Todo</Title>
-          <Text c="dimmed">実行可能な次のアクション</Text>
-        </Group>
-
         <Paper p="md" radius="md" shadow="xs" withBorder>
           <form onSubmit={handleCreate}>
             <Stack gap="sm">
@@ -170,12 +165,22 @@ export function TodosPage() {
                   placeholder="指定なし"
                   value={project}
                 />
-                <Select
-                  data={priorityOptions}
+                <Radio.Group
                   label="優先度"
-                  onChange={(value) => setPriority((value ?? 'none') as Priority)}
+                  onChange={(value) => setPriority(value as Priority)}
                   value={priority}
-                />
+                >
+                  <Group gap="sm" mt="xs">
+                    {priorityOptions.map((option) => (
+                      <Radio
+                        aria-label={option.value}
+                        color={option.color}
+                        key={option.value}
+                        value={option.value}
+                      />
+                    ))}
+                  </Group>
+                </Radio.Group>
                 <TextInput
                   label="期限"
                   onChange={(event) => setDueDate(event.currentTarget.value)}

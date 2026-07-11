@@ -146,8 +146,6 @@ export function BacklogPage() {
       }
     >
       <Stack gap="md">
-        <Title order={1}>Backlog</Title>
-
         {projectsError && <Alert color="red" title="Projectを取得できませんでした">{projectsError}</Alert>}
 
         <Paper p="lg" radius="md" shadow="xs" withBorder>
