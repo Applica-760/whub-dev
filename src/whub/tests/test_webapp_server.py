@@ -25,7 +25,7 @@ from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
 from whub.commands.app import app
-from whub.paths import app_dist_path, app_pid_path
+from whub.core.paths import app_dist_path, app_pid_path
 from whub.webapp.runner import AppProcessRecord
 from whub.webapp.server import create_app
 

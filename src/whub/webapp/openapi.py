@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from whub.paths import app_dist_path
+from whub.core.paths import app_dist_path
 from whub.webapp.server import create_app
 
 

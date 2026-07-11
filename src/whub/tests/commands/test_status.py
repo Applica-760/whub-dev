@@ -22,7 +22,7 @@ from unittest.mock import MagicMock, patch
 from click.testing import CliRunner
 
 from whub.commands.status import status, _parse_probe
-from whub.health import ResourceHealth
+from whub.core.health import ResourceHealth
 from whub.models import GitInfo, Manifest
 from whub.tests.helpers import manifest
 

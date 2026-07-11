@@ -4,7 +4,7 @@ from datetime import date
 from typing import Literal, get_args
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from whub.paths import todo_path
+from whub.core.paths import todo_path
 
 Priority = Literal["red", "yellow", "blue", "none"]
 PRIORITIES: list[str] = list(get_args(Priority))

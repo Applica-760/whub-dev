@@ -6,9 +6,9 @@ import sys
 import click
 from whub.commands import get_manifest
 from whub.models import RemoteResource, SymlinkResource, project_names
-from whub.remote import build_ssh_command
-from whub.tmux import build_shell_command, session_name
-from whub.target import TargetError, TargetItem, on_targets, resolve_project_resource
+from whub.core.remote import build_ssh_command
+from whub.core.tmux import build_shell_command, session_name
+from whub.core.target import TargetError, TargetItem, on_targets, resolve_project_resource
 
 EXIT_SSH = 100
 

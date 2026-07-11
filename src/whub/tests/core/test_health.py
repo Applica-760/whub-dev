@@ -1,4 +1,4 @@
-"""`whub.health`の仕様テスト。
+"""`whub.core.health`の仕様テスト。
 
 検証するケース:
 1. `inspect_symlink()`はsourceが存在しない場合、`source-missing`を返す。
@@ -27,8 +27,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import whub.health as health_module
-from whub.health import _read_mount_table, inspect_mount, inspect_symlink
+import whub.core.health as health_module
+from whub.core.health import _read_mount_table, inspect_mount, inspect_symlink
 from whub.models import RemoteResource, SymlinkResource
 
 

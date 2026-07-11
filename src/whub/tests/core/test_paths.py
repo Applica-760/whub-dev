@@ -1,4 +1,4 @@
-"""`whub.paths`の仕様テスト。
+"""`whub.core.paths`の仕様テスト。
 
 検証するケース:
 1. `WHUB_DATA_DIR`環境変数があれば、`.whub/config.toml`より優先する。
@@ -16,7 +16,7 @@ from pathlib import Path
 from unittest.mock import patch
 import click
 import pytest
-from whub.paths import downloads_dir, manifest_path, todo_path, whub_data_dir
+from whub.core.paths import downloads_dir, manifest_path, todo_path, whub_data_dir
 from whub.tests.helpers import write_config
 
 

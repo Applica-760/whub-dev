@@ -5,9 +5,9 @@ from pathlib import PurePosixPath
 import click
 from whub.commands import get_manifest
 from whub.models import RemoteResource
-from whub.paths import downloads_dir
-from whub.remote import build_scp_command
-from whub.target import TargetError, require_resource_type, resolve_resource_by_workspace_path
+from whub.core.paths import downloads_dir
+from whub.core.remote import build_scp_command
+from whub.core.target import TargetError, require_resource_type, resolve_resource_by_workspace_path
 
 
 @click.command()

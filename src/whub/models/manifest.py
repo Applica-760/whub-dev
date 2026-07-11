@@ -8,7 +8,7 @@ import yaml
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 from pydantic import ValidationError
 
-from whub.paths import manifest_path, whub_root
+from whub.core.paths import manifest_path, whub_root
 
 
 class ManifestError(Exception):

@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from pathlib import Path
 import click
 from whub.commands import get_manifest
-from whub.health import ResourceHealth, inspect_mount, inspect_symlink
+from whub.core.health import ResourceHealth, inspect_mount, inspect_symlink
 from whub.models import Host, Project, RemoteResource, SymlinkResource
-from whub.remote import run_ssh_command
-from whub.target import collect_targets
-from whub.tmux import session_name
+from whub.core.remote import run_ssh_command
+from whub.core.target import collect_targets
+from whub.core.tmux import session_name
 from whub.utils.render import render_table
 
 

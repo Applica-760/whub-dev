@@ -24,8 +24,8 @@ from whub.models import (
     SymlinkResource,
     workspace_hub_resource,
 )
-from whub.remote import run_rsync_command, run_ssh_command
-from whub.target import TargetItem, on_targets
+from whub.core.remote import run_rsync_command, run_ssh_command
+from whub.core.target import TargetItem, on_targets
 from whub.utils.managed_block import replace_or_prepend_block
 from whub.utils.process import format_process_error
 

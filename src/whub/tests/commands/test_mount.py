@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 from click.testing import CliRunner
 
 from whub.commands.mount import mount, unmount, _mount_one, _select_targets
-from whub.health import ResourceHealth
+from whub.core.health import ResourceHealth
 from whub.tests.helpers import manifest
 
 

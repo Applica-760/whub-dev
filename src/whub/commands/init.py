@@ -6,7 +6,7 @@ from pathlib import Path
 
 import click
 
-from whub.paths import whub_config_dir, whub_config_path
+from whub.core.paths import whub_config_dir, whub_config_path
 
 
 @click.command()

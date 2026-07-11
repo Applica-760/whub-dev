@@ -4,8 +4,8 @@ import subprocess
 import click
 from whub.commands import get_manifest
 from whub.models import RemoteResource, project_names
-from whub.remote import build_remote_exec_command, build_ssh_command
-from whub.target import TargetError, require_resource_type, resolve_project_resource
+from whub.core.remote import build_remote_exec_command, build_ssh_command
+from whub.core.target import TargetError, require_resource_type, resolve_project_resource
 
 
 @click.command(context_settings={

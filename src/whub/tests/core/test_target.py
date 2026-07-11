@@ -1,4 +1,4 @@
-"""`whub.target`の仕様テスト。
+"""`whub.core.target`の仕様テスト。
 
 検証するケース:
 1. `resolve_project_resource()`は既知projectのresourceを返す。
@@ -22,7 +22,7 @@ import click
 import pytest
 
 from whub.models import RemoteResource, SymlinkResource
-from whub.target import (
+from whub.core.target import (
     TargetError,
     TargetItem,
     collect_targets,

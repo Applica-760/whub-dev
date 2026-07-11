@@ -6,9 +6,9 @@ import time
 import contextlib
 import click
 from whub.commands import get_manifest
-from whub.health import inspect_mount
+from whub.core.health import inspect_mount
 from whub.models import Manifest, Project, RemoteResource, project_names
-from whub.remote import build_sshfs_command
+from whub.core.remote import build_sshfs_command
 from whub.utils.render import render_table
 
 

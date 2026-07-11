@@ -6,9 +6,9 @@ import subprocess
 from pathlib import Path
 
 from whub.models import Manifest, RemoteResource, SymlinkResource, workspace_hub_resource
-from whub.remote import run_ssh_command
+from whub.core.remote import run_ssh_command
 from whub.services.errors import ServiceError
-from whub.target import TargetItem, on_targets
+from whub.core.target import TargetItem, on_targets
 from whub.utils.managed_block import format_block, insert_before_end_marker
 from whub.utils.process import format_process_error
 

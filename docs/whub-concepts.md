@@ -46,18 +46,19 @@
 - Clickの`command callback`では`resource`が`remote`か`local`かを秘匿して記述する。条件分岐はローカル関数に移譲する
 - `target`は`resource`と処理データの列を受け取り、`local`/`remote`ごとの関数呼び分けを担う
 - Webでも使うドメイン処理（ビジネスロジック）は`services/`に置き、CLIとWeb adapterから呼ぶ。CLI固有の入力解釈・表示は各コマンドに置く
+- CLI/Webに依存しない下位層（`paths`/`remote`/`target`/`health`/`tmux`）は`core/`に置く
 - 各コマンドは`target`の入力インターフェースへ処理対象を整形する責務を持つ
-- `target.py`は`resolve_project_resource`など、入力インターフェースへ整形するための汎用ヘルパーを提供する
-- `target.py`はClickに依存せず、target解決・型不一致は純粋な`TargetError`として通知する
+- `core/target.py`は`resolve_project_resource`など、入力インターフェースへ整形するための汎用ヘルパーを提供する
+- `core/target.py`はClickに依存せず、target解決・型不一致は純粋な`TargetError`として通知する
 - targetを使うserviceは`TargetError`を`ServiceError`へ、CLI/Web adapterはそれぞれのプロトコル固有例外へ変換する
 - 現時点の`target`は`resource`と処理データの組み立て、`local`/`remote`関数の呼び分けを担う
 - 将来的に`target`は存在確認、ファイル書き込みのような、`resource`属性ごとに処理が変わる一般操作も担う
 - `backlog`のテンプレートなどWebでも使う処理は`services/`に置く。`status`の表示、`boot`の配布手順などCLI固有の処理は各コマンド側に置く
 - `boot`はworkspace-hub配布と複雑な配布手順を持つため、現時点ではcallback内の`local`/`remote`分岐を許容する
-- `remote.py`はSSH/rsync/sshfsのargvビルダー等の低レイヤーを担い、`project`や`backlog`の意味は持たない
-- `health.py`はsymlink/mountの健全性検査を集約する（remoteの健全性は`status`のホスト単位プローブが担う）
-- `tmux.py`はセッション命名規約とリモートシェルスニペットの組み立てを担う
-- `paths.py`はwhub rootとdata_dir、およびmanifest/todo/downloadsのパス解決を一元的に担う
+- `core/remote.py`はSSH/rsync/sshfsのargvビルダー等の低レイヤーを担い、`project`や`backlog`の意味は持たない
+- `core/health.py`はsymlink/mountの健全性検査を集約する（remoteの健全性は`status`のホスト単位プローブが担う）
+- `core/tmux.py`はセッション命名規約とリモートシェルスニペットの組み立てを担う
+- `core/paths.py`はwhub rootとdata_dir、およびmanifest/todo/downloadsのパス解決を一元的に担う
 - `utils/`は複数コマンドで共有する薄い補助処理を置く。`project`/`resource`のドメイン判断は持たせない
 - whubコードではラムダ式を使用せず、名前付き関数または明示的な記述を用いる
 - whub rootは`WHUB_ROOT`があれば優先し、通常はインストール済みパッケージ位置からworkspace-hub rootを導出する

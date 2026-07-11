@@ -10,7 +10,7 @@ from pathlib import Path
 
 import click
 
-from whub.paths import app_dist_path, app_pid_path
+from whub.core.paths import app_dist_path, app_pid_path
 from whub.webapp.runner import AppProcessRecord, read_pid_record, remove_pid_record
 
 

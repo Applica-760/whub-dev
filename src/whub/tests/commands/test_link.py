@@ -20,7 +20,7 @@ import pytest
 from click.testing import CliRunner
 
 from whub.commands.link import _GITIGNORE_MARKERS, link
-from whub.health import ResourceHealth
+from whub.core.health import ResourceHealth
 from whub.tests.helpers import manifest
 
 

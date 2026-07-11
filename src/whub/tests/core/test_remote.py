@@ -1,4 +1,4 @@
-"""`whub.remote`の仕様テスト。
+"""`whub.core.remote`の仕様テスト。
 
 検証するケース:
 1. `ssh_target()`は`user@hostname`、展開済みidentity path、portを返す。
@@ -22,9 +22,9 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-import whub.remote as remote_module
+import whub.core.remote as remote_module
 from whub.models import Host
-from whub.remote import (
+from whub.core.remote import (
     build_remote_exec_command,
     build_rsync_command,
     build_scp_command,

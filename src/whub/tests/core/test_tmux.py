@@ -1,4 +1,4 @@
-"""`whub.tmux`の仕様テスト。
+"""`whub.core.tmux`の仕様テスト。
 
 検証するケース:
 1. `session_name()`はproject名に`whub-` prefixを付ける。
@@ -15,7 +15,7 @@
 """
 from __future__ import annotations
 
-from whub.tmux import build_shell_command, session_name
+from whub.core.tmux import build_shell_command, session_name
 
 
 class TestTmuxSpec:

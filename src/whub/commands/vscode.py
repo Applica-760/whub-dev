@@ -9,7 +9,7 @@ import click
 
 from whub.commands import get_manifest
 from whub.models import Manifest, RemoteResource, SymlinkResource
-from whub.paths import whub_root
+from whub.core.paths import whub_root
 
 
 def _excluded_paths(manifest: Manifest) -> list[str]:

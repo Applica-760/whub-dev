@@ -3,9 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 import click
 from whub.commands import get_manifest
-from whub.health import inspect_symlink
+from whub.core.health import inspect_symlink
 from whub.models import SymlinkResource
-from whub.paths import whub_root
+from whub.core.paths import whub_root
 from whub.utils.managed_block import format_block, replace_or_prepend_block
 
 _GITIGNORE_MARKERS = (
