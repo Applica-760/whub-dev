@@ -2,18 +2,20 @@ import { Anchor, AppShell, Group, Text } from '@mantine/core';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router';
 
 import { BacklogPage } from './features/backlog/BacklogPage';
+import { InboxPage } from './features/inbox/InboxPage';
 import { TodosPage } from './features/todos/TodosPage';
 
 const navigation = [
   { label: 'Todo', to: '/todos' },
   { label: 'Backlog', to: '/backlog' },
+  { label: 'Inbox', to: '/inbox' },
 ];
 
 export function App() {
   const location = useLocation();
 
   return (
-    <AppShell header={{ height: 56 }} padding={0}>
+    <AppShell header={{ height: 47 }} padding={0}>
       <AppShell.Header className="whub-header">
         <Group align="end" gap="xl" h="100%" px="md">
           <Text fw={700} pb={10}>whub</Text>
@@ -39,6 +41,7 @@ export function App() {
           <Route element={<Navigate replace to="/todos" />} path="/" />
           <Route element={<TodosPage />} path="/todos" />
           <Route element={<BacklogPage />} path="/backlog" />
+          <Route element={<InboxPage />} path="/inbox" />
         </Routes>
       </AppShell.Main>
     </AppShell>

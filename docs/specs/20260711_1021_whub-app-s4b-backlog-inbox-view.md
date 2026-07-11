@@ -43,12 +43,12 @@
 - フォーム送信後の反映は再取得で行う（S4a同様、楽観更新は必須でない）
 
 ## 受け入れ基準
-- [ ] project選択→backlog表示→追記→表示更新の一連が動く
-- [ ] backlog未作成のprojectで空状態が表示され、エラーにならない
-- [ ] markdown（見出し・リスト・リンク・コード）が整形表示され、raw HTMLは描画されない
-- [ ] `/inbox`で投函するとvault/inbox/に日時プレフィックス付きファイルが生成される
-- [ ] 投函成功でフォームがクリアされfilenameが通知される。失敗時は入力が保持される
-- [ ] `npm run typecheck`・`npm run build`が通り、`uv run pytest`が全件通過する（whub側非変更の確認）
+- [x] project選択→backlog表示→追記→表示更新の一連が動く
+- [x] backlog未作成のprojectで空状態が表示され、エラーにならない
+- [x] markdown（見出し・リスト・リンク・コード）が整形表示され、raw HTMLは描画されない
+- [x] `/inbox`で投函するとvault/inbox/に日時プレフィックス付きファイルが生成される
+- [x] 投函成功でフォームがクリアされfilenameが通知される。失敗時は入力が保持される
+- [x] `npm run typecheck`・`npm run build`が通り、`uv run pytest`が全件通過する（whub側非変更の確認）
 
 ## 検証条件
 - 自動: `npm run typecheck`・`npm run build`・`uv run pytest`

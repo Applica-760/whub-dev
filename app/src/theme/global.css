@@ -54,6 +54,46 @@ textarea {
   z-index: 1;
 }
 
+.whub-page-frame {
+  padding: 0.5rem 1rem 2rem;
+}
+
+.whub-page-main {
+  margin: 0 auto;
+  max-width: 57rem;
+}
+
+.whub-page-aside {
+  margin: 0 auto 1rem;
+  max-width: 57rem;
+}
+
+@media (min-width: 75rem) {
+  .whub-page-frame {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 57rem) minmax(0, 1fr);
+    padding-inline: 0;
+  }
+
+  .whub-page-main {
+    grid-column: 2;
+    margin: 0;
+    max-width: none;
+  }
+
+  .whub-page-aside {
+    align-self: start;
+    grid-column: 1;
+    justify-self: stretch;
+    margin: 0 1rem;
+    max-width: none;
+  }
+
+  .backlog-project-list {
+    margin-top: 4rem;
+  }
+}
+
 .backlog-markdown > :first-child {
   margin-top: 0;
 }

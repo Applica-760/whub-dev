@@ -4,7 +4,7 @@
 - iOS設定画面風のgrouped list共通部品を確立し、Todoの閲覧・追加・完了・削除ができるビューを実装する
 
 ## 背景・前提
-- UI決定（2026-07-11 相談）: リストはiOSリマインダー風1本リストを基本とするが、**後から別のビューパターン（project別・テーブル等）を追加・切替できる構造**にする。追加UIはクイック追加バー＋展開式詳細
+- UI決定（2026-07-11 相談、実装後更新）: リストはiOSリマインダー風1本リストを基本とするが、**後から別のビューパターン（project別・テーブル等）を追加・切替できる構造**にする。追加UIはクイック追加バーと常時表示の詳細入力
 - API契約は`docs/specs/20260710_1853_whub-app-s2b-resource-api.md`を正とする: GET/POST `/api/todos`、PATCH `/api/todos/{id}`（done化のみ）、DELETE `/api/todos/{id}`（204）、GET `/api/projects`
 - `TodoResponse`: id・title・project(null可)・priority(`red|yellow|blue|none`)・done・created_at・due_date(null可)・done_at(null可)。日付はISO date形式（`app/openapi.json`より）
 - GET `/api/todos`は`pending`/`completed`を同梱で返す
@@ -31,9 +31,9 @@
     - GET `/api/todos`で取得し、pendingを1本のgrouped listで表示
     - pending行: チェックサークル、title、サブテキスト（project・due_date）、priorityの視覚区別（red/yellow/blue/noneをテーマ色で）
     - チェック操作でPATCH（done化）し、リストを更新（completedセクションへ移動）
-    - completedは件数付き折りたたみセクション（デフォルト閉）。done_atを表示
+    - completedは件数付きセクションとして常時表示し、done_atを表示
     - 削除操作を提供する（誤操作しにくい形。hover表示・確認等は実装者判断）。DELETE成功でリストから消える
-    - クイック追加バー: リスト上部に常設。title入力＋Enterで既定値（project無し・priority `none`・due無し）のまま即追加。詳細展開でproject（GET `/api/projects`の選択肢）・priority・due_dateを指定可能
+    - クイック追加バー: リスト上部に常設。title入力＋Enterで追加でき、project（GET `/api/projects`の選択肢）・priority・due_dateも常時指定可能
     - ロード中・空状態・APIエラー（`ApiError`のdetail）の表示を持ち、エラーで白画面にならない
 - ビュー切替可能な構造
     - データ取得・更新（container/hooks層）とリスト描画（presentational層）を分離し、同一のprops契約で別レイアウトを差し込める形にする
@@ -44,16 +44,16 @@
 - due_dateの入力はAPIのISO date形式へ変換して送る（CLIのMMDD形式とは独立にWeb側で扱いやすい入力でよい）
 
 ## 受け入れ基準
-- [ ] `/todos`でpending/completedが表示され、追加・完了・削除が画面に反映される
-- [ ] クイック追加（title＋Enter）と詳細指定追加（project/priority/due）の両方が動く
-- [ ] completedセクションがデフォルト閉で、開閉と件数表示ができる
-- [ ] APIエラー時にdetailメッセージが表示され、アプリが操作可能なまま残る
-- [ ] grouped list部品がtodoに依存しない（他featureから再利用可能なprops設計）
-- [ ] `npm run typecheck`・`npm run build`が通り、`uv run pytest`が全件通過する（whub側非変更の確認）
+- [x] `/todos`でpending/completedが表示され、追加・完了・削除が画面に反映される
+- [x] クイック追加（title＋Enter）と詳細指定追加（project/priority/due）の両方が動く
+- [x] completedセクションに件数とdone_atが表示される
+- [x] APIエラー時にdetailメッセージが表示され、アプリが操作可能なまま残る
+- [x] grouped list部品がtodoに依存しない（他featureから再利用可能なprops設計）
+- [x] `npm run typecheck`・`npm run build`が通り、`uv run pytest`が全件通過する（whub側非変更の確認）
 
 ## 検証条件
 - 自動: `npm run typecheck`・`npm run build`・`uv run pytest`
-- 手動: devサーバまたは`whub app`で追加→詳細指定追加→完了→completed展開→削除の一連を実施し、`whub todo list`（CLI）で同じ状態が見えることを確認する
+- 手動: devサーバまたは`whub app`で追加→詳細指定追加→完了→completed確認→削除の一連を実施し、`whub todo list`（CLI）で同じ状態が見えることを確認する
 
 ## リスク・注意点
 - PATCHはdone化のみでdoneの取り消しAPI契約が未確認。完了の取り消しUIは契約確認まで作らない

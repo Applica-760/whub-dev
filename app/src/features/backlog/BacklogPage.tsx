@@ -1,9 +1,7 @@
 import {
   Alert,
   Button,
-  Container,
   Divider,
-  Grid,
   Group,
   Paper,
   Stack,
@@ -21,6 +19,7 @@ import {
   requestJson,
 } from '../../api/client';
 import { GroupedListRow, GroupedListSection } from '../../components/GroupedList';
+import { PageFrame } from '../../components/PageFrame';
 
 const APPENDED_START = '<!-- hub:backlog:appended:start -->';
 const APPENDED_END = '<!-- hub:backlog:appended:end -->';
@@ -123,86 +122,84 @@ export function BacklogPage() {
   const { mainContent, appendedContent } = splitBacklog(content);
 
   return (
-    <Container pb="lg" pt="sm" size="xl">
+    <PageFrame
+      aside={
+        <div className="backlog-project-list">
+          <GroupedListSection title="Project">
+            {projectsLoading ? (
+              <Text c="dimmed" p="md">Projectを読み込んでいます…</Text>
+            ) : projects.length === 0 ? (
+              <Text c="dimmed" p="md">Projectがありません</Text>
+            ) : (
+              projects.map((project) => (
+                <GroupedListRow
+                  key={project}
+                  onClick={() => setSelectedProject(project)}
+                  rightSection={project === selectedProject ? <Text c="blue" size="sm">選択中</Text> : undefined}
+                  selected={project === selectedProject}
+                  title={project}
+                />
+              ))
+            )}
+          </GroupedListSection>
+        </div>
+      }
+    >
       <Stack gap="md">
         <Title order={1}>Backlog</Title>
 
         {projectsError && <Alert color="red" title="Projectを取得できませんでした">{projectsError}</Alert>}
 
-        <Grid align="flex-start">
-          <Grid.Col span={{ base: 12, sm: 4, md: 3 }}>
-            <GroupedListSection title="Project">
-              {projectsLoading ? (
-                <Text c="dimmed" p="md">Projectを読み込んでいます…</Text>
-              ) : projects.length === 0 ? (
-                <Text c="dimmed" p="md">Projectがありません</Text>
-              ) : (
-                projects.map((project) => (
-                  <GroupedListRow
-                    key={project}
-                    onClick={() => setSelectedProject(project)}
-                    rightSection={project === selectedProject ? <Text c="blue" size="sm">選択中</Text> : undefined}
-                    selected={project === selectedProject}
-                    title={project}
-                  />
-                ))
-              )}
-            </GroupedListSection>
-          </Grid.Col>
+        <Paper p="lg" radius="md" shadow="xs" withBorder>
+          <Stack gap="md">
+            <Title order={2}>{selectedProject ?? 'Projectを選択'}</Title>
 
-          <Grid.Col span={{ base: 12, sm: 8, md: 9 }}>
-            <Paper p="lg" radius="md" shadow="xs" withBorder>
+            <form onSubmit={handleAppend}>
+              <Group align="end" wrap="nowrap">
+                <TextInput
+                  aria-label="Backlogへ追記するメモ"
+                  disabled={!selectedProject || appending}
+                  flex={1}
+                  onChange={(event) => setMemo(event.currentTarget.value)}
+                  placeholder="メモを追記"
+                  required
+                  value={memo}
+                />
+                <Button disabled={!selectedProject} loading={appending} type="submit">
+                  追記
+                </Button>
+              </Group>
+            </form>
+
+            <Divider />
+
+            {backlogError ? (
+              <Alert color="red" title="Backlogを取得できませんでした">{backlogError}</Alert>
+            ) : backlogLoading ? (
+              <Text c="dimmed">Backlogを読み込んでいます…</Text>
+            ) : !selectedProject ? (
+              <Text c="dimmed">表示するProjectを選択してください</Text>
+            ) : mainContent.trim() === '' && appendedContent.trim() === '' ? (
+              <Text c="dimmed" py="xl" ta="center">まだBacklogはありません</Text>
+            ) : (
               <Stack gap="md">
-                <Title order={2}>{selectedProject ?? 'Projectを選択'}</Title>
-
-                <form onSubmit={handleAppend}>
-                  <Group align="end" wrap="nowrap">
-                    <TextInput
-                      aria-label="Backlogへ追記するメモ"
-                      disabled={!selectedProject || appending}
-                      flex={1}
-                      onChange={(event) => setMemo(event.currentTarget.value)}
-                      placeholder="メモを追記"
-                      required
-                      value={memo}
-                    />
-                    <Button disabled={!selectedProject} loading={appending} type="submit">
-                      追記
-                    </Button>
-                  </Group>
-                </form>
-
-                <Divider />
-
-                {backlogError ? (
-                  <Alert color="red" title="Backlogを取得できませんでした">{backlogError}</Alert>
-                ) : backlogLoading ? (
-                  <Text c="dimmed">Backlogを読み込んでいます…</Text>
-                ) : !selectedProject ? (
-                  <Text c="dimmed">表示するProjectを選択してください</Text>
-                ) : mainContent.trim() === '' && appendedContent.trim() === '' ? (
-                  <Text c="dimmed" py="xl" ta="center">まだBacklogはありません</Text>
-                ) : (
-                  <Stack gap="md">
-                    {mainContent.trim() !== '' && (
-                      <div className="backlog-markdown">
-                        <ReactMarkdown skipHtml>{mainContent}</ReactMarkdown>
-                      </div>
-                    )}
-                    {appendedContent.trim() !== '' && (
-                      <div className="backlog-markdown backlog-appended">
-                        <Text c="dimmed" size="sm">未分類メモ</Text>
-                        <ReactMarkdown skipHtml>{appendedContent}</ReactMarkdown>
-                      </div>
-                    )}
-                  </Stack>
+                {mainContent.trim() !== '' && (
+                  <div className="backlog-markdown">
+                    <ReactMarkdown skipHtml>{mainContent}</ReactMarkdown>
+                  </div>
+                )}
+                {appendedContent.trim() !== '' && (
+                  <div className="backlog-markdown backlog-appended">
+                    <Text c="dimmed" size="sm">未分類メモ</Text>
+                    <ReactMarkdown skipHtml>{appendedContent}</ReactMarkdown>
+                  </div>
                 )}
               </Stack>
-            </Paper>
-          </Grid.Col>
-        </Grid>
+            )}
+          </Stack>
+        </Paper>
       </Stack>
-    </Container>
+    </PageFrame>
   );
 }
 

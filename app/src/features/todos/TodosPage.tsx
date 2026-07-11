@@ -1,7 +1,6 @@
 import {
   Alert,
   Button,
-  Container,
   Group,
   Paper,
   Select,
@@ -15,6 +14,7 @@ import type { FormEvent } from 'react';
 
 import { requestJson } from '../../api/client';
 import type { components } from '../../api/generated/schema';
+import { PageFrame } from '../../components/PageFrame';
 import { TodoList, type TodoItem } from './TodoList';
 
 type TodoListResponse = components['schemas']['TodoListResponse'];
@@ -137,7 +137,7 @@ export function TodosPage() {
   }
 
   return (
-    <Container pb="lg" pt="sm" size="md">
+    <PageFrame>
       <Stack gap="md">
         <Group align="baseline" gap="sm">
           <Title order={1}>Todo</Title>
@@ -203,7 +203,7 @@ export function TodosPage() {
           </Stack>
         )}
       </Stack>
-    </Container>
+    </PageFrame>
   );
 }
 
