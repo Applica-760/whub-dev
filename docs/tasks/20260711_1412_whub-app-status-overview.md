@@ -27,9 +27,11 @@
 
 ### Phase 4: 統合ビューの追加
 - [x] TodoをレスポンシブなWidgetへ切り出し、Todoページから同じWidgetを利用する。
-- [ ] Inbox・Statusを配置先の幅へ適応するWidgetへ切り出し、各専門ページから同じWidgetを利用する。
+- [x] Statusを`ResourceStatusWidget`へ切り出し、既存hookを保ったまま専門ページから利用する。
+- [ ] InboxをWidgetへ切り出し、専門ページとOverviewから同じ機能を利用する。
+- [ ] Backlog本文・追記機能をWidgetへ切り出し、Project選択を担う専門ページから利用する。
 - [ ] `/`をTodo・Inbox・Status Widgetを可変グリッドで配置するOverviewへ変更する。
-- [ ] Backlog要約、FOCUS、CPU・メモリ表示を対象外として、既存専門ページへの導線を保つ。
+- [ ] BacklogはOverview対象外とし、Widget化とOverviewへの配置可否を分離して既存専門ページへの導線を保つ。
 - [ ] 型検査・ビルド・pytest・手動確認でCLI/Webの状態一致を検証する。
 
 ## 実行ログ
@@ -73,5 +75,10 @@
 - 実施内容: `whub app`で毎回`npm run build`してから起動する案を検討した。
 - 結果: 最新buildは保証できるがホットリロードにはならず、起動時間とNode依存が増える。
 - 判断: 現状維持とし、必要時に`whub app --build`を追加する案を保留。
+
+### 試行 9: 専門ページのWidgetFrame共通化
+- 実施内容: Backlog・Inbox・StatusのWidget化とOverview掲載範囲を整理した。
+- 結果: `PageFrame`はページ配置、`WidgetFrame`は主要機能の枠とし、Backlogは専門ページのみで利用する構成とした。
+- 判断: Status、Inbox、Backlog、Overviewの順に実装して続行。
 
 ## 結果
