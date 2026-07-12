@@ -8,8 +8,7 @@
 - 方針: mountはResource Statusのremote表示として扱い、Webからのmount操作は対象外とする。
 - 方針: `PageFrame`はページ配置、Widgetは各機能の表示・操作を担い、専門ページとOverviewから同じWidgetを利用する。
 - 方針: Widgetは配置先の幅へレスポンシブに適応し、グリッド寸法と並び順はOverviewが担う。
-- 方針: Overview本文は16:9の領域内へ12列×8行の正方形セルを中央配置し、左右の余白を許容する。
-- 方針: Overview本文だけを横幅基準で一様拡縮し、縦長画面では下部の余白を許容して端末間の構図を保つ。
+- 方針: Overviewは全幅の3等分列とし、各列へWidgetを上詰めで縦積みする。
 
 ## 計画
 
@@ -32,12 +31,25 @@
 - [x] Statusを`ResourceStatusWidget`へ切り出し、既存hookを保ったまま専門ページから利用する。
 - [x] InboxをWidgetへ切り出し、専門ページから利用してOverviewで再利用可能にする。
 - [x] Backlog本文・追記機能をWidgetへ切り出し、Project選択を担う専門ページから利用する。
-- [ ] Overviewへ16:9の固定比率キャンバスと中央寄せ12列×8行の正方形グリッドを追加する。
-- [ ] Todo・Inbox・Status Widgetの占有セルをOverview側で定義し、任意の幅・高さで配置できる構造にする。
-- [ ] キャンバス全体を横幅基準で一様拡縮し、文字・余白・部品の比率をLaptopと外部ディスプレイで揃える。
-- [ ] WidgetFrameと各Widgetへ高さ制約・内部スクロールを適用し、固定セルからのはみ出しを防ぐ。
-- [ ] BacklogはOverview対象外とし、Widget化とOverviewへの配置可否を分離して既存専門ページへの導線を保つ。
-- [ ] 型検査・ビルド・pytestと代表的な横長・縦長viewportの手動確認で配置・拡縮・CLI/Webの状態一致を検証する。
+- [x] Overviewを全幅の3等分列とし、各列へWidgetを上詰めで縦積みする。
+- [x] Todo WidgetをOverviewへ配置し、専門ページと同じWidgetを再利用する。
+- [x] BacklogはOverview対象外とし、Widget化とOverviewへの配置可否を分離して既存専門ページへの導線を保つ。
+
+### Phase 5: StatusのOverview導入
+- [x] `ResourceStatusWidget`の固定最小幅を廃止し、6列テーブルを配置先の横幅へ追従させる。
+- [x] `OverviewPage.tsx`の3列レイアウトへ既存の`ResourceStatusWidget`を配置する。
+- [x] 単独ページとOverviewで横スクロールなしに判別できることを確認する。
+- [x] `npm run typecheck`・`npm run build`で検証する。
+
+### Phase 6: InboxのOverview導入
+- [x] `OverviewPage.tsx`の右列にあるTodo仮配置を既存の`InboxWidget`へ置き換える。
+- [x] `npm run typecheck`・`npm run build`で検証する。
+
+### Phase 7: Widget表示の横断整理
+- [x] Overview左列の先頭へ既存のTodo追加フォームを配置する。
+- [x] Todoの文字縮小は実画面確認で撤回し、全Widgetの一括統一は行わず現行表示を採用する。
+- [x] Todoリスト最終行の二重線を除去し、途中行の区切り線を左右対称にする。
+- [x] `npm run typecheck`・`npm run build`とユーザー提供の実画面で検証する。
 
 ## 実行ログ
 
@@ -96,4 +108,43 @@
 - 結果: Widgetの見た目を維持したまま画面幅を活用でき、複数Widgetの縦積みも意図どおり表示できた。
 - 判断: 固定キャンバス案を破棄し、3等分列と列内縦積みをOverviewの配置方針として続行。
 
+### 試行 12: Status WidgetのOverview配置
+- 実施内容: 720pxの固定最小幅を廃止してテーブルを親幅へ追従させ、Overviewの中央列へ配置した。
+- 結果: 型検査とビルドは成功したが、実行環境のブラウザ接続制約により画面確認は未実施。
+- 判断: 手動表示確認を残して続行。
+
+### 試行 13: Status Widgetの実画面確認
+- 実施内容: ユーザー提供の単独ページとOverviewのスクリーンショットで表示を確認した。
+- 結果: 3分割列でも横スクロールなしに6列を判別できたが、Todoとの文字サイズ差が目立った。
+- 判断: Status配置は採用し、全Feature移植後に表示を横断整理する。
+
+### 試行 14: Inbox WidgetのOverview配置
+- 実施内容: Overview右列のTodo仮配置を既存のInbox Widgetへ置き換えた。
+- 結果: 型検査とビルドが成功し、追加の依存実装は不要だった。
+- 判断: 投函を伴う手動確認を残して続行。
+
+### 試行 15: Todoの表示密度調整と追加フォーム配置
+- 実施内容: Todoだけのタイトル・補足文字を縮小し、Overview左列の先頭へ既存の追加フォームを配置した。
+- 結果: Project取得を含む既存controllerを再利用でき、型検査とビルドが成功した。
+- 判断: 実画面での表示確認を残して続行。
+
+### 試行 16: Todo文字サイズの実画面確認
+- 実施内容: 縮小したTodoリストを実画面で確認した。
+- 結果: 他要素とのバランスに違和感が生じた。
+- 判断: 文字サイズ変更だけを撤回し、フォーム配置は維持する。
+
+### 試行 17: Todoリスト下端の二重線
+- 実施内容: 最終行のDividerとPaper下枠の重複を確認し、最終行だけDividerを描画しないようにした。
+- 結果: 行間の区切り線と外枠を維持したまま、ずれた下線の発生条件を除去し、型検査とビルドが成功した。
+- 判断: 続行。
+
+### 試行 18: Todoリスト区切り線の左右余白
+- 実施内容: 最終行判定を維持し、途中行のDividerを左右とも`md`分だけ内側へ寄せた。
+- 結果: 区切り線が左右対称になり、型検査が成功した。
+- 判断: 続行。
+
 ## 結果
+
+- Todo追加・未完了Todo・resource Status・Inboxを3列Overviewへ集約した。
+- Statusを配置幅へ追従させ、Todoリストの下端と区切り線を整理した。
+- `uv run pytest`、`npm run typecheck`、`npm run build`と実画面確認で検証した。

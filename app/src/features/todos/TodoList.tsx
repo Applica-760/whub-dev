@@ -31,7 +31,7 @@ export function TodoList({
     return <Text c="dimmed" p="md" ta="center">{emptyMessage}</Text>;
   }
 
-  return todos.map((todo) => (
+  return todos.map((todo, index) => (
     <TodoRow
       busy={busyTodoId === todo.id}
       completed={completed}
@@ -39,6 +39,7 @@ export function TodoList({
       onComplete={onComplete}
       onDelete={onDelete}
       todo={todo}
+      withDivider={index < todos.length - 1}
     />
   ));
 }
@@ -47,11 +48,12 @@ type TodoRowProps = {
   todo: TodoItem;
   busy: boolean;
   completed: boolean;
+  withDivider: boolean;
   onComplete: (todoId: number) => void;
   onDelete: (todoId: number) => void;
 };
 
-function TodoRow({ todo, busy, completed, onComplete, onDelete }: TodoRowProps) {
+function TodoRow({ todo, busy, completed, withDivider, onComplete, onDelete }: TodoRowProps) {
   const subtitle = [todo.project, !completed && todo.due_date && `締切 ${todo.due_date}`]
     .filter(Boolean)
     .join(' · ');
@@ -91,6 +93,7 @@ function TodoRow({ todo, busy, completed, onComplete, onDelete }: TodoRowProps) 
       }
       subtitle={subtitle || undefined}
       title={todo.title}
+      withDivider={withDivider}
     />
   );
 }

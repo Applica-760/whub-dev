@@ -14,6 +14,7 @@ type GroupedListRowProps = {
   rightSection?: ReactNode;
   onClick?: () => void;
   selected?: boolean;
+  withDivider?: boolean;
 };
 
 export function GroupedListSection({
@@ -45,6 +46,7 @@ export function GroupedListRow({
   rightSection,
   onClick,
   selected = false,
+  withDivider = true,
 }: GroupedListRowProps) {
   const content = (
     <>
@@ -70,7 +72,7 @@ export function GroupedListRow({
         </Group>
         {rightSection}
       </Group>
-      <Divider ml="md" />
+      {withDivider && <Divider mx="md" />}
     </>
   );
 

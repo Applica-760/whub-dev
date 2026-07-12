@@ -55,38 +55,36 @@ export function ResourceStatusWidget() {
       {loading && resources.length === 0 ? (
         <Text c="dimmed" p="md">Statusを読み込んでいます…</Text>
       ) : (
-        <Table.ScrollContainer minWidth={720}>
-          <Table highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Project</Table.Th>
-                <Table.Th>State</Table.Th>
-                <Table.Th>Type</Table.Th>
-                <Table.Th>Mount</Table.Th>
-                <Table.Th>Tmux</Table.Th>
-                <Table.Th>Git</Table.Th>
+        <Table highlightOnHover style={{ tableLayout: 'fixed' }}>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Project</Table.Th>
+              <Table.Th>State</Table.Th>
+              <Table.Th>Type</Table.Th>
+              <Table.Th>Mount</Table.Th>
+              <Table.Th>Tmux</Table.Th>
+              <Table.Th>Git</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {resources.map((resource) => (
+              <Table.Tr key={resource.project}>
+                <Table.Td style={{ overflowWrap: 'anywhere' }}>{resource.project}</Table.Td>
+                <Table.Td>
+                  <StatusValue value={resource.state} />
+                </Table.Td>
+                <Table.Td>{resource.type}</Table.Td>
+                <Table.Td>
+                  <StatusValue value={resource.mount} />
+                </Table.Td>
+                <Table.Td>
+                  <StatusValue value={resource.tmux} />
+                </Table.Td>
+                <Table.Td>{resource.git}</Table.Td>
               </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {resources.map((resource) => (
-                <Table.Tr key={resource.project}>
-                  <Table.Td>{resource.project}</Table.Td>
-                  <Table.Td>
-                    <StatusValue value={resource.state} />
-                  </Table.Td>
-                  <Table.Td>{resource.type}</Table.Td>
-                  <Table.Td>
-                    <StatusValue value={resource.mount} />
-                  </Table.Td>
-                  <Table.Td>
-                    <StatusValue value={resource.tmux} />
-                  </Table.Td>
-                  <Table.Td>{resource.git}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+            ))}
+          </Table.Tbody>
+        </Table>
       )}
 
       {!loading && resources.length === 0 && !error && (
