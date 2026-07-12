@@ -68,6 +68,28 @@ textarea {
   max-width: 57rem;
 }
 
+.whub-overview {
+  margin: 0 auto;
+  max-width: 90rem;
+  padding: 1rem;
+}
+
+.whub-overview-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.whub-overview-todo {
+  grid-column: span 8;
+}
+
+@media (max-width: 47.99rem) {
+  .whub-overview-todo {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (min-width: 75rem) {
   .whub-page-frame {
     display: grid;

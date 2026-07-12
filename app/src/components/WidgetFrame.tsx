@@ -1,22 +1,24 @@
-import { Group, Paper, Stack, Title } from '@mantine/core';
+import { Group, Paper, Stack } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 type WidgetFrameProps = {
-  title: ReactNode;
+  title?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
 };
 
 export function WidgetFrame({ title, action, children }: WidgetFrameProps) {
   return (
-    <Paper h="100%" p="md" radius="md" shadow="xs" withBorder>
-      <Stack gap="md">
-        <Group justify="space-between" wrap="nowrap">
-          <Title order={3}>{title}</Title>
+    <Stack gap={6} h="100%">
+      {(title || action) && (
+        <Group justify="space-between" px="sm" wrap="nowrap">
+          {title}
           {action}
         </Group>
+      )}
+      <Paper h="100%" radius="md" shadow="xs" withBorder>
         {children}
-      </Stack>
-    </Paper>
+      </Paper>
+    </Stack>
   );
 }

@@ -1,14 +1,13 @@
 import { ActionIcon, Badge, Checkbox, Group, Stack, Text } from '@mantine/core';
 
-import { GroupedListRow, GroupedListSection } from '../../components/GroupedList';
+import { GroupedListRow } from '../../components/GroupedList';
 import type { TodoItem } from './api';
 
-export type { TodoItem } from './api';
-
 type TodoListProps = {
-  pending: TodoItem[];
-  completed: TodoItem[];
+  todos: TodoItem[];
   busyTodoId: number | null;
+  completed?: boolean;
+  emptyMessage: string;
   onComplete: (todoId: number) => void;
   onDelete: (todoId: number) => void;
 };
@@ -20,77 +19,39 @@ const priorityColor = {
   none: 'gray',
 } as const;
 
-const priorityLabel = {
-  red: 'red',
-  yellow: 'yellow',
-  blue: 'blue',
-  none: 'none',
-} as const;
-
 export function TodoList({
-  pending,
-  completed,
+  todos,
   busyTodoId,
+  completed = false,
+  emptyMessage,
   onComplete,
   onDelete,
 }: TodoListProps) {
-  return (
-    <>
-      <GroupedListSection title="これからやる">
-        {pending.length === 0 ? (
-          <Text c="dimmed" p="md" ta="center">
-            これからやるTodoはありません
-          </Text>
-        ) : (
-          pending.map((todo) => (
-            <TodoRow
-              key={todo.id}
-              todo={todo}
-              busy={busyTodoId === todo.id}
-              onComplete={onComplete}
-              onDelete={onDelete}
-            />
-          ))
-        )}
-      </GroupedListSection>
+  if (todos.length === 0) {
+    return <Text c="dimmed" p="md" ta="center">{emptyMessage}</Text>;
+  }
 
-      <GroupedListSection title={`完了済み (${completed.length})`}>
-        {completed.length === 0 ? (
-          <Text c="dimmed" p="md" ta="center">
-            完了済みのTodoはありません
-          </Text>
-        ) : (
-          completed.map((todo) => (
-            <TodoRow
-              completed
-              key={todo.id}
-              todo={todo}
-              busy={busyTodoId === todo.id}
-              onComplete={onComplete}
-              onDelete={onDelete}
-            />
-          ))
-        )}
-      </GroupedListSection>
-    </>
-  );
+  return todos.map((todo) => (
+    <TodoRow
+      busy={busyTodoId === todo.id}
+      completed={completed}
+      key={todo.id}
+      onComplete={onComplete}
+      onDelete={onDelete}
+      todo={todo}
+    />
+  ));
 }
 
 type TodoRowProps = {
   todo: TodoItem;
   busy: boolean;
-  completed?: boolean;
+  completed: boolean;
   onComplete: (todoId: number) => void;
   onDelete: (todoId: number) => void;
 };
 
-function TodoRow({
-  todo,
-  busy,
-  completed = false,
-  onComplete,
-  onDelete,
-}: TodoRowProps) {
+function TodoRow({ todo, busy, completed, onComplete, onDelete }: TodoRowProps) {
   const subtitle = [todo.project, !completed && todo.due_date && `締切 ${todo.due_date}`]
     .filter(Boolean)
     .join(' · ');
@@ -114,7 +75,7 @@ function TodoRow({
             </Stack>
           ) : (
             <Badge color={priorityColor[todo.priority]} size="sm" variant="light">
-              {priorityLabel[todo.priority]}
+              {todo.priority}
             </Badge>
           )}
           <ActionIcon

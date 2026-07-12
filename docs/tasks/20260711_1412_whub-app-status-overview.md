@@ -26,7 +26,7 @@
 - [x] 型検査・ビルド・API接続の手動確認を行う。
 
 ### Phase 4: 統合ビューの追加
-- [ ] TodoをレスポンシブなWidgetへ切り出し、Todoページから同じWidgetを利用する。
+- [x] TodoをレスポンシブなWidgetへ切り出し、Todoページから同じWidgetを利用する。
 - [ ] Inbox・Statusを配置先の幅へ適応するWidgetへ切り出し、各専門ページから同じWidgetを利用する。
 - [ ] `/`をTodo・Inbox・Status Widgetを可変グリッドで配置するOverviewへ変更する。
 - [ ] Backlog要約、FOCUS、CPU・メモリ表示を対象外として、既存専門ページへの導線を保つ。
@@ -43,5 +43,35 @@
 - 実施内容: ローカル画面のブラウザ操作を試みた。
 - 結果: 実行環境のブラウザ接続制約により開始できず、buildと実サーバーのAPI応答で代替検証した。
 - 判断: 続行
+
+### 試行 3: Widgetの依存構造
+- 実施内容: Feature・Widget・Pageの責務と配置を整理した。
+- 結果: Feature Widgetが共通`WidgetFrame`へ情報を注入し、専門PageとWhubPageが再利用する構成とした。
+- 判断: builder層とBacklog左リストのWidget化は追加せず、独立配置する機能だけをWidget化して続行。
+
+### 試行 4: WhubPageでのTodo Widget試作
+- 実施内容: 共通`WidgetFrame`と12列Gridを追加し、`features/whub`へ未完了Todo表示を試作した。
+- 結果: Desktopは8列、狭幅は全幅で表示でき、既存Todoページを維持したまま統合タブを追加できた。
+- 判断: Todo Widgetを`features/todos`へ移して専門PageとWhubPageで共有する方針へ変更。
+
+### 試行 5: TodoのWidget共通化
+- 実施内容: Form・ListをWidget化し、状態と操作を`useTodoWidgets`へ集約して両Pageから利用した。
+- 結果: 依存方向は整理できたが、`WidgetFrame`とList内部の`Paper`が二重ボックスになった。
+- 判断: Listのセクション描画を分割して方針変更。
+
+### 試行 6: Todo ListのWidget分割
+- 実施内容: Listから内側の`Paper`を除き、未完了・完了済みを別Widgetへ分割して見出しをボックス外へ移した。
+- 結果: 二重ボックスを解消し、WhubPageは未完了Widgetだけを利用し、不要なProject取得も停止した。
+- 判断: 続行
+
+### 試行 7: WidgetFrameの可変構成
+- 実施内容: `title`を任意化し、見出し・actionがない場合は見出し行を省略する構成へ変更した。
+- 結果: Widgetの縦横比は固定せずGrid側で占有範囲を決め、将来はContainer Queryで内容を追従させる方針とした。
+- 判断: 続行
+
+### 試行 8: app起動時のfrontend build
+- 実施内容: `whub app`で毎回`npm run build`してから起動する案を検討した。
+- 結果: 最新buildは保証できるがホットリロードにはならず、起動時間とNode依存が増える。
+- 判断: 現状維持とし、必要時に`whub app --build`を追加する案を保留。
 
 ## 結果
