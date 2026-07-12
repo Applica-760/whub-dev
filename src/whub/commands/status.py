@@ -1,193 +1,30 @@
 """whub status — show health of all resources."""
 from __future__ import annotations
 
-import shlex
-import subprocess
-from collections import defaultdict
-from dataclasses import dataclass
-from pathlib import Path
 import click
+
 from whub.commands import get_manifest
-from whub.core.health import ResourceHealth, inspect_mount, inspect_symlink
-from whub.models import Host, Project, RemoteResource, SymlinkResource
-from whub.core.remote import run_ssh_command
-from whub.core.target import collect_targets
-from whub.core.tmux import session_name
+from whub.services.status import collect_resource_status
 from whub.utils.render import render_table
-
-
-@dataclass(frozen=True)
-class _ResourceInfo:
-    name: str
-    resource_type: str
-    health: ResourceHealth
-    mount: str = "-"
-    tmux: str = "-"
-    git_diff: str = "-"
-
-
-def _fetch_local_info(r: SymlinkResource, project: Project) -> _ResourceInfo:
-    health = inspect_symlink(r)
-    git_diff = "-"
-
-    if health.state == "ok" and r.git is not None:
-        source = Path(r.source).expanduser()
-        try:
-            result = subprocess.run(
-                ["git", "-C", str(source), "status", "--porcelain"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            if result.returncode == 0:
-                lines = [l for l in result.stdout.splitlines() if l.strip()]
-                git_diff = f"{len(lines)} files"
-            else:
-                git_diff = "failed"
-        except (OSError, subprocess.TimeoutExpired):
-            git_diff = "failed"
-
-    return _ResourceInfo(
-        name=project.name,
-        resource_type=r.type,
-        health=health,
-        git_diff=git_diff,
-    )
-
-
-# ── Remote probe (1 SSH per host) ─────────────────────────────────
-def _probe_line(index: int, path: str, session: str) -> str:
-    p = shlex.quote(path)
-    s = shlex.quote(session)
-    # git非リポジトリ・git未導入はカウント0と区別するため"?"を返す
-    return (
-        f'echo "R{index}'
-        f' $(test -d {p} && echo ok || echo missing)'
-        f" $(git -C {p} rev-parse --is-inside-work-tree >/dev/null 2>&1"
-        f" && git -C {p} status --porcelain 2>/dev/null | wc -l || echo '?')"
-        f' $(tmux has-session -t ={s} 2>/dev/null && echo on || echo -)"'
-    )
-
-
-def _parse_probe(stdout: str) -> dict[int, tuple[str, str, str]]:
-    parsed: dict[int, tuple[str, str, str]] = {}
-    for line in stdout.splitlines():
-        parts = line.split()
-        if len(parts) != 4 or not parts[0].startswith("R"):
-            continue
-        try:
-            index = int(parts[0][1:])
-        except ValueError:
-            continue
-        parsed[index] = (parts[1], parts[2], parts[3])
-    return parsed
-
-
-def _probe_host(
-    host: Host,
-    items: list[tuple[RemoteResource, Project]],
-) -> dict[int, tuple[str, str, str]] | None:
-    script = "; ".join(
-        _probe_line(index, resource.path, session_name(project.name))
-        for index, (resource, project) in enumerate(items)
-    )
-    try:
-        result = run_ssh_command(
-            host,
-            script,
-            batch_mode=True,
-            connect_timeout=5,
-            # 旧実装のリソース毎8sをホスト単位に換算してスケールさせる
-            timeout=5 + 8 * len(items),
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    if result.returncode == 255:
-        return None
-    return _parse_probe(result.stdout)
-
-
-def _fetch_remote_info(
-    resource: RemoteResource,
-    project: Project,
-    probe: tuple[str, str, str] | None,
-) -> _ResourceInfo:
-    mount = inspect_mount(resource, project.name).state
-    if probe is None:
-        health = ResourceHealth("unreachable", str(resource._resolved_host.hostname))
-        return _ResourceInfo(project.name, resource.type, health, mount=mount)
-
-    exists, git_count, tmux = probe
-    if exists != "ok":
-        health = ResourceHealth("missing", resource.path)
-        return _ResourceInfo(project.name, resource.type, health, mount=mount, tmux=tmux)
-
-    if resource.git is None:
-        git_diff = "-"
-    elif git_count == "?":
-        git_diff = "failed"
-    else:
-        git_diff = f"{git_count} files"
-    return _ResourceInfo(
-        project.name,
-        resource.type,
-        ResourceHealth("ok"),
-        mount=mount,
-        tmux=tmux,
-        git_diff=git_diff,
-    )
-
-
-def _collect_remote_infos(
-    remotes: list[tuple[RemoteResource, Project]],
-) -> dict[str, _ResourceInfo]:
-    by_host: dict[str, list[tuple[RemoteResource, Project]]] = defaultdict(list)
-    for resource, project in remotes:
-        by_host[resource.host].append((resource, project))
-
-    infos: dict[str, _ResourceInfo] = {}
-    for items in by_host.values():
-        probe = _probe_host(items[0][0]._resolved_host, items)
-        for index, (resource, project) in enumerate(items):
-            entry = probe.get(index) if probe is not None else None
-            infos[project.name] = _fetch_remote_info(resource, project, entry)
-    return infos
 
 
 @click.command()
 @click.pass_context
 def status(ctx: click.Context) -> None:
     """Show health of all resources."""
-    m = get_manifest(ctx)
-    targets = [t for t in collect_targets(m) if t.resource.status]
-    if not targets:
+    statuses = collect_resource_status(get_manifest(ctx))
+    if not statuses:
         click.echo("  (no resources)")
         return
 
-    remotes = [
-        (t.resource, t.data)
-        for t in targets
-        if isinstance(t.resource, RemoteResource)
-    ]
-    remote_infos = _collect_remote_infos(remotes)
-
-    infos: list[_ResourceInfo] = []
-    for target in targets:
-        resource = target.resource
-        if isinstance(resource, SymlinkResource):
-            infos.append(_fetch_local_info(resource, target.data))
-        else:
-            infos.append(remote_infos[target.data.name])
-
-    rows = [
-        (info.name, info.health.state, info.resource_type, info.mount, info.tmux, info.git_diff)
-        for info in infos
-    ]
     render_table(
-        rows,
+        [
+            (item.project, item.state, item.type, item.mount, item.tmux, item.git)
+            for item in statuses
+        ],
         headers=("project", "state", "type", "mount", "tmux", "git"),
         right_align={5},
     )
 
-    if any(info.health.state != "ok" or info.mount == "stale" for info in infos):
+    if any(item.state != "ok" or item.mount == "stale" for item in statuses):
         raise click.exceptions.Exit(1)

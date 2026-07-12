@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { requestJson } from '../../api/client';
+import { errorMessage } from '../../api/errorMessage';
 import type { components } from '../../api/generated/schema';
 import { PageFrame } from '../../components/PageFrame';
 
@@ -80,11 +81,4 @@ export function InboxPage() {
       </Stack>
     </PageFrame>
   );
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return '予期しないエラーが発生しました';
 }

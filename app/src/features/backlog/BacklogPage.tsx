@@ -15,20 +15,19 @@ import ReactMarkdown from 'react-markdown';
 
 import {
   type BacklogResponse,
-  type ProjectsResponse,
   requestJson,
 } from '../../api/client';
+import { errorMessage } from '../../api/errorMessage';
 import { GroupedListRow, GroupedListSection } from '../../components/GroupedList';
 import { PageFrame } from '../../components/PageFrame';
+import { useProjects } from '../projects/useProjects';
 
 const APPENDED_START = '<!-- hub:backlog:appended:start -->';
 const APPENDED_END = '<!-- hub:backlog:appended:end -->';
 
 export function BacklogPage() {
-  const [projects, setProjects] = useState<string[]>([]);
+  const { projects, loading: projectsLoading, error: projectsError } = useProjects();
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [projectsLoading, setProjectsLoading] = useState(true);
-  const [projectsError, setProjectsError] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [backlogLoading, setBacklogLoading] = useState(false);
   const [backlogError, setBacklogError] = useState<string | null>(null);
@@ -36,38 +35,12 @@ export function BacklogPage() {
   const [appending, setAppending] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadProjects() {
-      setProjectsLoading(true);
-      setProjectsError(null);
-      try {
-        const response = await requestJson<ProjectsResponse>('/api/projects');
-        if (cancelled) {
-          return;
-        }
-        setProjects(response.projects);
-        setSelectedProject((current) => (
-          current && response.projects.includes(current)
-            ? current
-            : (response.projects[0] ?? null)
-        ));
-      } catch (requestError) {
-        if (!cancelled) {
-          setProjectsError(errorMessage(requestError));
-        }
-      } finally {
-        if (!cancelled) {
-          setProjectsLoading(false);
-        }
-      }
-    }
-
-    void loadProjects();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    setSelectedProject((current) => (
+      current && projects.includes(current)
+        ? current
+        : (projects[0] ?? null)
+    ));
+  }, [projects]);
 
   const loadBacklog = useCallback(async () => {
     if (!selectedProject) {
@@ -199,13 +172,6 @@ export function BacklogPage() {
       </Stack>
     </PageFrame>
   );
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return '予期しないエラーが発生しました';
 }
 
 function splitBacklog(content: string): {

@@ -1,9 +1,9 @@
 import { ActionIcon, Badge, Checkbox, Group, Stack, Text } from '@mantine/core';
 
 import { GroupedListRow, GroupedListSection } from '../../components/GroupedList';
-import type { components } from '../../api/generated/schema';
+import type { TodoItem } from './api';
 
-export type TodoItem = components['schemas']['TodoResponse'];
+export type { TodoItem } from './api';
 
 type TodoListProps = {
   pending: TodoItem[];

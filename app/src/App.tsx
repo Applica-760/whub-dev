@@ -3,12 +3,14 @@ import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router';
 
 import { BacklogPage } from './features/backlog/BacklogPage';
 import { InboxPage } from './features/inbox/InboxPage';
+import { ResourceStatusPage } from './features/status/ResourceStatusPage';
 import { TodosPage } from './features/todos/TodosPage';
 
 const navigation = [
   { label: 'Todo', to: '/todos' },
   { label: 'Backlog', to: '/backlog' },
   { label: 'Inbox', to: '/inbox' },
+  { label: 'Status', to: '/status' },
 ];
 
 export function App() {
@@ -42,6 +44,7 @@ export function App() {
           <Route element={<TodosPage />} path="/todos" />
           <Route element={<BacklogPage />} path="/backlog" />
           <Route element={<InboxPage />} path="/inbox" />
+          <Route element={<ResourceStatusPage />} path="/status" />
         </Routes>
       </AppShell.Main>
     </AppShell>

@@ -92,6 +92,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/resources/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Resource Status */
+        get: operations["get_resource_status_api_resources_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -169,6 +186,32 @@ export interface components {
         ProjectsResponse: {
             /** Projects */
             projects: string[];
+        };
+        /** ResourceStatusListResponse */
+        ResourceStatusListResponse: {
+            /** Resources */
+            resources: components["schemas"]["ResourceStatusResponse"][];
+        };
+        /** ResourceStatusResponse */
+        ResourceStatusResponse: {
+            /** Project */
+            project: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ok" | "missing" | "source-missing" | "broken" | "wrong-target" | "unexpected" | "unreachable" | "unmounted" | "stale";
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "symlink" | "remote";
+            /** Mount */
+            mount: string;
+            /** Tmux */
+            tmux: string;
+            /** Git */
+            git: string;
         };
         /** TodoListResponse */
         TodoListResponse: {
@@ -456,6 +499,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_resource_status_api_resources_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResourceStatusListResponse"];
                 };
             };
         };

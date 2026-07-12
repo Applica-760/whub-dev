@@ -9,6 +9,7 @@
 6. 空白だけのbacklog memoを拒否する。
 7. inbox投函が作成ファイル名を返す。
 8. ServiceError系とManifestErrorをHTTPエラーへ変換する。
+9. resource statusがserviceの結果を返す。
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ from fastapi.testclient import TestClient
 from whub.models import ManifestError
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
+from whub.services.status import ResourceStatus
 from whub.tests.helpers import manifest
 from whub.webapp.server import create_app
 
@@ -169,6 +171,46 @@ def test_create_inbox_returns_created_filename(client: TestClient) -> None:
     assert response.status_code == 201
     assert response.json() == {"filename": "20260710_1630_note.md"}
     mock_create.assert_called_once_with(m, "note", "body")
+
+
+def test_get_resource_status_returns_service_results(client: TestClient) -> None:
+    # ケース9
+    m = manifest()
+    statuses = [
+        ResourceStatus("local", "ok", "symlink", git="2 files"),
+        ResourceStatus("remote", "unreachable", "remote", mount="stale"),
+    ]
+    with (
+        patch("whub.webapp.routers.status.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.status.collect_resource_status",
+            return_value=statuses,
+        ) as mock_collect,
+    ):
+        response = client.get("/api/resources/status")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resources": [
+            {
+                "project": "local",
+                "state": "ok",
+                "type": "symlink",
+                "mount": "-",
+                "tmux": "-",
+                "git": "2 files",
+            },
+            {
+                "project": "remote",
+                "state": "unreachable",
+                "type": "remote",
+                "mount": "stale",
+                "tmux": "-",
+                "git": "-",
+            },
+        ],
+    }
+    mock_collect.assert_called_once_with(m)
 
 
 def test_service_errors_are_mapped_to_http_responses(client: TestClient) -> None:
