@@ -8,6 +8,8 @@
 - 方針: mountはResource Statusのremote表示として扱い、Webからのmount操作は対象外とする。
 - 方針: `PageFrame`はページ配置、Widgetは各機能の表示・操作を担い、専門ページとOverviewから同じWidgetを利用する。
 - 方針: Widgetは配置先の幅へレスポンシブに適応し、グリッド寸法と並び順はOverviewが担う。
+- 方針: Overview本文は16:9の領域内へ12列×8行の正方形セルを中央配置し、左右の余白を許容する。
+- 方針: Overview本文だけを横幅基準で一様拡縮し、縦長画面では下部の余白を許容して端末間の構図を保つ。
 
 ## 計画
 
@@ -30,9 +32,12 @@
 - [x] Statusを`ResourceStatusWidget`へ切り出し、既存hookを保ったまま専門ページから利用する。
 - [x] InboxをWidgetへ切り出し、専門ページから利用してOverviewで再利用可能にする。
 - [x] Backlog本文・追記機能をWidgetへ切り出し、Project選択を担う専門ページから利用する。
-- [ ] `/`をTodo・Inbox・Status Widgetを可変グリッドで配置するOverviewへ変更する。
+- [ ] Overviewへ16:9の固定比率キャンバスと中央寄せ12列×8行の正方形グリッドを追加する。
+- [ ] Todo・Inbox・Status Widgetの占有セルをOverview側で定義し、任意の幅・高さで配置できる構造にする。
+- [ ] キャンバス全体を横幅基準で一様拡縮し、文字・余白・部品の比率をLaptopと外部ディスプレイで揃える。
+- [ ] WidgetFrameと各Widgetへ高さ制約・内部スクロールを適用し、固定セルからのはみ出しを防ぐ。
 - [ ] BacklogはOverview対象外とし、Widget化とOverviewへの配置可否を分離して既存専門ページへの導線を保つ。
-- [ ] 型検査・ビルド・pytest・手動確認でCLI/Webの状態一致を検証する。
+- [ ] 型検査・ビルド・pytestと代表的な横長・縦長viewportの手動確認で配置・拡縮・CLI/Webの状態一致を検証する。
 
 ## 実行ログ
 
@@ -80,5 +85,15 @@
 - 実施内容: Backlog・Inbox・StatusのWidget化とOverview掲載範囲を整理した。
 - 結果: `PageFrame`はページ配置、`WidgetFrame`は主要機能の枠とし、Backlogは専門ページのみで利用する構成とした。
 - 判断: Status、Inbox、Backlog、Overviewの順に実装して続行。
+
+### 試行 10: 固定キャンバスによるOverview配置
+- 実施内容: 16:9キャンバス内の12列×8行GridへWidgetを固定配置し、キャンバス全体を表示幅へ拡縮した。
+- 結果: レイアウトが崩れ、拡大時に低解像度描画のようなぼやけが生じた。
+- 判断: 棄却
+
+### 試行 11: 3等分列と列内縦積みによるOverview配置
+- 実施内容: Overviewを全幅の3等分列とし、各列へ専門ページと同じ自然寸法のTodo Widgetを上詰めで縦積みした。
+- 結果: Widgetの見た目を維持したまま画面幅を活用でき、複数Widgetの縦積みも意図どおり表示できた。
+- 判断: 固定キャンバス案を破棄し、3等分列と列内縦積みをOverviewの配置方針として続行。
 
 ## 結果
