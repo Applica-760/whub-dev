@@ -1,9 +1,9 @@
-import { Stack} from '@mantine/core';
+import { Stack } from '@mantine/core';
 
 import { TodoPendingWidget } from '../todos/TodoPendingWidget';
 import { useTodoWidgets } from '../todos/useTodoWidgets';
 
-export function WhubPage() {
+export function OverviewPage() {
   const todoController = useTodoWidgets({ withForm: false });
 
   return (

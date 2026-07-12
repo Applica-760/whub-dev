@@ -28,8 +28,8 @@
 ### Phase 4: 統合ビューの追加
 - [x] TodoをレスポンシブなWidgetへ切り出し、Todoページから同じWidgetを利用する。
 - [x] Statusを`ResourceStatusWidget`へ切り出し、既存hookを保ったまま専門ページから利用する。
-- [ ] InboxをWidgetへ切り出し、専門ページとOverviewから同じ機能を利用する。
-- [ ] Backlog本文・追記機能をWidgetへ切り出し、Project選択を担う専門ページから利用する。
+- [x] InboxをWidgetへ切り出し、専門ページから利用してOverviewで再利用可能にする。
+- [x] Backlog本文・追記機能をWidgetへ切り出し、Project選択を担う専門ページから利用する。
 - [ ] `/`をTodo・Inbox・Status Widgetを可変グリッドで配置するOverviewへ変更する。
 - [ ] BacklogはOverview対象外とし、Widget化とOverviewへの配置可否を分離して既存専門ページへの導線を保つ。
 - [ ] 型検査・ビルド・pytest・手動確認でCLI/Webの状態一致を検証する。

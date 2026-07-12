@@ -11,7 +11,7 @@ type TodoFormWidgetProps = {
 export function TodoFormWidget({ controller }: TodoFormWidgetProps) {
   return (
     <WidgetFrame
-      title={<Text c="dimmed" fw={600} size="sm" tt="uppercase">Todoを追加</Text>}
+      title={<Text c="dimmed" fw={600} size="sm">Todoを追加</Text>}
     >
       <Box p="md">
         {controller.projectsError && (

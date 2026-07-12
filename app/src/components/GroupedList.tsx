@@ -25,7 +25,7 @@ export function GroupedListSection({
     <Stack gap={6}>
       {(title || action) && (
         <Group justify="space-between" px="sm">
-          <Text c="dimmed" fw={600} size="sm" tt="uppercase">
+          <Text c="dimmed" fw={600} size="sm">
             {title}
           </Text>
           {action}

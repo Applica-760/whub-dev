@@ -43,7 +43,7 @@ export function ResourceStatusWidget() {
       )}
       title={(
         <Stack gap={0}>
-          <Text c="dimmed" fw={600} size="sm" tt="uppercase">Status</Text>
+          <Text c="dimmed" fw={600} size="sm">Status</Text>
           <Text c="dimmed" size="xs">
             最終更新: {updatedAt ? updatedAt.toLocaleString('ja-JP') : '未取得'}
           </Text>

@@ -3,12 +3,12 @@ import { NavLink, Route, Routes, useLocation } from 'react-router';
 
 import { BacklogPage } from './features/backlog/BacklogPage';
 import { InboxPage } from './features/inbox/InboxPage';
+import { OverviewPage } from './features/overview/OverviewPage';
 import { ResourceStatusPage } from './features/status/ResourceStatusPage';
 import { TodosPage } from './features/todos/TodosPage';
-import { WhubPage } from './features/whub/WhubPage';
 
 const navigation = [
-  { label: 'Whub', to: '/' },
+  { label: 'Overview', to: '/' },
   { label: 'Todo', to: '/todos' },
   { label: 'Backlog', to: '/backlog' },
   { label: 'Inbox', to: '/inbox' },
@@ -42,7 +42,7 @@ export function App() {
 
       <AppShell.Main style={{ background: '#f2f2f7', minHeight: '100vh' }}>
         <Routes>
-          <Route element={<WhubPage />} path="/" />
+          <Route element={<OverviewPage />} path="/" />
           <Route element={<TodosPage />} path="/todos" />
           <Route element={<BacklogPage />} path="/backlog" />
           <Route element={<InboxPage />} path="/inbox" />

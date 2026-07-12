@@ -12,7 +12,7 @@ export function TodoCompletedWidget({ controller }: TodoCompletedWidgetProps) {
   return (
     <WidgetFrame
       title={(
-        <Text c="dimmed" fw={600} size="sm" tt="uppercase">
+        <Text c="dimmed" fw={600} size="sm">
           完了済み ({controller.todos.completed.length})
         </Text>
       )}

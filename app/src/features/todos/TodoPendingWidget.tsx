@@ -21,7 +21,7 @@ export function TodoPendingWidget({
   return (
     <WidgetFrame
       action={action}
-      title={<Text c="dimmed" fw={600} size="sm" tt="uppercase">これからやる</Text>}
+      title={<Text c="dimmed" fw={600} size="sm">これからやる</Text>}
     >
       {controller.todosError && (
         <Alert color="red" title="Todoを取得できませんでした">{controller.todosError}</Alert>
