@@ -1,6 +1,9 @@
 """whub CLI entry point."""
 from __future__ import annotations
+from typing import Any
+
 import click
+
 from whub.commands.app import app
 from whub.commands.backlog import backlog
 from whub.commands.boot import boot
@@ -14,8 +17,18 @@ from whub.commands.run import run
 from whub.commands.status import status
 from whub.commands.todo import todo
 from whub.commands.vscode import vscode
+from whub.core.paths import PathError
 
-@click.group()
+
+class WhubGroup(click.Group):
+    def invoke(self, ctx: click.Context) -> Any:
+        try:
+            return super().invoke(ctx)
+        except PathError as error:
+            raise click.ClickException(str(error)) from error
+
+
+@click.group(cls=WhubGroup)
 def main() -> None:
     """workspace-hub: manage workspaces from a single manifest."""
 

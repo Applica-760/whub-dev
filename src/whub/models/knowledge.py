@@ -8,7 +8,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-_KNOWLEDGE_ID_PATTERN = r"^(?:DEF|REL|POL|EXC)-[0-9]+$"
+_KNOWLEDGE_ID_PATTERN = r"^(?:DEF|REL|POL|CON|EXC)-[0-9]+$"
 
 
 class KnowledgeError(Exception):
@@ -24,6 +24,8 @@ class KnowledgeEntry(KnowledgeModel):
 
 
 class KnowledgeDefinition(KnowledgeEntry):
+    """用語が何であるかを表すDEFエントリ。"""
+
     id: str = Field(pattern=r"^DEF-[0-9]+$")
     name: str = Field(min_length=1)
     definition: str = Field(min_length=1)
@@ -31,6 +33,8 @@ class KnowledgeDefinition(KnowledgeEntry):
 
 
 class KnowledgeRelation(KnowledgeEntry):
+    """用語同士の関係を表すRELエントリ。"""
+
     id: str = Field(pattern=r"^REL-[0-9]+$")
     subject: str = Field(pattern=_KNOWLEDGE_ID_PATTERN)
     predicate: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
@@ -40,24 +44,37 @@ class KnowledgeRelation(KnowledgeEntry):
 
 
 class KnowledgePolicy(KnowledgeEntry):
+    """人間・Agentがどう運用するかを表すPOLエントリ。"""
+
     id: str = Field(pattern=r"^POL-[0-9]+$")
     statement: str = Field(min_length=1)
     ref: str | None = Field(default=None, min_length=1)
 
 
+class KnowledgeConstraint(KnowledgeEntry):
+    """データ・実装・CLIが必ず満たす性質を表すCONエントリ。"""
+
+    id: str = Field(pattern=r"^CON-[0-9]+$")
+    statement: str = Field(min_length=1)
+    ref: str | None = Field(default=None, min_length=1)
+
+
 class KnowledgeException(KnowledgeEntry):
+    """PolicyまたはConstraintの例外を表すEXCエントリ。"""
+
     id: str = Field(pattern=r"^EXC-[0-9]+$")
-    exception_to: str = Field(pattern=r"^POL-[0-9]+$")
+    exception_to: str = Field(pattern=r"^(?:POL|CON)-[0-9]+$")
     condition: str = Field(min_length=1)
     statement: str = Field(min_length=1)
     ref: str | None = Field(default=None, min_length=1)
 
 
 class Knowledge(KnowledgeModel):
-    schema_version: Literal[1]
+    schema_version: Literal[2]
     definitions: list[KnowledgeDefinition]
     relations: list[KnowledgeRelation]
     policies: list[KnowledgePolicy]
+    constraints: list[KnowledgeConstraint]
     exceptions: list[KnowledgeException]
 
     @model_validator(mode="after")
@@ -66,6 +83,7 @@ class Knowledge(KnowledgeModel):
             *self.definitions,
             *self.relations,
             *self.policies,
+            *self.constraints,
             *self.exceptions,
         ]
         id_counts = Counter(entry.id for entry in entries)
@@ -84,11 +102,14 @@ class Knowledge(KnowledgeModel):
                     f"{', '.join(unknown)}"
                 )
 
-        policy_ids = {policy.id for policy in self.policies}
+        exception_target_ids = {
+            *(policy.id for policy in self.policies),
+            *(constraint.id for constraint in self.constraints),
+        }
         for exception in self.exceptions:
-            if exception.exception_to not in policy_ids:
+            if exception.exception_to not in exception_target_ids:
                 raise ValueError(
-                    f"exception '{exception.id}' references unknown policy: "
+                    f"exception '{exception.id}' references unknown policy or constraint: "
                     f"{exception.exception_to}"
                 )
         return self

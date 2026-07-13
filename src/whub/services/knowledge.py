@@ -7,6 +7,7 @@ from pathlib import Path
 from whub.core.target import TargetItem, on_targets
 from whub.models import (
     Knowledge,
+    KnowledgeConstraint,
     KnowledgeDefinition,
     KnowledgeError,
     KnowledgeException,
@@ -29,11 +30,18 @@ class KnowledgeQueryResult:
     definitions: list[KnowledgeDefinition]
     relations: list[KnowledgeRelation]
     policies: list[KnowledgePolicy]
+    constraints: list[KnowledgeConstraint]
     exceptions: list[KnowledgeException]
 
     def is_empty(self) -> bool:
         return not any(
-            (self.definitions, self.relations, self.policies, self.exceptions)
+            (
+                self.definitions,
+                self.relations,
+                self.policies,
+                self.constraints,
+                self.exceptions,
+            )
         )
 
 
@@ -124,7 +132,16 @@ def query_knowledge(knowledge: Knowledge, term: str) -> KnowledgeQueryResult:
         if _matches(normalized, policy.id, policy.ref, policy.statement)
     ]
 
-    matched_policy_ids = {policy.id for policy in policies}
+    constraints = [
+        constraint
+        for constraint in knowledge.constraints
+        if _matches(normalized, constraint.id, constraint.ref, constraint.statement)
+    ]
+
+    matched_exception_target_ids = {
+        *(policy.id for policy in policies),
+        *(constraint.id for constraint in constraints),
+    }
     exceptions = [
         exception
         for exception in knowledge.exceptions
@@ -136,7 +153,13 @@ def query_knowledge(knowledge: Knowledge, term: str) -> KnowledgeQueryResult:
             exception.condition,
             exception.statement,
         )
-        or exception.exception_to in matched_policy_ids
+        or exception.exception_to in matched_exception_target_ids
     ]
 
-    return KnowledgeQueryResult(definitions, relations, policies, exceptions)
+    return KnowledgeQueryResult(
+        definitions,
+        relations,
+        policies,
+        constraints,
+        exceptions,
+    )

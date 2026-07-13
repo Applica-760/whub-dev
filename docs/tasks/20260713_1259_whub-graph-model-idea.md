@@ -9,7 +9,7 @@
 - 目標: 未完了依存の飛び越しと受け入れ条件未達の完了を、YAML検証と状態遷移コマンドで防ぐ
 - 方針: グラフを論理モデルとしてYAMLで表現し、グラフDBは前提にしない
 - 方針: Markdownはナラティブとして維持し、関係・状態・制約・出典だけをYAMLへ構造化する
-- Knowledge YAML: 用語・関係・設計規約・例外を`DEF-*`・`REL-*`・`POL-*`・`EXC-*`の安定IDで保持する
+- Knowledge YAML: [別タスク](20260713_1647_whub-knowledge-yaml.md)で用語・関係・運用規約・制約・例外を安定IDで保持する
 - Task YAML: Goal・Task・Phase・Step・依存・優先度・受け入れ条件を保持する
 - Workflow YAML: backlogからの昇格・承認・差し戻し・計画変更・完了などwhubの運用規則を保持する
 - State YAML: Task・Phase・Stepの現在状態、検証結果、証跡、待機理由を保持する
@@ -22,26 +22,25 @@
 - MVP: 4種類の入力YAML雛形とExecution Graph出力形式を定義し、新規デモデータだけで検証する
 - MVP: `knowledge query`・`plan check`・`plan graph`・`plan next`・`context task`の最小コマンドを扱う
 - MVP: ローカル・リモート双方のProject配下でAgent向けコマンドを利用できる構成を扱う
-- MVP: 現行のtask md・backlog・FOCUS・Skillを置き換えず、既存文書との自動同期とWeb appは行わない
+- MVP: Knowledge以外は現行のtask md・backlog・FOCUS・Skillを置き換えず、既存文書との自動同期とWeb appは行わない
 - 状態原則: `blocked`と`actionable`を保存せず、Task自身の状態と未完了依存から導出する
 - ガード: Task開始は全依存完了、Task完了は全受け入れ条件の検証と証跡記録を必須とする
 - 計画変更: 実行を停止し、理由付き変更案へのユーザー承認後にYAMLを更新する
-- 前提: YAML構造と利用価値を確認するまではPythonデータモデル・JSON Schema・DBを導入しない
+- 前提: Knowledge以外はYAML構造と利用価値を確認するまでPythonデータモデル・JSON Schema・DBを導入しない
 
 ## 計画
 
 ## Phase 1: YAMLグラフの責務決定
 - [x] グラフDBを前提にせず、YAMLで論理グラフと制約を表現する方針へ変更する
 - [x] Knowledge・Task・Workflow・Stateを手書き入力、Execution GraphとFOCUSを派生ビューとする
-- [x] `whub-concept.yaml`へ用語・コマンド・関係・制約の叩き台を作成する
-- [x] 定義・関係・規約・例外を安定IDで引用する法律型ナレッジの方針を決める
+- [x] Knowledge YAMLの規約・実装・SSOT切替を[別タスク](20260713_1647_whub-knowledge-yaml.md)へ分離する
 - [x] `blocked`と`actionable`を保存せず、状態と依存から導出する方針を決める
 - [x] Project内コマンドを可搬CLIとして配布し、Project横断・Mac固有コマンドから分離する方針を決める
 - [ ] YAMLグラフで答える問いと、各YAMLが保持する事実の境界を確定する
 - [ ] YAML・Markdown・派生ビュー間で同一事実を二重管理しないSSOT規則を確定する
 
 ## Phase 2: 入出力YAML雛形
-- [ ] Knowledge YAMLへ用語・関係・規約・例外・出典・安定IDの雛形を定義する
+- [x] Knowledge YAMLの用語・関係・運用規約・制約・例外・安定IDを[別タスク](20260713_1647_whub-knowledge-yaml.md)で定義する
 - [ ] Task YAMLへGoal・Task・Phase・Step・依存・優先度・受け入れ条件の雛形を定義する
 - [ ] Workflow YAMLへ昇格・承認・差し戻し・計画変更・完了規則の雛形を定義する
 - [ ] State YAMLへ現在状態・検証結果・証跡・待機理由の雛形を定義する
@@ -55,7 +54,7 @@
 - [ ] Task開始と完了を依存・受け入れ条件・証跡で拒否できる状態遷移を定義する
 
 ## Phase 4: Knowledge検索とAgentコンテキスト
-- [ ] 安定ID・用語名・別名・定義文の順に部分一致を評価する`knowledge query`を定義する
+- [x] ID・用語・本文と直接関係を検索する`knowledge query`を[別タスク](20260713_1647_whub-knowledge-yaml.md)で実装する
 - [ ] Taskに関連するKnowledge・Workflow・Stateを集約する`context task`を定義する
 - [ ] Agentの着手前・計画変更前・完了前に必要なコマンドと引用形式を規約化する
 - [ ] Agent向け可搬CLIとMac専用whubのコマンド境界、および`boot`配布条件を定義する

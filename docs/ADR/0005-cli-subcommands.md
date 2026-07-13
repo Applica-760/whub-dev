@@ -2,4 +2,4 @@
 
 - **Status:** Superseded
 - **Date:** 2026-06-19
-- **Superseded by:** `docs/whub-concepts.md`
+- **Superseded by:** `docs/knowledge.yaml`

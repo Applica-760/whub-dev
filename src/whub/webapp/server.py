@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
+from whub.core.paths import PathError
 from whub.models import ManifestError
 from whub.services.errors import NotFoundError, ServiceError
 from whub.webapp.routers.backlog import router as backlog_router
@@ -42,6 +43,14 @@ def create_app(dist_dir: Path) -> FastAPI:
     def manifest_error_handler(
         request: Request,
         error: ManifestError,
+    ) -> JSONResponse:
+        del request
+        return JSONResponse(status_code=500, content={"detail": str(error)})
+
+    @app.exception_handler(PathError)
+    def path_error_handler(
+        request: Request,
+        error: PathError,
     ) -> JSONResponse:
         del request
         return JSONResponse(status_code=500, content={"detail": str(error)})

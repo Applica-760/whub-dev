@@ -2,6 +2,7 @@
 
 from whub.models.knowledge import (
     Knowledge,
+    KnowledgeConstraint,
     KnowledgeDefinition,
     KnowledgeError,
     KnowledgeException,
@@ -30,6 +31,7 @@ __all__ = [
     "GitInfo",
     "Host",
     "Knowledge",
+    "KnowledgeConstraint",
     "KnowledgeDefinition",
     "KnowledgeError",
     "KnowledgeException",

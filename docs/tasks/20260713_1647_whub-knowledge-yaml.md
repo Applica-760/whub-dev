@@ -1,15 +1,15 @@
 # whub Knowledge YAMLと検証CLI・app閲覧
 
 ## 目的・前提・方針案
-- 目的: `docs/knowledge.yaml`を、確定済みの用語・関係・規約・例外・説明・背景を集約するKnowledge YAMLとして正式化する
+- 目的: `docs/knowledge.yaml`を、確定済みの用語・関係・運用規約・制約・例外・説明・背景を集約するKnowledge YAMLとして正式化する
 - 親タスク: [whubへのYAMLグラフモデル適用案](20260713_1259_whub-graph-model-idea.md)からKnowledge YAMLの作成だけを切り出す
 - SSOT: Knowledge YAMLに`whub-concepts.md`と`workflow.md`の全確定事項を集約し、旧MarkdownはYAMLへの薄い導線とする
 - 記録範囲: 確定済みの現在の事実・規約だけを記録し、検討中の案はtask mdやbacklogに残す
 - 背景: 必要になった項目だけ1行の`rationale`を追加し、詳細な比較・意思決定はADRへ昇格する
-- ID: `DEF-*`・`REL-*`・`POL-*`・`EXC-*`の連番を一意に保ち、廃止後も再利用しない
+- ID: `DEF-*`・`REL-*`・`POL-*`・`CON-*`・`EXC-*`の連番を一意に保ち、廃止後も再利用しない
 - 用語境界: `whub`はMacBook上のCLI、`workspace-hub`はそのproject・repositoryとして分離する
 - ADR参照: ADRと直接結び付く項目だけ任意の`ref`を持つ
-- Workflow境界: 運用規約は`POL-*`として保持し、将来の実行可能なWorkflow YAMLはKnowledge IDを参照する
+- Workflow境界: 人間・Agentの運用規約は`POL-*`、データ・実装・CLIの必須性質は`CON-*`として保持する
 - 実装: Pydanticモデルと`whub knowledge check`でYAML構造・ID・参照を検証する
 - 配置: 各projectの`docs/knowledge.yaml`を固定パスとし、CLIはPATHではなくTab補完可能なproject名を受け取る
 - テスト方針: 方向性の変更による手戻りを避けるため、各機能の実装方針確定後にまとめて作成する
@@ -19,7 +19,7 @@
 ## 計画
 
 ### Phase 1: Knowledge YAML規約の確定
-- [x] `definitions`・`relations`・`policies`・`exceptions`の最小必須フィールドを定義する
+- [x] `definitions`・`relations`・`policies`・`constraints`・`exceptions`の最小必須フィールドを定義する
 - [x] `DEF-001`等の採番・一意性と内部参照の形式を定義する
 - [x] 追加フィールドは全量移行で必要性が確認された時だけ導入する
 
@@ -35,18 +35,34 @@
 - [x] checkは件数要約、queryはAIが読めるYAMLを出力し、失敗をClick例外へ変換する
 
 ### Phase 4: 確定ナレッジの全量移行
-- [x] 現行4種の既存フィールドだけを使い、任意フィールドは必要な項目に限る
+- [x] 確定済みの最小フィールドだけを使い、任意フィールドは必要な項目に限る
 - [x] 分類・記述に迷う項目は移行せず保留し、ユーザー判断を得る
 - [x] Phase 4では`whub-concepts.md`と`workflow.md`を削除・縮約しない
-- [x] `whub-concepts.md`の全確定事項を`DEF-*`・`REL-*`・`POL-*`・`EXC-*`へ移行する
+- [x] `whub-concepts.md`の全確定事項を`DEF-*`・`REL-*`・`POL-*`・`CON-*`・`EXC-*`へ移行する
 - [x] `workflow.md`の全確定事項を主に`POL-*`として移行する
 - [x] 長い意思決定はADR参照へ分離し、検討中の記述をKnowledge YAMLへ混入させない
 
+### Phase 4.1: PolicyとConstraintの分離
+- [x] ADR-0010で`DEF`・`REL`・`POL`・`CON`・`EXC`の分類基準を確定する
+- [x] PydanticモデルへConstraintを追加し、ExceptionからPolicy・Constraintを参照可能にする
+- [x] ServiceとCLIの検証・検索・表示をConstraintへ対応させる
+- [x] 既存Policyを運用判断と必須性質へ再分類し、旧IDの数値部分を維持する
+- [x] 各Policy・Constraintを周辺文脈なしで理解できる記述へ修正する
+
+### Phase 4.2: Constraintの現行実装監査
+- [x] `CON-008`・`CON-028`・`CON-046`を現行実装に合わせて修正する
+- [x] `CON-001`へ`CON-010`を統合し、過剰な`CON-014`・`CON-023`を削除する
+- [x] 不要になった`EXC-001`を削除し、移行元の`whub-concepts.md`を同期する
+- [x] `whub knowledge check`と代表queryで修正後のKnowledgeを検証する
+
 ### Phase 5: SSOT切替と検証
-- [ ] 元Markdown先頭のSSOTコメントをKnowledge YAMLへ移し、参照先をKnowledgeへ切り替える
-- [ ] 旧MarkdownをKnowledge YAMLへの薄い導線へ変更し、同一事実の二重管理を解消する
-- [ ] 親タスクのKnowledge YAML項目を本タスクへの参照に切り替える
-- [ ] `whub knowledge check`で実データを検証する
+- [x] `core/paths.py`の`PathError`をCLI・Web adapterで変換し、`CON-013`と実装を整合させる
+- [x] 元MarkdownのSSOT宣言を検索可能な`POL-050`としてKnowledge YAMLへ移す
+- [x] 旧MarkdownをKnowledge YAMLへの薄い導線へ変更し、同一事実の二重管理を解消する
+- [x] `AGENTS.md`と`.claude/CLAUDE.md`の`whub-concepts.md`・`workflow.md`参照指示をKnowledge YAMLへ切り替える
+- [x] README・配布元Skill・現行ADRの旧SSOT参照をKnowledge YAMLへ切り替える
+- [x] 親タスクのKnowledge YAML項目を本タスクへの参照に切り替える
+- [x] `whub knowledge check`で実データを検証する
 
 ### Phase 6: whub appでの規約閲覧（詳細はPhase 5後に確定）
 - [ ] backlog案を基に、whub専用ページでconcept・workflowを閲覧する要件と受け入れ基準を確定する
@@ -57,5 +73,10 @@
 - [ ] `uv run pytest`とappの検証コマンドで全体回帰を確認する
 
 ## 実行ログ
+
+### 試行 1: Agent指示以外にも旧SSOTの有効な参照が残っている
+- 実施内容: タスク履歴を除くrepository全体で`whub-concepts.md`と`workflow.md`の参照を検索した
+- 結果: README・配布元Skill・現行ADRに判断根拠として使われる参照を確認した
+- 判断: 続行（完了済みspecとslidesは履歴として薄い導線への参照を残す）
 
 ## 結果

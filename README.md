@@ -5,7 +5,7 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 
 ## 方針
 
-- 用語・CLI設計方針は `docs/whub-concepts.md` を正とする
+- 用語・CLI設計・運用規則は `docs/knowledge.yaml` を正とする
 - `.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
 - `.whub/` は `whub init <data-dir>` で外部のprivate data-dirへ接続できる
 - ローカル`resource`はsymlink、リモート`resource`はsshfs mount（参照・編集）とSSH（実行）で操作する

@@ -5,7 +5,9 @@ import os
 import tomllib
 from pathlib import Path
 
-import click
+
+class PathError(Exception):
+    """Raised when a whub path cannot be resolved."""
 
 
 def whub_root() -> Path:
@@ -30,7 +32,7 @@ def whub_data_dir() -> Path:
 
     config_path = whub_config_path()
     if not config_path.exists():
-        raise click.ClickException(
+        raise PathError(
             f"whub data_dir is not configured; run `whub init <data_dir>` "
             f"to create {config_path}"
         )
@@ -38,11 +40,11 @@ def whub_data_dir() -> Path:
     try:
         data = tomllib.loads(config_path.read_text())
     except tomllib.TOMLDecodeError as error:
-        raise click.ClickException(f"invalid whub config: {config_path}: {error}") from error
+        raise PathError(f"invalid whub config: {config_path}: {error}") from error
 
     value = data.get("data_dir")
     if not isinstance(value, str) or not value:
-        raise click.ClickException(f"whub config missing data_dir: {config_path}")
+        raise PathError(f"whub config missing data_dir: {config_path}")
     return Path(value).expanduser().resolve()
 
 

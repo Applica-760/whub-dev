@@ -37,6 +37,7 @@ def check(ctx: click.Context, project: str) -> None:
         f"{len(loaded.definitions)} definitions, "
         f"{len(loaded.relations)} relations, "
         f"{len(loaded.policies)} policies, "
+        f"{len(loaded.constraints)} constraints, "
         f"{len(loaded.exceptions)} exceptions"
     )
 
@@ -46,6 +47,7 @@ def _dump_result(result: KnowledgeQueryResult) -> str:
         ("definitions", result.definitions),
         ("relations", result.relations),
         ("policies", result.policies),
+        ("constraints", result.constraints),
         ("exceptions", result.exceptions),
     )
     data = {
