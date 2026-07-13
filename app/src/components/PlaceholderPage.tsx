@@ -7,7 +7,7 @@ type PlaceholderPageProps = {
 
 export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
   return (
-    <Paper p="lg" radius="md" withBorder>
+    <Paper className="whub-box" p="lg" radius="md" withBorder>
       <Stack gap="xs">
         <Title order={1}>{title}</Title>
         <Text c="dimmed">{description}</Text>

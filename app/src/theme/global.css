@@ -26,11 +26,21 @@ textarea {
   min-height: 100vh;
 }
 
+.whub-box {
+  background-color: var(--whub-color-box-background);
+}
+
 .whub-tabs {
   align-items: flex-end;
   align-self: stretch;
   display: flex;
   gap: 2px;
+}
+
+.whub-color-scheme-toggle {
+  align-self: center;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .whub-tab {

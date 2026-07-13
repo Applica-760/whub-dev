@@ -16,7 +16,7 @@ export function WidgetFrame({ title, action, children }: WidgetFrameProps) {
           {action}
         </Group>
       )}
-      <Paper h="100%" radius="md" shadow="xs" withBorder>
+      <Paper className="whub-box" h="100%" radius="md" shadow="xs" withBorder>
         {children}
       </Paper>
     </Stack>

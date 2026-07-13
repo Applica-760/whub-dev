@@ -9,6 +9,8 @@ const palette = {
   mutedText: '#636366',
   text: '#1c1c1e',
   link: '#007aff',
+  darkBackground: 'rgb(28, 28, 28)',
+  darkBoxBackground: 'rgb(35, 35, 35)',
 } as const;
 
 type ColorScheme = 'light' | 'dark';
@@ -17,7 +19,11 @@ type ColorPair = Record<ColorScheme, string>;
 const colorPairs = {
   '--whub-color-page-background': {
     light: palette.background,
-    dark: 'var(--mantine-color-dark-8)',
+    dark: palette.darkBackground,
+  },
+  '--whub-color-box-background': {
+    light: 'var(--mantine-color-white)',
+    dark: palette.darkBoxBackground,
   },
   '--whub-color-secondary-background': {
     light: palette.secondaryBackground,

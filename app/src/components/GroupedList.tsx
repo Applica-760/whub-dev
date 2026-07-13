@@ -32,7 +32,7 @@ export function GroupedListSection({
           {action}
         </Group>
       )}
-      <Paper radius="md" shadow="xs" withBorder>
+      <Paper className="whub-box" radius="md" shadow="xs" withBorder>
         {children}
       </Paper>
     </Stack>

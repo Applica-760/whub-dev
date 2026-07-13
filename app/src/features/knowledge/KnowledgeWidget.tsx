@@ -156,7 +156,7 @@ function knowledgeGroups(
 
 function KnowledgeEntryCard({ entry }: { entry: KnowledgeEntry }) {
   return (
-    <Paper p="md" radius="md" withBorder>
+    <Paper className="whub-box" p="md" radius="md" withBorder>
       <Stack gap="sm">
         <Group justify="space-between" wrap="nowrap">
           <Badge variant="light">{entry.id}</Badge>

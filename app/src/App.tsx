@@ -2,6 +2,7 @@ import { Anchor, AppShell, Center, Group, Loader, Text } from '@mantine/core';
 import { lazy, Suspense } from 'react';
 import { NavLink, Route, Routes, useLocation } from 'react-router';
 
+import { ColorSchemeToggle } from './components/ColorSchemeToggle';
 import { InboxPage } from './features/inbox/InboxPage';
 import { KnowledgePage } from './features/knowledge/KnowledgePage';
 import { OverviewPage } from './features/overview/OverviewPage';
@@ -32,7 +33,7 @@ export function App() {
   return (
     <AppShell header={{ height: 47 }} padding={0}>
       <AppShell.Header className="whub-header">
-        <Group align="end" gap="xl" h="100%" px="md">
+        <Group align="end" gap="xl" h="100%" px="md" wrap="nowrap">
           <Text fw={700} pb={10}>whub</Text>
           <div className="whub-tabs">
             {navigation.map((item) => (
@@ -48,6 +49,7 @@ export function App() {
               </Anchor>
             ))}
           </div>
+          <ColorSchemeToggle />
         </Group>
       </AppShell.Header>
 
