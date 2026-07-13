@@ -34,11 +34,11 @@
 - [x] `vault/docs/backlog.md` の既存Question「permanentの粒度整理」を本タスクの決着として更新
 
 ## Phase 4: ノート内容の移行（inbox消化と同時でも可）
-- [ ] 既存mindノートへ `topics` を付与し、旧wiki link・`A->B`記法を削除
-- [ ] refile Skillの配置判定を新構造（questions/establishedの2段階）へ更新
-- [ ] inbox 14件をrefileで振り分け（優先順: 統合明確4件 → 自分史 → ノート管理Question）
-- [ ] `mind/_map.md` 生成（topics別グルーピング）・`core.md` 見直し
-- [ ] 価値観統合ノートの新設を検討（readme旧記載の`何がしたいのか`は実在せず削除済み。社会課題解決・人の役に立ちたい・純粋好奇心を束ねる後継として）
+- [x] 既存mindノートへ `summary`・`topics` を付与し、旧wiki link行を削除（全27ノート、検証で漏れゼロ）
+- [x] refile Skillの配置判定を新構造（questions/establishedの2段階）へ更新
+- [x] inbox 15件をrefileで振り分け（削除2・移動8・統合4・分割1。inboxは空）
+- [x] `mind/_map.md` 生成（questions/established別＋topics別）・`core.md` へ自分史参照を追記
+- [x] 価値観統合ノートは新設不要と決着（core.mdが既にその役割。原体験の集約先として自分史を新設）
 
 # 実行ログ
 
@@ -47,4 +47,14 @@
 - 結果: `何がしたいのか`のみ実ファイルなし（過去に削除・改名された残骸）
 - 判断: 方針変更 — readmeから削除し、統合ノート新設の検討をPhase 4へ積む
 
+### 試行 2: inbox消化で分類不能2件が発生
+- 実施内容: 構造変化AI構想（研究構想）とクレカ選び（生活の意思決定記録）の置き場をユーザと協議
+- 結果: 前者はliterature/sources＋esn-lab backlogへのポインタ、後者はtextbook/finance新設＋`topics: [購入判断]`（purchase層はディレクトリでなくtopicsのビューとして実現）
+- 判断: 方針変更 — textbook定義を「意思決定分析ノートも置く」に拡張してreadmeへ反映
+
 # 結果
+
+- vault新構造が稼働: `mind/questions`(5)・`mind/established`(22)・`recruit`(3)・`textbook/finance`新設、inboxは空
+- 分類SSOTを確立: 成熟度＝ディレクトリ、ジャンル＝frontmatter `topics`。リンク運用は廃止し`summary`/`topics`がapp/CLI連携の共通データモデルとなった
+- `mind/_map.md`生成、core.md・readme・refile Skill・whub-concepts更新済み。`permanent`参照は全リポジトリでゼロ
+- 未コミット。後続タスク: recruit repoの段階移行（vault backlogに記録済み）
