@@ -71,7 +71,7 @@
 - 判断: 続行
 
 ### 試行 9: SSH ControlMasterの必要性を再評価
-- 実施内容: 現行実装と履歴を調査し、SSH/status関連テスと実環境の`whub status`を実行
+- 実施内容: 現行実装と履歴を調査し、SSH/status関連テストと実環境の`whub status`を実行
 - 結果: 同一ホストごと1 SSHプローブへ統合済み、17件全パス、remote 3件を含む0.87秒で完了
 - 判断: ControlMaster導入はstatus性能に不要とし、未実装のまま完了
 
