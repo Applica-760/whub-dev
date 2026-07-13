@@ -17,10 +17,10 @@ const VaultPage = lazy(() =>
 
 const navigation = [
   { label: 'Overview', to: '/' },
-  { label: 'Todo', to: '/todos' },
   { label: 'Backlog', to: '/backlog' },
-  { label: 'Inbox', to: '/inbox' },
   { label: 'Vault', to: '/vault' },
+  { label: 'Todo', to: '/todos' },
+  { label: 'Inbox', to: '/inbox' },
   { label: 'Status', to: '/status' },
 ];
 
@@ -59,9 +59,9 @@ export function App() {
         >
           <Routes>
             <Route element={<OverviewPage />} path="/" />
-            <Route element={<TodosPage />} path="/todos" />
             <Route element={<BacklogPage />} path="/backlog" />
             <Route element={<VaultPage />} path="/vault" />
+            <Route element={<TodosPage />} path="/todos" />
             <Route element={<InboxPage />} path="/inbox" />
             <Route element={<ResourceStatusPage />} path="/status" />
           </Routes>
