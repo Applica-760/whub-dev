@@ -1,0 +1,27 @@
+schema_version: 1
+
+definitions:
+  - id: DEF-001
+    name: project
+    definition: 私が抱えているプロジェクト
+
+  - id: DEF-002
+    name: resource
+    definition: projectが持つ任意の接続先データリソース
+
+relations:
+  - id: REL-001
+    subject: DEF-001
+    predicate: has_resource
+    object: DEF-002
+    cardinality: "0..1"
+
+policies:
+  - id: POL-001
+    statement: command callbackはresourceがlocalかremoteかを意識せずtargetへ処理を委譲する
+
+exceptions:
+  - id: EXC-001
+    exception_to: POL-001
+    condition: commandがbootである
+    statement: bootではlocal・remoteによる分岐を許容する
