@@ -55,10 +55,9 @@
     - /task-planningで過去に解決した課題の1行サマリーをMEMORY.mdに管理する案
 
 <!-- hub:backlog:appended:start -->
-- HTMLビュー/Markdownレンダラー導入
-- vaultエクスプローラーがあれば、inboxとの連携性高まりそう
 - プロジェクトごとのページではなく、whubを特別扱いしたPageとして、conceptやworkflowをタブの一つに入れることで、運用、設計に迷った時の指針になりそう
 - todoのedit機能をwebappにも導入
 - task mdのビューも追加したら、噛み砕いた作業単位はwebappで一望できるようになるはず。Backlogと合わせて、「プロジェクトの情報を見る」ようなWidgetFrameができたらいい
 - ダークモード実装
+- web appのtodoリストのバツ印をグレーにする　赤色だと分かりづらい
 <!-- hub:backlog:appended:end -->

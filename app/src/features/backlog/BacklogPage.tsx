@@ -25,7 +25,7 @@ export function BacklogPage() {
   return (
     <PageFrame
       aside={
-        <div className="backlog-project-list">
+        <div className="page-aside-list">
           <GroupedListSection title="Project">
             {projectsLoading ? (
               <Text c="dimmed" p="md">Projectを読み込んでいます…</Text>

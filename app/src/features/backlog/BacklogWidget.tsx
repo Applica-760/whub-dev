@@ -10,13 +10,13 @@ import {
 } from '@mantine/core';
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import ReactMarkdown from 'react-markdown';
 
 import {
   type BacklogResponse,
   requestJson,
 } from '../../api/client';
 import { errorMessage } from '../../api/errorMessage';
+import { MarkdownView } from '../../components/MarkdownView';
 import { WidgetFrame } from '../../components/WidgetFrame';
 
 const APPENDED_START = '<!-- hub:backlog:appended:start -->';
@@ -118,15 +118,11 @@ export function BacklogWidget({ project }: BacklogWidgetProps) {
             <Text c="dimmed" py="xl" ta="center">まだBacklogはありません</Text>
           ) : (
             <Stack gap="md">
-              {mainContent.trim() !== '' && (
-                <div className="backlog-markdown">
-                  <ReactMarkdown skipHtml>{mainContent}</ReactMarkdown>
-                </div>
-              )}
+              {mainContent.trim() !== '' && <MarkdownView content={mainContent} />}
               {appendedContent.trim() !== '' && (
-                <div className="backlog-markdown backlog-appended">
+                <div className="backlog-appended">
                   <Text c="dimmed" size="sm">未分類メモ</Text>
-                  <ReactMarkdown skipHtml>{appendedContent}</ReactMarkdown>
+                  <MarkdownView content={appendedContent} />
                 </div>
               )}
             </Stack>

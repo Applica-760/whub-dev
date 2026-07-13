@@ -13,6 +13,7 @@ from whub.webapp.routers.inbox import router as inbox_router
 from whub.webapp.routers.projects import router as projects_router
 from whub.webapp.routers.status import router as status_router
 from whub.webapp.routers.todos import router as todos_router
+from whub.webapp.routers.vault import router as vault_router
 
 
 def create_app(dist_dir: Path) -> FastAPI:
@@ -50,6 +51,7 @@ def create_app(dist_dir: Path) -> FastAPI:
     app.include_router(backlog_router)
     app.include_router(inbox_router)
     app.include_router(status_router)
+    app.include_router(vault_router)
 
     @app.get("/api/health")
     def health() -> dict[str, str]:

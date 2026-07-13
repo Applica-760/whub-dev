@@ -7,9 +7,12 @@ import { OverviewPage } from './features/overview/OverviewPage';
 import { ResourceStatusPage } from './features/status/ResourceStatusPage';
 import { TodosPage } from './features/todos/TodosPage';
 
-// react-markdownの依存ツリーを初回チャンクから外すため、Backlogのみ遅延読込する
+// react-markdownの依存ツリーを初回チャンクから外すため、Backlog/Vaultは遅延読込する
 const BacklogPage = lazy(() =>
   import('./features/backlog/BacklogPage').then((module) => ({ default: module.BacklogPage })),
+);
+const VaultPage = lazy(() =>
+  import('./features/vault/VaultPage').then((module) => ({ default: module.VaultPage })),
 );
 
 const navigation = [
@@ -17,6 +20,7 @@ const navigation = [
   { label: 'Todo', to: '/todos' },
   { label: 'Backlog', to: '/backlog' },
   { label: 'Inbox', to: '/inbox' },
+  { label: 'Vault', to: '/vault' },
   { label: 'Status', to: '/status' },
 ];
 
@@ -57,6 +61,7 @@ export function App() {
             <Route element={<OverviewPage />} path="/" />
             <Route element={<TodosPage />} path="/todos" />
             <Route element={<BacklogPage />} path="/backlog" />
+            <Route element={<VaultPage />} path="/vault" />
             <Route element={<InboxPage />} path="/inbox" />
             <Route element={<ResourceStatusPage />} path="/status" />
           </Routes>

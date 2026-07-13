@@ -109,6 +109,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vault/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Vault Tree */
+        get: operations["get_vault_tree_api_vault_tree_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vault/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Vault Note */
+        get: operations["get_vault_note_api_vault_note_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -257,6 +291,38 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * VaultNode
+         * @description A directory or markdown file in the vault tree.
+         */
+        VaultNode: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "directory" | "file";
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["VaultNode"][];
+        };
+        /** VaultNoteResponse */
+        VaultNoteResponse: {
+            /** Path */
+            path: string;
+            /** Content */
+            content: string;
+        };
+        /** VaultTreeResponse */
+        VaultTreeResponse: {
+            /** Nodes */
+            nodes: components["schemas"]["VaultNode"][];
         };
     };
     responses: never;
@@ -519,6 +585,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResourceStatusListResponse"];
+                };
+            };
+        };
+    };
+    get_vault_tree_api_vault_tree_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultTreeResponse"];
+                };
+            };
+        };
+    };
+    get_vault_note_api_vault_note_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultNoteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

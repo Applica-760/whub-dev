@@ -10,6 +10,7 @@
 7. inbox投函が作成ファイル名を返す。
 8. ServiceError系とManifestErrorをHTTPエラーへ変換する。
 9. resource statusがserviceの結果を返す。
+10. vaultのツリー取得・ノート取得がserviceを呼ぶ。
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from whub.models import ManifestError
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.status import ResourceStatus
+from whub.services.vault import VaultNode
 from whub.tests.helpers import manifest
 from whub.webapp.server import create_app
 
@@ -211,6 +213,55 @@ def test_get_resource_status_returns_service_results(client: TestClient) -> None
         ],
     }
     mock_collect.assert_called_once_with(m)
+
+
+def test_vault_endpoints_use_services(client: TestClient) -> None:
+    # ケース10
+    m = manifest()
+    tree = [
+        VaultNode(
+            name="mind",
+            path="mind",
+            type="directory",
+            children=[VaultNode(name="idea.md", path="mind/idea.md", type="file")],
+        ),
+    ]
+    with (
+        patch("whub.webapp.routers.vault.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.vault.list_vault_tree",
+            return_value=tree,
+        ) as mock_tree,
+        patch(
+            "whub.webapp.routers.vault.read_vault_note",
+            return_value="# idea\n",
+        ) as mock_read,
+    ):
+        tree_response = client.get("/api/vault/tree")
+        note_response = client.get("/api/vault/note", params={"path": "mind/idea.md"})
+
+    assert tree_response.status_code == 200
+    assert tree_response.json() == {
+        "nodes": [
+            {
+                "name": "mind",
+                "path": "mind",
+                "type": "directory",
+                "children": [
+                    {
+                        "name": "idea.md",
+                        "path": "mind/idea.md",
+                        "type": "file",
+                        "children": [],
+                    },
+                ],
+            },
+        ],
+    }
+    mock_tree.assert_called_once_with(m)
+    assert note_response.status_code == 200
+    assert note_response.json() == {"path": "mind/idea.md", "content": "# idea\n"}
+    mock_read.assert_called_once_with(m, "mind/idea.md")
 
 
 def test_service_errors_are_mapped_to_http_responses(client: TestClient) -> None:

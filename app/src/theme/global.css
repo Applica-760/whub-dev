@@ -111,51 +111,51 @@ textarea {
     max-width: none;
   }
 
-  .backlog-project-list {
+  .page-aside-list {
     margin-left: auto;
     margin-top: 4rem;
     width: 16rem;
   }
 }
 
-.backlog-markdown > :first-child {
+.md-view > :first-child {
   margin-top: 0;
 }
 
-.backlog-markdown > :last-child {
+.md-view > :last-child {
   margin-bottom: 0;
 }
 
-.backlog-markdown h1,
-.backlog-markdown h2,
-.backlog-markdown h3 {
+.md-view h1,
+.md-view h2,
+.md-view h3 {
   color: #1c1c1e;
   line-height: 1.25;
   margin: 1.5rem 0 0.75rem;
 }
 
-.backlog-markdown h1 {
+.md-view h1 {
   font-size: 1.5rem;
 }
 
-.backlog-markdown h2 {
+.md-view h2 {
   font-size: 1.25rem;
 }
 
-.backlog-markdown h3 {
+.md-view h3 {
   font-size: 1.1rem;
 }
 
-.backlog-markdown p,
-.backlog-markdown li {
+.md-view p,
+.md-view li {
   line-height: 1.65;
 }
 
-.backlog-markdown a {
+.md-view a {
   color: #007aff;
 }
 
-.backlog-markdown code {
+.md-view code {
   background: #e5e5ea;
   border-radius: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -163,7 +163,7 @@ textarea {
   padding: 0.1em 0.3em;
 }
 
-.backlog-markdown pre {
+.md-view pre {
   background: #1c1c1e;
   border-radius: 8px;
   color: #f2f2f7;
@@ -171,9 +171,41 @@ textarea {
   padding: 0.9rem;
 }
 
-.backlog-markdown pre code {
+.md-view pre code {
   background: transparent;
   padding: 0;
+}
+
+.vault-tree-node {
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.vault-tree-node:hover {
+  background: #ececf0;
+}
+
+.vault-tree-node[data-selected] {
+  background: var(--mantine-color-blue-0);
+}
+
+.vault-tree-node[data-selected] .mantine-Text-root {
+  color: var(--mantine-color-blue-7);
+  font-weight: 600;
+}
+
+.vault-tree-icon {
+  flex-shrink: 0;
+}
+
+.vault-tree-chevron {
+  color: #8e8e93;
+  transition: transform 0.15s ease;
+}
+
+.vault-tree-chevron[data-expanded] {
+  transform: rotate(90deg);
 }
 
 .backlog-appended {
