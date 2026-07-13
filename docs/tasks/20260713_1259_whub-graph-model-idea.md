@@ -11,7 +11,7 @@
 - 方針: Markdownはナラティブとして維持し、関係・状態・制約・出典だけをYAMLへ構造化する
 - Knowledge YAML: [別タスク](20260713_1647_whub-knowledge-yaml.md)で用語・関係・運用規約・制約・例外を安定IDで保持する
 - Task YAML: Goal・Task・Phase・Step・依存・優先度・受け入れ条件を保持する
-- Workflow YAML: backlogからの昇格・承認・差し戻し・計画変更・完了などwhubの運用規則を保持する
+- Workflow YAML: [別タスク](20260713_2236_whub-task-planning-workflow-yaml.md)で現行task-planningを代替する手順・承認・状態遷移・記録を定義する
 - State YAML: Task・Phase・Stepの現在状態、検証結果、証跡、待機理由を保持する
 - Execution Graph: Task YAMLの依存からNode・Edge・循環・`actionable`・未完了依存を生成し、手書きSSOTにしない
 - FOCUS.md: Knowledge・Task・Workflow・StateからProjectごとの現在地を示す集約ビューとして生成する
@@ -42,7 +42,7 @@
 ## Phase 2: 入出力YAML雛形
 - [x] Knowledge YAMLの用語・関係・運用規約・制約・例外・安定IDを[別タスク](20260713_1647_whub-knowledge-yaml.md)で定義する
 - [ ] Task YAMLへGoal・Task・Phase・Step・依存・優先度・受け入れ条件の雛形を定義する
-- [ ] Workflow YAMLへ昇格・承認・差し戻し・計画変更・完了規則の雛形を定義する
+- [x] task-planningを代替するWorkflow YAMLの定義と検証を[別タスク](20260713_2236_whub-task-planning-workflow-yaml.md)へ分離する
 - [ ] State YAMLへ現在状態・検証結果・証跡・待機理由の雛形を定義する
 - [ ] Execution GraphへNode・Edge・循環・`actionable`・未完了依存の出力形式を定義する
 

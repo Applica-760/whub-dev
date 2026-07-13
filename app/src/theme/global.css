@@ -1,6 +1,6 @@
 :root {
-  background: #f2f2f7;
-  color: #1c1c1e;
+  background: var(--whub-color-page-background);
+  color: var(--whub-color-text);
   font-synthesis: none;
 }
 
@@ -17,8 +17,13 @@ textarea {
 }
 
 .whub-header {
-  background: #e5e5ea;
-  border-bottom: 1px solid #c7c7cc;
+  background: var(--whub-color-secondary-background);
+  border-bottom: 1px solid var(--whub-color-border);
+}
+
+.whub-main {
+  background: var(--whub-color-page-background);
+  min-height: 100vh;
 }
 
 .whub-tabs {
@@ -33,7 +38,7 @@ textarea {
   border: 1px solid transparent;
   border-bottom: 0;
   border-radius: 10px 10px 0 0;
-  color: #636366;
+  color: var(--whub-color-text-muted);
   display: flex;
   font-weight: 600;
   height: 38px;
@@ -46,9 +51,9 @@ textarea {
 }
 
 .whub-tab[data-active='true'] {
-  background: #f2f2f7;
-  border-color: #c7c7cc;
-  color: #1c1c1e;
+  background: var(--whub-color-page-background);
+  border-color: var(--whub-color-border);
+  color: var(--whub-color-text);
   margin-bottom: -1px;
   position: relative;
   z-index: 1;
@@ -129,7 +134,7 @@ textarea {
 .md-view h1,
 .md-view h2,
 .md-view h3 {
-  color: #1c1c1e;
+  color: var(--whub-color-text);
   line-height: 1.25;
   margin: 1.5rem 0 0.75rem;
 }
@@ -152,11 +157,11 @@ textarea {
 }
 
 .md-view a {
-  color: #007aff;
+  color: var(--whub-color-link);
 }
 
 .md-view code {
-  background: #e5e5ea;
+  background: var(--whub-color-secondary-background);
   border-radius: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.9em;
@@ -164,9 +169,9 @@ textarea {
 }
 
 .md-view pre {
-  background: #1c1c1e;
+  background: var(--whub-color-code-block-background);
   border-radius: 8px;
-  color: #f2f2f7;
+  color: var(--whub-color-code-block-text);
   overflow-x: auto;
   padding: 0.9rem;
 }
@@ -176,6 +181,10 @@ textarea {
   padding: 0;
 }
 
+.grouped-list-row[data-selected] {
+  background: var(--mantine-color-blue-light);
+}
+
 .vault-tree-node {
   border-radius: 6px;
   cursor: pointer;
@@ -183,15 +192,15 @@ textarea {
 }
 
 .vault-tree-node:hover {
-  background: #ececf0;
+  background: var(--whub-color-interactive-hover);
 }
 
 .vault-tree-node[data-selected] {
-  background: var(--mantine-color-blue-0);
+  background: var(--mantine-color-blue-light);
 }
 
 .vault-tree-node[data-selected] .mantine-Text-root {
-  color: var(--mantine-color-blue-7);
+  color: var(--mantine-color-blue-light-color);
   font-weight: 600;
 }
 
@@ -199,8 +208,16 @@ textarea {
   flex-shrink: 0;
 }
 
+.vault-tree-folder-icon {
+  color: var(--mantine-color-blue-text);
+}
+
+.vault-tree-file-icon {
+  color: var(--mantine-color-dimmed);
+}
+
 .vault-tree-chevron {
-  color: #8e8e93;
+  color: var(--whub-color-text-subtle);
   transition: transform 0.15s ease;
 }
 
@@ -209,9 +226,9 @@ textarea {
 }
 
 .backlog-appended {
-  color: #8e8e93;
+  color: var(--whub-color-text-subtle);
 }
 
 .backlog-appended a {
-  color: #8e8e93;
+  color: var(--whub-color-text-subtle);
 }

@@ -52,7 +52,8 @@ export function GroupedListRow({
     <>
       <Group
         align="center"
-        bg={selected ? 'blue.0' : undefined}
+        className="grouped-list-row"
+        data-selected={selected || undefined}
         gap="sm"
         justify="space-between"
         px="md"

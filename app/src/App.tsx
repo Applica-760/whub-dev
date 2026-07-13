@@ -51,7 +51,7 @@ export function App() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Main style={{ background: '#f2f2f7', minHeight: '100vh' }}>
+      <AppShell.Main className="whub-main">
         <Suspense
           fallback={
             <Center pt="xl">

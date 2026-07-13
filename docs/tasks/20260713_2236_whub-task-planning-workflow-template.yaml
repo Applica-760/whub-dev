@@ -1,0 +1,98 @@
+schema_version: 1
+
+workflow:
+  id: WF-001
+  name: task-planning
+  initial_state: STA-001
+  terminal_states: [STA-004, STA-005]
+
+states:
+  - id: STA-001
+    name: draft
+    definition: 目的と計画案を作成している
+
+  - id: STA-002
+    name: awaiting_approval
+    definition: 計画案または計画変更のユーザー承認を待っている
+
+  - id: STA-003
+    name: in_progress
+    definition: 承認済み計画を実行している
+
+  - id: STA-004
+    name: completed
+    definition: 全Stepと受け入れ条件を検証して完了した
+
+  - id: STA-005
+    name: cancelled
+    definition: 理由を記録して中止した
+
+guards:
+  - id: GRD-001
+    statement: 目的とPhase・Step形式の計画案が存在する
+
+  - id: GRD-002
+    statement: 計画変更の理由が記録されている
+
+  - id: GRD-003
+    statement: 全Stepがcompletedまたはskippedである
+
+  - id: GRD-004
+    statement: 全受け入れ条件の検証結果と証跡が記録されている
+
+  - id: GRD-005
+    statement: 中止理由が記録されている
+
+actions:
+  - id: ACT-001
+    statement: ユーザー承認と対象plan revisionを記録する
+
+  - id: ACT-002
+    statement: 実行を停止して計画変更要求を記録する
+
+  - id: ACT-003
+    statement: Taskの結果と完了証跡を記録する
+
+  - id: ACT-004
+    statement: 中止理由とユーザー判断を記録する
+
+transitions:
+  - id: TRN-001
+    trigger: submit_plan
+    actor: agent
+    from: STA-001
+    to: STA-002
+    guards: [GRD-001]
+    actions: []
+
+  - id: TRN-002
+    trigger: approve_plan
+    actor: user
+    from: STA-002
+    to: STA-003
+    guards: []
+    actions: [ACT-001]
+
+  - id: TRN-003
+    trigger: request_plan_change
+    actor: agent
+    from: STA-003
+    to: STA-002
+    guards: [GRD-002]
+    actions: [ACT-002]
+
+  - id: TRN-004
+    trigger: complete_task
+    actor: agent
+    from: STA-003
+    to: STA-004
+    guards: [GRD-003, GRD-004]
+    actions: [ACT-003]
+
+  - id: TRN-005
+    trigger: cancel_task
+    actor: user
+    from: [STA-001, STA-002, STA-003]
+    to: STA-005
+    guards: [GRD-005]
+    actions: [ACT-004]
