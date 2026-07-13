@@ -51,19 +51,12 @@ def _resolve_resource(
     return resolved_project.resource
 
 
-def _load_path(path: Path) -> Knowledge:
-    try:
-        return load_knowledge(path)
-    except KnowledgeError as error:
-        raise ServiceError(str(error)) from error
-
-
 def _load_local(
     resource: SymlinkResource,
     data: None,
 ) -> Knowledge:
     del data
-    return _load_path(Path(resource.source) / KNOWLEDGE_RELATIVE_PATH)
+    return load_knowledge(Path(resource.source) / KNOWLEDGE_RELATIVE_PATH)
 
 
 def _load_remote(
@@ -74,13 +67,16 @@ def _load_remote(
     root = resource._resolved_workspace_path
     if not root.is_dir():
         raise ServiceError(f"remote workspace path is not available: {root}")
-    return _load_path(root / KNOWLEDGE_RELATIVE_PATH)
+    return load_knowledge(root / KNOWLEDGE_RELATIVE_PATH)
 
 
 def load_project_knowledge(manifest: Manifest, project: str) -> Knowledge:
     """Load a project's fixed-path Knowledge YAML."""
     target = TargetItem(_resolve_resource(manifest, project), None)
-    return on_targets([target], local=_load_local, remote=_load_remote)[0]
+    try:
+        return on_targets([target], local=_load_local, remote=_load_remote)[0]
+    except KnowledgeError as error:
+        raise ServiceError(str(error)) from error
 
 
 def _matches(term: str, *values: str | None) -> bool:
@@ -93,78 +89,54 @@ def query_knowledge(knowledge: Knowledge, term: str) -> KnowledgeQueryResult:
     if not normalized:
         raise ServiceError("knowledge query term is required")
 
-    definitions_by_id = {
-        definition.id: definition for definition in knowledge.definitions
-    }
-    policies_by_id = {policy.id: policy for policy in knowledge.policies}
-
     definitions = [
         definition
         for definition in knowledge.definitions
         if _matches(
             normalized,
             definition.id,
+            definition.ref,
             definition.name,
             definition.definition,
         )
     ]
 
-    relations = []
-    for relation in knowledge.relations:
-        subject = definitions_by_id.get(relation.subject)
-        object_ = definitions_by_id.get(relation.object)
+    matched_definition_ids = {definition.id for definition in definitions}
+    relations = [
+        relation
+        for relation in knowledge.relations
         if _matches(
             normalized,
             relation.id,
+            relation.ref,
             relation.subject,
-            subject.name if subject is not None else None,
-            subject.definition if subject is not None else None,
             relation.predicate,
             relation.object,
-            object_.name if object_ is not None else None,
-            object_.definition if object_ is not None else None,
             relation.cardinality,
-        ):
-            relations.append(relation)
-
-    related_definition_ids = {
-        entry_id
-        for relation in relations
-        for entry_id in (relation.subject, relation.object)
-    }
-    matched_definition_ids = {
-        definition.id for definition in definitions
-    } | related_definition_ids
-    definitions = [
-        definition
-        for definition in knowledge.definitions
-        if definition.id in matched_definition_ids
+        )
+        or relation.subject in matched_definition_ids
+        or relation.object in matched_definition_ids
     ]
 
     policies = [
         policy
         for policy in knowledge.policies
-        if _matches(normalized, policy.id, policy.statement)
+        if _matches(normalized, policy.id, policy.ref, policy.statement)
     ]
 
-    exceptions = []
-    for exception in knowledge.exceptions:
-        policy = policies_by_id.get(exception.exception_to)
+    matched_policy_ids = {policy.id for policy in policies}
+    exceptions = [
+        exception
+        for exception in knowledge.exceptions
         if _matches(
             normalized,
             exception.id,
+            exception.ref,
             exception.exception_to,
-            policy.statement if policy is not None else None,
             exception.condition,
             exception.statement,
-        ):
-            exceptions.append(exception)
-
-    matched_policy_ids = {policy.id for policy in policies} | {
-        exception.exception_to for exception in exceptions
-    }
-    policies = [
-        policy for policy in knowledge.policies if policy.id in matched_policy_ids
+        )
+        or exception.exception_to in matched_policy_ids
     ]
 
     return KnowledgeQueryResult(definitions, relations, policies, exceptions)

@@ -19,30 +19,38 @@ class KnowledgeModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
-class KnowledgeDefinition(KnowledgeModel):
+class KnowledgeEntry(KnowledgeModel):
+    id: str
+
+
+class KnowledgeDefinition(KnowledgeEntry):
     id: str = Field(pattern=r"^DEF-[0-9]+$")
     name: str = Field(min_length=1)
     definition: str = Field(min_length=1)
+    ref: str | None = Field(default=None, min_length=1)
 
 
-class KnowledgeRelation(KnowledgeModel):
+class KnowledgeRelation(KnowledgeEntry):
     id: str = Field(pattern=r"^REL-[0-9]+$")
     subject: str = Field(pattern=_KNOWLEDGE_ID_PATTERN)
     predicate: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     object: str = Field(pattern=_KNOWLEDGE_ID_PATTERN)
     cardinality: str | None = Field(default=None, min_length=1)
+    ref: str | None = Field(default=None, min_length=1)
 
 
-class KnowledgePolicy(KnowledgeModel):
+class KnowledgePolicy(KnowledgeEntry):
     id: str = Field(pattern=r"^POL-[0-9]+$")
     statement: str = Field(min_length=1)
+    ref: str | None = Field(default=None, min_length=1)
 
 
-class KnowledgeException(KnowledgeModel):
+class KnowledgeException(KnowledgeEntry):
     id: str = Field(pattern=r"^EXC-[0-9]+$")
     exception_to: str = Field(pattern=r"^POL-[0-9]+$")
     condition: str = Field(min_length=1)
     statement: str = Field(min_length=1)
+    ref: str | None = Field(default=None, min_length=1)
 
 
 class Knowledge(KnowledgeModel):

@@ -7,6 +7,8 @@
 - 記録範囲: 確定済みの現在の事実・規約だけを記録し、検討中の案はtask mdやbacklogに残す
 - 背景: 必要になった項目だけ1行の`rationale`を追加し、詳細な比較・意思決定はADRへ昇格する
 - ID: `DEF-*`・`REL-*`・`POL-*`・`EXC-*`の連番を一意に保ち、廃止後も再利用しない
+- 用語境界: `whub`はMacBook上のCLI、`workspace-hub`はそのproject・repositoryとして分離する
+- ADR参照: ADRと直接結び付く項目だけ任意の`ref`を持つ
 - Workflow境界: 運用規約は`POL-*`として保持し、将来の実行可能なWorkflow YAMLはKnowledge IDを参照する
 - 実装: Pydanticモデルと`whub knowledge check`でYAML構造・ID・参照を検証する
 - 配置: 各projectの`docs/knowledge.yaml`を固定パスとし、CLIはPATHではなくTab補完可能なproject名を受け取る
@@ -33,11 +35,15 @@
 - [x] checkは件数要約、queryはAIが読めるYAMLを出力し、失敗をClick例外へ変換する
 
 ### Phase 4: 確定ナレッジの全量移行
-- [ ] `whub-concepts.md`の全確定事項を`DEF-*`・`REL-*`・`POL-*`・`EXC-*`へ移行する
-- [ ] `workflow.md`の全確定事項を主に`POL-*`として移行する
-- [ ] 長い意思決定はADR参照へ分離し、検討中の記述をKnowledge YAMLへ混入させない
+- [x] 現行4種の既存フィールドだけを使い、任意フィールドは必要な項目に限る
+- [x] 分類・記述に迷う項目は移行せず保留し、ユーザー判断を得る
+- [x] Phase 4では`whub-concepts.md`と`workflow.md`を削除・縮約しない
+- [x] `whub-concepts.md`の全確定事項を`DEF-*`・`REL-*`・`POL-*`・`EXC-*`へ移行する
+- [x] `workflow.md`の全確定事項を主に`POL-*`として移行する
+- [x] 長い意思決定はADR参照へ分離し、検討中の記述をKnowledge YAMLへ混入させない
 
 ### Phase 5: SSOT切替と検証
+- [ ] 元Markdown先頭のSSOTコメントをKnowledge YAMLへ移し、参照先をKnowledgeへ切り替える
 - [ ] 旧MarkdownをKnowledge YAMLへの薄い導線へ変更し、同一事実の二重管理を解消する
 - [ ] 親タスクのKnowledge YAML項目を本タスクへの参照に切り替える
 - [ ] `whub knowledge check`で実データを検証する

@@ -8,7 +8,8 @@
 - `resource`: `project`が持つ任意の接続先データリソース
     - `remote`: `resource`が持つ属性で、リモートのコンピュータに格納されている`project`データを指す。sshfs mountでwhub以下に接続し（参照・編集）、実行はSSHで行う
     - `local`: `resource`が持つ属性で、このコンピュータにある`project`データを指す。シンボリックリンクでwhub以下に接続する
-- `workspace-hub`: whub自体の`project`。ただしmount/link対象ではないため、現時点では`resource`ではない
+- `whub`: MacBook上でlocal・remoteのprojectを統合管理するCLI
+- `workspace-hub`: whubのsourceを持つ`project`兼repository。mount/link対象ではないため、現時点では`resource`ではない
 - `vault`: 私の固有記述（知識・信念・whub運用データ）を集約するprivateな貯蔵庫repo。知識プレーン（daily/inbox/mind/literature）・派生文書プレーン（recruit）・機械プレーン（manifest・todos・各種ログ）を持つ。whubの自己データは原則vaultに置き、workspace-hubの`.whub/config.toml`にdata_dirとして登録する（ADR-0008）
 - `manifest`: `project`、`resource`、接続情報を定義する設定ファイル
 - `target`: `resource`を操作するための実行対象。現時点では`local`/`remote`の呼び分け層を指す
@@ -65,7 +66,8 @@
 - data_dirは`WHUB_DATA_DIR`があれば優先し、通常は`<workspace-hub>/.whub/config.toml`の`data_dir`をSSOTとする
 
 # CLI振る舞いポリシー（どのような挙動を想定するか）
-- とにかく`whub`を特別扱いしない。ただし`boot`は例外。
+- `workspace-hub`はmount/link/cd対象の`resource`を持たない
+- project内容を参照・編集する操作では、`workspace-hub`のrepository rootを合成`local target`として解決してよい
 - `cd <project>`で紐づく`resource`がない場合は移動先なしを通知する（whubも）
 - `status`は接続状態、ヘルスチェック、git差分確認に責務を絞る
 - `status`は`resource`を持つ全`project`を対象にする

@@ -9,6 +9,115 @@ definitions:
     name: resource
     definition: projectが持つ任意の接続先データリソース
 
+  - id: DEF-003
+    name: remote
+    definition: リモートコンピュータに格納されたprojectデータを表すresource属性で、sshfs mountで参照・編集しSSHで実行する
+
+  - id: DEF-004
+    name: local
+    definition: このコンピュータにあるprojectデータを表すresource属性で、シンボリックリンクで参照する
+
+  - id: DEF-005
+    name: workspace-hub
+    definition: whubのsourceを持つproject兼repositoryであり、mount・link対象のresourceではない
+
+  - id: DEF-006
+    name: vault
+    definition: 固有記述とwhub運用データを集約するprivateな貯蔵庫repoで、知識・派生文書・機械データの各プレーンを持ちwhubの自己データをdata_dirとして保持する
+    ref: docs/ADR/0008-tool-data-plane-separation.md
+
+  - id: DEF-007
+    name: manifest
+    definition: project・resource・接続情報を定義する設定ファイル
+
+  - id: DEF-008
+    name: target
+    definition: resourceと処理データを受け取り、local・remoteごとの関数を呼び分ける実行境界
+
+  - id: DEF-009
+    name: backlog
+    definition: projectごとの未整理入力・構想・作業候補を置くドキュメント
+
+  - id: DEF-010
+    name: todo
+    definition: project紐付けを任意とする実行可能な単発アクション
+
+  - id: DEF-011
+    name: whub status
+    definition: 接続状態とヘルスチェックを確認するコマンド
+
+  - id: DEF-012
+    name: whub cd
+    definition: projectまたはresourceへ移動し、localではパス移動、remoteではSSH接続するコマンド
+
+  - id: DEF-013
+    name: whub link
+    definition: symlink resourceをworkspace-hub配下へ接続するコマンド
+
+  - id: DEF-014
+    name: whub todo
+    definition: project横断のtodoを管理するコマンド
+
+  - id: DEF-015
+    name: whub boot
+    definition: Agent設定・Skill・CodeGraph初期化を各resourceへ配布するコマンド
+
+  - id: DEF-016
+    name: whub backlog
+    definition: projectごとのbacklogへ未整理メモを追記するコマンド
+
+  - id: DEF-017
+    name: whub app
+    definition: ローカルWeb appサーバーを常駐起動・停止するコマンド
+
+  - id: DEF-018
+    name: whub mount
+    definition: remote resourceをsshfsでwhubツリーへ接続するコマンド
+
+  - id: DEF-019
+    name: whub unmount
+    definition: remote resourceのsshfs接続を解除するコマンド
+
+  - id: DEF-020
+    name: whub run
+    definition: remoteでワンショット実行するコマンド
+
+  - id: DEF-021
+    name: whub fetch
+    definition: remoteのファイルをdata_dirのdownloadsへ取得するコマンド
+
+  - id: DEF-022
+    name: whub vscode
+    definition: symlinkとmount対象をVS Codeの走査対象から除外する設定を生成するコマンド
+
+  - id: DEF-023
+    name: inbox
+    definition: project非依存の思いつき・思想・外部情報・一般ナレッジの疑問を置く場所
+
+  - id: DEF-024
+    name: task-planning
+    definition: 個別作業の実行計画と作業ログを記録する運用
+
+  - id: DEF-025
+    name: FOCUS.md
+    definition: whubから全projectの現在地を得て次の注力先を相談するための集約ビュー
+
+  - id: DEF-026
+    name: discourse
+    definition: 外部ソースを取得・解説しliteratureへ記録するSkill
+
+  - id: DEF-027
+    name: refile
+    definition: inbox内のノートを配置提案・分割・移動するSkill
+
+  - id: DEF-028
+    name: execution-spec
+    definition: 実装前に仕様を固める文書を作成するSkill
+
+  - id: DEF-029
+    name: whub
+    definition: MacBook上でlocal・remoteのprojectを統合管理するCLI
+
 relations:
   - id: REL-001
     subject: DEF-001
@@ -16,9 +125,198 @@ relations:
     object: DEF-002
     cardinality: "0..1"
 
+  - id: REL-002
+    subject: DEF-003
+    predicate: is_a
+    object: DEF-002
+
+  - id: REL-003
+    subject: DEF-004
+    predicate: is_a
+    object: DEF-002
+
+  - id: REL-004
+    subject: DEF-005
+    predicate: is_a
+    object: DEF-001
+
+  - id: REL-005
+    subject: DEF-007
+    predicate: defines
+    object: DEF-001
+
+  - id: REL-006
+    subject: DEF-007
+    predicate: defines
+    object: DEF-002
+
+  - id: REL-007
+    subject: DEF-008
+    predicate: operates
+    object: DEF-002
+
+  - id: REL-008
+    subject: DEF-023
+    predicate: promotes_to
+    object: DEF-010
+
+  - id: REL-009
+    subject: DEF-009
+    predicate: promotes_to
+    object: DEF-024
+
+  - id: REL-010
+    subject: DEF-009
+    predicate: promotes_to
+    object: DEF-028
+
 policies:
   - id: POL-001
     statement: command callbackはresourceがlocalかremoteかを意識せずtargetへ処理を委譲する
+
+  - id: POL-002
+    statement: 編集・コード確認・project横断のコンテキスト参照はmountで行う
+
+  - id: POL-003
+    statement: 走査系・長時間処理はremote側で実行し、ワンショットはrun、作業セッションはcdのtmuxを使う
+
+  - id: POL-004
+    statement: 大容量ファイルの手元確認はfetchで逐次取得する
+
+  - id: POL-005
+    statement: 参照と実行を分離してSSHFSのレイテンシ弱点と双方向同期の競合を避ける
+
+  - id: POL-006
+    statement: projectの必須フィールドはnameだけとする
+
+  - id: POL-007
+    statement: resourceはproject直下に定義する
+
+  - id: POL-008
+    statement: resourceのパス系フィールドはpathへ寄せずworkspace_pathやsourceなど用途が分かる名前を使う
+
+  - id: POL-009
+    statement: 全resourceはwhubツリー上の位置を表すworkspace_pathを必須で持つ
+
+  - id: POL-010
+    statement: CLIからは操作対象resourceがremoteかlocalかを意識せず操作できるようにする
+
+  - id: POL-011
+    statement: targetはresourceと処理データの列を受け取りlocal・remoteごとの関数を呼び分ける
+
+  - id: POL-012
+    statement: Webでも使うドメイン処理はservicesに置きCLIとWeb adapterから呼ぶ
+
+  - id: POL-013
+    statement: CLIとWebに依存しない下位層はcoreに置く
+
+  - id: POL-014
+    statement: 各commandはtargetの入力インターフェースへ処理対象を整形する
+
+  - id: POL-015
+    statement: core/target.pyは入力インターフェースへ整形する汎用ヘルパーを提供する
+
+  - id: POL-016
+    statement: core/target.pyはClickに依存せずtarget解決・型不一致をTargetErrorで通知する
+
+  - id: POL-017
+    statement: targetを使うserviceはTargetErrorをServiceErrorへ変換しCLI・Web adapterは各プロトコル固有例外へ変換する
+
+  - id: POL-018
+    statement: core/remote.pyはSSH・rsync・sshfsの低レイヤーを担いprojectやbacklogの意味を持たない
+
+  - id: POL-019
+    statement: core/health.pyはsymlink・mountの健全性検査を集約しremoteの健全性はstatusのhost単位probeが担う
+
+  - id: POL-020
+    statement: core/tmux.pyはセッション命名規約とremote shell snippetの組み立てを担う
+
+  - id: POL-021
+    statement: core/paths.pyはwhub root・data_dir・manifest・todo・downloadsのパス解決を一元化する
+
+  - id: POL-022
+    statement: utilsには複数commandで共有する薄い補助処理だけを置きproject・resourceのドメイン判断を持たせない
+
+  - id: POL-023
+    statement: whubコードではlambda式を使わず名前付き関数または明示的な記述を使う
+
+  - id: POL-024
+    statement: whub rootはWHUB_ROOTを優先し通常はインストール済みpackage位置から導出する
+
+  - id: POL-025
+    statement: data_dirはWHUB_DATA_DIRを優先し通常は.whub/config.tomlのdata_dirをSSOTとする
+
+  - id: POL-026
+    statement: cdでresourceのないprojectを指定した場合は移動先なしを通知する
+
+  - id: POL-027
+    statement: statusは接続状態・ヘルスチェック・git差分確認に責務を絞る
+
+  - id: POL-028
+    statement: statusはresourceを持つ全projectを対象にする
+
+  - id: POL-029
+    statement: mountは無引数でmountが有効なresourceだけを対象にし名指し・全件指定ではmount設定を無視する
+
+  - id: POL-030
+    statement: todoはproject紐付けを任意とする実行可能な単発アクションだけを管理し未整理入力・作業候補はbacklogに置く
+
+  - id: POL-031
+    statement: backlogは各projectのdocs/backlog.mdへ未整理メモを追記する
+
+  - id: POL-032
+    statement: appは.whub/app.pidで常駐serverを管理し無引数で起動、app downで停止する
+
+  - id: POL-033
+    statement: fetchはworkspace-hub相対パスからresourceを解決しdownloads直下へ単一ファイルを同名上書きで保存する
+
+  - id: POL-034
+    statement: MacBook上のwhubをlocal・自宅Linux・supercomputerへ接続する唯一のインターフェースとする
+
+  - id: POL-035
+    statement: whubはMacBook上だけで動作するCLIとする
+
+  - id: POL-036
+    statement: Mac側のwhubで足り配布コストに見合わないためwhubはremote先へインストール・配布しない
+
+  - id: POL-037
+    statement: remote resourceへのcd先ではwhub commandを利用可能にしない
+
+  - id: POL-038
+    statement: Mac内ではlocal resourceへ移動した先を含むどのdirectoryからでもwhubを実行可能にする
+
+  - id: POL-039
+    statement: inboxの入力はtodoまたはvault知識プレーンへ昇格する
+
+  - id: POL-040
+    statement: backlogの入力はtask-planning・execution-spec・ADRへ昇格する
+
+  - id: POL-041
+    statement: 外部ソースはdiscourseを経由してliterature/log.jsonlとliterature/sourcesへ記録する
+
+  - id: POL-042
+    statement: backlogとtask-planningの開始・完了はFOCUS.mdの更新材料にする
+
+  - id: POL-043
+    statement: FOCUS.mdはprojectごとに1つの現在状態サマリーを持つ
+
+  - id: POL-044
+    statement: 詳細な進捗や構想はbacklogとtask mdに置きFOCUS.mdは要約に留める
+
+  - id: POL-045
+    statement: FOCUS.mdを材料にAI Agentへ次に着手すべきことを相談する
+
+  - id: POL-046
+    statement: backlog templateなどWebでも使う処理はservicesに置く
+
+  - id: POL-047
+    statement: statusの表示やbootの配布手順などCLI固有処理は各commandに置く
+
+  - id: POL-048
+    statement: workspace-hubはmount・link・cd対象のresourceを持たない
+
+  - id: POL-049
+    statement: project内容を参照・編集する操作ではworkspace-hubのrepository rootを合成local targetとして解決してよい
 
 exceptions:
   - id: EXC-001
