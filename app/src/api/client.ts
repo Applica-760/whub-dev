@@ -6,6 +6,8 @@ export type ProjectsResponse =
   paths['/api/projects']['get']['responses'][200]['content']['application/json'];
 export type BacklogResponse =
   paths['/api/backlog/{project}']['get']['responses'][200]['content']['application/json'];
+export type KnowledgeResponse =
+  paths['/api/knowledge/{project}']['get']['responses'][200]['content']['application/json'];
 export type VaultTreeResponse =
   paths['/api/vault/tree']['get']['responses'][200]['content']['application/json'];
 export type VaultNoteResponse =

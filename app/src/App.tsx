@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { NavLink, Route, Routes, useLocation } from 'react-router';
 
 import { InboxPage } from './features/inbox/InboxPage';
+import { KnowledgePage } from './features/knowledge/KnowledgePage';
 import { OverviewPage } from './features/overview/OverviewPage';
 import { ResourceStatusPage } from './features/status/ResourceStatusPage';
 import { TodosPage } from './features/todos/TodosPage';
@@ -19,6 +20,7 @@ const navigation = [
   { label: 'Overview', to: '/' },
   { label: 'Backlog', to: '/backlog' },
   { label: 'Vault', to: '/vault' },
+  { label: 'Knowledge', to: '/knowledge' },
   { label: 'Todo', to: '/todos' },
   { label: 'Inbox', to: '/inbox' },
   { label: 'Status', to: '/status' },
@@ -60,6 +62,7 @@ export function App() {
           <Routes>
             <Route element={<OverviewPage />} path="/" />
             <Route element={<BacklogPage />} path="/backlog" />
+            <Route element={<KnowledgePage />} path="/knowledge" />
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
             <Route element={<InboxPage />} path="/inbox" />

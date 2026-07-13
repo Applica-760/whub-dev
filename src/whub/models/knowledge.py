@@ -32,6 +32,13 @@ class KnowledgeDefinition(KnowledgeEntry):
     ref: str | None = Field(default=None, min_length=1)
 
 
+class KnowledgeRelationType(KnowledgeModel):
+    """Project固有のRelation predicate。"""
+
+    name: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    definition: str = Field(min_length=1)
+
+
 class KnowledgeRelation(KnowledgeEntry):
     """用語同士の関係を表すRELエントリ。"""
 
@@ -70,8 +77,9 @@ class KnowledgeException(KnowledgeEntry):
 
 
 class Knowledge(KnowledgeModel):
-    schema_version: Literal[2]
+    schema_version: Literal[3]
     definitions: list[KnowledgeDefinition]
+    relation_types: list[KnowledgeRelationType]
     relations: list[KnowledgeRelation]
     policies: list[KnowledgePolicy]
     constraints: list[KnowledgeConstraint]
@@ -92,6 +100,25 @@ class Knowledge(KnowledgeModel):
         )
         if duplicates:
             raise ValueError(f"duplicate knowledge ids: {', '.join(duplicates)}")
+
+        relation_type_counts = Counter(item.name for item in self.relation_types)
+        duplicate_relation_types = sorted(
+            name for name, count in relation_type_counts.items() if count > 1
+        )
+        if duplicate_relation_types:
+            raise ValueError(
+                "duplicate relation type names: "
+                f"{', '.join(duplicate_relation_types)}"
+            )
+
+        unknown_predicates = sorted(
+            {relation.predicate for relation in self.relations}
+            - set(relation_type_counts)
+        )
+        if unknown_predicates:
+            raise ValueError(
+                f"unknown relation predicates: {', '.join(unknown_predicates)}"
+            )
 
         known_ids = set(id_counts)
         for relation in self.relations:

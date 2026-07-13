@@ -4,7 +4,7 @@
 1. `WHUB_DATA_DIR`環境変数があれば、`.whub/config.toml`より優先する。
 2. `WHUB_DATA_DIR`がなければ、`WHUB_ROOT/.whub/config.toml`の`data_dir`を使う。
 3. `manifest.yaml`/`todos.yaml`/`downloads`は`data_dir`配下へ解決する。
-4. config欠落・TOML不正・`data_dir`欠落は`ClickException`にする。
+4. config欠落・TOML不正・`data_dir`欠落は`PathError`にする。
 
 検証しないケース:
 1. 環境変数なしでパッケージ位置からworkspace rootを推定する挙動。
@@ -14,9 +14,8 @@ import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import click
 import pytest
-from whub.core.paths import downloads_dir, manifest_path, todo_path, whub_data_dir
+from whub.core.paths import PathError, downloads_dir, manifest_path, todo_path, whub_data_dir
 from whub.tests.helpers import write_config
 
 
@@ -42,11 +41,11 @@ class TestPathsSpec:
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
                 assert whub_data_dir() == Path(data).resolve()
 
-    def test_missing_or_invalid_config_is_click_error(self) -> None:
+    def test_missing_or_invalid_config_is_path_error(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             # ケース4
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
-                with pytest.raises(click.ClickException, match="data_dir is not configured"):
+                with pytest.raises(PathError, match="data_dir is not configured"):
                     whub_data_dir()
 
             # ケース4
@@ -54,11 +53,11 @@ class TestPathsSpec:
             config_dir.mkdir()
             (config_dir / "config.toml").write_text("data_dir = [")
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
-                with pytest.raises(click.ClickException, match="invalid whub config"):
+                with pytest.raises(PathError, match="invalid whub config"):
                     whub_data_dir()
 
             # ケース4
             (config_dir / "config.toml").write_text("other = 'value'\n")
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
-                with pytest.raises(click.ClickException, match="missing data_dir"):
+                with pytest.raises(PathError, match="missing data_dir"):
                     whub_data_dir()

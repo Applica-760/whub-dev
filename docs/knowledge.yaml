@@ -1,4 +1,4 @@
-schema_version: 2
+schema_version: 3
 
 definitions:
   - id: DEF-001
@@ -118,6 +118,22 @@ definitions:
     name: whub
     definition: MacBook上でlocal・remoteのprojectを統合管理するCLI
 
+relation_types:
+  - name: has_resource
+    definition: subjectのprojectがobjectのresourceを持つ
+
+  - name: is_a
+    definition: subjectがobjectの下位概念または具体種である
+
+  - name: defines
+    definition: subjectの定義データがobjectを定義する
+
+  - name: operates
+    definition: subjectがobjectを操作対象とする
+
+  - name: promotes_to
+    definition: subjectに置かれた入力がobjectへ昇格する
+
 relations:
   - id: REL-001
     subject: DEF-001
@@ -171,149 +187,149 @@ relations:
     object: DEF-028
 
 policies:
-  - id: POL-002
+  - id: POL-001
     statement: remote resourceの編集・コード確認・project横断のコンテキスト参照はmountで行う
 
-  - id: POL-003
+  - id: POL-002
     statement: remote resourceの走査系・長時間処理はremote側で実行し、ワンショットはrun、作業セッションはcdのtmuxを使う
 
-  - id: POL-004
+  - id: POL-003
     statement: remote resourceの大容量ファイルをMacBookで確認する場合はfetchで逐次取得する
 
-  - id: POL-005
+  - id: POL-004
     statement: remote resourceでは参照をmount、実行をrunまたはcdに分離し、SSHFSのレイテンシ弱点と双方向同期の競合を避ける
 
-  - id: POL-030
+  - id: POL-005
     statement: 未整理入力・作業候補はtodoではなくbacklogに置く
 
-  - id: POL-034
+  - id: POL-006
     statement: MacBook上のwhubをlocal・自宅Linux・supercomputerへ接続する唯一のインターフェースとして使う
 
-  - id: POL-039
+  - id: POL-007
     statement: inboxの入力はtodoまたはvault知識プレーンへ昇格する
 
-  - id: POL-040
+  - id: POL-008
     statement: backlogの入力はtask-planning・execution-spec・ADRへ昇格する
 
-  - id: POL-041
+  - id: POL-009
     statement: 外部ソースはdiscourseを経由してliterature/log.jsonlとliterature/sourcesへ記録する
 
-  - id: POL-042
+  - id: POL-010
     statement: backlogとtask-planningの開始・完了はFOCUS.mdの更新材料にする
 
-  - id: POL-044
+  - id: POL-011
     statement: 詳細な進捗や構想はbacklogとtask mdに置きFOCUS.mdは要約に留める
 
-  - id: POL-045
+  - id: POL-012
     statement: FOCUS.mdを材料にAI Agentへ次に着手すべきことを相談する
 
-  - id: POL-050
+  - id: POL-013
     statement: whubの用語・責務・CLI設計・運用フロー・Skill判断基準はdocs/knowledge.yamlをSSOTとし、変更時はこのファイルを先に更新する
 
-  - id: POL-051
+  - id: POL-014
     statement: vaultの構造と配置判断はvault/readme.mdをSSOTとする
 
 constraints:
   - id: CON-001
     statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する
 
-  - id: CON-006
+  - id: CON-002
     statement: manifestのprojectで必須とするフィールドはnameだけとする
 
-  - id: CON-007
+  - id: CON-003
     statement: manifestではresourceを独立したtop-level一覧にせず、対応するprojectのresourceフィールド直下に定義する
 
-  - id: CON-008
+  - id: CON-004
     statement: manifestのresource位置はwhubツリー上をworkspace_path、local実体をsource、remote実体をpathとして用途別に表す
 
-  - id: CON-009
+  - id: CON-005
     statement: manifestの全resourceはwhubツリー上の位置を表すworkspace_pathを必須で持つ
 
-  - id: CON-011
+  - id: CON-006
     statement: targetはresourceと処理データの列を受け取りlocal・remoteごとの関数を呼び分ける
 
-  - id: CON-012
+  - id: CON-007
     statement: Webでも使うwhubのドメイン処理はservicesに置きCLIとWeb adapterから呼ぶ
 
-  - id: CON-013
+  - id: CON-008
     statement: whubのCLIとWebに依存しない下位層はcoreに置く
 
-  - id: CON-015
+  - id: CON-009
     statement: core/target.pyはtargetの入力インターフェースへ整形する汎用ヘルパーを提供する
 
-  - id: CON-016
+  - id: CON-010
     statement: core/target.pyはClickに依存せずtarget解決・型不一致をTargetErrorで通知する
 
-  - id: CON-017
+  - id: CON-011
     statement: targetを使うserviceはTargetErrorをServiceErrorへ変換し、CLI・Web adapterは各プロトコル固有例外へ変換する
 
-  - id: CON-018
+  - id: CON-012
     statement: core/remote.pyはSSH・rsync・sshfsの低レイヤーを担いprojectやbacklogの意味を持たない
 
-  - id: CON-019
+  - id: CON-013
     statement: core/health.pyはsymlink・mountの健全性検査を集約し、remoteの健全性はstatusのhost単位probeが担う
 
-  - id: CON-020
+  - id: CON-014
     statement: core/tmux.pyはセッション命名規約とremote shell snippetの組み立てを担う
 
-  - id: CON-021
+  - id: CON-015
     statement: core/paths.pyはwhub root・data_dir・manifest・todo・downloadsのパス解決を一元化する
 
-  - id: CON-022
+  - id: CON-016
     statement: utilsには複数commandで共有する薄い補助処理だけを置きproject・resourceのドメイン判断を持たせない
 
-  - id: CON-024
+  - id: CON-017
     statement: whub rootはWHUB_ROOTを優先し、通常はインストール済みpackage位置から導出する
 
-  - id: CON-025
+  - id: CON-018
     statement: data_dirはWHUB_DATA_DIRを優先し、通常は.whub/config.tomlのdata_dirをSSOTとする
 
-  - id: CON-026
+  - id: CON-019
     statement: whub cdでresourceのないprojectを指定した場合は移動先なしを通知する
 
-  - id: CON-027
+  - id: CON-020
     statement: whub statusは接続状態・ヘルスチェック・git差分確認に責務を絞る
 
-  - id: CON-028
+  - id: CON-021
     statement: whub statusはstatusが有効な全resourceを対象にする
 
-  - id: CON-029
+  - id: CON-022
     statement: whub mountは無引数でmountが有効なresourceだけを対象にし、名指し・全件指定ではmount設定を無視する
 
-  - id: CON-031
+  - id: CON-023
     statement: whub backlogは各projectのdocs/backlog.mdへ未整理メモを追記する
 
-  - id: CON-032
+  - id: CON-024
     statement: whub appは.whub/app.pidで常駐serverを管理し、無引数で起動、app downで停止する
 
-  - id: CON-033
+  - id: CON-025
     statement: whub fetchはworkspace-hub相対パスからresourceを解決し、downloads直下へ単一ファイルを同名上書きで保存する
 
-  - id: CON-035
+  - id: CON-026
     statement: whubはMacBook上だけで動作するCLIとする
 
-  - id: CON-036
+  - id: CON-027
     statement: Mac側のwhubで足り配布コストに見合わないため、whubはremote先へインストール・配布しない
 
-  - id: CON-037
+  - id: CON-028
     statement: remote resourceへのwhub cd接続先ではwhub commandを利用可能にしない
 
-  - id: CON-038
+  - id: CON-029
     statement: Mac内ではlocal resourceへ移動した先を含むどのdirectoryからでもwhubを実行可能にする
 
-  - id: CON-043
+  - id: CON-030
     statement: FOCUS.mdはprojectごとに1つの現在状態サマリーを持つ
 
-  - id: CON-046
+  - id: CON-031
     statement: backlogの読み書きなどWebでも使う処理はservicesに置く
 
-  - id: CON-047
+  - id: CON-032
     statement: statusの表示やbootの配布手順などCLI固有処理は各commandに置く
 
-  - id: CON-048
+  - id: CON-033
     statement: workspace-hubはmount・link・cd対象のresourceを持たない
 
-  - id: CON-049
+  - id: CON-034
     statement: project内容を参照・編集する操作ではworkspace-hubのrepository rootを合成local targetとして解決できる
 
 exceptions: []

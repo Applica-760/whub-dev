@@ -35,6 +35,7 @@ def check(ctx: click.Context, project: str) -> None:
     click.echo(
         f"valid {project}: "
         f"{len(loaded.definitions)} definitions, "
+        f"{len(loaded.relation_types)} relation types, "
         f"{len(loaded.relations)} relations, "
         f"{len(loaded.policies)} policies, "
         f"{len(loaded.constraints)} constraints, "
@@ -45,6 +46,7 @@ def check(ctx: click.Context, project: str) -> None:
 def _dump_result(result: KnowledgeQueryResult) -> str:
     groups = (
         ("definitions", result.definitions),
+        ("relation_types", result.relation_types),
         ("relations", result.relations),
         ("policies", result.policies),
         ("constraints", result.constraints),

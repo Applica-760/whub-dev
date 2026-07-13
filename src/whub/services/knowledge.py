@@ -13,13 +13,14 @@ from whub.models import (
     KnowledgeException,
     KnowledgePolicy,
     KnowledgeRelation,
+    KnowledgeRelationType,
     Manifest,
     RemoteResource,
     SymlinkResource,
     load_knowledge,
     workspace_hub_resource,
 )
-from whub.services.errors import ServiceError
+from whub.services.errors import NotFoundError, ServiceError
 
 
 KNOWLEDGE_RELATIVE_PATH = Path("docs/knowledge.yaml")
@@ -28,6 +29,7 @@ KNOWLEDGE_RELATIVE_PATH = Path("docs/knowledge.yaml")
 @dataclass(frozen=True)
 class KnowledgeQueryResult:
     definitions: list[KnowledgeDefinition]
+    relation_types: list[KnowledgeRelationType]
     relations: list[KnowledgeRelation]
     policies: list[KnowledgePolicy]
     constraints: list[KnowledgeConstraint]
@@ -37,12 +39,19 @@ class KnowledgeQueryResult:
         return not any(
             (
                 self.definitions,
+                self.relation_types,
                 self.relations,
                 self.policies,
                 self.constraints,
                 self.exceptions,
             )
         )
+
+
+def _load_path(path: Path) -> Knowledge:
+    if not path.is_file():
+        raise NotFoundError(f"knowledge file not found: {path}")
+    return load_knowledge(path)
 
 
 def _resolve_resource(
@@ -64,7 +73,7 @@ def _load_local(
     data: None,
 ) -> Knowledge:
     del data
-    return load_knowledge(Path(resource.source) / KNOWLEDGE_RELATIVE_PATH)
+    return _load_path(Path(resource.source) / KNOWLEDGE_RELATIVE_PATH)
 
 
 def _load_remote(
@@ -75,7 +84,7 @@ def _load_remote(
     root = resource._resolved_workspace_path
     if not root.is_dir():
         raise ServiceError(f"remote workspace path is not available: {root}")
-    return load_knowledge(root / KNOWLEDGE_RELATIVE_PATH)
+    return _load_path(root / KNOWLEDGE_RELATIVE_PATH)
 
 
 def load_project_knowledge(manifest: Manifest, project: str) -> Knowledge:
@@ -110,6 +119,12 @@ def query_knowledge(knowledge: Knowledge, term: str) -> KnowledgeQueryResult:
     ]
 
     matched_definition_ids = {definition.id for definition in definitions}
+    relation_types = [
+        relation_type
+        for relation_type in knowledge.relation_types
+        if _matches(normalized, relation_type.name, relation_type.definition)
+    ]
+    matched_relation_type_names = {item.name for item in relation_types}
     relations = [
         relation
         for relation in knowledge.relations
@@ -124,6 +139,14 @@ def query_knowledge(knowledge: Knowledge, term: str) -> KnowledgeQueryResult:
         )
         or relation.subject in matched_definition_ids
         or relation.object in matched_definition_ids
+        or relation.predicate in matched_relation_type_names
+    ]
+    matched_relation_predicates = {relation.predicate for relation in relations}
+    relation_types = [
+        relation_type
+        for relation_type in knowledge.relation_types
+        if relation_type.name in matched_relation_type_names
+        or relation_type.name in matched_relation_predicates
     ]
 
     policies = [
@@ -158,6 +181,7 @@ def query_knowledge(knowledge: Knowledge, term: str) -> KnowledgeQueryResult:
 
     return KnowledgeQueryResult(
         definitions,
+        relation_types,
         relations,
         policies,
         constraints,
