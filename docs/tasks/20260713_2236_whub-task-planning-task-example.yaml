@@ -3,6 +3,7 @@ schema_version: 1
 task:
   id: TASK-001
   workflow: WF-001
+  state: awaiting_approval
   title: READMEへ開発環境セットアップ手順を追加する
   objective: 新規参加者がREADMEだけでテストを実行できるようにする
   assumptions:
@@ -15,53 +16,30 @@ decisions: []
 
 plan:
   revision: 1
+  acceptance:
+    - id: ACC-001
+      statement: READMEに前提条件・依存導入・テスト手順が記載され、その手順の成功が検証されている
   phases:
     - id: PHA-001
       title: 現行手順の確認
       steps:
-        - id: STP-001
+        - id: STP-001-001
           description: 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する
-          depends_on: []
-          acceptance:
-            - id: ACC-001
-              statement: 必要な前提条件・依存導入コマンド・テストコマンドが特定されている
+          state: pending
 
     - id: PHA-002
       title: README更新と検証
       steps:
-        - id: STP-002
+        - id: STP-002-001
           description: READMEへ開発環境セットアップ手順を追加する
-          depends_on: [STP-001]
-          acceptance:
-            - id: ACC-002
-              statement: READMEに前提条件・依存導入コマンド・テストコマンドが記載されている
+          state: pending
 
-        - id: STP-003
+        - id: STP-002-002
           description: READMEに記載した手順でテストを実行する
-          depends_on: [STP-002]
-          acceptance:
-            - id: ACC-003
-              statement: 記載したコマンドが成功し、結果が証跡として記録されている
-
-state:
-  workflow_state: STA-002
-  waiting_reason: ユーザーによるplan revision 1の承認待ち
-  steps:
-    - step: STP-001
-      status: pending
-    - step: STP-002
-      status: pending
-    - step: STP-003
-      status: pending
+          state: pending
 
 approvals: []
+acceptance_results: []
 change_requests: []
-evidence: []
-
-execution_log:
-  - id: EVT-001
-    transition: TRN-001
-    actor: agent
-    note: plan revision 1を提案した
-
+cancellation: null
 result: null
