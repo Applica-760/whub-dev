@@ -10,6 +10,11 @@
 - SSOT: 確定した構造・現在状態・遷移規則・実行事実はYAML、背景・議論などのナラティブはMarkdownに保持する
 - 導入方針: 新規デモTaskで現行Skillと比較し、代替条件を満たすまで既存task mdとSkillを廃止しない
 - 前提: YAML構造と利用価値を確認するまでPydanticモデル・JSON Schema・DB・Web appを導入しない
+- 移植注意: remote利用を見据え、Modelと判定処理はManifest・resource解決・Mac固有path・Web・Click adapterへの依存を持たせない
+- 移植条件: remote側にPython・Pydantic・PyYAMLと対象packageがあれば判定処理を実行でき、ClickはCLIを同形式で提供する場合だけ必要とする
+- 配置方針: Workflow基盤とtask-planningを`src/whub/wflow`へまとめ、whub固有層に依存しないsub-packageとして配置する
+- CLI配置: Click adapterは`src/whub/commands/wflow.py`、whub固有path解決は必要な場合だけ`src/whub/services/wflow.py`へ置く
+- 依存方向: `commands.wflow`から任意の`services.wflow`を経て`whub.wflow`を呼び、`whub.wflow`はClick・core・servicesに依存しない
 - 要件: ユーザーの目的・前提・方針を入力とし、Agentが情報不足・判断事項とPhase・Step形式の計画案を提示する
 - 要件: ユーザー承認後だけ計画を確定し、現在状態・次に実行可能なStep・実行できない理由・必要な承認を取得できる
 - 要件: 依存Task未完了・承認不足・未定義遷移を拒否し、想定外では実行を停止して理由付き計画変更を再承認する
@@ -18,7 +23,7 @@
 - 分類方針: Knowledge YAMLのDefinition・Relation・Policy・Constraint・Exceptionの意味を要件整理へ転用する
 - 型方針: WorkflowのState・Transitionを専用セクションで表し、条件と記録先はTransition内の`requires`・`records`に置く
 - 例外方針: MVPではExceptionを設けず、skip・cancelは理由と承認を伴う明示的な状態遷移として扱う
-- 雛形: 共通手順を[Workflow定義](20260713_2236_whub-task-planning-workflow-template.yaml)、個別記録を[架空Task](20260713_2236_whub-task-planning-task-example.yaml)へ分離する
+- 雛形: 共通手順を[Workflow定義](../../src/whub/wflow/task_planning/workflow.yaml)、個別記録を[架空Task](20260713_2236_whub-task-planning-task-example.yaml)へ分離する
 - ID: MVPでは参照対象のWorkflow・Task・Phase・Step・受け入れ条件だけに安定IDを付ける
 - Step ID: 親Phaseの番号とPhase内連番を組み合わせた`STP-<phase>-<step>`形式を使う
 - 順序: PhaseとStepは記載順に逐次実行し、前項の完了または承認付きskip後に次項へ進む
@@ -28,6 +33,10 @@
 - 更新: TaskはTransition時、Stepは完了またはskip時だけ近接する`state`を更新する
 - 条件式: `requires`は`field`・`operator`・`value`、記録値は`$plan`・`$input`・`$actor`参照で表す
 - 計画変更: 実行中から承認待ちへ戻し、変更理由と新しいplan revisionへのユーザー承認を記録する
+- デモ結果: revision 1承認後の計画変更・revision 2再承認・全Step完了・受け入れ確認・Task完了を1つの架空Taskで表現できた
+- 表現可能: 計画の存在・変更理由・全Step完了・受け入れ確認・中止理由をTask Transitionの条件にできる
+- 検証課題: 承認前実行・Step順序違反・現在plan revisionと承認revisionの不一致はPhase 4の検証で拒否する
+- 比較結果: Step状態の可読性を維持しつつ、承認・計画変更・受け入れ結果・Task結果をMarkdownより構造化できる
 
 ## 計画
 
@@ -44,14 +53,19 @@
 - [x] Stepの状態を各Step直下へ置き、末尾の状態・結果一覧を持たない方針を決める
 
 ### Phase 3: デモTaskによる評価
-- [] 新規デモTaskをYAMLで計画提案から完了まで進行する
-- [] 承認前実行・依存Task未完了・証跡不足・未承認計画変更を拒否できるか確認する
-- [] 現行task mdと比較し、欠落情報・重複管理・Agentの参照コストを評価する
+- [x] 新規デモTaskを計画承認・計画変更・再承認・検証・完了まで進行する
+- [x] 拒否条件をWorkflowで表現できる範囲とPhase 4で検証すべき不足を特定する
+- [x] 現行task mdと可読性・情報量・構造化範囲を比較する
 
 ### Phase 4: 検証・操作境界の確定
-- [] 参照切れ・到達不能状態・不正遷移・完了条件不足の検証仕様を定義する
+- [x] Workflow・Task YAMLを厳格なPydanticモデルとローダーにし、構造・ID・同一ファイル内参照を検証する
+- [x] ModelをPydantic・PyYAML・標準ライブラリだけに依存させ、whub固有adapterから分離する
+- [x] 雛形2ファイルの読込成功と不正構造の拒否をモデル仕様テストで証明する
+- [x] 汎用Workflowとtask-planning固有モデル・定義を`src/whub/wflow`内の別moduleへ分離する
+- [x] CLI adapterを`whub/commands`へ置き、判定処理を`whub/wflow`へ保つ依存境界を確定する
+- [] WorkflowとTaskをまたぐ整合性・到達不能状態・不正遷移・完了条件不足をchecker層の責務として定義する
 - [] `workflow check`・`task next`・状態遷移操作の最小CLI境界を決める
-- [] 構造が確定した場合だけモデル・ローダー・CLI実装を別Phaseまたは別タスクで扱う
+- [] checker・CLI実装はモデル層の構造確定後に扱う
 
 ### Phase 5: task-planning代替判断
 - [] 現行Skillとtask mdの代替条件・移行方法・既存記録の扱いを確定する

@@ -3,7 +3,7 @@ schema_version: 1
 task:
   id: TASK-001
   workflow: WF-001
-  state: awaiting_approval
+  state: completed
   title: READMEへ開発環境セットアップ手順を追加する
   objective: 新規参加者がREADMEだけでテストを実行できるようにする
   assumptions:
@@ -15,7 +15,7 @@ open_questions: []
 decisions: []
 
 plan:
-  revision: 1
+  revision: 2
   acceptance:
     - id: ACC-001
       statement: READMEに前提条件・依存導入・テスト手順が記載され、その手順の成功が検証されている
@@ -25,21 +25,40 @@ plan:
       steps:
         - id: STP-001-001
           description: 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する
-          state: pending
+          state: done
 
     - id: PHA-002
       title: README更新と検証
       steps:
         - id: STP-002-001
           description: READMEへ開発環境セットアップ手順を追加する
-          state: pending
+          state: done
 
         - id: STP-002-002
           description: READMEに記載した手順でテストを実行する
-          state: pending
+          state: done
 
-approvals: []
-acceptance_results: []
-change_requests: []
+        - id: STP-002-003
+          description: READMEだけを参照してセットアップ手順を再現できることを確認する
+          state: done
+
+approvals:
+  - plan_revision: 1
+    actor: user
+  - plan_revision: 2
+    actor: user
+
+acceptance_results:
+  - acceptance: ACC-001
+    status: passed
+    evidence:
+      - 架空Taskの想定検証としてREADME記載手順の成功を確認した
+
+change_requests:
+  - plan_revision: 1
+    reason: コマンド成功だけではREADME単独で手順を再現できるか確認できない
+    resolved_by_plan_revision: 2
+
 cancellation: null
-result: null
+result:
+  summary: READMEへセットアップ手順を追加し、READMEだけを参照した再現確認まで完了した
