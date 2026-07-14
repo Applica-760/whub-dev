@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from importlib.resources import as_file, files
-from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -10,19 +9,8 @@ from pydantic import ValidationError
 
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.models.workflow import WorkflowDefinition
+from whub.wflow.services.errors import Diagnostic, WflowError
 from whub.wflow.services.workflow import load_workflow
-
-
-class TaskError(Exception):
-    """Raised when a task YAML file cannot be loaded or validated."""
-
-
-@dataclass(frozen=True)
-class TaskDiagnostic:
-    """A semantic error in a task execution record."""
-
-    code: str
-    message: str
 
 
 def load_task(path: Path) -> TaskDocument:
@@ -30,7 +18,7 @@ def load_task(path: Path) -> TaskDocument:
     try:
         return TaskDocument.model_validate(yaml.safe_load(path.read_text()))
     except (OSError, yaml.YAMLError, ValidationError) as error:
-        raise TaskError(f"failed to load task YAML: {path}: {error}") from error
+        raise WflowError(f"failed to load task YAML: {path}: {error}") from error
 
 
 def load_task_workflow() -> WorkflowDefinition:
@@ -43,14 +31,14 @@ def load_task_workflow() -> WorkflowDefinition:
 def check_task(
     task: TaskDocument,
     workflow: WorkflowDefinition,
-) -> tuple[TaskDiagnostic, ...]:
+) -> tuple[Diagnostic, ...]:
     """Return semantic errors in TASK against WORKFLOW."""
-    diagnostics: list[TaskDiagnostic] = []
+    diagnostics: list[Diagnostic] = []
 
     # ケース1: Taskは対象Workflowと同じIDを持つ。
     if task.task.workflow != workflow.workflow.id:
         diagnostics.append(
-            TaskDiagnostic(
+            Diagnostic(
                 "workflow_mismatch",
                 f"task references '{task.task.workflow}', not '{workflow.workflow.id}'",
             )
@@ -59,7 +47,7 @@ def check_task(
     # ケース2: Taskの状態はWorkflow定義の状態に含まれる。
     if task.task.state not in workflow.states:
         diagnostics.append(
-            TaskDiagnostic(
+            Diagnostic(
                 "unknown_task_state",
                 f"task state '{task.task.state}' is not defined by the Workflow",
             )
@@ -72,7 +60,7 @@ def check_task(
     # ケース3: 実行・完了には現在plan revisionの承認がある。
     if requires_approval and (plan is None or plan.revision not in approved_revisions):
         diagnostics.append(
-            TaskDiagnostic(
+            Diagnostic(
                 "missing_plan_approval",
                 "current plan revision is not approved",
             )
@@ -91,7 +79,7 @@ def check_task(
             for step in steps[first_incomplete + 1:]:
                 if step.state in complete_states:
                     diagnostics.append(
-                        TaskDiagnostic(
+                        Diagnostic(
                             "step_order_violation",
                             f"step '{step.id}' is complete before an earlier step",
                         )
@@ -101,7 +89,7 @@ def check_task(
         if task.task.state == "completed":
             if any(step.state not in complete_states for step in steps):
                 diagnostics.append(
-                    TaskDiagnostic("incomplete_steps", "completed task has incomplete steps")
+                    Diagnostic("incomplete_steps", "completed task has incomplete steps")
                 )
             criteria = [
                 *plan.acceptance,
@@ -115,19 +103,19 @@ def check_task(
             missing = [criterion.id for criterion in criteria if criterion.id not in passed]
             if missing:
                 diagnostics.append(
-                    TaskDiagnostic(
+                    Diagnostic(
                         "unsatisfied_acceptance",
                         f"completed task has unsatisfied acceptance: {', '.join(missing)}",
                     )
                 )
             if task.result is None:
                 diagnostics.append(
-                    TaskDiagnostic("missing_result", "completed task has no result")
+                    Diagnostic("missing_result", "completed task has no result")
                 )
 
     # ケース6: 中止Taskは中止理由と実行者を記録する。
     if task.task.state == "cancelled" and task.cancellation is None:
         diagnostics.append(
-            TaskDiagnostic("missing_cancellation", "cancelled task has no cancellation"))
+            Diagnostic("missing_cancellation", "cancelled task has no cancellation"))
 
     return tuple(diagnostics)

@@ -4,15 +4,12 @@ from __future__ import annotations
 from collections import Counter
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 Identifier = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
 StateName = Identifier
-type JsonValue = (
-    str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]
-)
 
 
 class WorkflowModel(BaseModel):
@@ -39,7 +36,7 @@ class TransitionRequirement(WorkflowModel):
     @model_validator(mode="after")
     def _validate_operator_fields(self) -> TransitionRequirement:
         if self.operator == "all_in" and not isinstance(self.value, list):
-            raise ValueError("all_in requires value")
+            raise ValueError("all_in requires a list value")
         if self.operator == "satisfied_if_defined" and self.result_field is None:
             raise ValueError("satisfied_if_defined requires result_field")
         return self

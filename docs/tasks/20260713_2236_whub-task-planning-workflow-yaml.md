@@ -39,7 +39,7 @@
 - 検証課題: 承認前実行・Step順序違反・現在plan revisionと承認revisionの不一致はPhase 4の検証で拒否する
 - 比較結果: Step状態の可読性を維持しつつ、承認・計画変更・受け入れ結果・Task結果をMarkdownより構造化できる
 - CLI配置: `wflow`を独立コマンドとし、直下はWorkflow定義、`wflow task`はtask-planning実行記録を操作する
-- Checker境界: Modelは構造、checkerはWorkflowの到達可能性・終端性・trigger曖昧性を`WorkflowDiagnostic`として返す
+- Checker境界: Modelは構造、checkerはWorkflowの到達可能性・終端性・trigger曖昧性を`Diagnostic`として返す
 - 命名: `$task-planning`は対話的な計画運用、`task`はYAMLで保持する実行記録とし、組込定義は`definitions/task.yaml`とする
 
 ### CLI案
@@ -83,6 +83,13 @@
 - [x] `wflow check`・`graph`・`wflow task`の最小CLI境界を決める
 - [] checker・CLI実装はモデル層の構造確定後に扱う
 
+### Phase 4.5: models・services層コードレビュー
+- [x] models層（workflow.py・task.py・__init__.py）の過剰validation・未使用フィールド・不要抽象を精読で検出する
+- [x] services層（workflow.py・task.py）の責務重複・過剰エラー処理・冗長ラッパーを精読で検出する
+- [x] commands・テスト・設計方針（依存方向・移植条件）と突き合わせてdead code・乖離を検出する
+- [x] 指摘を1件ずつ理由付きで提案し、承認された修正のみ適用してテストで検証する
+- [x] 指摘・修正のサマリを結果に記録する
+
 ### Phase 5: task-planning代替判断
 - [] 現行Skillとtask mdの代替条件・移行方法・既存記録の扱いを確定する
 - [] 代替可能ならAgent規約・Skill・Knowledge YAMLの参照先を新方式へ切り替える
@@ -98,6 +105,11 @@
 ### 試行 2: wflow層別移設と独立CLI
 - 実施内容: models・services・commands・definitionsとtests/wflowへ移設し`wflow check`を追加した
 - 結果: 全232テストと`wflow check`が成功した
+- 判断: 続行
+
+### 試行 3: models・services層コードレビュー
+- 実施内容: AI的過剰・冗長の観点で精読し、承認4件（Diagnostic・Error統合→`services/errors.py`、facade削減、`pydantic.JsonValue`置換、微修正）を適用した
+- 結果: 重大な過剰実装なし。models共通定義の集約は見送り。`check_task`の状態名ハードコードとYAML `requires`の二重定義はchecker設計の論点として残置。全237テストと`wflow check`が成功
 - 判断: 続行
 
 ## 結果

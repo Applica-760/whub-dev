@@ -2,17 +2,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 from pydantic import ValidationError
 
 from whub.wflow.models.workflow import WorkflowDefinition
-
-
-class WorkflowError(Exception):
-    """Raised when a Workflow YAML file cannot be loaded or validated."""
+from whub.wflow.services.errors import Diagnostic, WflowError
 
 
 def load_workflow(path: Path) -> WorkflowDefinition:
@@ -20,15 +16,7 @@ def load_workflow(path: Path) -> WorkflowDefinition:
     try:
         return WorkflowDefinition.model_validate(yaml.safe_load(path.read_text()))
     except (OSError, yaml.YAMLError, ValidationError) as error:
-        raise WorkflowError(f"failed to load Workflow YAML: {path}: {error}") from error
-
-
-@dataclass(frozen=True)
-class WorkflowDiagnostic:
-    """A semantic error in a Workflow definition."""
-
-    code: str
-    message: str
+        raise WflowError(f"failed to load Workflow YAML: {path}: {error}") from error
 
 
 def _reachable_states(
@@ -45,11 +33,11 @@ def _reachable_states(
     return visited
 
 
-def check_workflow(workflow: WorkflowDefinition) -> tuple[WorkflowDiagnostic, ...]:
+def check_workflow(workflow: WorkflowDefinition) -> tuple[Diagnostic, ...]:
     """Return semantic errors that are not expressible by the Pydantic model."""
     adjacency: dict[str, set[str]] = defaultdict(set)
     reverse_adjacency: dict[str, set[str]] = defaultdict(set)
-    diagnostics: list[WorkflowDiagnostic] = []
+    diagnostics: list[Diagnostic] = []
     transition_keys: set[tuple[str, str]] = set()
     terminal_states = set(workflow.workflow.terminal_states)
 
@@ -62,7 +50,7 @@ def check_workflow(workflow: WorkflowDefinition) -> tuple[WorkflowDiagnostic, ..
             # ケース2: 同一状態とtriggerの遷移は一意である。
             if key in transition_keys:
                 diagnostics.append(
-                    WorkflowDiagnostic(
+                    Diagnostic(
                         "ambiguous_trigger",
                         f"state '{source}' has multiple '{transition.trigger}' transitions",
                     )
@@ -71,7 +59,7 @@ def check_workflow(workflow: WorkflowDefinition) -> tuple[WorkflowDiagnostic, ..
             # ケース3: 終端状態は遷移元にしない。
             if source in terminal_states:
                 diagnostics.append(
-                    WorkflowDiagnostic(
+                    Diagnostic(
                         "terminal_state_has_transition",
                         f"terminal state '{source}' has an outgoing transition",
                     )
@@ -82,7 +70,7 @@ def check_workflow(workflow: WorkflowDefinition) -> tuple[WorkflowDiagnostic, ..
     for state in workflow.states:
         if state not in reachable:
             diagnostics.append(
-                WorkflowDiagnostic(
+                Diagnostic(
                     "unreachable_state",
                     f"state '{state}' is unreachable from the initial state",
                 )
@@ -93,7 +81,7 @@ def check_workflow(workflow: WorkflowDefinition) -> tuple[WorkflowDiagnostic, ..
     for state in workflow.states:
         if state not in terminal_states and state not in terminal_reachable:
             diagnostics.append(
-                WorkflowDiagnostic(
+                Diagnostic(
                     "no_terminal_path",
                     f"state '{state}' cannot reach a terminal state",
                 )

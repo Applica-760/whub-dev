@@ -8,7 +8,7 @@
 5. 条件operatorごとの必須フィールド不足を拒否する。
 6. Task内のID重複とStep IDの親Phase不一致を拒否する。
 7. Task内の受け入れ条件参照切れとplan revision範囲外を拒否する。
-8. loaderはファイル・YAML・schema不正を各moduleのErrorにする。
+8. loaderはファイル・YAML・schema不正をWflowErrorにする。
 
 検証しないケース:
 1. WorkflowとTaskをまたぐ状態・Workflow IDの整合性。
@@ -25,8 +25,7 @@ from pydantic import ValidationError
 
 from whub.wflow.models import TaskDocument, WorkflowDefinition
 from whub.wflow.services import (
-    TaskError,
-    WorkflowError,
+    WflowError,
     load_task,
     load_task_workflow,
     load_workflow,
@@ -99,7 +98,7 @@ def test_rejects_missing_operator_fields() -> None:
         if transition["trigger"] == "complete_task"
     )
     complete["requires"][0].pop("value")
-    with pytest.raises(ValidationError, match="all_in requires value"):
+    with pytest.raises(ValidationError, match="all_in requires a list value"):
         WorkflowDefinition.model_validate(all_in)
 
     satisfied = _workflow_data()
@@ -141,16 +140,16 @@ def test_rejects_unknown_acceptance_and_future_revisions() -> None:
 
 def test_loaders_report_file_yaml_and_schema_errors(tmp_path: Path) -> None:
     missing = tmp_path / "missing.yaml"
-    with pytest.raises(WorkflowError, match="failed to load Workflow YAML"):
+    with pytest.raises(WflowError, match="failed to load Workflow YAML"):
         load_workflow(missing)
-    with pytest.raises(TaskError, match="failed to load task YAML"):
+    with pytest.raises(WflowError, match="failed to load task YAML"):
         load_task(missing)
 
     invalid = tmp_path / "invalid.yaml"
     invalid.write_text("schema_version: [")
-    with pytest.raises(WorkflowError, match="failed to load Workflow YAML"):
+    with pytest.raises(WflowError, match="failed to load Workflow YAML"):
         load_workflow(invalid)
 
     invalid.write_text("schema_version: 1\n")
-    with pytest.raises(TaskError, match="failed to load task YAML"):
+    with pytest.raises(WflowError, match="failed to load task YAML"):
         load_task(invalid)

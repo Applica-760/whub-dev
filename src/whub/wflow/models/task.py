@@ -108,7 +108,6 @@ class TaskDocument(TaskModel):
         phases = self.plan.phases
         steps = [step for phase in phases for step in phase.steps]
         ids = [
-            self.task.id,
             *(criterion.id for criterion in criteria),
             *(phase.id for phase in phases),
             *(step.id for step in steps),

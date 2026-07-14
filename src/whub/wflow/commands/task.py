@@ -6,8 +6,7 @@ import click
 from pathlib import Path
 
 from whub.wflow.services import (
-    TaskError,
-    WorkflowError,
+    WflowError,
     check_task,
     load_task,
     load_task_workflow,
@@ -25,7 +24,7 @@ def check(task_path: Path) -> None:
     """Check one task execution record."""
     try:
         diagnostics = check_task(load_task(task_path), load_task_workflow())
-    except (TaskError, WorkflowError) as error:
+    except WflowError as error:
         raise click.ClickException(str(error)) from error
 
     if not diagnostics:
