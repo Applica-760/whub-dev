@@ -1,27 +1,21 @@
-"""Models and loader for task-planning execution records."""
+"""Pydantic models for task execution records."""
 from __future__ import annotations
 
 from collections import Counter
-from pathlib import Path
 from typing import Annotated, Literal
 
-import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 StateName = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
 
 
-class TaskPlanningError(Exception):
-    """Raised when task-planning YAML cannot be loaded or validated."""
-
-
-class TaskPlanningModel(BaseModel):
+class TaskModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
-class TaskHeader(TaskPlanningModel):
+class TaskHeader(TaskModel):
     id: str = Field(pattern=r"^TASK-[0-9]+$")
     workflow: str = Field(pattern=r"^WF-[0-9]+$")
     state: StateName
@@ -34,57 +28,57 @@ class TaskHeader(TaskPlanningModel):
     )
 
 
-class AcceptanceCriterion(TaskPlanningModel):
+class AcceptanceCriterion(TaskModel):
     id: str = Field(pattern=r"^ACC-[0-9]+$")
     statement: NonEmptyStr
 
 
-class PlanStep(TaskPlanningModel):
+class PlanStep(TaskModel):
     id: str = Field(pattern=r"^STP-[0-9]+-[0-9]+$")
     description: NonEmptyStr
     state: StateName
 
 
-class PlanPhase(TaskPlanningModel):
+class PlanPhase(TaskModel):
     id: str = Field(pattern=r"^PHA-[0-9]+$")
     title: NonEmptyStr
     acceptance: list[AcceptanceCriterion] = Field(default_factory=list)
     steps: list[PlanStep] = Field(min_length=1)
 
 
-class TaskPlan(TaskPlanningModel):
+class TaskPlan(TaskModel):
     revision: int = Field(gt=0)
     acceptance: list[AcceptanceCriterion] = Field(default_factory=list)
     phases: list[PlanPhase] = Field(min_length=1)
 
 
-class PlanApproval(TaskPlanningModel):
+class PlanApproval(TaskModel):
     plan_revision: int = Field(gt=0)
     actor: NonEmptyStr
 
 
-class AcceptanceResult(TaskPlanningModel):
+class AcceptanceResult(TaskModel):
     acceptance: str = Field(pattern=r"^ACC-[0-9]+$")
     status: StateName
     evidence: list[NonEmptyStr] = Field(min_length=1)
 
 
-class ChangeRequest(TaskPlanningModel):
+class ChangeRequest(TaskModel):
     plan_revision: int = Field(gt=0)
     reason: NonEmptyStr
     resolved_by_plan_revision: int | None = Field(default=None, gt=0)
 
 
-class TaskCancellation(TaskPlanningModel):
+class TaskCancellation(TaskModel):
     reason: NonEmptyStr
     actor: NonEmptyStr
 
 
-class TaskResult(TaskPlanningModel):
+class TaskResult(TaskModel):
     summary: NonEmptyStr
 
 
-class TaskPlanningDocument(TaskPlanningModel):
+class TaskDocument(TaskModel):
     schema_version: Literal[1]
     task: TaskHeader
     open_questions: list[NonEmptyStr] = Field(default_factory=list)
@@ -97,7 +91,7 @@ class TaskPlanningDocument(TaskPlanningModel):
     result: TaskResult | None = None
 
     @model_validator(mode="after")
-    def _validate_ids_and_references(self) -> TaskPlanningDocument:
+    def _validate_ids_and_references(self) -> TaskDocument:
         if self.plan is None:
             if self.approvals or self.acceptance_results or self.change_requests:
                 raise ValueError("plan records require a plan")
@@ -164,13 +158,3 @@ class TaskPlanningDocument(TaskPlanningModel):
                 f"{', '.join(map(str, future_revisions))}"
             )
         return self
-
-
-def load_task_planning(path: Path) -> TaskPlanningDocument:
-    try:
-        data = yaml.safe_load(path.read_text())
-        return TaskPlanningDocument.model_validate(data)
-    except (OSError, yaml.YAMLError, ValidationError) as error:
-        raise TaskPlanningError(
-            f"failed to load task-planning YAML: {path}: {error}"
-        ) from error

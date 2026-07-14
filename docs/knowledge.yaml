@@ -118,6 +118,14 @@ definitions:
     name: whub
     definition: MacBook上でlocal・remoteのprojectを統合管理するCLI
 
+  - id: DEF-030
+    name: wflow
+    definition: Workflow定義とtask実行記録を可搬に検査・操作するCLI
+
+  - id: DEF-031
+    name: task
+    definition: wflowがYAMLで保持する個別作業の計画・状態・実行事実
+
 relation_types:
   - name: has_resource
     definition: subjectのprojectがobjectのresourceを持つ

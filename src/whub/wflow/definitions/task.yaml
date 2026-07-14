@@ -9,6 +9,14 @@ workflow:
 states: [draft, awaiting_approval, in_progress, completed, cancelled]
 
 transitions:
+  - trigger: submit_plan
+    actor: agent
+    from: draft
+    to: awaiting_approval
+    requires:
+      - field: plan
+        operator: exists
+
   - trigger: approve_plan
     actor: user
     from: awaiting_approval
