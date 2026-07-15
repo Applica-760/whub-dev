@@ -120,11 +120,39 @@ definitions:
 
   - id: DEF-030
     name: wflow
-    definition: Workflow定義とtask実行記録を可搬に検査・操作するCLI
+    definition: Workflow定義とその実行記録を可搬に検査・操作するCLI
 
   - id: DEF-031
     name: task
-    definition: wflowがYAMLで保持する個別作業の計画・状態・実行事実
+    definition: Task Workflowに基づき、個別作業の計画・状態・実行事実を保持するYAML実行記録
+
+  - id: DEF-032
+    name: knowledge
+    definition: projectの確定済み用語・関係・運用規約・実装制約を構造化して保持するKnowledge YAML
+
+  - id: DEF-033
+    name: workflow
+    definition: StateをTriggerによるTransitionで更新する、個別ドメインに依存しない実行状態管理のプリミティブ
+
+  - id: DEF-034
+    name: state
+    definition: Workflowが管理する対象の現在の状態
+
+  - id: DEF-035
+    name: trigger
+    definition: Transitionを要求する、Workflowに定義された操作または事象
+
+  - id: DEF-036
+    name: transition
+    definition: TriggerによりStateを更新する規則で、条件と記録を伴える
+
+  - id: DEF-037
+    name: task dependency
+    definition: Taskが着手または完了する前に満たす必要がある、他Taskへの明示的な前提関係
+
+  - id: DEF-038
+    name: task workflow
+    definition: task-planningの後継として、個別作業の計画・承認・実行・完了を管理する具体的なWorkflow
 
 relation_types:
   - name: has_resource
@@ -237,6 +265,12 @@ policies:
   - id: POL-014
     statement: vaultの構造と配置判断はvault/readme.mdをSSOTとする
 
+  - id: POL-015
+    statement: Knowledge YAMLには確定済みの現在の事実・規約だけを記録し、検討中の案はbacklogに置く
+
+  - id: POL-016
+    statement: 長期構想はTask YAMLのTask依存で表現し、Markdownはbacklogの未整理入力・検討記録に限り、Web appはTask YAMLを更新しない読み取り専用の派生ビューとする
+
 constraints:
   - id: CON-001
     statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する
@@ -339,5 +373,17 @@ constraints:
 
   - id: CON-034
     statement: project内容を参照・編集する操作ではworkspace-hubのrepository rootを合成local targetとして解決できる
+
+  - id: CON-035
+    statement: Knowledge YAMLの分類・必須フィールド・検証規則はsrc/whub/models/knowledge.pyをSSOTとする
+
+  - id: CON-036
+    statement: "wflowのWorkflow解釈・検証・Transition適用は個別ドメインに依存しない汎用engineへ置き、具体的なWorkflow（例: Task）のドメイン固有不変条件は各ドメインへ置く"
+
+  - id: CON-037
+    statement: Task依存はTask間だけに表し、PhaseやStepには持たせない
+
+  - id: CON-038
+    statement: Task Workflowの状態・遷移・条件・遷移時の記録はsrc/whub/wflow/definitions/task.yamlをSSOTとし、コードは汎用engineとTask固有の不変条件に限定する
 
 exceptions: []
