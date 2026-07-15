@@ -20,10 +20,10 @@ const VaultPage = lazy(() =>
 const navigation = [
   { label: 'Overview', to: '/' },
   { label: 'Backlog', to: '/backlog' },
-  { label: 'Inbox', to: '/inbox' },
   { label: 'Vault', to: '/vault' },
   { label: 'Knowledge', to: '/knowledge' },
   { label: 'Todo', to: '/todos' },
+  { label: 'Inbox', to: '/inbox' },
   { label: 'Status', to: '/status' },
 ];
 

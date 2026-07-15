@@ -137,6 +137,11 @@ def test_rejects_unknown_acceptance_and_future_revisions() -> None:
     with pytest.raises(ValidationError, match="future plan revisions"):
         TaskDocument.model_validate(future_revision)
 
+    unknown_log_phase = _task_data()
+    unknown_log_phase["logs"] = [{"phase": "PHA-999", "summary": "missing"}]
+    with pytest.raises(ValidationError, match="unknown log phases"):
+        TaskDocument.model_validate(unknown_log_phase)
+
 
 def test_loaders_report_file_yaml_and_schema_errors(tmp_path: Path) -> None:
     missing = tmp_path / "missing.yaml"

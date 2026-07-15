@@ -37,6 +37,15 @@ class PlanStep(TaskModel):
     id: str = Field(pattern=r"^STP-[0-9]+-[0-9]+$")
     description: NonEmptyStr
     state: StateName
+    skip_reason: NonEmptyStr | None = None
+
+    @model_validator(mode="after")
+    def _validate_skip_reason(self) -> PlanStep:
+        if self.state == "skipped" and self.skip_reason is None:
+            raise ValueError("skipped step requires skip_reason")
+        if self.state != "skipped" and self.skip_reason is not None:
+            raise ValueError("skip_reason is only allowed for skipped steps")
+        return self
 
 
 class PlanPhase(TaskModel):
@@ -78,6 +87,12 @@ class TaskResult(TaskModel):
     summary: NonEmptyStr
 
 
+class TaskLog(TaskModel):
+    phase: str = Field(pattern=r"^PHA-[0-9]+$")
+    summary: NonEmptyStr
+    evidence: list[NonEmptyStr] = Field(default_factory=list)
+
+
 class TaskDocument(TaskModel):
     schema_version: Literal[1]
     task: TaskHeader
@@ -87,13 +102,14 @@ class TaskDocument(TaskModel):
     approvals: list[PlanApproval] = Field(default_factory=list)
     acceptance_results: list[AcceptanceResult] = Field(default_factory=list)
     change_requests: list[ChangeRequest] = Field(default_factory=list)
+    logs: list[TaskLog] = Field(default_factory=list)
     cancellation: TaskCancellation | None = None
     result: TaskResult | None = None
 
     @model_validator(mode="after")
     def _validate_ids_and_references(self) -> TaskDocument:
         if self.plan is None:
-            if self.approvals or self.acceptance_results or self.change_requests:
+            if self.approvals or self.acceptance_results or self.change_requests or self.logs:
                 raise ValueError("plan records require a plan")
             return self
 
@@ -116,6 +132,19 @@ class TaskDocument(TaskModel):
         duplicates = sorted(item_id for item_id, count in counts.items() if count > 1)
         if duplicates:
             raise ValueError(f"duplicate task-planning ids: {', '.join(duplicates)}")
+
+        phase_ids = {phase.id for phase in phases}
+        unknown_log_phases = sorted({log.phase for log in self.logs} - phase_ids)
+        if unknown_log_phases:
+            raise ValueError(f"unknown log phases: {', '.join(unknown_log_phases)}")
+        log_counts = Counter(log.phase for log in self.logs)
+        duplicate_log_phases = sorted(
+            phase_id for phase_id, count in log_counts.items() if count > 1
+        )
+        if duplicate_log_phases:
+            raise ValueError(
+                f"duplicate phase logs: {', '.join(duplicate_log_phases)}"
+            )
 
         for phase in phases:
             phase_number = phase.id.removeprefix("PHA-")

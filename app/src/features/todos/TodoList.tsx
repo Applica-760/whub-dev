@@ -82,7 +82,7 @@ function TodoRow({ todo, busy, completed, withDivider, onComplete, onDelete }: T
           )}
           <ActionIcon
             aria-label={`${todo.title}を削除する`}
-            color="red"
+            color="gray"
             disabled={busy}
             onClick={() => onDelete(todo.id)}
             variant="subtle"

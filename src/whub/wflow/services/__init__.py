@@ -2,9 +2,13 @@
 
 from whub.wflow.services.errors import WflowError
 from whub.wflow.services.task import (
+    apply_transition,
+    available_transitions,
     check_task,
     load_task,
     load_task_workflow,
+    update_step,
+    write_task,
 )
 from whub.wflow.services.workflow import (
     check_workflow,
@@ -13,9 +17,13 @@ from whub.wflow.services.workflow import (
 
 __all__ = [
     "WflowError",
+    "apply_transition",
+    "available_transitions",
     "check_task",
     "check_workflow",
     "load_task",
     "load_task_workflow",
     "load_workflow",
+    "update_step",
+    "write_task",
 ]

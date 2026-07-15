@@ -1,0 +1,64 @@
+schema_version: 1
+task:
+  id: TASK-002
+  workflow: WF-001
+  state: completed
+  title: Web appのTodo削除アイコンをグレー化する
+  objective: Todoリストの削除用×を他の操作と区別しやすいグレーで表示する
+  assumptions:
+  - 変更対象はWeb appのTodoリスト表示だけとする
+  approach:
+  - 既存の削除操作とアクセシビリティを維持し、色指定だけを変更して検証する
+  depends_on: []
+open_questions: []
+decisions: []
+plan:
+  revision: 1
+  acceptance:
+  - id: ACC-001
+    statement: Todoリストの削除用×がグレーで表示され、削除操作を維持している
+  phases:
+  - id: PHA-001
+    title: 対象確認
+    acceptance: []
+    steps:
+    - id: STP-001-001
+      description: Todo削除用×の実装箇所と既存の操作仕様を確認する
+      state: done
+      skip_reason: null
+  - id: PHA-002
+    title: 修正と検証
+    acceptance: []
+    steps:
+    - id: STP-002-001
+      description: 削除用×の色指定をグレーへ変更する
+      state: done
+      skip_reason: null
+    - id: STP-002-002
+      description: ビルドまたはUI確認で色と削除操作を検証する
+      state: done
+      skip_reason: null
+approvals:
+- plan_revision: 1
+  actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - Todo削除用×がグレーで表示されることをユーザーが確認した
+  - 削除操作が維持されることをユーザーが確認した
+change_requests: []
+logs:
+- phase: PHA-001
+  summary: 削除用×はTodoListのActionIconであり、色以外の削除操作は変更不要と確認した
+  evidence:
+  - 'app/src/features/todos/TodoList.tsx: ActionIcon color=red, onClick=onDelete'
+  - 'app/src/features/todos/useTodoWidgets.ts: handleDeleteがDELETE APIを呼ぶ'
+- phase: PHA-002
+  summary: Todo削除用×の色変更後に本番ビルドとユーザーによる表示確認を完了した
+  evidence:
+  - 'npm run build: tsc -b と vite build が成功'
+  - 'ユーザー確認: Todo削除用×がグレーで表示されることを確認'
+cancellation: null
+result:
+  summary: Todo削除用×をグレー化し、ビルドとユーザーの動作確認を完了した

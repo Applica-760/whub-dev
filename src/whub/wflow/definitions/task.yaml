@@ -59,7 +59,8 @@ transitions:
         result_field: acceptance_results
     records:
       - field: result
-        value: $input.result
+        value:
+          summary: $input.result
 
   - trigger: cancel_task
     actor: user

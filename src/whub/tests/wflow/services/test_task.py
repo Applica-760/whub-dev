@@ -10,10 +10,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from whub.wflow.models import TaskDocument
-from whub.wflow.services import check_task, load_task_workflow
+from whub.wflow.services import (
+    WflowError,
+    apply_transition,
+    check_task,
+    load_task,
+    load_task_workflow,
+    update_step,
+    write_task,
+)
 
 
 _ROOT = Path(__file__).parents[5]
@@ -71,3 +80,89 @@ def test_reports_missing_completion_and_cancellation_records() -> None:
     cancelled["task"]["state"] = "cancelled"
     cancelled["cancellation"] = None
     assert "missing_cancellation" in _codes(cancelled)
+
+
+def _draft_task() -> TaskDocument:
+    data = _task_data()
+    data["task"]["state"] = "draft"
+    data["approvals"] = []
+    data["acceptance_results"] = []
+    data["change_requests"] = []
+    data["result"] = None
+    for phase in data["plan"]["phases"]:
+        for step in phase["steps"]:
+            step["state"] = "pending"
+    return TaskDocument.model_validate(data)
+
+
+def test_applies_lifecycle_transitions_and_records() -> None:
+    workflow = load_task_workflow()
+    task = apply_transition(_draft_task(), workflow, "submit_plan", "agent")
+    assert task.task.state == "awaiting_approval"
+
+    task = apply_transition(task, workflow, "approve_plan", "user")
+    assert task.task.state == "in_progress"
+    assert task.approvals[-1].plan_revision == task.plan.revision
+
+    with pytest.raises(WflowError, match="requirement not satisfied"):
+        apply_transition(task, workflow, "complete_task", "agent", {"result": "done"})
+
+    for phase in task.plan.phases:
+        for index, step in enumerate(phase.steps):
+            task = update_step(
+                task,
+                workflow,
+                step.id,
+                "done",
+                log_summary=f"{phase.id} complete" if index == len(phase.steps) - 1 else None,
+            )
+    task = TaskDocument.model_validate(
+        task.model_dump()
+        | {
+            "acceptance_results": [
+                {
+                    "acceptance": "ACC-001",
+                    "status": "passed",
+                    "evidence": ["verified"],
+                }
+            ]
+        }
+    )
+    task = apply_transition(task, workflow, "complete_task", "agent", {"result": "done"})
+    assert task.task.state == "completed"
+    assert task.result.summary == "done"
+
+
+def test_rejects_wrong_actor_and_out_of_order_step() -> None:
+    workflow = load_task_workflow()
+    awaiting = apply_transition(_draft_task(), workflow, "submit_plan", "agent")
+    with pytest.raises(WflowError, match="requires actor 'user'"):
+        apply_transition(awaiting, workflow, "approve_plan", "agent")
+
+    active = apply_transition(awaiting, workflow, "approve_plan", "user")
+    with pytest.raises(WflowError, match="next step is 'STP-001-001'"):
+        update_step(active, workflow, "STP-002-001", "done")
+
+    with pytest.raises(WflowError, match="requires a log summary"):
+        update_step(active, workflow, "STP-001-001", "done")
+
+
+def test_skip_records_its_reason_and_write_is_loadable(tmp_path: Path) -> None:
+    workflow = load_task_workflow()
+    awaiting = apply_transition(_draft_task(), workflow, "submit_plan", "agent")
+    active = apply_transition(awaiting, workflow, "approve_plan", "user")
+    skipped = update_step(
+        active,
+        workflow,
+        "STP-001-001",
+        "skipped",
+        "not needed",
+        "phase skipped",
+        ("no work required",),
+    )
+    assert skipped.plan.phases[0].steps[0].skip_reason == "not needed"
+    assert skipped.logs[0].phase == "PHA-001"
+
+    path = tmp_path / "task.yaml"
+    write_task(path, skipped)
+    assert load_task(path) == skipped

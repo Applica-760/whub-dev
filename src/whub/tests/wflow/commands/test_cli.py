@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from click.testing import CliRunner
+import yaml
 
 from whub.wflow.cli import main
 
@@ -40,3 +41,63 @@ def test_task_check_validates_a_task_record() -> None:
 
     assert result.exit_code == 0
     assert f"valid {_TASK_PATH}" in result.output
+
+
+def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
+    path = tmp_path / "task.yaml"
+    data = yaml.safe_load(_TASK_PATH.read_text())
+    data["task"]["state"] = "draft"
+    data["approvals"] = []
+    data["acceptance_results"] = []
+    data["change_requests"] = []
+    data["result"] = None
+    for phase in data["plan"]["phases"]:
+        for step in phase["steps"]:
+            step["state"] = "pending"
+    path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
+
+    runner = CliRunner()
+    show = runner.invoke(main, ["task", "show", str(path)], catch_exceptions=False)
+    assert show.exit_code == 0
+    assert "state: draft" in show.output
+    assert "ready transitions: submit_plan" in show.output
+
+    submitted = runner.invoke(
+        main,
+        ["task", "apply", str(path), "submit_plan", "--actor", "agent"],
+        catch_exceptions=False,
+    )
+    assert submitted.exit_code == 0
+    approved = runner.invoke(
+        main,
+        ["task", "apply", str(path), "approve_plan", "--actor", "user"],
+        catch_exceptions=False,
+    )
+    assert approved.exit_code == 0
+
+    done = runner.invoke(
+        main,
+        [
+            "task",
+            "done",
+            str(path),
+            "STP-001-001",
+            "--log",
+            "current style located",
+            "--evidence",
+            "src/whub/webapp",
+        ],
+        catch_exceptions=False,
+    )
+    assert done.exit_code == 0
+    skipped = runner.invoke(
+        main,
+        ["task", "skip", str(path), "STP-002-001", "--reason", "not needed"],
+        catch_exceptions=False,
+    )
+    assert skipped.exit_code == 0
+
+    updated = yaml.safe_load(path.read_text())
+    assert updated["task"]["state"] == "in_progress"
+    assert updated["logs"][0]["phase"] == "PHA-001"
+    assert updated["plan"]["phases"][1]["steps"][0]["skip_reason"] == "not needed"

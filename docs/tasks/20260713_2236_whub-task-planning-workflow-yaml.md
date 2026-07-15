@@ -19,11 +19,12 @@
 - 要件: ユーザー承認後だけ計画を確定し、現在状態・次に実行可能なStep・実行できない理由・必要な承認を取得できる
 - 要件: 依存Task未完了・承認不足・未定義遷移を拒否し、想定外では実行を停止して理由付き計画変更を再承認する
 - 要件: 未完了Step、または定義済みのTask・Phase受け入れ条件に未達があれば完了を拒否する
-- 要件: 計画変更・skip・cancel・完了の理由と履歴を保持し、Taskの目的・承認済み計画・現在地・結果を追跡できる
+- 要件: 計画変更・skip・cancel・完了の理由とPhase終了ログを保持し、Taskの目的・承認済み計画・現在地・結果を追跡できる
+- 要件: 各Phaseの終了時に要約と任意の証跡を`logs`へ記録し、実行ログをYAMLに集約できる
 - 分類方針: Knowledge YAMLのDefinition・Relation・Policy・Constraint・Exceptionの意味を要件整理へ転用する
 - 型方針: WorkflowのState・Transitionを専用セクションで表し、条件と記録先はTransition内の`requires`・`records`に置く
 - 例外方針: MVPではExceptionを設けず、skip・cancelは理由と承認を伴う明示的な状態遷移として扱う
-- 雛形: 共通手順を[Workflow定義](../../src/whub/wflow/task_planning/workflow.yaml)、個別記録を[架空Task](20260713_2236_whub-task-planning-task-example.yaml)へ分離する
+- 雛形: 共通手順を[Workflow定義](../../src/whub/wflow/definitions/task.yaml)、個別記録を[架空Task](20260713_2236_whub-task-planning-task-example.yaml)へ分離する
 - ID: MVPでは参照対象のWorkflow・Task・Phase・Step・受け入れ条件だけに安定IDを付ける
 - Step ID: 親Phaseの番号とPhase内連番を組み合わせた`STP-<phase>-<step>`形式を使う
 - 順序: PhaseとStepは記載順に逐次実行し、前項の完了または承認付きskip後に次項へ進む
@@ -79,9 +80,11 @@
 - [x] 雛形2ファイルの読込成功と不正構造の拒否をモデル仕様テストで証明する
 - [x] Workflow・Taskモデル・service・組込定義を`src/whub/wflow` 内の層別moduleへ分離する
 - [x] `wflow`を独立entry pointとし、commandsからservicesを経てmodelsへ依存する境界を確定する
-- [] WorkflowとTaskをまたぐ整合性・到達不能状態・不正遷移・完了条件不足をchecker層の責務として定義する
+- [x] WorkflowとTaskをまたぐ整合性・到達不能状態・不正遷移・完了条件不足をchecker層の責務として定義する
 - [x] `wflow check`・`graph`・`wflow task`の最小CLI境界を決める
-- [] checker・CLI実装はモデル層の構造確定後に扱う
+- [x] checkerと`wflow task show`・`apply`・`done`・`skip`を実装し、遷移・記録・Step順序を検証する
+- [x] Phase終了時の`logs`をTask YAMLへ追加し、`done`・`skip`で要約を必須にする
+- [] `wflow graph`はtask-planning代替の判断後に実装範囲を検討する
 
 ### Phase 4.5: models・services層コードレビュー
 - [x] models層（workflow.py・task.py・__init__.py）の過剰validation・未使用フィールド・不要抽象を精読で検出する
@@ -91,6 +94,7 @@
 - [x] 指摘・修正のサマリを結果に記録する
 
 ### Phase 5: task-planning代替判断
+- [] FOCUS再構成を実運用候補として、先に軽量TaskでYAML運用を検証した後に並走評価する
 - [] 現行Skillとtask mdの代替条件・移行方法・既存記録の扱いを確定する
 - [] 代替可能ならAgent規約・Skill・Knowledge YAMLの参照先を新方式へ切り替える
 - [] backlog昇格Workflow・FOCUS派生ビュー・Task依存グラフを後続タスクへ分離する
@@ -111,5 +115,43 @@
 - 実施内容: AI的過剰・冗長の観点で精読し、承認4件（Diagnostic・Error統合→`services/errors.py`、facade削減、`pydantic.JsonValue`置換、微修正）を適用した
 - 結果: 重大な過剰実装なし。models共通定義の集約は見送り。`check_task`の状態名ハードコードとYAML `requires`の二重定義はchecker設計の論点として残置。全237テストと`wflow check`が成功
 - 判断: 続行
+
+### 試行 4: Task状態更新CLIの検証
+- 実施内容: `show`・`apply`・`done`・`skip`と状態遷移serviceを実装し、Workflow定義に沿ってテストした
+- 結果: `complete_task`のresult記録が`TaskResult`形式と不一致だったため、`summary`を持つ値へ修正して全241テストが成功した
+- 判断: 続行
+
+### 試行 5: Phase終了ログの検証
+- 実施内容: `logs`へPhase・要約・任意証跡を記録し、Phaseを完了する`done`・`skip`で要約を必須にした
+- 結果: ログ欠落を拒否し、モデル・CLIを含む全241テストが成功した
+- 判断: 続行
+
+### 試行 6: 軽量Taskの手動運用
+- 実施内容: Todo削除用×のグレー化をTask YAMLとして生成し、`check`と`submit_plan`を適用した
+- 結果: YAML生成時点で計画は存在し、`submit_plan`は存在確認だけの冗長な遷移だった
+- 判断: `submit_plan`を廃止し、`approve_plan`を`draft`・`awaiting_approval`から`in_progress`へ遷移させる
+- 修正ポイント: Task生成と`check`はSkillの標準手順へ組み込み、必要になれば`wflow task init`で雛形生成・検査を自動化する
+
+### 試行 7: 承認・Phaseログの運用感
+- 実施内容: ユーザー承認後にPhase 1とPhase 2のStepを順に記録した
+- 結果: Agentへ委ねたままでは承認の実感が薄く、状態遷移だけで計画レビューを保証できない
+- 判断: Phase順序違反を試して拒否を確認し、承認の入力内容・証跡を持たせる要否を検討する
+- 修正ポイント: rootの`logs`は廃止し、Phaseの完了ログを各Phaseへ直接保持して計画と実績を同じ場所で参照できるようにする
+- 毎回エビデンスつけるのは過剰
+
+### 試行 8: 受け入れ結果の記録
+- 実施内容: 全Step完了後にTask完了を試み、受け入れ条件の結果を記録する経路を確認した
+- 結果: `acceptance_results`は完了条件だが、結果・証跡を記録するCLI操作がない
+- 判断: 今回はユーザー承認のもとTask YAMLを直接編集し、後続で`wflow task accept`相当を追加する
+
+### 試行 9: 計画revisionの必要性
+- 実施内容: 計画変更時のrevisionと棄却履歴の役割を確認した
+- 結果: `change_requests`が理由付きの履歴を保持するため、数値revisionは追加の判断材料にならない
+- 判断: `plan.revision`と承認・計画変更からのrevision参照を廃止し、現行planと変更履歴だけを保持する
+
+### 試行 10: YAMLとPythonの責務境界
+- 実施内容: Workflow定義とTask実装に重複する遷移規則を整理した
+- 結果: 状態・遷移・遷移条件・遷移時の記録内容は`task.yaml`で表現可能であり、Pythonとの二重化がある
+- 判断: これらはYAMLをSSOTとしてPythonは汎用的に解釈・適用し、Task固有の構造不変条件だけをPythonへ残す
 
 ## 結果
