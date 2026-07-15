@@ -6,20 +6,12 @@ workflow:
   initial_state: draft
   terminal_states: [completed, cancelled]
 
-states: [draft, awaiting_approval, in_progress, completed, cancelled]
+states: [draft, in_progress, completed, cancelled]
 
 transitions:
-  - trigger: submit_plan
-    actor: agent
-    from: draft
-    to: awaiting_approval
-    requires:
-      - field: plan
-        operator: exists
-
   - trigger: approve_plan
     actor: user
-    from: awaiting_approval
+    from: draft
     to: in_progress
     requires:
       - field: plan
@@ -27,20 +19,18 @@ transitions:
     records:
       - field: approvals
         value:
-          plan_revision: $plan.revision
           actor: $actor
 
   - trigger: request_plan_change
     actor: agent
     from: in_progress
-    to: awaiting_approval
+    to: draft
     requires:
       - field: $input.reason
         operator: exists
     records:
       - field: change_requests
         value:
-          plan_revision: $plan.revision
           reason: $input.reason
 
   - trigger: complete_task
@@ -48,6 +38,8 @@ transitions:
     from: in_progress
     to: completed
     requires:
+      - field: $input.result
+        operator: exists
       - field: plan.phases.*.steps.*.state
         operator: all_in
         value: [done, skipped]
@@ -64,7 +56,7 @@ transitions:
 
   - trigger: cancel_task
     actor: user
-    from: [draft, awaiting_approval, in_progress]
+    from: [draft, in_progress]
     to: cancelled
     requires:
       - field: $input.reason

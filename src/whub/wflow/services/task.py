@@ -11,9 +11,14 @@ import yaml
 from pydantic import ValidationError
 
 from whub.wflow.models.task import TaskDocument
-from whub.wflow.models.workflow import WorkflowDefinition
+from whub.wflow.models.workflow import TransitionRequirement, WorkflowDefinition
 from whub.wflow.services.errors import Diagnostic, WflowError
-from whub.wflow.services.workflow import load_workflow
+from whub.wflow.services.workflow import (
+    apply_transition as apply_workflow_transition,
+    available_transitions as available_workflow_transitions,
+    load_workflow,
+    values_at,
+)
 
 
 def load_task(path: Path) -> TaskDocument:
@@ -31,86 +36,31 @@ def load_task_workflow() -> WorkflowDefinition:
         return load_workflow(path)
 
 
-def _values_at(data: Any, field: str, input_data: dict[str, Any]) -> list[Any]:
-    if field.startswith("$input."):
-        current: list[Any] = [input_data]
-        parts = field.removeprefix("$input.").split(".")
-    else:
-        current = [data]
-        parts = field.removeprefix("$").split(".")
-
-    for part in parts:
-        next_values: list[Any] = []
-        for value in current:
-            if part == "*" and isinstance(value, list):
-                next_values.extend(value)
-            elif isinstance(value, dict) and part in value:
-                next_values.append(value[part])
-        current = next_values
-    return current
-
-
-def _resolve_value(value: Any, data: dict[str, Any], input_data: dict[str, Any], actor: str) -> Any:
-    if value == "$actor":
-        return actor
-    if isinstance(value, str) and value.startswith("$"):
-        values = _values_at(data, value, input_data)
-        if len(values) != 1:
-            raise WflowError(f"record value '{value}' does not resolve to one value")
-        return values[0]
-    if isinstance(value, list):
-        return [_resolve_value(item, data, input_data, actor) for item in value]
-    if isinstance(value, dict):
-        return {
-            key: _resolve_value(item, data, input_data, actor)
-            for key, item in value.items()
-        }
-    return value
-
-
-def _requirement_error(
-    requirement: Any,
+def _satisfied_if_defined(
+    requirement: TransitionRequirement,
     data: dict[str, Any],
     input_data: dict[str, Any],
 ) -> str | None:
-    values = _values_at(data, requirement.field, input_data)
-    if requirement.operator == "exists":
-        if any(value is not None for value in values):
-            return None
-    elif requirement.operator == "all_in":
-        if values and all(value in requirement.value for value in values):
-            return None
-    else:
-        criteria = [
-            criterion
-            for value in values
-            for criterion in (value if isinstance(value, list) else [value])
-            if isinstance(criterion, dict)
-        ]
-        if not criteria:
-            return None
-        results = data.get(requirement.result_field, [])
-        passed = {
-            result["acceptance"]
-            for result in results
-            if result.get("status") == "passed"
-        }
-        if all(criterion["id"] in passed for criterion in criteria):
-            return None
+    criteria = [
+        criterion
+        for value in values_at(data, requirement.field, input_data)
+        for criterion in (value if isinstance(value, list) else [value])
+        if isinstance(criterion, dict)
+    ]
+    if not criteria:
+        return None
+    results = data.get(requirement.result_field, [])
+    passed = {
+        result["acceptance"]
+        for result in results
+        if result.get("status") == "passed"
+    }
+    if all(criterion["id"] in passed for criterion in criteria):
+        return None
     return f"requirement not satisfied: {requirement.field} ({requirement.operator})"
 
 
-def _transition_for(task: TaskDocument, workflow: WorkflowDefinition, trigger: str) -> Any:
-    candidates = [
-        transition
-        for transition in workflow.transitions
-        if transition.trigger == trigger and task.task.state in transition.source_states
-    ]
-    if not candidates:
-        raise WflowError(
-            f"trigger '{trigger}' is not allowed from state '{task.task.state}'"
-        )
-    return candidates[0]
+_TASK_REQUIREMENT_EVALUATORS = {"satisfied_if_defined": _satisfied_if_defined}
 
 
 def available_transitions(
@@ -119,16 +69,12 @@ def available_transitions(
     input_data: dict[str, Any] | None = None,
 ) -> tuple[str, ...]:
     """Return triggers whose requirements are currently satisfied."""
-    data = task.model_dump(mode="python")
-    inputs = input_data or {}
-    return tuple(
-        transition.trigger
-        for transition in workflow.transitions
-        if task.task.state in transition.source_states
-        and not any(
-            _requirement_error(requirement, data, inputs)
-            for requirement in transition.requires
-        )
+    return available_workflow_transitions(
+        workflow,
+        task.task.state,
+        task.model_dump(mode="python"),
+        input_data,
+        _TASK_REQUIREMENT_EVALUATORS,
     )
 
 
@@ -144,28 +90,17 @@ def apply_transition(
     if diagnostics:
         raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
 
-    transition = _transition_for(task, workflow, trigger)
-    if actor != transition.actor:
-        raise WflowError(f"trigger '{trigger}' requires actor '{transition.actor}'")
-
     data = task.model_dump(mode="python")
-    inputs = input_data or {}
-    errors = [
-        error
-        for requirement in transition.requires
-        if (error := _requirement_error(requirement, data, inputs)) is not None
-    ]
-    if errors:
-        raise WflowError("; ".join(errors))
-
-    for record in transition.records:
-        value = _resolve_value(record.value, data, inputs, actor)
-        current = data.get(record.field)
-        if isinstance(current, list):
-            current.append(value)
-        else:
-            data[record.field] = value
-    data["task"]["state"] = transition.to
+    state, data = apply_workflow_transition(
+        workflow,
+        task.task.state,
+        data,
+        trigger,
+        actor,
+        input_data,
+        _TASK_REQUIREMENT_EVALUATORS,
+    )
+    data["task"]["state"] = state
 
     try:
         updated = TaskDocument.model_validate(data)
@@ -219,13 +154,10 @@ def update_step(
     if all(step["state"] in {"done", "skipped"} for step in phase["steps"]):
         if not log_summary:
             raise WflowError(f"completed phase '{phase['id']}' requires a log summary")
-        data["logs"].append(
-            {
-                "phase": phase["id"],
-                "summary": log_summary,
-                "evidence": list(log_evidence),
-            }
-        )
+        phase["log"] = {
+            "summary": log_summary,
+            "evidence": list(log_evidence),
+        }
     elif log_summary:
         raise WflowError("a log summary is only allowed when completing a phase")
     try:
@@ -233,6 +165,43 @@ def update_step(
     except ValidationError as error:
         raise WflowError(f"failed to update step '{step_id}': {error}") from error
     return updated
+
+
+def record_acceptance(
+    task: TaskDocument,
+    acceptance: str,
+    status: str,
+    evidence: tuple[str, ...] = (),
+) -> TaskDocument:
+    """Record one acceptance result while a Task is in progress."""
+    if task.task.state != "in_progress":
+        raise WflowError("acceptance can only be recorded while the task is in_progress")
+    if task.plan is None:
+        raise WflowError("task has no plan")
+    if status not in {"passed", "failed"}:
+        raise WflowError(f"unsupported acceptance status '{status}'")
+
+    criteria = [
+        *task.plan.acceptance,
+        *(criterion for phase in task.plan.phases for criterion in phase.acceptance),
+    ]
+    if acceptance not in {criterion.id for criterion in criteria}:
+        raise WflowError(f"unknown acceptance '{acceptance}'")
+    if any(result.acceptance == acceptance for result in task.acceptance_results):
+        raise WflowError(f"acceptance '{acceptance}' is already recorded")
+
+    data = task.model_dump(mode="python")
+    data["acceptance_results"].append(
+        {
+            "acceptance": acceptance,
+            "status": status,
+            "evidence": list(evidence),
+        }
+    )
+    try:
+        return TaskDocument.model_validate(data)
+    except ValidationError as error:
+        raise WflowError(f"failed to record acceptance '{acceptance}': {error}") from error
 
 
 def write_task(path: Path, task: TaskDocument) -> None:
@@ -286,14 +255,13 @@ def check_task(
 
     plan = task.plan
     requires_approval = task.task.state in {"in_progress", "completed"}
-    approved_revisions = {approval.plan_revision for approval in task.approvals}
 
-    # ケース3: 実行・完了には現在plan revisionの承認がある。
-    if requires_approval and (plan is None or plan.revision not in approved_revisions):
+    # ケース3: 実行・完了にはplan承認がある。
+    if requires_approval and (plan is None or not task.approvals):
         diagnostics.append(
             Diagnostic(
                 "missing_plan_approval",
-                "current plan revision is not approved",
+                "plan is not approved",
             )
         )
 

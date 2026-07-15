@@ -12,6 +12,7 @@ from whub.wflow.services import (
     check_task,
     load_task,
     load_task_workflow,
+    record_acceptance,
     update_step,
     write_task,
 )
@@ -86,6 +87,26 @@ def apply(task_path: Path, trigger: str, actor: str, reason: str | None, result:
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"applied {trigger}: {updated.task.state}")
+
+
+@task.command()
+@click.argument("task_path", type=click.Path(path_type=Path))
+@click.argument("acceptance")
+@click.option("--status", type=click.Choice(["passed", "failed"]), required=True)
+@click.option("--evidence", multiple=True, help="Optional evidence for the acceptance result.")
+def accept(
+    task_path: Path,
+    acceptance: str,
+    status: str,
+    evidence: tuple[str, ...],
+) -> None:
+    """Record one acceptance result."""
+    try:
+        updated = record_acceptance(load_task(task_path), acceptance, status, evidence)
+        write_task(task_path, updated)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"accepted {acceptance}: {status}")
 
 
 @task.command()

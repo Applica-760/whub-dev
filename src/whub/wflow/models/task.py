@@ -48,34 +48,36 @@ class PlanStep(TaskModel):
         return self
 
 
+class PhaseLog(TaskModel):
+    summary: NonEmptyStr
+    evidence: list[NonEmptyStr] = Field(default_factory=list)
+
+
 class PlanPhase(TaskModel):
     id: str = Field(pattern=r"^PHA-[0-9]+$")
     title: NonEmptyStr
     acceptance: list[AcceptanceCriterion] = Field(default_factory=list)
     steps: list[PlanStep] = Field(min_length=1)
+    log: PhaseLog | None = None
 
 
 class TaskPlan(TaskModel):
-    revision: int = Field(gt=0)
     acceptance: list[AcceptanceCriterion] = Field(default_factory=list)
     phases: list[PlanPhase] = Field(min_length=1)
 
 
 class PlanApproval(TaskModel):
-    plan_revision: int = Field(gt=0)
     actor: NonEmptyStr
 
 
 class AcceptanceResult(TaskModel):
     acceptance: str = Field(pattern=r"^ACC-[0-9]+$")
     status: StateName
-    evidence: list[NonEmptyStr] = Field(min_length=1)
+    evidence: list[NonEmptyStr] = Field(default_factory=list)
 
 
 class ChangeRequest(TaskModel):
-    plan_revision: int = Field(gt=0)
     reason: NonEmptyStr
-    resolved_by_plan_revision: int | None = Field(default=None, gt=0)
 
 
 class TaskCancellation(TaskModel):
@@ -87,12 +89,6 @@ class TaskResult(TaskModel):
     summary: NonEmptyStr
 
 
-class TaskLog(TaskModel):
-    phase: str = Field(pattern=r"^PHA-[0-9]+$")
-    summary: NonEmptyStr
-    evidence: list[NonEmptyStr] = Field(default_factory=list)
-
-
 class TaskDocument(TaskModel):
     schema_version: Literal[1]
     task: TaskHeader
@@ -102,14 +98,13 @@ class TaskDocument(TaskModel):
     approvals: list[PlanApproval] = Field(default_factory=list)
     acceptance_results: list[AcceptanceResult] = Field(default_factory=list)
     change_requests: list[ChangeRequest] = Field(default_factory=list)
-    logs: list[TaskLog] = Field(default_factory=list)
     cancellation: TaskCancellation | None = None
     result: TaskResult | None = None
 
     @model_validator(mode="after")
     def _validate_ids_and_references(self) -> TaskDocument:
         if self.plan is None:
-            if self.approvals or self.acceptance_results or self.change_requests or self.logs:
+            if self.approvals or self.acceptance_results or self.change_requests:
                 raise ValueError("plan records require a plan")
             return self
 
@@ -133,19 +128,6 @@ class TaskDocument(TaskModel):
         if duplicates:
             raise ValueError(f"duplicate task-planning ids: {', '.join(duplicates)}")
 
-        phase_ids = {phase.id for phase in phases}
-        unknown_log_phases = sorted({log.phase for log in self.logs} - phase_ids)
-        if unknown_log_phases:
-            raise ValueError(f"unknown log phases: {', '.join(unknown_log_phases)}")
-        log_counts = Counter(log.phase for log in self.logs)
-        duplicate_log_phases = sorted(
-            phase_id for phase_id, count in log_counts.items() if count > 1
-        )
-        if duplicate_log_phases:
-            raise ValueError(
-                f"duplicate phase logs: {', '.join(duplicate_log_phases)}"
-            )
-
         for phase in phases:
             phase_number = phase.id.removeprefix("PHA-")
             expected_prefix = f"STP-{phase_number}-"
@@ -168,21 +150,14 @@ class TaskDocument(TaskModel):
                 f"unknown acceptance ids: {', '.join(unknown_acceptance_ids)}"
             )
 
-        referenced_revisions = [
-            *(approval.plan_revision for approval in self.approvals),
-            *(request.plan_revision for request in self.change_requests),
-            *(
-                request.resolved_by_plan_revision
-                for request in self.change_requests
-                if request.resolved_by_plan_revision is not None
-            ),
-        ]
-        future_revisions = sorted(
-            {revision for revision in referenced_revisions if revision > self.plan.revision}
+        acceptance_counts = Counter(item.acceptance for item in self.acceptance_results)
+        duplicate_acceptance = sorted(
+            item_id for item_id, count in acceptance_counts.items() if count > 1
         )
-        if future_revisions:
+        if duplicate_acceptance:
             raise ValueError(
-                "future plan revisions: "
-                f"{', '.join(map(str, future_revisions))}"
+                "duplicate acceptance results: "
+                f"{', '.join(duplicate_acceptance)}"
             )
+
         return self

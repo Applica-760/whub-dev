@@ -2,7 +2,7 @@
 
 検証するケース:
 1. 組込みTaskとWorkflowの組合せは整合する。
-2. Workflow ID・状態・現在plan承認の不整合を通知する。
+2. Workflow ID・状態・plan承認の不整合を通知する。
 3. Stepの順序違反を通知する。
 4. 完了Taskの不足と中止Taskの記録不足を通知する。
 """
@@ -17,9 +17,11 @@ from whub.wflow.models import TaskDocument
 from whub.wflow.services import (
     WflowError,
     apply_transition,
+    available_transitions,
     check_task,
     load_task,
     load_task_workflow,
+    record_acceptance,
     update_step,
     write_task,
 )
@@ -90,6 +92,7 @@ def _draft_task() -> TaskDocument:
     data["change_requests"] = []
     data["result"] = None
     for phase in data["plan"]["phases"]:
+        phase["log"] = None
         for step in phase["steps"]:
             step["state"] = "pending"
     return TaskDocument.model_validate(data)
@@ -97,12 +100,9 @@ def _draft_task() -> TaskDocument:
 
 def test_applies_lifecycle_transitions_and_records() -> None:
     workflow = load_task_workflow()
-    task = apply_transition(_draft_task(), workflow, "submit_plan", "agent")
-    assert task.task.state == "awaiting_approval"
-
-    task = apply_transition(task, workflow, "approve_plan", "user")
+    task = apply_transition(_draft_task(), workflow, "approve_plan", "user")
     assert task.task.state == "in_progress"
-    assert task.approvals[-1].plan_revision == task.plan.revision
+    assert task.approvals[-1].actor == "user"
 
     with pytest.raises(WflowError, match="requirement not satisfied"):
         apply_transition(task, workflow, "complete_task", "agent", {"result": "done"})
@@ -116,18 +116,9 @@ def test_applies_lifecycle_transitions_and_records() -> None:
                 "done",
                 log_summary=f"{phase.id} complete" if index == len(phase.steps) - 1 else None,
             )
-    task = TaskDocument.model_validate(
-        task.model_dump()
-        | {
-            "acceptance_results": [
-                {
-                    "acceptance": "ACC-001",
-                    "status": "passed",
-                    "evidence": ["verified"],
-                }
-            ]
-        }
-    )
+    task = record_acceptance(task, "ACC-001", "passed", ("verified",))
+    assert "complete_task" not in available_transitions(task, workflow)
+    assert "complete_task" in available_transitions(task, workflow, {"result": "done"})
     task = apply_transition(task, workflow, "complete_task", "agent", {"result": "done"})
     assert task.task.state == "completed"
     assert task.result.summary == "done"
@@ -135,11 +126,10 @@ def test_applies_lifecycle_transitions_and_records() -> None:
 
 def test_rejects_wrong_actor_and_out_of_order_step() -> None:
     workflow = load_task_workflow()
-    awaiting = apply_transition(_draft_task(), workflow, "submit_plan", "agent")
     with pytest.raises(WflowError, match="requires actor 'user'"):
-        apply_transition(awaiting, workflow, "approve_plan", "agent")
+        apply_transition(_draft_task(), workflow, "approve_plan", "agent")
 
-    active = apply_transition(awaiting, workflow, "approve_plan", "user")
+    active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
     with pytest.raises(WflowError, match="next step is 'STP-001-001'"):
         update_step(active, workflow, "STP-002-001", "done")
 
@@ -149,8 +139,7 @@ def test_rejects_wrong_actor_and_out_of_order_step() -> None:
 
 def test_skip_records_its_reason_and_write_is_loadable(tmp_path: Path) -> None:
     workflow = load_task_workflow()
-    awaiting = apply_transition(_draft_task(), workflow, "submit_plan", "agent")
-    active = apply_transition(awaiting, workflow, "approve_plan", "user")
+    active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
     skipped = update_step(
         active,
         workflow,
@@ -161,8 +150,18 @@ def test_skip_records_its_reason_and_write_is_loadable(tmp_path: Path) -> None:
         ("no work required",),
     )
     assert skipped.plan.phases[0].steps[0].skip_reason == "not needed"
-    assert skipped.logs[0].phase == "PHA-001"
+    assert skipped.plan.phases[0].log.summary == "phase skipped"
 
     path = tmp_path / "task.yaml"
     write_task(path, skipped)
     assert load_task(path) == skipped
+
+
+def test_rejects_duplicate_acceptance_results() -> None:
+    task = _draft_task()
+    workflow = load_task_workflow()
+    active = apply_transition(task, workflow, "approve_plan", "user")
+    accepted = record_acceptance(active, "ACC-001", "passed")
+
+    with pytest.raises(WflowError, match="already recorded"):
+        record_acceptance(accepted, "ACC-001", "passed")

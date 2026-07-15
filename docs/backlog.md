@@ -10,8 +10,21 @@
     - FOCUSビュー（FOCUS.md再構成タスクの決着後）
     - スマホから質問・思いつきをinbox/backlogへ投げられるようにする
     - discourse連携ビュー: 解説結果を眺め、skip/keep/noteやinbox/backlog/todo/literatureへの振り分けを行う
+        - URL投入→headless Claude（`claude -p` or Agent SDK）を非同期ジョブで起動し、`vault/literature/pending/`へ解説mdを出力（frontmatterにurl/type/summary/提案tags/session_id）
+        - verdictボタンの確定処理（log.jsonl追記・md移動/削除）はAgentを使わずservices層のPythonで実装し整合性を保証
+        - noteのみ追加で`--resume <session_id>`によりClaudeを再起動し、記事全文の文脈を保持したままnote本文を生成
+        - 発展: Web上の簡易チャットを同session resumeに乗せ、壁打ち→note昇格の体験を再現
+        - 論点: Web appからvault/literatureへの書き込み解禁はADR化、新規タグはUI上でマーク表示して統制語彙の崩れを防ぐ
     - 音声入力
     - statusにwhub appの起動状況モニタを入れる
+- [ ] whub knowledge CLI（knowledge.yamlの消費インターフェース、検討中）
+    - 筋の良さ: YAMLは正規化されたSSOTのまま、消費時にCLIが散文へ展開する分離。トリプルのjoinや全文ロードをモデルにやらせない（CodeGraphと同じ構図）
+    - 効果大: relation_typesのテンプレート文でRELを自然文に展開して返す（例: REL-009 → 「backlogに置かれた入力はtask-planningへ昇格する」）
+    - 効果大: ノードビュー `whub knowledge show <name|id>` — 定義＋展開済み関係＋関連POL/CONを1コールで返す。`codegraph node`の知識版。最初に作るならこれ
+    - 効果薄（現時点）: 検索・絞り込み。現状389行ならRead一発で足りる。知識が数百項目に育った時のスケール投資
+    - 作らない: 全件dumpする素通しの`ls`はReadと等価でCLI化の意味がない
+    - 残る課題: 発見性。AgentにCLIを呼ばせる誘導はCLAUDE.md側のトリガー条件付き平文（「whub/データモデル変更前に`whub knowledge show <対象>`」）が必要
+    - 出力形式はID付き散文（`POL-005: 未整理入力は…`）に固定し、根拠参照可能性と可読性を両立する
 - [ ] boot skills配布の削除伝播
     - local `copytree(dirs_exist_ok)` / remote `rsync -a`（--deleteなし）のため廃止Skillが残骸として残り続ける
     - remoteは`--delete`、localは配布先を消してからcopyで揃える
@@ -66,4 +79,5 @@
 - 生活サイクルが安定しないことがQOLを下げている気がする。
 - ↑ これに関して時計機能を入れたり、Commit回数や実装の程度から、「自分基準で1日あたりこのくらいの活動ができていれば十分」とか、の基準があれば、際限なくがんばることん負荷を感じたりせずに済むのではないか
 - テキストに仏教、儒教を入れる
+- vault/sources に関して、日付時刻付きのファイル名にした方が可塑性、時系列推移を捉えやすそう。既存ファイルに対しても、Git履歴から付与できそう
 <!-- hub:backlog:appended:end -->

@@ -15,7 +15,6 @@ open_questions: []
 decisions: []
 
 plan:
-  revision: 2
   acceptance:
     - id: ACC-001
       statement: READMEに前提条件・依存導入・テスト手順が記載され、その手順の成功が検証されている
@@ -26,6 +25,8 @@ plan:
         - id: STP-001-001
           description: 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する
           state: done
+      log:
+        summary: 現行のセットアップ手順を確認した
 
     - id: PHA-002
       title: README更新と検証
@@ -41,12 +42,11 @@ plan:
         - id: STP-002-003
           description: READMEだけを参照してセットアップ手順を再現できることを確認する
           state: done
+      log:
+        summary: README更新と再現確認を完了した
 
 approvals:
-  - plan_revision: 1
-    actor: user
-  - plan_revision: 2
-    actor: user
+  - actor: user
 
 acceptance_results:
   - acceptance: ACC-001
@@ -55,9 +55,7 @@ acceptance_results:
       - 架空Taskの想定検証としてREADME記載手順の成功を確認した
 
 change_requests:
-  - plan_revision: 1
-    reason: コマンド成功だけではREADME単独で手順を再現できるか確認できない
-    resolved_by_plan_revision: 2
+  - reason: コマンド成功だけではREADME単独で手順を再現できるか確認できない
 
 cancellation: null
 result:

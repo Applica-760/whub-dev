@@ -52,6 +52,7 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
     data["change_requests"] = []
     data["result"] = None
     for phase in data["plan"]["phases"]:
+        phase["log"] = None
         for step in phase["steps"]:
             step["state"] = "pending"
     path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
@@ -60,14 +61,8 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
     show = runner.invoke(main, ["task", "show", str(path)], catch_exceptions=False)
     assert show.exit_code == 0
     assert "state: draft" in show.output
-    assert "ready transitions: submit_plan" in show.output
+    assert "ready transitions: approve_plan" in show.output
 
-    submitted = runner.invoke(
-        main,
-        ["task", "apply", str(path), "submit_plan", "--actor", "agent"],
-        catch_exceptions=False,
-    )
-    assert submitted.exit_code == 0
     approved = runner.invoke(
         main,
         ["task", "apply", str(path), "approve_plan", "--actor", "user"],
@@ -96,8 +91,15 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
         catch_exceptions=False,
     )
     assert skipped.exit_code == 0
+    accepted = runner.invoke(
+        main,
+        ["task", "accept", str(path), "ACC-001", "--status", "passed"],
+        catch_exceptions=False,
+    )
+    assert accepted.exit_code == 0
 
     updated = yaml.safe_load(path.read_text())
     assert updated["task"]["state"] == "in_progress"
-    assert updated["logs"][0]["phase"] == "PHA-001"
+    assert updated["plan"]["phases"][0]["log"]["summary"] == "current style located"
     assert updated["plan"]["phases"][1]["steps"][0]["skip_reason"] == "not needed"
+    assert updated["acceptance_results"] == [{"acceptance": "ACC-001", "status": "passed", "evidence": []}]

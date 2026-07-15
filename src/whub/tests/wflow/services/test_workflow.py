@@ -15,6 +15,7 @@ import yaml
 
 from whub.wflow.models import WorkflowDefinition
 from whub.wflow.services import check_workflow, load_task_workflow
+from whub.wflow.services.workflow import apply_transition, available_transitions
 
 
 _ROOT = Path(__file__).parents[5]
@@ -60,7 +61,7 @@ def test_reports_ambiguous_triggers_from_the_same_state() -> None:
         {
             "trigger": "approve_plan",
             "actor": "user",
-            "from": "awaiting_approval",
+            "from": "draft",
             "to": "cancelled",
         }
     )
@@ -83,3 +84,47 @@ def test_reports_transitions_from_terminal_states() -> None:
     assert "terminal_state_has_transition" in _codes(
         WorkflowDefinition.model_validate(data)
     )
+
+
+def test_applies_a_domain_independent_transition() -> None:
+    workflow = WorkflowDefinition.model_validate(
+        {
+            "schema_version": 1,
+            "workflow": {
+                "id": "WF-002",
+                "name": "generic",
+                "initial_state": "draft",
+                "terminal_states": ["completed"],
+            },
+            "states": ["draft", "completed"],
+            "transitions": [
+                {
+                    "trigger": "complete",
+                    "actor": "user",
+                    "from": "draft",
+                    "to": "completed",
+                    "requires": [{"field": "$input.summary", "operator": "exists"}],
+                    "records": [
+                        {
+                            "field": "history",
+                            "value": {"summary": "$input.summary", "actor": "$actor"},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    data = {"history": []}
+
+    assert available_transitions(workflow, "draft", data) == ()
+    state, updated = apply_transition(
+        workflow,
+        "draft",
+        data,
+        "complete",
+        "user",
+        {"summary": "done"},
+    )
+
+    assert state == "completed"
+    assert updated == {"history": [{"summary": "done", "actor": "user"}]}

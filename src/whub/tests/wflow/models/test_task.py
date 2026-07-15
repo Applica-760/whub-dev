@@ -7,7 +7,7 @@
 4. Workflow内の状態重複と状態参照切れを拒否する。
 5. 条件operatorごとの必須フィールド不足を拒否する。
 6. Task内のID重複とStep IDの親Phase不一致を拒否する。
-7. Task内の受け入れ条件参照切れとplan revision範囲外を拒否する。
+7. Task内の受け入れ条件参照切れとroot logsを拒否する。
 8. loaderはファイル・YAML・schema不正をWflowErrorにする。
 
 検証しないケース:
@@ -51,7 +51,7 @@ def test_loads_workflow_and_task_definitions() -> None:
 
     assert workflow.workflow.id == "WF-001"
     assert task.task.id == "TASK-001"
-    assert task.plan.revision == 2
+    assert task.plan.phases[0].id == "PHA-001"
 
 
 def test_workflow_actor_accepts_arbitrary_role_names() -> None:
@@ -97,7 +97,11 @@ def test_rejects_missing_operator_fields() -> None:
         for transition in all_in["transitions"]
         if transition["trigger"] == "complete_task"
     )
-    complete["requires"][0].pop("value")
+    next(
+        requirement
+        for requirement in complete["requires"]
+        if requirement["operator"] == "all_in"
+    ).pop("value")
     with pytest.raises(ValidationError, match="all_in requires a list value"):
         WorkflowDefinition.model_validate(all_in)
 
@@ -107,7 +111,11 @@ def test_rejects_missing_operator_fields() -> None:
         for transition in satisfied["transitions"]
         if transition["trigger"] == "complete_task"
     )
-    complete["requires"][1].pop("result_field")
+    next(
+        requirement
+        for requirement in complete["requires"]
+        if requirement["operator"] == "satisfied_if_defined"
+    ).pop("result_field")
     with pytest.raises(ValidationError, match="satisfied_if_defined requires result_field"):
         WorkflowDefinition.model_validate(satisfied)
 
@@ -126,21 +134,16 @@ def test_rejects_duplicate_ids_and_step_parent_mismatch() -> None:
         TaskDocument.model_validate(mismatch)
 
 
-def test_rejects_unknown_acceptance_and_future_revisions() -> None:
+def test_rejects_unknown_acceptance_and_root_logs() -> None:
     unknown_acceptance = _task_data()
     unknown_acceptance["acceptance_results"][0]["acceptance"] = "ACC-999"
     with pytest.raises(ValidationError, match="unknown acceptance ids"):
         TaskDocument.model_validate(unknown_acceptance)
 
-    future_revision = _task_data()
-    future_revision["approvals"][0]["plan_revision"] = 3
-    with pytest.raises(ValidationError, match="future plan revisions"):
-        TaskDocument.model_validate(future_revision)
-
-    unknown_log_phase = _task_data()
-    unknown_log_phase["logs"] = [{"phase": "PHA-999", "summary": "missing"}]
-    with pytest.raises(ValidationError, match="unknown log phases"):
-        TaskDocument.model_validate(unknown_log_phase)
+    root_logs = _task_data()
+    root_logs["logs"] = [{"phase": "PHA-999", "summary": "missing"}]
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        TaskDocument.model_validate(root_logs)
 
 
 def test_loaders_report_file_yaml_and_schema_errors(tmp_path: Path) -> None:
