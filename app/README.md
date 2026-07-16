@@ -3,14 +3,12 @@
 ## 初回セットアップ
 
 ```sh
-cd app
 npm install
 ```
 
 ## 型生成
 
 ```sh
-cd app
 npm run generate:types
 ```
 
@@ -18,11 +16,9 @@ npm run generate:types
 
 ## 開発
 
-別ターミナルで`whub app --no-open`を起動してから、Viteを起動する。
+別ターミナルでリポジトリルートから`whub app --no-open`を起動してから、Viteを起動する。
 
 ```sh
-whub app --no-open
-cd app
 npm run dev
 ```
 
@@ -31,7 +27,6 @@ Viteは`/api`を`http://127.0.0.1:8710`へプロキシする。
 ## ビルドと検証
 
 ```sh
-cd app
 npm run typecheck
 npm run build
 uv run pytest
