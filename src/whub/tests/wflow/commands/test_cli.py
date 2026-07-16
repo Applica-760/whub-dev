@@ -73,8 +73,9 @@ def test_task_ls_uses_docs_tasks_by_default(tmp_path: Path, monkeypatch) -> None
     assert "\t" not in result.output
 
 
-def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
-    path = tmp_path / "task.yaml"
+def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None:
+    path = tmp_path / "docs/tasks/task.yaml"
+    path.parent.mkdir(parents=True)
     data = yaml.safe_load(_TASK_PATH.read_text())
     data["task"]["state"] = "draft"
     data["approvals"] = []
@@ -88,16 +89,16 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
     path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
 
     runner = CliRunner()
-    show = runner.invoke(main, ["task", "show", str(path)], catch_exceptions=False)
+    monkeypatch.chdir(tmp_path)
+    show = runner.invoke(main, ["task", "show", "001"], catch_exceptions=False)
     assert show.exit_code == 0
     assert "state: draft" in show.output
     assert "Phase 1: 現行手順の確認" in show.output
-    assert "[ ] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
-    assert "STP-001-001" not in show.output
+    assert "[001-001] [ ] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
 
     approved = runner.invoke(
         main,
-        ["task", "transition", str(path), "approve_plan", "--actor", "user"],
+        ["task", "transition", "001", "approve_plan", "--actor", "user"],
         catch_exceptions=False,
     )
     assert approved.exit_code == 0
@@ -107,8 +108,7 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
         [
             "task",
             "done",
-            str(path),
-            "STP-001-001",
+            "001",
             "--log",
             "current style located",
             "--evidence",
@@ -119,13 +119,13 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
     assert done.exit_code == 0
     skipped = runner.invoke(
         main,
-        ["task", "skip", str(path), "STP-002-001", "--reason", "not needed"],
+        ["task", "skip", "001", "002-002", "--reason", "not needed"],
         catch_exceptions=False,
     )
     assert skipped.exit_code == 0
     accepted = runner.invoke(
         main,
-        ["task", "accept", str(path), "ACC-001", "--status", "passed"],
+        ["task", "accept", "001", "ACC-001", "--status", "passed"],
         catch_exceptions=False,
     )
     assert accepted.exit_code == 0
@@ -133,15 +133,14 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
     updated = yaml.safe_load(path.read_text())
     assert updated["task"]["state"] == "in_progress"
     assert updated["plan"]["phases"][0]["log"]["summary"] == "current style located"
-    assert updated["plan"]["phases"][1]["steps"][0]["skip_reason"] == "not needed"
+    assert updated["plan"]["phases"][1]["steps"][1]["skip_reason"] == "not needed"
     assert updated["acceptance_results"] == [{"acceptance": "ACC-001", "status": "passed", "evidence": []}]
 
-    show = runner.invoke(main, ["task", "show", str(path)], catch_exceptions=False)
+    show = runner.invoke(main, ["task", "show", "001"], catch_exceptions=False)
 
     assert show.exit_code == 0
-    assert "[x] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
+    assert "[001-001] [x] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
     assert "- current style located" in show.output
-    assert "[-] READMEへ開発環境セットアップ手順を追加する" in show.output
+    assert "[002-002] [-] READMEに記載した手順でテストを実行する" in show.output
     assert "- skipped: not needed" in show.output
-    assert "PHA-" not in show.output
     assert "ACC-" not in show.output

@@ -90,13 +90,12 @@ def show(task_ref: str) -> None:
             click.echo("plan: -")
             return
 
-        for phase in record.plan.phases:
-            phase_number = phase.id.removeprefix("PHA-").lstrip("0") or "0"
+        for phase_number, phase in enumerate(record.plan.phases, start=1):
             click.echo()
             click.echo(f"Phase {phase_number}: {phase.title}")
-            for step in phase.steps:
+            for step_number, step in enumerate(phase.steps, start=1):
                 marker = {"done": "x", "skipped": "-"}.get(step.state, " ")
-                click.echo(f" [{marker}] {step.description}")
+                click.echo(f" [{phase_number:03}-{step_number:03}] [{marker}] {step.description}")
                 if step.skip_reason is not None:
                     click.echo(f"    - skipped: {step.skip_reason}")
             if phase.log is not None:
@@ -152,22 +151,22 @@ def accept(
 
 @task.command()
 @click.argument("task_ref")
-@click.argument("step_id")
+@click.argument("step_ref", required=False)
 @click.option("--log", "log_summary", help="Required when this completes a Phase.")
 @click.option("--evidence", multiple=True, help="Evidence for the completed Phase.")
 def done(
     task_ref: str,
-    step_id: str,
+    step_ref: str | None,
     log_summary: str | None,
     evidence: tuple[str, ...],
 ) -> None:
-    """Mark the next incomplete Step done."""
+    """Mark a selected or next incomplete Step done."""
     try:
         task_path = resolve_task_reference(task_ref)
         updated = update_step(
             load_task(task_path),
             load_task_workflow(),
-            step_id,
+            step_ref,
             "done",
             log_summary=log_summary,
             log_evidence=evidence,
@@ -175,29 +174,29 @@ def done(
         write_task(task_path, updated)
     except WflowError as error:
         raise click.ClickException(str(error)) from error
-    click.echo(f"done {step_id}")
+    click.echo(f"done {step_ref or 'next'}")
 
 
 @task.command()
 @click.argument("task_ref")
-@click.argument("step_id")
+@click.argument("step_ref", required=False)
 @click.option("--reason", required=True, help="Reason for skipping the Step.")
 @click.option("--log", "log_summary", help="Required when this completes a Phase.")
 @click.option("--evidence", multiple=True, help="Evidence for the completed Phase.")
 def skip(
     task_ref: str,
-    step_id: str,
+    step_ref: str | None,
     reason: str,
     log_summary: str | None,
     evidence: tuple[str, ...],
 ) -> None:
-    """Skip the next incomplete Step with a reason."""
+    """Skip a selected or next incomplete Step with a reason."""
     try:
         task_path = resolve_task_reference(task_ref)
         updated = update_step(
             load_task(task_path),
             load_task_workflow(),
-            step_id,
+            step_ref,
             "skipped",
             reason,
             log_summary,
@@ -206,4 +205,4 @@ def skip(
         write_task(task_path, updated)
     except WflowError as error:
         raise click.ClickException(str(error)) from error
-    click.echo(f"skipped {step_id}")
+    click.echo(f"skipped {step_ref or 'next'}")

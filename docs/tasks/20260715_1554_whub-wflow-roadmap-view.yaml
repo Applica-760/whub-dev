@@ -1,154 +1,119 @@
 schema_version: 1
 task:
   id: TASK-003
-  workflow: WF-001
   state: in_progress
   title: wflow Taskロードマップビュー
   objective: wflowのTask状態・依存関係を集計し、whub開発のロードマップをWeb appで確認できるようにする
-  assumptions: []
   approach:
   - Markdownは長期構想と判断の記録、YAML Taskは実行事実のSSOT、Web appは読み取りビューとする
   - Task横断の読取機能を先行し、Mermaid出力とWeb app表示を段階的に追加する
   depends_on: []
-open_questions: []
-decisions: []
 plan:
   acceptance: []
   phases:
-  - id: PHA-001
-    title: Knowledgeで責務境界を定義
+  - title: Knowledgeで責務境界を定義
     acceptance: []
     steps:
-    - id: STP-001-001
-      description: Knowledge自身の定義・SSOT・記述制約をDEF・POL・CONへ定義する
+    - description: Knowledge自身の定義・SSOT・記述制約をDEF・POL・CONへ定義する
       state: done
       skip_reason: null
-    - id: STP-001-002
-      description: Workflow定義・汎用engine・Taskドメイン・Task間依存の責務とSSOTをKnowledgeへ定義する
+    - description: Workflow定義・汎用engine・Taskドメイン・Task間依存の責務とSSOTをKnowledgeへ定義する
       state: done
       skip_reason: null
-    - id: STP-001-003
-      description: DEF・POL・CONをカテゴリごとに草案提示・ユーザー承認してから反映する
+    - description: DEF・POL・CONをカテゴリごとに草案提示・ユーザー承認してから反映する
       state: done
       skip_reason: null
     log:
       summary: Knowledgeの責務境界とSSOTを定義し、ユーザー承認のうえ反映した
       evidence: []
-  - id: PHA-002
-    title: wflow運用の不足を修正
+  - title: wflow運用の不足を修正
     acceptance: []
     steps:
-    - id: STP-002-001
-      description: Task YAMLのrevision参照を削除し、承認・変更理由・Phase完了ログを現在のplanへ簡潔に保持する
+    - description: Task YAMLのrevision参照を削除し、承認・変更理由・Phase完了ログを現在のplanへ簡潔に保持する
       state: done
       skip_reason: null
-    - id: STP-002-002
-      description: Workflow定義からsubmit_plan・awaiting_approvalを削除し、approve_planをdraftから実行開始する遷移へ更新する
+    - description: Workflow定義からsubmit_plan・awaiting_approvalを削除し、approve_planをdraftから実行開始する遷移へ更新する
       state: done
       skip_reason: null
-    - id: STP-002-003
-      description: wflow task acceptを追加し、受け入れ条件のpassed/failed結果と任意証跡を記録できるようにする
+    - description: wflow task acceptを追加し、受け入れ条件のpassed/failed結果と任意証跡を記録できるようにする
       state: done
       skip_reason: null
-    - id: STP-002-004
-      description: Step完了・skip時のPhase要約と任意証跡を該当Phaseへ直接記録し、root logsを廃止する
+    - description: Step完了・skip時のPhase要約と任意証跡を該当Phaseへ直接記録し、root logsを廃止する
       state: done
       skip_reason: null
-    - id: STP-002-005
-      description: モデル・Task固有検証・汎用Transition適用を更新し、YAML定義をSSOTとして整合性を検査する
+    - description: モデル・Task固有検証・汎用Transition適用を更新し、YAML定義をSSOTとして整合性を検査する
       state: done
       skip_reason: null
-    - id: STP-002-006
-      description: apply・done・skip・acceptのCLI契約、Task YAML例、モデル／service／CLIテストを更新する
+    - description: apply・done・skip・acceptのCLI契約、Task YAML例、モデル／service／CLIテストを更新する
       state: done
       skip_reason: null
-    - id: STP-002-007
-      description: uv run pytestと代表的なTask CLI操作で、承認・Phase完了・受け入れ・Task完了・拒否条件を検証する
+    - description: uv run pytestと代表的なTask CLI操作で、承認・Phase完了・受け入れ・Task完了・拒否条件を検証する
       state: done
       skip_reason: null
     log:
       summary: Task Workflowの承認・受け入れ・Phaseログ・CLI契約を現行運用へ更新し、検証した
       evidence: []
-  - id: PHA-003
-    title: workflow／Task責務を分離
+  - title: workflow／Task責務を分離
     acceptance: []
     steps:
-    - id: STP-003-001
-      description: services/workflow.pyへ定義の条件評価・Trigger選択・記録適用を集約し、Task非依存にする
+    - description: services/workflow.pyへ定義の条件評価・Trigger選択・記録適用を集約し、Task非依存にする
       state: done
       skip_reason: null
-    - id: STP-003-002
-      description: Task serviceをTask YAMLのI/O・状態受渡し・Task固有操作と不変条件に限定する
+    - description: Task serviceをTask YAMLのI/O・状態受渡し・Task固有操作と不変条件に限定する
       state: done
       skip_reason: null
-    - id: STP-003-003
-      description: satisfied_if_definedをTask固有条件評価器として注入し、engineからacceptanceの構造を除去する
+    - description: satisfied_if_definedをTask固有条件評価器として注入し、engineからacceptanceの構造を除去する
       state: done
       skip_reason: null
-    - id: STP-003-004
-      description: 既存CLI契約を維持するmodel／service／CLIテストを更新し、uv run pytestで検証する
+    - description: 既存CLI契約を維持するmodel／service／CLIテストを更新し、uv run pytestで検証する
       state: done
       skip_reason: null
     log:
       summary: Workflow engineとTask固有serviceの責務を分離し、既存CLI契約を検証した
       evidence: []
-  - id: PHA-004
-    title: Task横断の読取機能を作成
+  - title: Task横断の読取機能を作成
     acceptance: []
     steps:
-    - id: STP-004-001
-      description: Task YAMLの標準配置をdocs/tasks、wflow task ls [TASK_DIR]の発見契約をKnowledgeへ定義する
+    - description: Task YAMLの標準配置をdocs/tasks、wflow task ls [TASK_DIR]の発見契約をKnowledgeへ定義する
       state: done
       skip_reason: null
-    - id: STP-004-002
-      description: Task YAMLを再帰発見し、妥当性エラーを個別Taskの読取結果として保持する
+    - description: Task YAMLを再帰発見し、妥当性エラーを個別Taskの読取結果として保持する
       state: done
       skip_reason: null
-    - id: STP-004-003
-      description: Task ID・依存関係・状態からブロック理由と着手可能状態を集計する
+    - description: Task ID・依存関係・状態からブロック理由と着手可能状態を集計する
       state: done
       skip_reason: null
-    - id: STP-004-004
-      description: wflow task ls [TASK_DIR]で一覧・状態・依存・ブロック理由・readyを表示する
+    - description: wflow task ls [TASK_DIR]で一覧・状態・依存・ブロック理由・readyを表示する
       state: done
       skip_reason: null
-    - id: STP-004-005
-      description: 単一Task操作でTASK-IDをdocs/tasksから一意に解決し、任意YAML path指定との互換性を維持する
+    - description: 単一Task操作でTASK-IDをdocs/tasksから一意に解決し、任意YAML path指定との互換性を維持する
       state: done
       skip_reason: null
-    - id: STP-004-006
-      description: 汎用Transition適用commandをwflow task transitionへ改名する
+    - description: 汎用Transition適用commandをwflow task transitionへ改名する
       state: done
       skip_reason: null
-    - id: STP-004-007
-      description: service／CLIテストとuv run pytestで発見・依存・不正Taskの扱いを検証する
+    - description: service／CLIテストとuv run pytestで発見・依存・不正Taskの扱いを検証する
       state: done
       skip_reason: null
     log:
       summary: Task横断読取、TASK-ID解決、transition commandを追加し、全248テストで検証した
       evidence: []
-  - id: PHA-005
-    title: Web appの読み取り専用ロードマップビューを追加
+  - title: Web appの読み取り専用ロードマップビューを追加
     acceptance: []
     steps:
-    - id: STP-005-001
-      description: wflow task graph [TASK_DIR]でTask依存関係をMermaidとして出力し検証する
+    - description: wflow task graph [TASK_DIR]でTask依存関係をMermaidとして出力し検証する
       state: pending
       skip_reason: null
-    - id: STP-005-002
-      description: Phaseをノード、順序とAcceptance完了条件を矢印で表すTaskフローをMermaidとして出力する
+    - description: Phaseをノード、順序とAcceptance完了条件を矢印で表すTaskフローをMermaidとして出力する
       state: pending
       skip_reason: null
-    - id: STP-005-003
-      description: Taskをノード、Task依存を矢印、独立Taskを島として表すTask全体フローをMermaidとして出力する
+    - description: Taskをノード、Task依存を矢印、独立Taskを島として表すTask全体フローをMermaidとして出力する
       state: pending
       skip_reason: null
-    - id: STP-005-004
-      description: Task集計APIと一覧・依存関係・進捗を表示する画面を実装し検証する
+    - description: Task集計APIと一覧・依存関係・進捗を表示する画面を実装し検証する
       state: pending
       skip_reason: null
-    - id: STP-005-005
-      description: 遷移履歴の出力は、記録粒度を別途設計してから扱う
+    - description: 遷移履歴の出力は、記録粒度を別途設計してから扱う
       state: pending
       skip_reason: null
     log: null

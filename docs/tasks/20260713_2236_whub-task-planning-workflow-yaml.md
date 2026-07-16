@@ -25,9 +25,9 @@
 - 型方針: WorkflowのState・Transitionを専用セクションで表し、条件と記録先はTransition内の`requires`・`records`に置く
 - 例外方針: MVPではExceptionを設けず、skip・cancelは理由と承認を伴う明示的な状態遷移として扱う
 - 雛形: 共通手順を[Workflow定義](../../src/whub/wflow/definitions/task.yaml)、個別記録を[架空Task](20260713_2236_whub-task-planning-task-example.yaml)へ分離する
-- ID: MVPでは参照対象のWorkflow・Task・Phase・Step・受け入れ条件だけに安定IDを付ける
-- Step ID: 親Phaseの番号とPhase内連番を組み合わせた`STP-<phase>-<step>`形式を使う
-- 順序: PhaseとStepは記載順に逐次実行し、前項の完了または承認付きskip後に次項へ進む
+- ID: Workflow・Task・受け入れ条件だけに安定IDを付ける
+- 位置指定: PhaseとStepは記載順に位置を決め、`wflow task done`・`skip`では`<phase>-<step>`（例: `002-003`）で指定できる
+- 順序: PhaseとStepは記載順を既定の実行順とし、位置指定がない場合は次の未完了Stepを更新する
 - 依存: `depends_on`はTask間の明示的な前提だけに使う任意フィールドとし、Phase・Stepには持たせない
 - 受け入れ条件: 任意とし、通常はTask単位、Phaseが独立した成果物を持つ場合だけPhase単位に置き、Step単位には置かない
 - 状態: Taskは`task.state`、Stepは各Step直下の`state`をSSOTとし、末尾に状態一覧を重複保持しない

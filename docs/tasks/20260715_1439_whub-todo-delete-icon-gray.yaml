@@ -1,28 +1,22 @@
 schema_version: 1
 task:
   id: TASK-002
-  workflow: WF-001
   state: completed
   title: Web appのTodo削除アイコンをグレー化する
   objective: Todoリストの削除用×を他の操作と区別しやすいグレーで表示する
-  assumptions:
-  - 変更対象はWeb appのTodoリスト表示だけとする
   approach:
+  - 変更対象はWeb appのTodoリスト表示だけとする
   - 既存の削除操作とアクセシビリティを維持し、色指定だけを変更して検証する
   depends_on: []
-open_questions: []
-decisions: []
 plan:
   acceptance:
   - id: ACC-001
     statement: Todoリストの削除用×がグレーで表示され、削除操作を維持している
   phases:
-  - id: PHA-001
-    title: 対象確認
+  - title: 対象確認
     acceptance: []
     steps:
-    - id: STP-001-001
-      description: Todo削除用×の実装箇所と既存の操作仕様を確認する
+    - description: Todo削除用×の実装箇所と既存の操作仕様を確認する
       state: done
       skip_reason: null
     log:
@@ -30,16 +24,13 @@ plan:
       evidence:
       - 'app/src/features/todos/TodoList.tsx: ActionIcon color=red, onClick=onDelete'
       - 'app/src/features/todos/useTodoWidgets.ts: handleDeleteがDELETE APIを呼ぶ'
-  - id: PHA-002
-    title: 修正と検証
+  - title: 修正と検証
     acceptance: []
     steps:
-    - id: STP-002-001
-      description: 削除用×の色指定をグレーへ変更する
+    - description: 削除用×の色指定をグレーへ変更する
       state: done
       skip_reason: null
-    - id: STP-002-002
-      description: ビルドまたはUI確認で色と削除操作を検証する
+    - description: ビルドまたはUI確認で色と削除操作を検証する
       state: done
       skip_reason: null
     log:

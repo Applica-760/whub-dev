@@ -2,45 +2,34 @@ schema_version: 1
 
 task:
   id: TASK-001
-  workflow: WF-001
   state: completed
   title: READMEへ開発環境セットアップ手順を追加する
   objective: 新規参加者がREADMEだけでテストを実行できるようにする
-  assumptions:
-    - Python環境と依存管理にはuvを使用する
   approach:
+    - Python環境と依存管理にはuvを使用する
     - 現行コマンドを確認してからREADMEを更新し、記載した手順を検証する
-
-open_questions: []
-decisions: []
 
 plan:
   acceptance:
     - id: ACC-001
       statement: READMEに前提条件・依存導入・テスト手順が記載され、その手順の成功が検証されている
   phases:
-    - id: PHA-001
-      title: 現行手順の確認
+    - title: 現行手順の確認
       steps:
-        - id: STP-001-001
-          description: 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する
+        - description: 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する
           state: done
       log:
         summary: 現行のセットアップ手順を確認した
 
-    - id: PHA-002
-      title: README更新と検証
+    - title: README更新と検証
       steps:
-        - id: STP-002-001
-          description: READMEへ開発環境セットアップ手順を追加する
+        - description: READMEへ開発環境セットアップ手順を追加する
           state: done
 
-        - id: STP-002-002
-          description: READMEに記載した手順でテストを実行する
+        - description: READMEに記載した手順でテストを実行する
           state: done
 
-        - id: STP-002-003
-          description: READMEだけを参照してセットアップ手順を再現できることを確認する
+        - description: READMEだけを参照してセットアップ手順を再現できることを確認する
           state: done
       log:
         summary: README更新と再現確認を完了した

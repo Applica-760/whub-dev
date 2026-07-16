@@ -6,17 +6,16 @@
 3. 未知フィールドと不正IDを拒否する。
 4. Workflow内の状態重複と状態参照切れを拒否する。
 5. 条件operatorごとの必須フィールド不足を拒否する。
-6. Task内のID重複とStep IDの親Phase不一致を拒否する。
+6. PhaseとStepのIDを拒否する。
 7. Task内の受け入れ条件参照切れとroot logsを拒否する。
 8. loaderはファイル・YAML・schema不正をWflowErrorにする。
 
 検証しないケース:
-1. WorkflowとTaskをまたぐ状態・Workflow IDの整合性。
+1. WorkflowとTaskをまたぐ状態の整合性。
 2. 状態の到達可能性、条件式評価、状態遷移操作。
 """
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 
 import pytest
@@ -51,7 +50,7 @@ def test_loads_workflow_and_task_definitions() -> None:
 
     assert workflow.workflow.id == "WF-001"
     assert task.task.id == "TASK-001"
-    assert task.plan.phases[0].id == "PHA-001"
+    assert task.plan.phases[0].title == "現行手順の確認"
 
 
 def test_workflow_actor_accepts_arbitrary_role_names() -> None:
@@ -71,6 +70,17 @@ def test_rejects_unknown_fields_and_invalid_ids() -> None:
     task_data["task"]["id"] = "INVALID-001"
     with pytest.raises(ValidationError):
         TaskDocument.model_validate(task_data)
+
+    for mutate in (
+        lambda data: data["task"].update(assumptions=[]),
+        lambda data: data["task"].update(workflow="WF-001"),
+        lambda data: data.update(open_questions=[]),
+        lambda data: data.update(decisions=[]),
+    ):
+        task_data = _task_data()
+        mutate(task_data)
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            TaskDocument.model_validate(task_data)
 
 
 def test_rejects_duplicate_and_unknown_workflow_states() -> None:
@@ -120,18 +130,16 @@ def test_rejects_missing_operator_fields() -> None:
         WorkflowDefinition.model_validate(satisfied)
 
 
-def test_rejects_duplicate_ids_and_step_parent_mismatch() -> None:
-    duplicate = _task_data()
-    duplicate["plan"]["phases"].append(
-        copy.deepcopy(duplicate["plan"]["phases"][0])
-    )
-    with pytest.raises(ValidationError, match="duplicate task-planning ids"):
-        TaskDocument.model_validate(duplicate)
+def test_rejects_ids_in_phases_and_steps() -> None:
+    phase = _task_data()
+    phase["plan"]["phases"][0]["id"] = "PHA-001"
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        TaskDocument.model_validate(phase)
 
-    mismatch = _task_data()
-    mismatch["plan"]["phases"][0]["steps"][0]["id"] = "STP-999-001"
-    with pytest.raises(ValidationError, match="does not belong to phase"):
-        TaskDocument.model_validate(mismatch)
+    step = _task_data()
+    step["plan"]["phases"][0]["steps"][0]["id"] = "STP-001-001"
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        TaskDocument.model_validate(step)
 
 
 def test_rejects_unknown_acceptance_and_root_logs() -> None:

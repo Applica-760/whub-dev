@@ -18,11 +18,9 @@ class TaskModel(BaseModel):
 
 class TaskHeader(TaskModel):
     id: str = Field(pattern=TASK_ID_PATTERN)
-    workflow: str = Field(pattern=r"^WF-[0-9]+$")
     state: StateName
     title: NonEmptyStr
     objective: NonEmptyStr
-    assumptions: list[NonEmptyStr] = Field(default_factory=list)
     approach: list[NonEmptyStr] = Field(default_factory=list)
     depends_on: list[Annotated[str, Field(pattern=TASK_ID_PATTERN)]] = Field(
         default_factory=list
@@ -35,7 +33,6 @@ class AcceptanceCriterion(TaskModel):
 
 
 class PlanStep(TaskModel):
-    id: str = Field(pattern=r"^STP-[0-9]+-[0-9]+$")
     description: NonEmptyStr
     state: StateName
     skip_reason: NonEmptyStr | None = None
@@ -55,7 +52,6 @@ class PhaseLog(TaskModel):
 
 
 class PlanPhase(TaskModel):
-    id: str = Field(pattern=r"^PHA-[0-9]+$")
     title: NonEmptyStr
     acceptance: list[AcceptanceCriterion] = Field(default_factory=list)
     steps: list[PlanStep] = Field(min_length=1)
@@ -106,8 +102,6 @@ class TaskSummary(TaskModel):
 class TaskDocument(TaskModel):
     schema_version: Literal[1]
     task: TaskHeader
-    open_questions: list[NonEmptyStr] = Field(default_factory=list)
-    decisions: list[NonEmptyStr] = Field(default_factory=list)
     plan: TaskPlan | None = None
     approvals: list[PlanApproval] = Field(default_factory=list)
     acceptance_results: list[AcceptanceResult] = Field(default_factory=list)
@@ -116,7 +110,7 @@ class TaskDocument(TaskModel):
     result: TaskResult | None = None
 
     @model_validator(mode="after")
-    def _validate_ids_and_references(self) -> TaskDocument:
+    def _validate_acceptance_references(self) -> TaskDocument:
         if self.plan is None:
             if self.approvals or self.acceptance_results or self.change_requests:
                 raise ValueError("plan records require a plan")
@@ -130,27 +124,6 @@ class TaskDocument(TaskModel):
                 for criterion in phase.acceptance
             ),
         ]
-        phases = self.plan.phases
-        steps = [step for phase in phases for step in phase.steps]
-        ids = [
-            *(criterion.id for criterion in criteria),
-            *(phase.id for phase in phases),
-            *(step.id for step in steps),
-        ]
-        counts = Counter(ids)
-        duplicates = sorted(item_id for item_id, count in counts.items() if count > 1)
-        if duplicates:
-            raise ValueError(f"duplicate task-planning ids: {', '.join(duplicates)}")
-
-        for phase in phases:
-            phase_number = phase.id.removeprefix("PHA-")
-            expected_prefix = f"STP-{phase_number}-"
-            for step in phase.steps:
-                if not step.id.startswith(expected_prefix):
-                    raise ValueError(
-                        f"step '{step.id}' does not belong to phase '{phase.id}'"
-                    )
-
         known_acceptance_ids = {criterion.id for criterion in criteria}
         unknown_acceptance_ids = sorted(
             {

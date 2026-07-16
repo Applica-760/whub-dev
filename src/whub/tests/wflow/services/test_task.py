@@ -2,9 +2,8 @@
 
 検証するケース:
 1. 組込みTaskとWorkflowの組合せは整合する。
-2. Workflow ID・状態・plan承認の不整合を通知する。
-3. Stepの順序違反を通知する。
-4. 完了Taskの不足と中止Taskの記録不足を通知する。
+2. 状態・plan承認の不整合を通知する。
+3. 完了Taskの不足と中止Taskの記録不足を通知する。
 """
 from __future__ import annotations
 
@@ -51,12 +50,8 @@ def test_builtin_task_matches_the_builtin_workflow() -> None:
     assert _codes(_task_data()) == set()
 
 
-def test_reports_workflow_state_and_approval_mismatches() -> None:
+def test_reports_state_and_approval_mismatches() -> None:
     # ケース2
-    mismatch = _task_data()
-    mismatch["task"]["workflow"] = "WF-999"
-    assert "workflow_mismatch" in _codes(mismatch)
-
     unknown_state = _task_data()
     unknown_state["task"]["state"] = "waiting"
     assert "unknown_task_state" in _codes(unknown_state)
@@ -67,16 +62,8 @@ def test_reports_workflow_state_and_approval_mismatches() -> None:
     assert "missing_plan_approval" in _codes(unapproved)
 
 
-def test_reports_step_order_violations() -> None:
-    # ケース3
-    data = _task_data()
-    data["plan"]["phases"][0]["steps"][0]["state"] = "pending"
-
-    assert "step_order_violation" in _codes(data)
-
-
 def test_reports_missing_completion_and_cancellation_records() -> None:
-    # ケース4
+    # ケース3
     completed = _task_data()
     completed["result"] = None
     completed["acceptance_results"] = []
@@ -113,14 +100,18 @@ def test_applies_lifecycle_transitions_and_records() -> None:
     with pytest.raises(WflowError, match="requirement not satisfied"):
         apply_transition(task, workflow, "complete_task", "agent", {"result": "done"})
 
-    for phase in task.plan.phases:
-        for index, step in enumerate(phase.steps):
+    for phase_index, phase in enumerate(task.plan.phases, start=1):
+        for step_index, step in enumerate(phase.steps, start=1):
             task = update_step(
                 task,
                 workflow,
-                step.id,
+                f"{phase_index:03}-{step_index:03}",
                 "done",
-                log_summary=f"{phase.id} complete" if index == len(phase.steps) - 1 else None,
+                log_summary=(
+                    f"phase {phase_index} complete"
+                    if step_index == len(phase.steps)
+                    else None
+                ),
             )
     task = record_acceptance(task, "ACC-001", "passed", ("verified",))
     assert "complete_task" not in available_transitions(task, workflow)
@@ -130,17 +121,27 @@ def test_applies_lifecycle_transitions_and_records() -> None:
     assert task.result.summary == "done"
 
 
-def test_rejects_wrong_actor_and_out_of_order_step() -> None:
+def test_rejects_wrong_actor_and_invalid_step_reference() -> None:
     workflow = load_task_workflow()
     with pytest.raises(WflowError, match="requires actor 'user'"):
         apply_transition(_draft_task(), workflow, "approve_plan", "agent")
 
     active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
-    with pytest.raises(WflowError, match="next step is 'STP-001-001'"):
-        update_step(active, workflow, "STP-002-001", "done")
+    with pytest.raises(WflowError, match="must be PPP-SSS"):
+        update_step(active, workflow, "2-1", "done")
 
     with pytest.raises(WflowError, match="requires a log summary"):
-        update_step(active, workflow, "STP-001-001", "done")
+        update_step(active, workflow, None, "done")
+
+
+def test_updates_selected_step_out_of_order() -> None:
+    workflow = load_task_workflow()
+    active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
+
+    updated = update_step(active, workflow, "002-001", "done")
+
+    assert updated.plan.phases[1].steps[0].state == "done"
+    assert check_task(updated, workflow) == ()
 
 
 def test_skip_records_its_reason_and_write_is_loadable(tmp_path: Path) -> None:
@@ -149,7 +150,7 @@ def test_skip_records_its_reason_and_write_is_loadable(tmp_path: Path) -> None:
     skipped = update_step(
         active,
         workflow,
-        "STP-001-001",
+        None,
         "skipped",
         "not needed",
         "phase skipped",

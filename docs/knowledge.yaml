@@ -395,4 +395,7 @@ constraints:
   - id: CON-041
     statement: Task Workflowの宣言済みTransitionを適用するCLI commandはwflow task transitionとする
 
+  - id: CON-042
+    statement: PhaseとStepはTask YAMLの記載順で識別し、安定IDを持たない。wflow task doneとskipはPPP-SSS形式の位置指定を受け、指定がなければ次の未完了Stepを対象にする
+
 exceptions: []
