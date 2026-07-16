@@ -7,6 +7,7 @@ import { errorMessage } from '../../api/errorMessage';
 import { PageFrame } from '../../components/PageFrame';
 import { WidgetFrame } from '../../components/WidgetFrame';
 import { getTask } from './api';
+import { TaskFlowGraphWidget } from './TaskFlowGraphWidget';
 
 function stepMarker(state: string | null | undefined): string {
   return { done: 'x', skipped: '-' }[state ?? ''] ?? ' ';
@@ -43,34 +44,37 @@ export function TaskDetailPage() {
 
   return (
     <PageFrame>
-      <WidgetFrame
-        action={<Anchor component={NavLink} size="sm" to="/tasks">一覧へ戻る</Anchor>}
-        title={<Text c="dimmed" fw={600} size="sm">{task?.task?.title ?? 'Task'}</Text>}
-      >
-        <Box p="md">
-          {error ? (
-            <Alert color="red" title="Taskを取得できませんでした">{error}</Alert>
-          ) : loading ? (
-            <Text c="dimmed">Taskを読み込んでいます…</Text>
-          ) : task ? (
-            <Stack gap="md">
-              <Text>state: {task.task?.state ?? '-'}</Text>
-              {task.plan ? phases.map((phase, phaseIndex) => (
-                <Stack gap="xs" key={`${phaseIndex}-${phase.title}`}>
-                  <Text fw={600}>Phase {phaseIndex + 1}: {phase.title}</Text>
-                  {(phase.steps ?? []).map((step, stepIndex) => (
-                    <Stack gap={0} key={`${stepIndex}-${step.description}`}>
-                      <Text pl="xl">[{stepMarker(step.state)}] {step.description}</Text>
-                      {step.skip_reason && <Text c="dimmed" pl="md" size="sm">- skipped: {step.skip_reason}</Text>}
-                    </Stack>
-                  ))}
-                  {phase.log && <Text c="dimmed" size="sm">- {phase.log.summary}</Text>}
-                </Stack>
-              )) : <Text c="dimmed">plan: -</Text>}
-            </Stack>
-          ) : null}
-        </Box>
-      </WidgetFrame>
+      <Stack gap="md">
+        {taskId && <TaskFlowGraphWidget taskId={taskId} />}
+        <WidgetFrame
+          action={<Anchor component={NavLink} size="sm" to="/tasks">一覧へ戻る</Anchor>}
+          title={<Text c="dimmed" fw={600} size="sm">{task?.task?.title ?? 'Task'}</Text>}
+        >
+          <Box p="md">
+            {error ? (
+              <Alert color="red" title="Taskを取得できませんでした">{error}</Alert>
+            ) : loading ? (
+              <Text c="dimmed">Taskを読み込んでいます…</Text>
+            ) : task ? (
+              <Stack gap="md">
+                <Text>state: {task.task?.state ?? '-'}</Text>
+                {task.plan ? phases.map((phase, phaseIndex) => (
+                  <Stack gap="xs" key={`${phaseIndex}-${phase.title}`}>
+                    <Text fw={600}>Phase {phaseIndex + 1}: {phase.title}</Text>
+                    {(phase.steps ?? []).map((step, stepIndex) => (
+                      <Stack gap={0} key={`${stepIndex}-${step.description}`}>
+                        <Text pl="xl">[{stepMarker(step.state)}] {step.description}</Text>
+                        {step.skip_reason && <Text c="dimmed" pl="md" size="sm">- skipped: {step.skip_reason}</Text>}
+                      </Stack>
+                    ))}
+                    {phase.log && <Text c="dimmed" size="sm">- {phase.log.summary}</Text>}
+                  </Stack>
+                )) : <Text c="dimmed">plan: -</Text>}
+              </Stack>
+            ) : null}
+          </Box>
+        </WidgetFrame>
+      </Stack>
     </PageFrame>
   );
 }

@@ -1,5 +1,6 @@
 import { InboxWidget } from '../inbox/InboxWidget';
 import { ResourceStatusWidget } from '../status/ResourceStatusWidget';
+import { TaskDependencyGraphWidget } from '../tasks/TaskDependencyGraphWidget';
 import { TaskWidget } from '../tasks/TaskWidget';
 import { TodoFormWidget } from '../todos/TodoFormWidget';
 import { TodoPendingWidget } from '../todos/TodoPendingWidget';
@@ -14,13 +15,14 @@ export function OverviewPage() {
       <OverviewColumn>
         <TodoFormWidget controller={todoController} />
         <InboxWidget />
+        <ResourceStatusWidget />
       </OverviewColumn>
       <OverviewColumn>
         <TodoPendingWidget controller={todoController} showAllLink />
         <TaskWidget overviewOnly showAllLink />
       </OverviewColumn>
       <OverviewColumn>
-        <ResourceStatusWidget />
+        <TaskDependencyGraphWidget height={480} />
       </OverviewColumn>
     </OverviewFrame>
   );

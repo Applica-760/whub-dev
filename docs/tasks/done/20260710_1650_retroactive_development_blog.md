@@ -48,3 +48,4 @@
 
 - Phase 1完了。`slides/dev-log/index.md`作成済み（全88コミット・task md47件・ADR11件を時系列網羅、対応不明コミット9件は末尾に別記）。
 - Phase 2完了。粒度6本を確定し、`slides/dev-log/01-foundation-and-my-boot.md`〜`06-widget-integration-and-graph-model.md`を6並列Agentで作成済み。ユーザーレビュー待ち（レビュー後、必要なら`docs/tasks/done`へ移動）。
+- 中止: ユーザー判断によりレビュー・公開工程は継続しない。

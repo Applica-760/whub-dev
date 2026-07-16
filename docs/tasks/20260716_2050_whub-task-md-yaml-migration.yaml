@@ -1,0 +1,39 @@
+schema_version: 1
+
+task:
+  id: TASK-010
+  state: draft
+  title: task-planning以外の運用Workflow候補を選定する
+  objective: inbox・backlog・意思決定記録・進捗集約の運用から、wflowで管理すべきWorkflowを選定する
+  approach:
+    - LinearのTriageとMartin FowlerのADRを参考に、入力整理と意思決定記録をTask Workflowと混同せずに比較する
+    - 既存のKnowledge YAMLで定義したinbox・backlog・execution-spec・ADR・FOCUSの責務を前提にする
+  depends_on:
+    - TASK-003
+
+plan:
+  phases:
+    - title: 参考運用からWorkflow候補を抽出する
+      steps:
+        - description: Linear Triageの受入・却下・保留と、ADRの決定・置換記録を既存運用へ対応付ける
+          state: pending
+        - description: inbox・backlog・issue-log・execution-spec・ADR・FOCUS更新のうち状態遷移が必要な候補を抽出する
+          state: pending
+    - title: 候補ごとのWorkflow適性を評価する
+      steps:
+        - description: 各候補のSSOT、開始・終端状態、必要な承認・証跡、Task Workflowとの境界を評価する
+          state: pending
+        - description: 単なる文書運用または一回限りの操作で足りる候補を除外する
+          state: pending
+    - title: 導入順序と後続Taskを確定する
+      steps:
+        - description: 導入するWorkflow、見送るWorkflow、検証対象をユーザーと確定する
+          state: pending
+        - description: 選定結果を実装単位の後続Taskへ分割する
+          state: pending
+
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

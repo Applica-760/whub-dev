@@ -55,10 +55,10 @@
 - [x] `/tasks`一覧とOverviewのready／in_progress Task Widgetから詳細へ移動できる導線を実装し、型検査・ビルド・pytestで検証する
 
 ### Phase 6: Web appのロードマップビュー
-- [] `task_graph` Serviceを共有するタスク間・単一Taskフロー読取APIを実装し、OpenAPI・APIテストで検証する
-- [] `components/MermaidDiagram`でMermaid文字列をSVGへ描画し、タスク間・タスク内の別WidgetFrameへ組み込む
-- [] タスク間WidgetをOverview中央列と`/tasks`先頭、タスク内Widgetを`/tasks/:taskId`先頭へ配置し、型検査・ビルド・pytestで検証する
-- [] 遷移履歴の出力は、記録粒度を別途設計してから扱う
+- [x] `task_graph` Serviceを共有するタスク間・単一Taskフロー読取APIを実装し、OpenAPI・APIテストで検証する
+- [x] `components/MermaidDiagram`でTask内フローをSVGへ描画し、タスク間はCytoscape.jsのカード型グラフへ置き換える
+- [x] タスク間WidgetをOverview中央列と`/tasks`先頭、タスク内Widgetを`/tasks/:taskId`先頭へ配置し、型検査・ビルド・pytestで検証する
+- [x] 遷移履歴の出力は、記録粒度を別途設計してから扱う（保留）
 
 ## 実行ログ
 
@@ -143,5 +143,16 @@
 - 結果: OpenAPI・APIテスト14件と`npm run build`が成功した
 - 判断: 続行
 
+### 試行 17: Mermaidロードマップビュー
+- 実施内容: Task graph API、共通Mermaid描画部品、タスク間・タスク内Widgetを追加し、Mermaid本体は遅延読込した
+- 結果: OpenAPI・APIテスト15件と`npm run build`が成功した
+- 判断: 続行
+
+### 試行 18: Cytoscape.jsタスク間ビュー
+- 実施内容: タスク間WidgetをfCoSEのカード型グラフへ置換し、Overviewだけ高さを480pxにした
+- 結果: `npm run build`と全254テストが成功した
+- 判断: 完了
+
 ## 結果
 - Phase 3: `wflow task ls [TASK_DIR]`とTask横断集計を追加し、246テストと既存Task一覧で検証した
+- Phase 5-6: Task読取API・チェックリスト詳細・Cytoscape.jsタスク間ビュー・Mermaid Task内フローを追加し、`npm run build`と全254テストで検証した

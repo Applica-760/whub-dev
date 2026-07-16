@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-003
-  state: in_progress
+  state: completed
   title: wflow Taskロードマップビュー
   objective: wflowのTask状態・依存関係を集計し、whub開発のロードマップをWeb appで確認できるようにする
   approach:
@@ -102,24 +102,29 @@ plan:
     acceptance: []
     steps:
     - description: wflow task graph [TASK_DIR]でTask依存関係をMermaidとして出力し検証する
-      state: pending
+      state: done
       skip_reason: null
     - description: Phaseをノード、順序とAcceptance完了条件を矢印で表すTaskフローをMermaidとして出力する
-      state: pending
+      state: done
       skip_reason: null
     - description: Taskをノード、Task依存を矢印、独立Taskを島として表すTask全体フローをMermaidとして出力する
-      state: pending
+      state: done
       skip_reason: null
     - description: Task集計APIと一覧・依存関係・進捗を表示する画面を実装し検証する
-      state: pending
+      state: done
       skip_reason: null
     - description: 遷移履歴の出力は、記録粒度を別途設計してから扱う
-      state: pending
-      skip_reason: null
-    log: null
+      state: skipped
+      skip_reason: 遷移履歴の記録粒度は未設計のため別Taskで扱う
+    log:
+      summary: Task読取API、Cytoscape.jsタスク間ビュー、Mermaid Task内フローを実装し検証した
+      evidence:
+      - 'uv run pytest: 254 passed'
+      - 'npm run build: passed'
 approvals:
 - actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: Task読取Webビューとロードマップグラフを実装し検証した
