@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 StateName = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
+TASK_ID_PATTERN = r"^TASK-[0-9]+$"
 
 
 class TaskModel(BaseModel):
@@ -16,14 +17,14 @@ class TaskModel(BaseModel):
 
 
 class TaskHeader(TaskModel):
-    id: str = Field(pattern=r"^TASK-[0-9]+$")
+    id: str = Field(pattern=TASK_ID_PATTERN)
     workflow: str = Field(pattern=r"^WF-[0-9]+$")
     state: StateName
     title: NonEmptyStr
     objective: NonEmptyStr
     assumptions: list[NonEmptyStr] = Field(default_factory=list)
     approach: list[NonEmptyStr] = Field(default_factory=list)
-    depends_on: list[Annotated[str, Field(pattern=r"^TASK-[0-9]+$")]] = Field(
+    depends_on: list[Annotated[str, Field(pattern=TASK_ID_PATTERN)]] = Field(
         default_factory=list
     )
 

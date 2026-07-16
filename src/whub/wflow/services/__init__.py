@@ -9,6 +9,7 @@ from whub.wflow.services.task import (
     load_task,
     load_task_workflow,
     record_acceptance,
+    resolve_task_reference,
     update_step,
     write_task,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "list_tasks",
     "load_workflow",
     "record_acceptance",
+    "resolve_task_reference",
     "update_step",
     "write_task",
 ]

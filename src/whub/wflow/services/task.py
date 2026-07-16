@@ -4,13 +4,14 @@ from __future__ import annotations
 from importlib.resources import as_file, files
 import os
 from pathlib import Path
+import re
 import tempfile
 from typing import Any
 
 import yaml
 from pydantic import ValidationError
 
-from whub.wflow.models.task import TaskDocument, TaskSummary
+from whub.wflow.models.task import TASK_ID_PATTERN, TaskDocument, TaskSummary
 from whub.wflow.models.workflow import TransitionRequirement, WorkflowDefinition
 from whub.wflow.services.errors import Diagnostic, WflowError
 from whub.wflow.services.workflow import (
@@ -27,6 +28,36 @@ def load_task(path: Path) -> TaskDocument:
         return TaskDocument.model_validate(yaml.safe_load(path.read_text()))
     except (OSError, yaml.YAMLError, ValidationError) as error:
         raise WflowError(f"failed to load task YAML: {path}: {error}") from error
+
+
+def resolve_task_reference(
+    reference: str,
+    root: Path = Path("docs/tasks"),
+) -> Path:
+    """Resolve a Task ID or its numeric part in ROOT, or a YAML path."""
+    task_id = (
+        reference
+        if re.fullmatch(TASK_ID_PATTERN, reference) is not None
+        else f"TASK-{reference}" if re.fullmatch(r"[0-9]+", reference) else None
+    )
+    if task_id is None:
+        return Path(reference)
+    if not root.is_dir():
+        raise WflowError(f"task directory does not exist: {root}")
+
+    matches: list[Path] = []
+    for path in sorted(root.rglob("*.yaml")):
+        try:
+            if load_task(path).task.id == task_id:
+                matches.append(path)
+        except WflowError:
+            continue
+    if not matches:
+        raise WflowError(f"task ID not found: {task_id}")
+    if len(matches) > 1:
+        paths = ", ".join(str(path) for path in matches)
+        raise WflowError(f"task ID is ambiguous: {task_id}: {paths}")
+    return matches[0]
 
 
 def load_task_workflow() -> WorkflowDefinition:

@@ -35,11 +35,21 @@
 - [x] Task YAMLを再帰発見し、妥当性エラーを個別Taskの読取結果として保持する
 - [x] Task ID・依存関係・状態からブロック理由と着手可能状態を集計する
 - [x] `wflow task ls [TASK_DIR]`で一覧・状態・依存・ブロック理由・readyを表示する
+- [x] 単一Task操作でTASK-IDをdocs/tasksから一意に解決し、任意YAML path指定との互換性を維持する
+- [x] 汎用Transition適用commandを`wflow task transition`へ改名する
 - [x] service／CLIテストと`uv run pytest`で発見・依存・不正Taskの扱いを検証する
+
+### Phase 3.5: 単一Taskの計画表示を改善
+- [x] `wflow task show`でTask stateとPhase／StepをMarkdownに近いチェックボックス形式で表示する
+- [x] 完了・未完了・skipとPhase logをID・Acceptance・evidenceを表示せずに描画する
+- [x] CLIテストと`uv run pytest`で表示契約を検証する
 
 ### Phase 4: Web appの読み取り専用ロードマップビューを追加
 - [] `wflow task graph [TASK_DIR]`でTask依存関係をMermaidとして出力し検証する
+- [] Phaseをノード、順序とAcceptance完了条件を矢印で表すTaskフローをMermaidとして出力する
+- [] Taskをノード、Task依存を矢印、独立Taskを島として表すTask全体フローをMermaidとして出力する
 - [] Task集計APIと一覧・依存関係・進捗を表示する画面を実装し検証する
+- [] 遷移履歴の出力は、記録粒度を別途設計してから扱う
 
 ## 実行ログ
 
@@ -72,6 +82,21 @@
 ### 試行 6: Task一覧の整形
 - 実施内容: `wflow task ls`のTSV出力を共通table rendererへ置換した
 - 結果: 列幅が表示幅に合わせて揃い、CLIテストと全246テストが成功した
+- 判断: 続行
+
+### 試行 7: Task参照とTransition commandの整理
+- 実施内容: TASK-IDをdocs/tasksから一意解決し、path指定を維持したまま`apply`を`transition`へ改名した
+- 結果: TASK-IDの欠落・重複を拒否し、31 wflowテストと全248テストが成功した
+- 判断: 続行
+
+### 試行 8: 数値Task ID参照
+- 実施内容: 単一Task commandでTASK-IDの数字部分だけをID参照として受け付けた
+- 結果: `wflow task show 003`がTASK-003を解決し、全248テストが成功した
+- 判断: 続行
+
+### 試行 9: Task YAMLの実行記録化
+- 実施内容: TASK-003を生成し、承認後にPhase 1から3までのStepとPhaseログを順に記録した
+- 結果: Task YAMLは有効で、次StepはPhase 4のSTP-005-001になった
 - 判断: 続行
 
 ## 結果

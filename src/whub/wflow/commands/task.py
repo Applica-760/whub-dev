@@ -8,12 +8,12 @@ from pathlib import Path
 from whub.wflow.services import (
     WflowError,
     apply_transition,
-    available_transitions,
     check_task,
     list_tasks,
     load_task,
     load_task_workflow,
     record_acceptance,
+    resolve_task_reference,
     update_step,
     write_task,
 )
@@ -26,10 +26,11 @@ def task() -> None:
 
 
 @task.command()
-@click.argument("task_path", type=click.Path(path_type=Path))
-def check(task_path: Path) -> None:
+@click.argument("task_ref")
+def check(task_ref: str) -> None:
     """Check one task execution record."""
     try:
+        task_path = resolve_task_reference(task_ref)
         diagnostics = check_task(load_task(task_path), load_task_workflow())
     except WflowError as error:
         raise click.ClickException(str(error)) from error
@@ -74,38 +75,43 @@ def ls(task_dir: Path) -> None:
 
 
 @task.command()
-@click.argument("task_path", type=click.Path(path_type=Path))
-def show(task_path: Path) -> None:
-    """Show task state, next Step, and ready transitions."""
+@click.argument("task_ref")
+def show(task_ref: str) -> None:
+    """Show task state and plan progress."""
     try:
+        task_path = resolve_task_reference(task_ref)
         record = load_task(task_path)
         workflow = load_task_workflow()
         diagnostics = check_task(record, workflow)
         if diagnostics:
             raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
-        steps = (
-            [step for phase in record.plan.phases for step in phase.steps]
-            if record.plan is not None
-            else []
-        )
-        next_step = next(
-            (step for step in steps if step.state not in {"done", "skipped"}), None
-        )
         click.echo(f"state: {record.task.state}")
-        click.echo(f"next step: {next_step.id if next_step else '-'}")
-        transitions = available_transitions(record, workflow)
-        click.echo(f"ready transitions: {', '.join(transitions) if transitions else '-'}")
+        if record.plan is None:
+            click.echo("plan: -")
+            return
+
+        for phase in record.plan.phases:
+            phase_number = phase.id.removeprefix("PHA-").lstrip("0") or "0"
+            click.echo()
+            click.echo(f"Phase {phase_number}: {phase.title}")
+            for step in phase.steps:
+                marker = {"done": "x", "skipped": "-"}.get(step.state, " ")
+                click.echo(f" [{marker}] {step.description}")
+                if step.skip_reason is not None:
+                    click.echo(f"    - skipped: {step.skip_reason}")
+            if phase.log is not None:
+                click.echo(f"    - {phase.log.summary}")
     except WflowError as error:
         raise click.ClickException(str(error)) from error
 
 
-@task.command("apply")
-@click.argument("task_path", type=click.Path(path_type=Path))
+@task.command("transition")
+@click.argument("task_ref")
 @click.argument("trigger")
 @click.option("--actor", required=True, help="Workflow role performing the trigger.")
 @click.option("--reason", help="Reason for a plan change or cancellation.")
 @click.option("--result", help="Summary recorded when completing a task.")
-def apply(task_path: Path, trigger: str, actor: str, reason: str | None, result: str | None) -> None:
+def transition(task_ref: str, trigger: str, actor: str, reason: str | None, result: str | None) -> None:
     """Apply one declared Workflow trigger."""
     input_data = {
         key: value
@@ -113,28 +119,30 @@ def apply(task_path: Path, trigger: str, actor: str, reason: str | None, result:
         if value is not None
     }
     try:
+        task_path = resolve_task_reference(task_ref)
         updated = apply_transition(
             load_task(task_path), load_task_workflow(), trigger, actor, input_data
         )
         write_task(task_path, updated)
     except WflowError as error:
         raise click.ClickException(str(error)) from error
-    click.echo(f"applied {trigger}: {updated.task.state}")
+    click.echo(f"transitioned {trigger}: {updated.task.state}")
 
 
 @task.command()
-@click.argument("task_path", type=click.Path(path_type=Path))
+@click.argument("task_ref")
 @click.argument("acceptance")
 @click.option("--status", type=click.Choice(["passed", "failed"]), required=True)
 @click.option("--evidence", multiple=True, help="Optional evidence for the acceptance result.")
 def accept(
-    task_path: Path,
+    task_ref: str,
     acceptance: str,
     status: str,
     evidence: tuple[str, ...],
 ) -> None:
     """Record one acceptance result."""
     try:
+        task_path = resolve_task_reference(task_ref)
         updated = record_acceptance(load_task(task_path), acceptance, status, evidence)
         write_task(task_path, updated)
     except WflowError as error:
@@ -143,18 +151,19 @@ def accept(
 
 
 @task.command()
-@click.argument("task_path", type=click.Path(path_type=Path))
+@click.argument("task_ref")
 @click.argument("step_id")
 @click.option("--log", "log_summary", help="Required when this completes a Phase.")
 @click.option("--evidence", multiple=True, help="Evidence for the completed Phase.")
 def done(
-    task_path: Path,
+    task_ref: str,
     step_id: str,
     log_summary: str | None,
     evidence: tuple[str, ...],
 ) -> None:
     """Mark the next incomplete Step done."""
     try:
+        task_path = resolve_task_reference(task_ref)
         updated = update_step(
             load_task(task_path),
             load_task_workflow(),
@@ -170,13 +179,13 @@ def done(
 
 
 @task.command()
-@click.argument("task_path", type=click.Path(path_type=Path))
+@click.argument("task_ref")
 @click.argument("step_id")
 @click.option("--reason", required=True, help="Reason for skipping the Step.")
 @click.option("--log", "log_summary", help="Required when this completes a Phase.")
 @click.option("--evidence", multiple=True, help="Evidence for the completed Phase.")
 def skip(
-    task_path: Path,
+    task_ref: str,
     step_id: str,
     reason: str,
     log_summary: str | None,
@@ -184,6 +193,7 @@ def skip(
 ) -> None:
     """Skip the next incomplete Step with a reason."""
     try:
+        task_path = resolve_task_reference(task_ref)
         updated = update_step(
             load_task(task_path),
             load_task_workflow(),

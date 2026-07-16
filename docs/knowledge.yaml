@@ -389,4 +389,10 @@ constraints:
   - id: CON-039
     statement: Task YAMLの標準配置はrepository root相対のdocs/tasksとし、wflow task lsは無引数で同ディレクトリを再帰走査し、任意のTASK_DIR指定で対象を上書きする
 
+  - id: CON-040
+    statement: 単一Taskを対象にするwflow task commandはTASK-ID・その数字部分・Task YAML pathを受け、ID参照はdocs/tasksから一意に解決する
+
+  - id: CON-041
+    statement: Task Workflowの宣言済みTransitionを適用するCLI commandはwflow task transitionとする
+
 exceptions: []

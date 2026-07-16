@@ -33,14 +33,28 @@ def test_task_command_group_is_available() -> None:
 
     assert result.exit_code == 0
     assert "Operate task execution records." in result.output
+    assert "transition" in result.output
+    assert "apply" not in result.output
 
 
-def test_task_check_validates_a_task_record() -> None:
+def test_task_check_accepts_a_task_path() -> None:
     # ケース3
     result = CliRunner().invoke(main, ["task", "check", str(_TASK_PATH)])
 
     assert result.exit_code == 0
     assert f"valid {_TASK_PATH}" in result.output
+
+
+def test_task_check_resolves_a_task_id(tmp_path: Path, monkeypatch) -> None:
+    task_dir = tmp_path / "docs/tasks"
+    task_dir.mkdir(parents=True)
+    (task_dir / "example.yaml").write_text(_TASK_PATH.read_text())
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["task", "check", "001"])
+
+    assert result.exit_code == 0
+    assert "valid docs/tasks/example.yaml" in result.output
 
 
 def test_task_ls_uses_docs_tasks_by_default(tmp_path: Path, monkeypatch) -> None:
@@ -77,11 +91,13 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
     show = runner.invoke(main, ["task", "show", str(path)], catch_exceptions=False)
     assert show.exit_code == 0
     assert "state: draft" in show.output
-    assert "ready transitions: approve_plan" in show.output
+    assert "Phase 1: 現行手順の確認" in show.output
+    assert "[ ] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
+    assert "STP-001-001" not in show.output
 
     approved = runner.invoke(
         main,
-        ["task", "apply", str(path), "approve_plan", "--actor", "user"],
+        ["task", "transition", str(path), "approve_plan", "--actor", "user"],
         catch_exceptions=False,
     )
     assert approved.exit_code == 0
@@ -119,3 +135,13 @@ def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
     assert updated["plan"]["phases"][0]["log"]["summary"] == "current style located"
     assert updated["plan"]["phases"][1]["steps"][0]["skip_reason"] == "not needed"
     assert updated["acceptance_results"] == [{"acceptance": "ACC-001", "status": "passed", "evidence": []}]
+
+    show = runner.invoke(main, ["task", "show", str(path)], catch_exceptions=False)
+
+    assert show.exit_code == 0
+    assert "[x] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
+    assert "- current style located" in show.output
+    assert "[-] READMEへ開発環境セットアップ手順を追加する" in show.output
+    assert "- skipped: not needed" in show.output
+    assert "PHA-" not in show.output
+    assert "ACC-" not in show.output

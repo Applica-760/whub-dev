@@ -23,6 +23,7 @@ from whub.wflow.services import (
     load_task,
     load_task_workflow,
     record_acceptance,
+    resolve_task_reference,
     update_step,
     write_task,
 )
@@ -219,3 +220,21 @@ def test_lists_missing_and_duplicate_dependencies_as_blocked(tmp_path: Path) -> 
         "missing dependency: TASK-999",
     ]
     assert tasks["dependent.yaml"].ready is False
+
+
+def test_resolves_task_ids_and_rejects_missing_or_ambiguous_ids(tmp_path: Path) -> None:
+    first = _task_data()
+    first_path = tmp_path / "first.yaml"
+    _write_task(tmp_path, first_path.name, first)
+
+    assert resolve_task_reference("TASK-001", tmp_path) == first_path
+    assert resolve_task_reference("001", tmp_path) == first_path
+    with pytest.raises(WflowError, match="task ID not found: TASK-999"):
+        resolve_task_reference("TASK-999", tmp_path)
+
+    duplicate = _task_data()
+    duplicate["task"]["title"] = "duplicate TASK-001"
+    _write_task(tmp_path, "duplicate.yaml", duplicate)
+
+    with pytest.raises(WflowError, match="task ID is ambiguous: TASK-001"):
+        resolve_task_reference("TASK-001", tmp_path)
