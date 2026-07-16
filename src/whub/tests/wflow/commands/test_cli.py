@@ -43,6 +43,22 @@ def test_task_check_validates_a_task_record() -> None:
     assert f"valid {_TASK_PATH}" in result.output
 
 
+def test_task_ls_uses_docs_tasks_by_default(tmp_path: Path, monkeypatch) -> None:
+    task_dir = tmp_path / "docs/tasks"
+    task_dir.mkdir(parents=True)
+    (task_dir / "example.yaml").write_text(_TASK_PATH.read_text())
+
+    runner = CliRunner()
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(main, ["task", "ls"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "path" in result.output
+    assert "example.yaml" in result.output
+    assert "TASK-001" in result.output
+    assert "\t" not in result.output
+
+
 def test_task_commands_update_a_task_record(tmp_path: Path) -> None:
     path = tmp_path / "task.yaml"
     data = yaml.safe_load(_TASK_PATH.read_text())

@@ -19,6 +19,7 @@ from whub.wflow.services import (
     apply_transition,
     available_transitions,
     check_task,
+    list_tasks,
     load_task,
     load_task_workflow,
     record_acceptance,
@@ -33,6 +34,10 @@ _TASK_PATH = _ROOT / "docs/tasks/20260713_2236_whub-task-planning-task-example.y
 
 def _task_data() -> dict:
     return yaml.safe_load(_TASK_PATH.read_text())
+
+
+def _write_task(root: Path, name: str, data: dict) -> None:
+    (root / name).write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
 
 
 def _codes(data: dict) -> set[str]:
@@ -165,3 +170,52 @@ def test_rejects_duplicate_acceptance_results() -> None:
 
     with pytest.raises(WflowError, match="already recorded"):
         record_acceptance(accepted, "ACC-001", "passed")
+
+
+def test_lists_tasks_with_dependency_status_and_invalid_records(tmp_path: Path) -> None:
+    prerequisite = _task_data()
+    dependent = _task_data()
+    dependent["task"].update(
+        id="TASK-003",
+        title="depends on TASK-001",
+        state="draft",
+        depends_on=["TASK-001"],
+    )
+    _write_task(tmp_path, "prerequisite.yaml", prerequisite)
+    (tmp_path / "nested").mkdir(exist_ok=True)
+    _write_task(tmp_path / "nested", "dependent.yaml", dependent)
+    (tmp_path / "broken.yaml").write_text("schema_version: [")
+
+    tasks = {item.path: item for item in list_tasks(tmp_path)}
+
+    assert tasks["prerequisite.yaml"].ready is False
+    assert tasks["nested/dependent.yaml"].ready is True
+    assert tasks["broken.yaml"].state is None
+    assert tasks["broken.yaml"].diagnostics
+    assert "\n" not in tasks["broken.yaml"].diagnostics[0]
+
+
+def test_lists_missing_and_duplicate_dependencies_as_blocked(tmp_path: Path) -> None:
+    first = _task_data()
+    second = _task_data()
+    second["task"]["title"] = "duplicate TASK-001"
+    dependent = _task_data()
+    dependent["task"].update(
+        id="TASK-003",
+        title="blocked task",
+        state="draft",
+        depends_on=["TASK-001", "TASK-999"],
+    )
+    _write_task(tmp_path, "first.yaml", first)
+    _write_task(tmp_path, "second.yaml", second)
+    _write_task(tmp_path, "dependent.yaml", dependent)
+
+    tasks = {item.path: item for item in list_tasks(tmp_path)}
+
+    assert "duplicate task id: TASK-001" in tasks["first.yaml"].diagnostics
+    assert "duplicate task id: TASK-001" in tasks["second.yaml"].diagnostics
+    assert tasks["dependent.yaml"].blocked_by == [
+        "ambiguous dependency: TASK-001",
+        "missing dependency: TASK-999",
+    ]
+    assert tasks["dependent.yaml"].ready is False

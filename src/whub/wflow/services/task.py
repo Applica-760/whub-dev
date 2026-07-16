@@ -10,7 +10,7 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from whub.wflow.models.task import TaskDocument
+from whub.wflow.models.task import TaskDocument, TaskSummary
 from whub.wflow.models.workflow import TransitionRequirement, WorkflowDefinition
 from whub.wflow.services.errors import Diagnostic, WflowError
 from whub.wflow.services.workflow import (
@@ -34,6 +34,76 @@ def load_task_workflow() -> WorkflowDefinition:
     resource = files("whub.wflow.definitions").joinpath("task.yaml")
     with as_file(resource) as path:
         return load_workflow(path)
+
+
+def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
+    """Discover Task YAML files below ROOT and derive their dependency status."""
+    if not root.is_dir():
+        raise WflowError(f"task directory does not exist: {root}")
+
+    workflow = load_task_workflow()
+    summaries: list[TaskSummary] = []
+    for path in sorted(root.rglob("*.yaml")):
+        relative_path = path.relative_to(root).as_posix()
+        try:
+            record = load_task(path)
+        except WflowError as error:
+            summaries.append(
+                TaskSummary(
+                    path=relative_path,
+                    diagnostics=[" ".join(str(error).splitlines())],
+                )
+            )
+            continue
+
+        diagnostics = [
+            f"{item.code}: {item.message}" for item in check_task(record, workflow)
+        ]
+        summaries.append(
+            TaskSummary(
+                path=relative_path,
+                id=record.task.id,
+                title=record.task.title,
+                state=record.task.state,
+                depends_on=record.task.depends_on,
+                diagnostics=diagnostics,
+            )
+        )
+    ids: dict[str, list[TaskSummary]] = {}
+    for summary in summaries:
+        if summary.id is not None and not summary.diagnostics:
+            ids.setdefault(summary.id, []).append(summary)
+    duplicate_ids = {task_id for task_id, items in ids.items() if len(items) > 1}
+
+    updated: list[TaskSummary] = []
+    for summary in summaries:
+        diagnostics = list(summary.diagnostics)
+        if summary.id in duplicate_ids:
+            diagnostics.append(f"duplicate task id: {summary.id}")
+        if diagnostics:
+            updated.append(summary.model_copy(update={"diagnostics": diagnostics}))
+            continue
+
+        blockers: list[str] = []
+        for dependency in summary.depends_on:
+            targets = ids.get(dependency, [])
+            if not targets:
+                blockers.append(f"missing dependency: {dependency}")
+            elif dependency in duplicate_ids:
+                blockers.append(f"ambiguous dependency: {dependency}")
+            elif targets[0].state != "completed":
+                blockers.append(
+                    f"incomplete dependency: {dependency} ({targets[0].state})"
+                )
+        updated.append(
+            summary.model_copy(
+                update={
+                    "blocked_by": blockers,
+                    "ready": summary.state == "draft" and not blockers,
+                }
+            )
+        )
+    return tuple(updated)
 
 
 def _satisfied_if_defined(

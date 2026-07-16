@@ -31,9 +31,14 @@
 - [x] 既存CLI契約を維持するmodel／service／CLIテストを更新し、`uv run pytest`で検証する
 
 ### Phase 3: Task横断の読取機能を作成
-- [] Task一覧・状態・依存関係・ブロック理由・着手可能Taskをservice/CLIで取得できるようにする
+- [x] Task YAMLの標準配置をdocs/tasks、`wflow task ls [TASK_DIR]`の発見契約をKnowledgeへ定義する
+- [x] Task YAMLを再帰発見し、妥当性エラーを個別Taskの読取結果として保持する
+- [x] Task ID・依存関係・状態からブロック理由と着手可能状態を集計する
+- [x] `wflow task ls [TASK_DIR]`で一覧・状態・依存・ブロック理由・readyを表示する
+- [x] service／CLIテストと`uv run pytest`で発見・依存・不正Taskの扱いを検証する
 
 ### Phase 4: Web appの読み取り専用ロードマップビューを追加
+- [] `wflow task graph [TASK_DIR]`でTask依存関係をMermaidとして出力し検証する
 - [] Task集計APIと一覧・依存関係・進捗を表示する画面を実装し検証する
 
 ## 実行ログ
@@ -54,4 +59,20 @@
 - 判断: Step／acceptanceのDSL化は基盤を複雑にするため見送り、Phase 3でTask横断読取に必要な情報を確認してから再判断する
 - 引継ぎ: Knowledgeを固定基準とし、Phase 3ではTask YAML発見方式を決定して一覧・状態・依存・ブロック理由・着手可能判定をservice/CLIへ追加する
 
+### 試行 4: 旧形式Taskの診断表示
+- 実施内容: `wflow task ls`で既存の旧形式Task YAMLを表示した
+- 結果: Pydanticの複数行エラーがTSVの1行1Task形式を崩した
+- 判断: 診断文を1行へ正規化して一覧を継続表示する
+
+### 試行 5: 旧形式Task YAMLの移行
+- 実施内容: 廃止済みrevision参照を削除し、root logsを各Phaseのlogへ移した
+- 結果: TASK-002が現行Task形式として検証され、一覧でcompleted表示になった
+- 判断: 続行
+
+### 試行 6: Task一覧の整形
+- 実施内容: `wflow task ls`のTSV出力を共通table rendererへ置換した
+- 結果: 列幅が表示幅に合わせて揃い、CLIテストと全246テストが成功した
+- 判断: 続行
+
 ## 結果
+- Phase 3: `wflow task ls [TASK_DIR]`とTask横断集計を追加し、246テストと既存Task一覧で検証した

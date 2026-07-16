@@ -89,6 +89,19 @@ class TaskResult(TaskModel):
     summary: NonEmptyStr
 
 
+class TaskSummary(TaskModel):
+    """Derived read model for one Task discovered in a directory."""
+
+    path: NonEmptyStr
+    id: str | None = None
+    title: str | None = None
+    state: StateName | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    blocked_by: list[NonEmptyStr] = Field(default_factory=list)
+    ready: bool = False
+    diagnostics: list[NonEmptyStr] = Field(default_factory=list)
+
+
 class TaskDocument(TaskModel):
     schema_version: Literal[1]
     task: TaskHeader

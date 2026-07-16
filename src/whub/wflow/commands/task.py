@@ -10,12 +10,14 @@ from whub.wflow.services import (
     apply_transition,
     available_transitions,
     check_task,
+    list_tasks,
     load_task,
     load_task_workflow,
     record_acceptance,
     update_step,
     write_task,
 )
+from whub.utils.render import render_table
 
 
 @click.group()
@@ -38,6 +40,37 @@ def check(task_path: Path) -> None:
     for diagnostic in diagnostics:
         click.echo(f"{diagnostic.code}: {diagnostic.message}", err=True)
     raise click.exceptions.Exit(1)
+
+
+@task.command("ls")
+@click.argument(
+    "task_dir",
+    required=False,
+    default=Path("docs/tasks"),
+    type=click.Path(path_type=Path),
+)
+def ls(task_dir: Path) -> None:
+    """List Tasks discovered below TASK_DIR."""
+    try:
+        tasks = list_tasks(task_dir)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+
+    render_table(
+        [
+            (
+                item.path,
+                item.id or "-",
+                item.state or "invalid",
+                ",".join(item.depends_on) or "-",
+                "; ".join(item.blocked_by) or "-",
+                "yes" if item.ready else "no",
+                "; ".join(item.diagnostics) or "-",
+            )
+            for item in tasks
+        ],
+        headers=("path", "id", "state", "depends_on", "blocked_by", "ready", "diagnostics"),
+    )
 
 
 @task.command()

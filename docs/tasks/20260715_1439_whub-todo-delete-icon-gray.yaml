@@ -13,7 +13,6 @@ task:
 open_questions: []
 decisions: []
 plan:
-  revision: 1
   acceptance:
   - id: ACC-001
     statement: Todoリストの削除用×がグレーで表示され、削除操作を維持している
@@ -26,6 +25,11 @@ plan:
       description: Todo削除用×の実装箇所と既存の操作仕様を確認する
       state: done
       skip_reason: null
+    log:
+      summary: 削除用×はTodoListのActionIconであり、色以外の削除操作は変更不要と確認した
+      evidence:
+      - 'app/src/features/todos/TodoList.tsx: ActionIcon color=red, onClick=onDelete'
+      - 'app/src/features/todos/useTodoWidgets.ts: handleDeleteがDELETE APIを呼ぶ'
   - id: PHA-002
     title: 修正と検証
     acceptance: []
@@ -38,9 +42,13 @@ plan:
       description: ビルドまたはUI確認で色と削除操作を検証する
       state: done
       skip_reason: null
+    log:
+      summary: Todo削除用×の色変更後に本番ビルドとユーザーによる表示確認を完了した
+      evidence:
+      - 'npm run build: tsc -b と vite build が成功'
+      - 'ユーザー確認: Todo削除用×がグレーで表示されることを確認'
 approvals:
-- plan_revision: 1
-  actor: user
+- actor: user
 acceptance_results:
 - acceptance: ACC-001
   status: passed
@@ -48,17 +56,6 @@ acceptance_results:
   - Todo削除用×がグレーで表示されることをユーザーが確認した
   - 削除操作が維持されることをユーザーが確認した
 change_requests: []
-logs:
-- phase: PHA-001
-  summary: 削除用×はTodoListのActionIconであり、色以外の削除操作は変更不要と確認した
-  evidence:
-  - 'app/src/features/todos/TodoList.tsx: ActionIcon color=red, onClick=onDelete'
-  - 'app/src/features/todos/useTodoWidgets.ts: handleDeleteがDELETE APIを呼ぶ'
-- phase: PHA-002
-  summary: Todo削除用×の色変更後に本番ビルドとユーザーによる表示確認を完了した
-  evidence:
-  - 'npm run build: tsc -b と vite build が成功'
-  - 'ユーザー確認: Todo削除用×がグレーで表示されることを確認'
 cancellation: null
 result:
   summary: Todo削除用×をグレー化し、ビルドとユーザーの動作確認を完了した

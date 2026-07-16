@@ -386,4 +386,7 @@ constraints:
   - id: CON-038
     statement: Task Workflowの状態・遷移・条件・遷移時の記録はsrc/whub/wflow/definitions/task.yamlをSSOTとし、コードは汎用engineとTask固有の不変条件に限定する
 
+  - id: CON-039
+    statement: Task YAMLの標準配置はrepository root相対のdocs/tasksとし、wflow task lsは無引数で同ディレクトリを再帰走査し、任意のTASK_DIR指定で対象を上書きする
+
 exceptions: []
