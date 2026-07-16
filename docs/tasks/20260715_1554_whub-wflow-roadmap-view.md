@@ -44,11 +44,20 @@
 - [x] 完了・未完了・skipとPhase logをID・Acceptance・evidenceを表示せずに描画する
 - [x] CLIテストと`uv run pytest`で表示契約を検証する
 
-### Phase 4: Web appの読み取り専用ロードマップビューを追加
-- [] Service層にTask全体依存グラフと任意Taskの詳細フローをMermaidとして導出する機能を実装し、Web APIと共有する
-- [x] `wflow task graph [TASK_REF]`はTask依存グラフを既定出力し、TASK-ID・数字部分・Task YAML pathでPhase・順序・Acceptance完了条件の詳細フローを出力する
-- [x] Taskをノード、Task依存を矢印、独立Taskを島として表す全体フローをCLIテストで検証する
-- [] Task集計・Mermaid出力の読取APIと、一覧・依存関係・進捗を表示する画面を実装し検証する
+### Phase 4: TaskグラフServiceとCLI
+- [x] Task情報から全体依存・Task詳細フローをMermaidへ変換するServiceを追加する
+- [x] `wflow task graph [TASK_REF]`と`--task-dir`でMermaidを標準出力し検証する
+- [x] 分岐・合流・独立Taskを表すデモTaskとCLIテストで検証する
+
+### Phase 5: Web appへTask読取を接続
+- [x] `webapp/routers/tasks.py`からTask query／validation Serviceを共有する一覧・詳細読取APIを実装し、OpenAPI・APIテストで検証する
+- [x] state・Phase・Step・skip理由・Phase logを表示する`/tasks/:taskId`詳細画面を実装し、`wflow task show`と同じ実行事実を読めるようにする
+- [x] `/tasks`一覧とOverviewのready／in_progress Task Widgetから詳細へ移動できる導線を実装し、型検査・ビルド・pytestで検証する
+
+### Phase 6: Web appのロードマップビュー
+- [] `task_graph` Serviceを共有するタスク間・単一Taskフロー読取APIを実装し、OpenAPI・APIテストで検証する
+- [] `components/MermaidDiagram`でMermaid文字列をSVGへ描画し、タスク間・タスク内の別WidgetFrameへ組み込む
+- [] タスク間WidgetをOverview中央列と`/tasks`先頭、タスク内Widgetを`/tasks/:taskId`先頭へ配置し、型検査・ビルド・pytestで検証する
 - [] 遷移履歴の出力は、記録粒度を別途設計してから扱う
 
 ## 実行ログ
@@ -127,6 +136,11 @@
 ### 試行 15: Mermaid変換Serviceの分離
 - 実施内容: `task_graph.py`へTask情報からMermaidへ変換する処理だけを移し、Task YAMLの走査は`task_query.py`に残した
 - 結果: CLIの出力契約を維持し、wflowテスト35件が成功した
+- 判断: 続行
+
+### 試行 16: Task Web app読取ビュー
+- 実施内容: Task API、一覧・詳細・Overview Widgetを追加し、一覧はin_progress／draft／completed順、Overviewはready／in_progressに絞った
+- 結果: OpenAPI・APIテスト14件と`npm run build`が成功した
 - 判断: 続行
 
 ## 結果

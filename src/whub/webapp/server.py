@@ -14,8 +14,10 @@ from whub.webapp.routers.inbox import router as inbox_router
 from whub.webapp.routers.knowledge import router as knowledge_router
 from whub.webapp.routers.projects import router as projects_router
 from whub.webapp.routers.status import router as status_router
+from whub.webapp.routers.tasks import router as tasks_router
 from whub.webapp.routers.todos import router as todos_router
 from whub.webapp.routers.vault import router as vault_router
+from whub.wflow.services import WflowError
 
 
 def create_app(dist_dir: Path) -> FastAPI:
@@ -36,6 +38,14 @@ def create_app(dist_dir: Path) -> FastAPI:
     def service_error_handler(
         request: Request,
         error: ServiceError,
+    ) -> JSONResponse:
+        del request
+        return JSONResponse(status_code=400, content={"detail": str(error)})
+
+    @app.exception_handler(WflowError)
+    def wflow_error_handler(
+        request: Request,
+        error: WflowError,
     ) -> JSONResponse:
         del request
         return JSONResponse(status_code=400, content={"detail": str(error)})
@@ -62,6 +72,7 @@ def create_app(dist_dir: Path) -> FastAPI:
     app.include_router(knowledge_router)
     app.include_router(inbox_router)
     app.include_router(status_router)
+    app.include_router(tasks_router)
     app.include_router(vault_router)
 
     @app.get("/api/health")

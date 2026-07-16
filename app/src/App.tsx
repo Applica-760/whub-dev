@@ -7,6 +7,8 @@ import { InboxPage } from './features/inbox/InboxPage';
 import { KnowledgePage } from './features/knowledge/KnowledgePage';
 import { OverviewPage } from './features/overview/OverviewPage';
 import { ResourceStatusPage } from './features/status/ResourceStatusPage';
+import { TaskDetailPage } from './features/tasks/TaskDetailPage';
+import { TasksPage } from './features/tasks/TasksPage';
 import { TodosPage } from './features/todos/TodosPage';
 
 // react-markdownの依存ツリーを初回チャンクから外すため、Backlog/Vaultは遅延読込する
@@ -23,6 +25,7 @@ const navigation = [
   { label: 'Vault', to: '/vault' },
   { label: 'Knowledge', to: '/knowledge' },
   { label: 'Todo', to: '/todos' },
+  { label: 'Task', to: '/tasks' },
   { label: 'Inbox', to: '/inbox' },
   { label: 'Status', to: '/status' },
 ];
@@ -67,6 +70,8 @@ export function App() {
             <Route element={<KnowledgePage />} path="/knowledge" />
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
+            <Route element={<TasksPage />} path="/tasks" />
+            <Route element={<TaskDetailPage />} path="/tasks/:taskId" />
             <Route element={<InboxPage />} path="/inbox" />
             <Route element={<ResourceStatusPage />} path="/status" />
           </Routes>

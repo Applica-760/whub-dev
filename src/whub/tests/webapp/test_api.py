@@ -29,6 +29,7 @@ from whub.services.status import ResourceStatus
 from whub.services.vault import VaultNode
 from whub.tests.helpers import knowledge, manifest
 from whub.webapp.server import create_app
+from whub.wflow.models.task import TaskDocument, TaskSummary
 
 
 @pytest.fixture
@@ -174,6 +175,48 @@ def test_create_inbox_returns_created_filename(client: TestClient) -> None:
     assert response.status_code == 201
     assert response.json() == {"filename": "20260710_1630_note.md"}
     mock_create.assert_called_once_with(m, "note", "body")
+
+
+def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
+    summary = TaskSummary(
+        path="20260715_task.yaml",
+        id="TASK-003",
+        title="Task view",
+        state="draft",
+        blocked_by=[],
+        ready=True,
+    )
+    document = TaskDocument.model_validate(
+        {
+            "schema_version": 1,
+            "task": {
+                "id": "TASK-003",
+                "state": "draft",
+                "title": "Task view",
+                "objective": "Show tasks",
+            },
+        }
+    )
+    path = Path("docs/tasks/20260715_task.yaml")
+    with (
+        patch("whub.webapp.routers.tasks.list_tasks", return_value=(summary,)) as mock_list,
+        patch("whub.webapp.routers.tasks.resolve_task_reference", return_value=path) as mock_resolve,
+        patch("whub.webapp.routers.tasks.load_task", return_value=document) as mock_load,
+        patch("whub.webapp.routers.tasks.load_task_workflow") as mock_workflow,
+        patch("whub.webapp.routers.tasks.validate_task", return_value=()) as mock_validate,
+    ):
+        list_response = client.get("/api/tasks")
+        detail_response = client.get("/api/tasks/TASK-003")
+
+    assert list_response.status_code == 200
+    assert list_response.json() == {"tasks": [summary.model_dump()]}
+    mock_list.assert_called_once_with(Path("docs/tasks"))
+    assert detail_response.status_code == 200
+    assert detail_response.json() == document.model_dump()
+    mock_resolve.assert_called_once_with("TASK-003", Path("docs/tasks"))
+    mock_load.assert_called_once_with(path)
+    mock_workflow.assert_called_once_with()
+    mock_validate.assert_called_once_with(document, mock_workflow.return_value)
 
 
 def test_get_resource_status_returns_service_results(client: TestClient) -> None:

@@ -12,6 +12,10 @@ export type VaultTreeResponse =
   paths['/api/vault/tree']['get']['responses'][200]['content']['application/json'];
 export type VaultNoteResponse =
   paths['/api/vault/note']['get']['responses'][200]['content']['application/json'];
+export type TasksResponse =
+  paths['/api/tasks']['get']['responses'][200]['content']['application/json'];
+export type TaskResponse =
+  paths['/api/tasks/{task_id}']['get']['responses'][200]['content']['application/json'];
 export type VaultNode = VaultTreeResponse['nodes'][number];
 
 export class ApiError extends Error {

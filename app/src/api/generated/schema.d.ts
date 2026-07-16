@@ -126,6 +126,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Tasks */
+        get: operations["get_tasks_api_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Task */
+        get: operations["get_task_api_tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vault/tree": {
         parameters: {
             query?: never;
@@ -181,12 +215,33 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcceptanceCriterion */
+        AcceptanceCriterion: {
+            /** Id */
+            id: string;
+            /** Statement */
+            statement: string;
+        };
+        /** AcceptanceResult */
+        AcceptanceResult: {
+            /** Acceptance */
+            acceptance: string;
+            /** Status */
+            status: string;
+            /** Evidence */
+            evidence?: string[];
+        };
         /** BacklogResponse */
         BacklogResponse: {
             /** Project */
             project: string;
             /** Content */
             content: string;
+        };
+        /** ChangeRequest */
+        ChangeRequest: {
+            /** Reason */
+            reason: string;
         };
         /** CompleteTodoRequest */
         CompleteTodoRequest: {
@@ -335,6 +390,37 @@ export interface components {
             /** Definition */
             definition: string;
         };
+        /** PhaseLog */
+        PhaseLog: {
+            /** Summary */
+            summary: string;
+            /** Evidence */
+            evidence?: string[];
+        };
+        /** PlanApproval */
+        PlanApproval: {
+            /** Actor */
+            actor: string;
+        };
+        /** PlanPhase */
+        PlanPhase: {
+            /** Title */
+            title: string;
+            /** Acceptance */
+            acceptance?: components["schemas"]["AcceptanceCriterion"][];
+            /** Steps */
+            steps: components["schemas"]["PlanStep"][];
+            log?: components["schemas"]["PhaseLog"] | null;
+        };
+        /** PlanStep */
+        PlanStep: {
+            /** Description */
+            description: string;
+            /** State */
+            state: string;
+            /** Skip Reason */
+            skip_reason?: string | null;
+        };
         /** ProjectsResponse */
         ProjectsResponse: {
             /** Projects */
@@ -365,6 +451,88 @@ export interface components {
             tmux: string;
             /** Git */
             git: string;
+        };
+        /** TaskCancellation */
+        TaskCancellation: {
+            /** Reason */
+            reason: string;
+            /** Actor */
+            actor: string;
+        };
+        /** TaskDocument */
+        TaskDocument: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
+            task: components["schemas"]["TaskHeader"];
+            plan?: components["schemas"]["TaskPlan"] | null;
+            /** Approvals */
+            approvals?: components["schemas"]["PlanApproval"][];
+            /** Acceptance Results */
+            acceptance_results?: components["schemas"]["AcceptanceResult"][];
+            /** Change Requests */
+            change_requests?: components["schemas"]["ChangeRequest"][];
+            cancellation?: components["schemas"]["TaskCancellation"] | null;
+            result?: components["schemas"]["TaskResult"] | null;
+        };
+        /** TaskHeader */
+        TaskHeader: {
+            /** Id */
+            id: string;
+            /** State */
+            state: string;
+            /** Title */
+            title: string;
+            /** Objective */
+            objective: string;
+            /** Approach */
+            approach?: string[];
+            /** Depends On */
+            depends_on?: string[];
+        };
+        /** TaskListResponse */
+        TaskListResponse: {
+            /** Tasks */
+            tasks: components["schemas"]["TaskSummary"][];
+        };
+        /** TaskPlan */
+        TaskPlan: {
+            /** Acceptance */
+            acceptance?: components["schemas"]["AcceptanceCriterion"][];
+            /** Phases */
+            phases: components["schemas"]["PlanPhase"][];
+        };
+        /** TaskResult */
+        TaskResult: {
+            /** Summary */
+            summary: string;
+        };
+        /**
+         * TaskSummary
+         * @description Derived read model for one Task discovered in a directory.
+         */
+        TaskSummary: {
+            /** Path */
+            path: string;
+            /** Id */
+            id?: string | null;
+            /** Title */
+            title?: string | null;
+            /** State */
+            state?: string | null;
+            /** Depends On */
+            depends_on?: string[];
+            /** Blocked By */
+            blocked_by?: string[];
+            /**
+             * Ready
+             * @default false
+             */
+            ready: boolean;
+            /** Diagnostics */
+            diagnostics?: string[];
         };
         /** TodoListResponse */
         TodoListResponse: {
@@ -735,6 +903,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResourceStatusListResponse"];
+                };
+            };
+        };
+    };
+    get_tasks_api_tasks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListResponse"];
+                };
+            };
+        };
+    };
+    get_task_api_tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

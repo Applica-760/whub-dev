@@ -16,6 +16,8 @@ def test_openapi_schema_contains_all_resource_endpoints() -> None:
         "/api/backlog/{project}",
         "/api/inbox",
         "/api/resources/status",
+        "/api/tasks",
+        "/api/tasks/{task_id}",
     }
 
 
