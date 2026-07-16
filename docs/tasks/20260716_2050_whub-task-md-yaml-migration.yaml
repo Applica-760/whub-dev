@@ -39,6 +39,7 @@ plan:
     log:
     - Phase logを任意行数の文字列リストへ変更した
     - wflowテスト35件が成功した
+    - 計画の内容は`wflow task show TTT`で確認するよう、Skillに指示を追加
   - title: Agent向け導線を更新する
     acceptance: []
     steps:

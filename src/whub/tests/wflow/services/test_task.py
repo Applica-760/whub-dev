@@ -28,6 +28,7 @@ from whub.wflow.services import (
     resolve_task_reference,
     update_step,
     validate_task,
+    validate_task_interruption,
     write_task,
 )
 
@@ -64,6 +65,11 @@ def test_reports_state_and_approval_mismatches() -> None:
     unapproved["task"]["state"] = "in_progress"
     unapproved["approvals"] = []
     assert "missing_plan_approval" in _codes(unapproved)
+
+    paused = _task_data()
+    paused["task"]["state"] = "paused"
+    paused["approvals"] = []
+    assert "missing_plan_approval" in _codes(paused)
 
 
 def test_reports_missing_completion_and_cancellation_records() -> None:
@@ -121,6 +127,82 @@ def test_applies_lifecycle_transitions_and_records() -> None:
     task = apply_transition(task, workflow, "complete_task", "agent", {"result": "done"})
     assert task.task.state == "completed"
     assert task.result.summary == "done"
+
+
+def test_interrupts_and_resumes_with_paused_operation_limits() -> None:
+    workflow = load_task_workflow()
+    active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
+    active = active.model_copy(
+        update={
+            "task": active.task.model_copy(
+                update={
+                    "interruption_task_id": "TASK-002",
+                    "interruption_reason": "urgent issue",
+                }
+            )
+        }
+    )
+
+    with pytest.raises(WflowError, match="requires actor 'agent'"):
+        apply_transition(active, workflow, "interrupt_task", "user")
+
+    paused = apply_transition(active, workflow, "interrupt_task", "agent")
+    assert paused.task.state == "paused"
+    assert available_transitions(paused, workflow) == ("resume_task",)
+    assert append_phase_log(paused, "001", ("interruption noted",)).plan.phases[0].log == [
+        "interruption noted"
+    ]
+
+    with pytest.raises(WflowError, match="in_progress"):
+        update_step(paused, workflow, "001-001", "done")
+    with pytest.raises(WflowError, match="in_progress"):
+        record_acceptance(paused, "ACC-001", "passed")
+    with pytest.raises(WflowError, match="not allowed from state 'paused'"):
+        apply_transition(paused, workflow, "request_plan_change", "agent", {"reason": "later"})
+    with pytest.raises(WflowError, match="not allowed from state 'paused'"):
+        apply_transition(paused, workflow, "complete_task", "agent", {"result": "done"})
+
+    resumed = apply_transition(paused, workflow, "resume_task", "agent")
+    assert resumed.task.state == "in_progress"
+    paused_again = apply_transition(resumed, workflow, "interrupt_task", "agent")
+    cancelled = apply_transition(paused_again, workflow, "cancel_task", "user", {"reason": "stop"})
+    assert cancelled.task.state == "cancelled"
+
+
+def test_validates_interruption_relationships() -> None:
+    parent_data = _task_data()
+    parent_data["task"].update(
+        state="paused",
+        interruption_task_id="TASK-002",
+        interruption_reason="urgent issue",
+    )
+    child_data = _task_data()
+    child_data["task"].update(
+        id="TASK-002",
+        state="in_progress",
+        interruption_source_task_id="TASK-001",
+    )
+    parent = TaskDocument.model_validate(parent_data)
+    child = TaskDocument.model_validate(child_data)
+    tasks = {parent.task.id: parent, child.task.id: child}
+
+    assert validate_task_interruption(parent, tasks) == ()
+    assert validate_task_interruption(child, tasks) == ()
+
+    second_child_data = _task_data()
+    second_child_data["task"].update(
+        id="TASK-003",
+        state="in_progress",
+        interruption_source_task_id="TASK-001",
+    )
+    second_child = TaskDocument.model_validate(second_child_data)
+    diagnostics = validate_task_interruption(parent, {**tasks, second_child.task.id: second_child})
+    assert {item.code for item in diagnostics} == {"multiple_active_interruptions"}
+
+    child_data["task"]["interruption_source_task_id"] = "TASK-999"
+    mismatched_child = TaskDocument.model_validate(child_data)
+    diagnostics = validate_task_interruption(parent, {parent.task.id: parent, mismatched_child.task.id: mismatched_child})
+    assert {item.code for item in diagnostics} == {"interruption_link_mismatch"}
 
 
 def test_rejects_wrong_actor_and_invalid_step_reference() -> None:

@@ -25,6 +25,17 @@ class TaskHeader(TaskModel):
     depends_on: list[Annotated[str, Field(pattern=TASK_ID_PATTERN)]] = Field(
         default_factory=list
     )
+    interruption_task_id: Annotated[str, Field(pattern=TASK_ID_PATTERN)] | None = None
+    interruption_reason: NonEmptyStr | None = None
+    interruption_source_task_id: Annotated[str, Field(pattern=TASK_ID_PATTERN)] | None = None
+
+    @model_validator(mode="after")
+    def _validate_interruption_fields(self) -> TaskHeader:
+        if (self.interruption_task_id is None) != (self.interruption_reason is None):
+            raise ValueError("interruption_task_id and interruption_reason must be provided together")
+        if self.id in {self.interruption_task_id, self.interruption_source_task_id}:
+            raise ValueError("task cannot interrupt itself")
+        return self
 
 
 class AcceptanceCriterion(TaskModel):

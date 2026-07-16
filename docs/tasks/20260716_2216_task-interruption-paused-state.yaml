@@ -13,6 +13,9 @@ task:
   - WorkflowのState・Transition、Task間関係、CLI表示・検証を一貫して更新する
   depends_on:
   - TASK-003
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
 plan:
   acceptance:
   - id: ACC-001
@@ -56,7 +59,7 @@ plan:
       state: done
       skip_reason: null
     - description: 計画変更・通常依存・Phase logとの責務境界を確定する
-      state: pending
+      state: done
       skip_reason: null
     log:
     - pausedはStep・Phaseの途中で発生し、実行位置を保持したまま通常操作を停止する
@@ -69,16 +72,27 @@ plan:
     - 子Taskがcompletedまたはcancelledになれば、親は割り込みが解消した事実だけを受けてpausedを解除できる。子の中止理由は子Taskにだけ保持する
     - paused中はlogとcancel_taskを許可し、done・skip・accept・complete_task・request_plan_changeを拒否する
     - paused中の計画変更案や思いつきはlogに残し、再開後に最新のコード状況を踏まえて再検討する
+    - 割り込みTaskがcompletedまたはcancelledになった親Taskの再開は自動化せず、resume_taskを明示実行する
+    - paused中の親Taskをcancelledにしても割り込みTaskは連鎖的にcancelledにせず、子Taskは継続可能とする。親へのresume_taskだけを拒否する
+    - depends_onはTaskの実行順序を守らせる開始前提とし、通常のapprove_planと割り込みTaskの開始の両方で全依存Taskのcompletedを要求する
+    - depends_onは前後のTaskを接続する並列の順序関係、割り込みは二要素間の親子関係として区別する。各Taskの有効な直接の割り込み子は1件、割り込み元は1件までとし、ネスト時の中間Taskは両方を持てる
+    - 凍結Stateはpausedとし、割り込みという原因・Task間関係はinterruption_task_idとinterruption_source_task_idで表す
+    - 計画変更・通常依存・Phase logの責務境界を確定した。depends_onは開始前提、割り込みはpausedと親子関係、計画変更と保留事項は再開後に扱う。
   - title: WorkflowとTaskモデルを実装する
     acceptance: []
     steps:
     - description: Task Workflowへpausedと凍結・再開Transitionを追加する
-      state: pending
+      state: done
       skip_reason: null
     - description: Task YAMLへ割り込み関係を追加し、有効な直接割り込みが1件だけとなる検証を実装する
-      state: pending
+      state: done
       skip_reason: null
-    log: []
+    log:
+    - paused State、interrupt_task・resume_task・pausedからのcancel_taskをTask Workflowへ追加した。pausedも承認済みplanを必須とし、paused中の通常操作拒否・log・cancel・明示再開を含むwflowテスト37件とwflow
+      checkが成功した。
+    - 親にinterruption_task_idとinterruption_reason、子にinterruption_source_task_idを追加し、理由と親Task
+      IDの対・自己参照をmodelで拒否した。Task横断で親子リンク、有効な直接割り込みの上限、activeな子に対する親のpausedまたはcancelledを検証し、task
+      lsとtask checkへ反映した。wflow checkとwflowテスト40件が成功した。
   - title: 割り込み操作と読取を実装する
     acceptance: []
     steps:

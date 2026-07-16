@@ -57,6 +57,31 @@ def test_task_check_resolves_a_task_id(tmp_path: Path, monkeypatch) -> None:
     assert "valid docs/tasks/example.yaml" in result.output
 
 
+def test_task_check_reports_interruption_relationship_errors(tmp_path: Path, monkeypatch) -> None:
+    task_dir = tmp_path / "docs/tasks"
+    task_dir.mkdir(parents=True)
+    parent = yaml.safe_load(_TASK_PATH.read_text())
+    parent["task"].update(
+        state="paused",
+        interruption_task_id="TASK-002",
+        interruption_reason="urgent issue",
+    )
+    child = yaml.safe_load(_TASK_PATH.read_text())
+    child["task"].update(
+        id="TASK-002",
+        state="in_progress",
+        interruption_source_task_id="TASK-999",
+    )
+    (task_dir / "parent.yaml").write_text(yaml.safe_dump(parent, allow_unicode=True))
+    (task_dir / "child.yaml").write_text(yaml.safe_dump(child, allow_unicode=True))
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["task", "check", "001"])
+
+    assert result.exit_code == 1
+    assert "interruption_link_mismatch" in result.output
+
+
 def test_task_ls_uses_docs_tasks_by_default(tmp_path: Path, monkeypatch) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)

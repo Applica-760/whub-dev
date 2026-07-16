@@ -19,7 +19,7 @@ from whub.wflow.services.task_query import (
     load_task_workflow,
     resolve_task_reference,
 )
-from whub.wflow.services.task_validation import validate_task
+from whub.wflow.services.task_validation import validate_task, validate_task_interruption
 from whub.wflow.services.workflow import (
     check_workflow,
     load_workflow,
@@ -41,5 +41,6 @@ __all__ = [
     "resolve_task_reference",
     "update_step",
     "validate_task",
+    "validate_task_interruption",
     "write_task",
 ]

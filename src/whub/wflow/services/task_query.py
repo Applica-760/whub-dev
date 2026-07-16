@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from whub.wflow.models.task import TASK_ID_PATTERN, TaskDocument, TaskSummary
 from whub.wflow.models.workflow import WorkflowDefinition
 from whub.wflow.services.errors import WflowError
-from whub.wflow.services.task_validation import validate_task
+from whub.wflow.services.task_validation import validate_task, validate_task_interruption
 from whub.wflow.services.workflow import load_workflow
 
 
@@ -67,6 +67,7 @@ def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
 
     workflow = load_task_workflow()
     summaries: list[TaskSummary] = []
+    records_by_path: dict[str, TaskDocument] = {}
     for path in sorted(root.rglob("*.yaml")):
         relative_path = path.relative_to(root).as_posix()
         try:
@@ -79,6 +80,8 @@ def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
                 )
             )
             continue
+
+        records_by_path[relative_path] = record
 
         diagnostics = [
             f"{item.code}: {item.message}" for item in validate_task(record, workflow)
@@ -98,12 +101,22 @@ def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
         if summary.id is not None and not summary.diagnostics:
             ids.setdefault(summary.id, []).append(summary)
     duplicate_ids = {task_id for task_id, items in ids.items() if len(items) > 1}
+    records_by_id = {
+        task_id: records_by_path[items[0].path]
+        for task_id, items in ids.items()
+        if len(items) == 1
+    }
 
     updated: list[TaskSummary] = []
     for summary in summaries:
         diagnostics = list(summary.diagnostics)
         if summary.id in duplicate_ids:
             diagnostics.append(f"duplicate task id: {summary.id}")
+        elif summary.id is not None and summary.id in records_by_id:
+            diagnostics.extend(
+                f"{item.code}: {item.message}"
+                for item in validate_task_interruption(records_by_id[summary.id], records_by_id)
+            )
         if diagnostics:
             updated.append(summary.model_copy(update={"diagnostics": diagnostics}))
             continue

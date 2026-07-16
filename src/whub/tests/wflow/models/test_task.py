@@ -83,6 +83,35 @@ def test_rejects_unknown_fields_and_invalid_ids() -> None:
             TaskDocument.model_validate(task_data)
 
 
+def test_validates_interruption_fields() -> None:
+    task_data = _task_data()
+    task_data["task"].update(
+        interruption_task_id="TASK-002",
+        interruption_reason="urgent issue",
+    )
+    task = TaskDocument.model_validate(task_data)
+    assert task.task.interruption_task_id == "TASK-002"
+
+    for mutate, message in (
+        (
+            lambda data: data["task"].update(interruption_task_id="TASK-002"),
+            "must be provided together",
+        ),
+        (
+            lambda data: data["task"].update(interruption_reason="urgent issue"),
+            "must be provided together",
+        ),
+        (
+            lambda data: data["task"].update(interruption_task_id="TASK-001", interruption_reason="self"),
+            "cannot interrupt itself",
+        ),
+    ):
+        invalid = _task_data()
+        mutate(invalid)
+        with pytest.raises(ValidationError, match=message):
+            TaskDocument.model_validate(invalid)
+
+
 def test_rejects_duplicate_and_unknown_workflow_states() -> None:
     duplicate = _workflow_data()
     duplicate["states"].append(duplicate["states"][0])

@@ -1,6 +1,8 @@
 """Semantic validation for Task execution records."""
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.models.workflow import WorkflowDefinition
 from whub.wflow.services.errors import Diagnostic
@@ -23,7 +25,7 @@ def validate_task(
         )
 
     plan = task.plan
-    requires_approval = task.task.state in {"in_progress", "completed"}
+    requires_approval = task.task.state in {"in_progress", "paused", "completed"}
 
     # ケース2: 実行・完了にはplan承認がある。
     if requires_approval and (plan is None or not task.approvals):
@@ -31,6 +33,14 @@ def validate_task(
             Diagnostic(
                 "missing_plan_approval",
                 "plan is not approved",
+            )
+        )
+
+    if task.task.state == "paused" and task.task.interruption_task_id is None:
+        diagnostics.append(
+            Diagnostic(
+                "missing_interruption",
+                "paused task has no interruption task",
             )
         )
 
@@ -70,6 +80,81 @@ def validate_task(
     if task.task.state == "cancelled" and task.cancellation is None:
         diagnostics.append(
             Diagnostic("missing_cancellation", "cancelled task has no cancellation")
+        )
+
+    return tuple(diagnostics)
+
+
+def validate_task_interruption(
+    task: TaskDocument,
+    tasks: Mapping[str, TaskDocument],
+) -> tuple[Diagnostic, ...]:
+    """Return cross-Task interruption relationship errors for TASK."""
+    diagnostics: list[Diagnostic] = []
+    active_states = {"in_progress", "paused"}
+    header = task.task
+
+    if header.interruption_task_id is not None:
+        child = tasks.get(header.interruption_task_id)
+        if child is None:
+            diagnostics.append(
+                Diagnostic(
+                    "missing_interruption_task",
+                    f"interruption task not found: {header.interruption_task_id}",
+                )
+            )
+        elif child.task.interruption_source_task_id != header.id:
+            diagnostics.append(
+                Diagnostic(
+                    "interruption_link_mismatch",
+                    f"interruption task {child.task.id} does not reference source {header.id}",
+                )
+            )
+        elif child.task.state in active_states and header.state not in {"paused", "cancelled"}:
+            diagnostics.append(
+                Diagnostic(
+                    "active_interruption_source_not_paused",
+                    f"task {header.id} must be paused while interruption task {child.task.id} is active",
+                )
+            )
+
+    if header.interruption_source_task_id is not None:
+        source = tasks.get(header.interruption_source_task_id)
+        if source is None:
+            diagnostics.append(
+                Diagnostic(
+                    "missing_interruption_source",
+                    f"interruption source not found: {header.interruption_source_task_id}",
+                )
+            )
+        elif header.state in active_states:
+            if source.task.interruption_task_id != header.id:
+                diagnostics.append(
+                    Diagnostic(
+                        "interruption_link_mismatch",
+                        f"interruption source {source.task.id} does not reference task {header.id}",
+                    )
+                )
+            elif source.task.state not in {"paused", "cancelled"}:
+                diagnostics.append(
+                    Diagnostic(
+                        "active_interruption_source_not_paused",
+                        f"interruption source {source.task.id} is not paused or cancelled",
+                    )
+                )
+
+    active_children = [
+        candidate
+        for candidate in tasks.values()
+        if candidate.task.interruption_source_task_id == header.id
+        and candidate.task.state in active_states
+    ]
+    if len(active_children) > 1:
+        diagnostics.append(
+            Diagnostic(
+                "multiple_active_interruptions",
+                f"task {header.id} has multiple active interruption tasks",
+            )
         )
 
     return tuple(diagnostics)

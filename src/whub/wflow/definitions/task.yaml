@@ -6,7 +6,7 @@ workflow:
   initial_state: draft
   terminal_states: [completed, cancelled]
 
-states: [draft, in_progress, completed, cancelled]
+states: [draft, in_progress, paused, completed, cancelled]
 
 transitions:
   - trigger: approve_plan
@@ -33,6 +33,16 @@ transitions:
         value:
           reason: $input.reason
 
+  - trigger: interrupt_task
+    actor: agent
+    from: in_progress
+    to: paused
+
+  - trigger: resume_task
+    actor: agent
+    from: paused
+    to: in_progress
+
   - trigger: complete_task
     actor: agent
     from: in_progress
@@ -56,7 +66,7 @@ transitions:
 
   - trigger: cancel_task
     actor: user
-    from: [draft, in_progress]
+    from: [draft, in_progress, paused]
     to: cancelled
     requires:
       - field: $input.reason

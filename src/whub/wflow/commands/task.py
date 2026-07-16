@@ -34,7 +34,17 @@ def check(task_ref: str) -> None:
     """Check one task execution record."""
     try:
         task_path = resolve_task_reference(task_ref)
-        diagnostics = validate_task(load_task(task_path), load_task_workflow())
+        task_root = Path("docs/tasks")
+        try:
+            relative_path = task_path.resolve().relative_to(task_root.resolve()).as_posix()
+        except ValueError:
+            diagnostics = [
+                f"{item.code}: {item.message}"
+                for item in validate_task(load_task(task_path), load_task_workflow())
+            ]
+        else:
+            summary = next(item for item in list_tasks(task_root) if item.path == relative_path)
+            diagnostics = summary.diagnostics
     except WflowError as error:
         raise click.ClickException(str(error)) from error
 
@@ -42,7 +52,7 @@ def check(task_ref: str) -> None:
         click.echo(f"valid {task_path}")
         return
     for diagnostic in diagnostics:
-        click.echo(f"{diagnostic.code}: {diagnostic.message}", err=True)
+        click.echo(diagnostic, err=True)
     raise click.exceptions.Exit(1)
 
 
