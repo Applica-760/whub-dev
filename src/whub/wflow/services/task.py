@@ -22,6 +22,7 @@ from whub.wflow.services.workflow import (
 
 
 STEP_REFERENCE_PATTERN = r"^[0-9]{3}-[0-9]{3}$"
+PHASE_REFERENCE_PATTERN = r"^[0-9]{3}$"
 
 
 def _satisfied_if_defined(
@@ -109,8 +110,7 @@ def update_step(
     step_ref: str | None,
     state: str,
     reason: str | None = None,
-    log_summary: str | None = None,
-    log_evidence: tuple[str, ...] = (),
+    logs: tuple[str, ...] = (),
 ) -> TaskDocument:
     """Update a selected or next incomplete Step, logging a completed Phase."""
     if task.task.state != "in_progress":
@@ -160,20 +160,42 @@ def update_step(
         raise WflowError(f"step is already complete: {phase_index + 1:03}-{step_index + 1:03}")
     step["state"] = state
     step["skip_reason"] = reason if state == "skipped" else None
-    if all(step["state"] in {"done", "skipped"} for step in phase["steps"]):
-        if not log_summary:
-            raise WflowError(f"completed phase {phase_index + 1:03} requires a log summary")
-        phase["log"] = {
-            "summary": log_summary,
-            "evidence": list(log_evidence),
-        }
-    elif log_summary:
-        raise WflowError("a log summary is only allowed when completing a phase")
+    phase_completed = all(step["state"] in {"done", "skipped"} for step in phase["steps"])
+    if phase_completed and not logs:
+        raise WflowError(f"completed phase {phase_index + 1:03} requires a log")
+    phase["log"].extend(logs)
     try:
         updated = TaskDocument.model_validate(data)
     except ValidationError as error:
         raise WflowError(f"failed to update step '{step_id}': {error}") from error
     return updated
+
+
+def append_phase_log(
+    task: TaskDocument,
+    phase_ref: str,
+    logs: tuple[str, ...],
+) -> TaskDocument:
+    """Append log lines to one Phase without changing its Steps."""
+    if task.task.state not in {"in_progress", "paused"}:
+        raise WflowError("phase logs can only be recorded while the task is in_progress or paused")
+    if task.plan is None:
+        raise WflowError("task has no plan")
+    if not logs:
+        raise WflowError("at least one log is required")
+    if re.fullmatch(PHASE_REFERENCE_PATTERN, phase_ref) is None:
+        raise WflowError("phase reference must be PPP, for example '002'")
+
+    phase_index = int(phase_ref) - 1
+    if phase_index < 0 or phase_index >= len(task.plan.phases):
+        raise WflowError(f"phase reference not found: {phase_ref}")
+
+    data = task.model_dump(mode="python")
+    data["plan"]["phases"][phase_index]["log"].extend(logs)
+    try:
+        return TaskDocument.model_validate(data)
+    except ValidationError as error:
+        raise WflowError(f"failed to append phase log '{phase_ref}': {error}") from error
 
 
 def record_acceptance(

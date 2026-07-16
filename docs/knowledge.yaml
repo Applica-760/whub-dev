@@ -96,7 +96,7 @@ definitions:
 
   - id: DEF-024
     name: task-planning
-    definition: 個別作業の実行計画と作業ログを記録する運用
+    definition: YAML Taskを作成・承認・実行・完了する個別作業の対話的運用
 
   - id: DEF-025
     name: FOCUS.md
@@ -215,7 +215,7 @@ relations:
   - id: REL-009
     subject: DEF-009
     predicate: promotes_to
-    object: DEF-024
+    object: DEF-031
 
   - id: REL-010
     subject: DEF-009
@@ -245,16 +245,16 @@ policies:
     statement: inboxの入力はtodoまたはvault知識プレーンへ昇格する
 
   - id: POL-008
-    statement: backlogの入力はtask-planning・execution-spec・ADRへ昇格する
+    statement: backlogの入力はTask YAML・execution-spec・ADRへ昇格する
 
   - id: POL-009
     statement: 外部ソースはdiscourseを経由してliterature/log.jsonlとliterature/sourcesへ記録する
 
   - id: POL-010
-    statement: backlogとtask-planningの開始・完了はFOCUS.mdの更新材料にする
+    statement: backlogとTask YAMLの開始・完了はFOCUS.mdの更新材料にする
 
   - id: POL-011
-    statement: 詳細な進捗や構想はbacklogとtask mdに置きFOCUS.mdは要約に留める
+    statement: 詳細な進捗や構想はbacklogとTask YAMLに置きFOCUS.mdは要約に留める
 
   - id: POL-012
     statement: FOCUS.mdを材料にAI Agentへ次に着手すべきことを相談する
@@ -269,7 +269,7 @@ policies:
     statement: Knowledge YAMLには確定済みの現在の事実・規約だけを記録し、検討中の案はbacklogに置く
 
   - id: POL-016
-    statement: 長期構想はTask YAMLのTask依存で表現し、Markdownはbacklogの未整理入力・検討記録に限り、Web appはTask YAMLを更新しない読み取り専用の派生ビューとする
+    statement: 長期構想はTask YAMLのTask依存で表現し、Markdownはbacklogの未整理入力・検討記録と凍結済みTask履歴に限り、Web appはTask YAMLを更新しない読み取り専用の派生ビューとする
 
 constraints:
   - id: CON-001

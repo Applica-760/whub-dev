@@ -75,4 +75,6 @@
     - テストコードにDEF/CON対応のコメントを付け、Knowledge→acceptance→テストの導出関係を作る
 
 <!-- hub:backlog:appended:start -->
+- せめてtaskのページはホットリロードにしたい
+- リロード時にスクロール位置を保持したい
 <!-- hub:backlog:appended:end -->

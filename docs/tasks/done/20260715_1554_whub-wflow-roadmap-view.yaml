@@ -24,8 +24,7 @@ plan:
       state: done
       skip_reason: null
     log:
-      summary: Knowledgeの責務境界とSSOTを定義し、ユーザー承認のうえ反映した
-      evidence: []
+    - Knowledgeの責務境界とSSOTを定義し、ユーザー承認のうえ反映した
   - title: wflow運用の不足を修正
     acceptance: []
     steps:
@@ -51,8 +50,7 @@ plan:
       state: done
       skip_reason: null
     log:
-      summary: Task Workflowの承認・受け入れ・Phaseログ・CLI契約を現行運用へ更新し、検証した
-      evidence: []
+    - Task Workflowの承認・受け入れ・Phaseログ・CLI契約を現行運用へ更新し、検証した
   - title: workflow／Task責務を分離
     acceptance: []
     steps:
@@ -69,8 +67,7 @@ plan:
       state: done
       skip_reason: null
     log:
-      summary: Workflow engineとTask固有serviceの責務を分離し、既存CLI契約を検証した
-      evidence: []
+    - Workflow engineとTask固有serviceの責務を分離し、既存CLI契約を検証した
   - title: Task横断の読取機能を作成
     acceptance: []
     steps:
@@ -96,8 +93,7 @@ plan:
       state: done
       skip_reason: null
     log:
-      summary: Task横断読取、TASK-ID解決、transition commandを追加し、全248テストで検証した
-      evidence: []
+    - Task横断読取、TASK-ID解決、transition commandを追加し、全248テストで検証した
   - title: Web appの読み取り専用ロードマップビューを追加
     acceptance: []
     steps:
@@ -117,10 +113,9 @@ plan:
       state: skipped
       skip_reason: 遷移履歴の記録粒度は未設計のため別Taskで扱う
     log:
-      summary: Task読取API、Cytoscape.jsタスク間ビュー、Mermaid Task内フローを実装し検証した
-      evidence:
-      - 'uv run pytest: 254 passed'
-      - 'npm run build: passed'
+    - Task読取API、Cytoscape.jsタスク間ビュー、Mermaid Task内フローを実装し検証した
+    - 'uv run pytest: 254 passed'
+    - 'npm run build: passed'
 approvals:
 - actor: user
 acceptance_results: []

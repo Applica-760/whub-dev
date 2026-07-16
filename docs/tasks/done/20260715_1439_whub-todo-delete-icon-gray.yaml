@@ -20,10 +20,9 @@ plan:
       state: done
       skip_reason: null
     log:
-      summary: 削除用×はTodoListのActionIconであり、色以外の削除操作は変更不要と確認した
-      evidence:
-      - 'app/src/features/todos/TodoList.tsx: ActionIcon color=red, onClick=onDelete'
-      - 'app/src/features/todos/useTodoWidgets.ts: handleDeleteがDELETE APIを呼ぶ'
+    - 削除用×はTodoListのActionIconであり、色以外の削除操作は変更不要と確認した
+    - 'app/src/features/todos/TodoList.tsx: ActionIcon color=red, onClick=onDelete'
+    - 'app/src/features/todos/useTodoWidgets.ts: handleDeleteがDELETE APIを呼ぶ'
   - title: 修正と検証
     acceptance: []
     steps:
@@ -34,10 +33,9 @@ plan:
       state: done
       skip_reason: null
     log:
-      summary: Todo削除用×の色変更後に本番ビルドとユーザーによる表示確認を完了した
-      evidence:
-      - 'npm run build: tsc -b と vite build が成功'
-      - 'ユーザー確認: Todo削除用×がグレーで表示されることを確認'
+    - Todo削除用×の色変更後に本番ビルドとユーザーによる表示確認を完了した
+    - 'npm run build: tsc -b と vite build が成功'
+    - 'ユーザー確認: Todo削除用×がグレーで表示されることを確認'
 approvals:
 - actor: user
 acceptance_results:

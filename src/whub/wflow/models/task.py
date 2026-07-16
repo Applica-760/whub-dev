@@ -46,16 +46,11 @@ class PlanStep(TaskModel):
         return self
 
 
-class PhaseLog(TaskModel):
-    summary: NonEmptyStr
-    evidence: list[NonEmptyStr] = Field(default_factory=list)
-
-
 class PlanPhase(TaskModel):
     title: NonEmptyStr
     acceptance: list[AcceptanceCriterion] = Field(default_factory=list)
     steps: list[PlanStep] = Field(min_length=1)
-    log: PhaseLog | None = None
+    log: list[NonEmptyStr] = Field(default_factory=list)
 
 
 class TaskPlan(TaskModel):

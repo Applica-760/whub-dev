@@ -1,0 +1,129 @@
+schema_version: 1
+task:
+  id: TASK-011
+  state: in_progress
+  title: Taskの割り込み・凍結・再開を管理するpaused Stateを導入する
+  objective: 実行中Taskを割り込みで凍結し、割り込みTaskへ焦点を移した後に主Taskへ戻れるようにする
+  approach:
+  - 主Taskの実行中に本筋と別の必要作業が発見された場合、主Taskを凍結して割り込みTaskへ作業焦点を移す運用を表現する
+  - pausedは通常の進捗Stateとは異なり、実行位置を保持したまま通常操作を停止する特権的なStateとして扱う
+  - 割り込みの目的は主Taskへ戻れなくすることではなく、割り込みTaskへ傾倒し続けず解決後に主Taskへ戻ることとする
+  - 同時に有効な直接の割り込みはTaskごとに1件だけとし、割り込みTask自身へのネストした割り込みを許容する
+  - 計画変更・Phase logと割り込みを区別し、割り込み元Task・理由・再開条件をTask YAMLに記録する
+  - WorkflowのState・Transition、Task間関係、CLI表示・検証を一貫して更新する
+  depends_on:
+  - TASK-003
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: 主Taskからネストした割り込みTaskへ焦点を移し、終端後に逆順で主Taskへ戻れる
+  - id: ACC-002
+    statement: 同じTaskに複数の有効な直接割り込みを作成できず、停止中の通常操作を拒否する
+  phases:
+  - title: Phase logの任意追記を操作化する
+    acceptance: []
+    steps:
+    - description: 指定Phaseへ複数行のlogを追記するTask serviceを実装する
+      state: done
+      skip_reason: null
+    - description: wflow task logのCLIとservice・CLIテストを実装する
+      state: done
+      skip_reason: null
+    log:
+    - wflow task logでStep状態を変えずにPhase logへ追記できることを確認した
+    - append_phase_logが指定Phaseへ複数行を追記するserviceを実装した
+    - wflow task logのCLIとservice・CLIテストを実装し、wflowテスト36件が成功した
+  - title: Task詳細Webビューへ実行文脈を表示する
+    acceptance: []
+    steps:
+    - description: Task詳細でapproachと各Phaseの任意logを表示する
+      state: done
+      skip_reason: null
+    - description: 旧Phase完了log表示を廃止し、任意log一覧の表示を検証する
+      state: done
+      skip_reason: null
+    log:
+    - Task詳細WebビューへapproachとPhase log一覧を追加した
+    - 旧Phase完了log表示を任意log一覧へ置換し、Web APIテスト28件とフロントビルドが成功した
+    - ユーザーがwhub appでapproachと任意Phase logの表示を確認し、成功した
+  - title: 割り込みの状態・関係を確定する
+    acceptance: []
+    steps:
+    - description: paused中に許す操作、割り込み元・理由・再開条件のYAML表現を確定する
+      state: done
+      skip_reason: null
+    - description: completedまたはcancelledの割り込みTaskから親Taskへ戻る規則と、ネスト時の焦点規則を確定する
+      state: done
+      skip_reason: null
+    - description: 計画変更・通常依存・Phase logとの責務境界を確定する
+      state: pending
+      skip_reason: null
+    log:
+    - pausedはStep・Phaseの途中で発生し、実行位置を保持したまま通常操作を停止する
+    - pausedのStateとTransitionはTask Workflow定義task.yamlへ追加し、汎用Workflow model・serviceは変更しない
+    - 割り込み元Taskはpausedと割り込みTask IDを持ち、割り込みTaskはin_progressと割り込み元Task IDを持つ
+    - 割り込み由来はStateではなくTask間関係で表す
+    - Taskごとの有効な直接割り込みは1件だけとし、割り込みTask自身へのネストは許容する
+    - 割り込み関係の整合性と再開可否はTask固有model・service・validation・CLIで扱う
+    - 親はinterruption_task_id、子はinterruption_source_task_idを持つ方向別フィールドとし、State依存の解釈や双方向の同名フィールドは使わない
+    - 子Taskがcompletedまたはcancelledになれば、親は割り込みが解消した事実だけを受けてpausedを解除できる。子の中止理由は子Taskにだけ保持する
+    - paused中はlogとcancel_taskを許可し、done・skip・accept・complete_task・request_plan_changeを拒否する
+    - paused中の計画変更案や思いつきはlogに残し、再開後に最新のコード状況を踏まえて再検討する
+  - title: WorkflowとTaskモデルを実装する
+    acceptance: []
+    steps:
+    - description: Task Workflowへpausedと凍結・再開Transitionを追加する
+      state: pending
+      skip_reason: null
+    - description: Task YAMLへ割り込み関係を追加し、有効な直接割り込みが1件だけとなる検証を実装する
+      state: pending
+      skip_reason: null
+    log: []
+  - title: 割り込み操作と読取を実装する
+    acceptance: []
+    steps:
+    - description: 親Taskの凍結と割り込みTaskへの焦点移動を整合した操作として実装する
+      state: pending
+      skip_reason: null
+    - description: 割り込みTaskの終端後に親Taskへ戻る操作を実装する
+      state: pending
+      skip_reason: null
+    - description: Taskの現在地・親子関係・再開可能性をCLI表示へ反映する
+      state: pending
+      skip_reason: null
+    log: []
+  - title: Task間グラフへ割り込み関係を描画する
+    acceptance: []
+    steps:
+    - description: 通常依存と割り込みを区別するNode・Edge・方向・状態の描画規則を確定する
+      state: pending
+      skip_reason: null
+    - description: 親Taskからネストした割り込みTaskへの関係をTask間グラフへ描画する
+      state: pending
+      skip_reason: null
+    - description: 通常依存との共存とネストした割り込みの描画をテストで検証する
+      state: pending
+      skip_reason: null
+    log: []
+  - title: ネストした割り込みを検証する
+    acceptance: []
+    steps:
+    - description: 主Taskから2段の割り込みへ移動し、終端後に逆順で再開する受け入れ検証を実装する
+      state: pending
+      skip_reason: null
+    - description: 複数の直接割り込み、停止中の通常操作、不正な再開を拒否するテストを実装する
+      state: pending
+      skip_reason: null
+    log: []
+approvals:
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: Step状態を変えずにPhase logを追記するwflow task logを追加するため
+- reason: Task詳細Webビューでapproachと任意Phase logを表示するため
+- reason: Task間グラフで割り込み関係を描画する規則と検証を追加するため
+cancellation: null
+result: null

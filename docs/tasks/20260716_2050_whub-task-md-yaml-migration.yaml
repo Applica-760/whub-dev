@@ -1,39 +1,71 @@
 schema_version: 1
-
 task:
   id: TASK-010
-  state: draft
-  title: task-planning以外の運用Workflow候補を選定する
-  objective: inbox・backlog・意思決定記録・進捗集約の運用から、wflowで管理すべきWorkflowを選定する
+  state: in_progress
+  title: task-planningをYAML Task運用へ完全移行する
+  objective: 新規・未完了の個別作業をYAML Taskとwflowで運用し、Markdown Taskは履歴として凍結する
   approach:
-    - LinearのTriageとMartin FowlerのADRを参考に、入力整理と意思決定記録をTask Workflowと混同せずに比較する
-    - 既存のKnowledge YAMLで定義したinbox・backlog・execution-spec・ADR・FOCUSの責務を前提にする
+  - 運用規約のSSOTであるKnowledge YAMLを先にYAML Task運用へ更新する
+  - task-planning Skillの実行手順をYAML Taskとwflow操作へ置き換え、boot配布元と利用中のSkillを同期する
+  - wflow CLIの操作契約はREADMEのチートシートに集約し、詳細な運用手順はSkillへ残す
   depends_on:
-    - TASK-003
-
+  - TASK-003
 plan:
+  acceptance: []
   phases:
-    - title: 参考運用からWorkflow候補を抽出する
-      steps:
-        - description: Linear Triageの受入・却下・保留と、ADRの決定・置換記録を既存運用へ対応付ける
-          state: pending
-        - description: inbox・backlog・issue-log・execution-spec・ADR・FOCUS更新のうち状態遷移が必要な候補を抽出する
-          state: pending
-    - title: 候補ごとのWorkflow適性を評価する
-      steps:
-        - description: 各候補のSSOT、開始・終端状態、必要な承認・証跡、Task Workflowとの境界を評価する
-          state: pending
-        - description: 単なる文書運用または一回限りの操作で足りる候補を除外する
-          state: pending
-    - title: 導入順序と後続Taskを確定する
-      steps:
-        - description: 導入するWorkflow、見送るWorkflow、検証対象をユーザーと確定する
-          state: pending
-        - description: 選定結果を実装単位の後続Taskへ分割する
-          state: pending
-
-approvals: []
+  - title: 運用規約と移行範囲を確定する
+    acceptance: []
+    steps:
+    - description: Knowledge YAMLのtask-planning・backlog・FOCUS関連規約をYAML Task運用とMarkdown履歴凍結へ更新する
+      state: done
+      skip_reason: null
+    - description: 新規・未完了TaskをYAMLへ統一し、完了済みMarkdown Taskを遡及変換しない移行境界を確認する
+      state: done
+      skip_reason: null
+    log:
+    - 未完了Taskは2件ともYAMLで、Markdownはdone配下の履歴のみ
+  - title: Task運用SkillとPhase logをYAMLへ移行する
+    acceptance: []
+    steps:
+    - description: Phaseごとのlogを任意行数記録するTaskモデル、完了時の記録、表示を実装する
+      state: done
+      skip_reason: null
+    - description: task-planning SkillとYAML雛形を計画・承認・実行・完了手順へ更新する
+      state: pending
+      skip_reason: null
+    - description: boot配布元と利用中のtask-planning Skillを同一内容へ同期する
+      state: pending
+      skip_reason: null
+    log:
+    - Phase logを任意行数の文字列リストへ変更した
+    - wflowテスト35件が成功した
+  - title: Agent向け導線を更新する
+    acceptance: []
+    steps:
+    - description: READMEにwflow Taskのコマンドチートシートを追加し、運用手順との責務を分離する
+      state: pending
+      skip_reason: null
+    - description: AGENTS.mdをYAML Task運用へ最小限更新し、詳細手順はSkillを参照させる
+      state: pending
+      skip_reason: null
+    log: []
+  - title: 移行後の運用を検証する
+    acceptance: []
+    steps:
+    - description: 更新済みTaskとTask Workflowの整合性をwflow task checkで検証する
+      state: pending
+      skip_reason: null
+    - description: テストとSkill配布元・利用先の一致確認により移行後の運用を検証する
+      state: pending
+      skip_reason: null
+    log: []
+approvals:
+- actor: user
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: Phaseごとの任意件数ログとwflow task logを追加するため
+- reason: Phaseログの専用CLIを設けず、既存のdoneとskipによる複数ログ記録へ範囲を縮小するため
 cancellation: null
 result: null

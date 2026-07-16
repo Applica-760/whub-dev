@@ -16,7 +16,7 @@ from whub.wflow.cli import main
 
 
 _ROOT = Path(__file__).parents[5]
-_TASK_PATH = _ROOT / "docs/tasks/20260713_2236_whub-task-planning-task-example.yaml"
+_TASK_PATH = _ROOT / "src/whub/tests/wflow/fixtures/task.yaml"
 
 
 def test_check_uses_the_builtin_task_workflow() -> None:
@@ -86,7 +86,7 @@ def test_task_graph_prints_task_dependencies_as_mermaid(tmp_path: Path) -> None:
     dependent["acceptance_results"] = []
     dependent["result"] = None
     for phase in dependent["plan"]["phases"]:
-        phase["log"] = None
+        phase["log"] = []
         for step in phase["steps"]:
             step["state"] = "pending"
     (tmp_path / "prerequisite.yaml").write_text(
@@ -137,7 +137,7 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
     data["change_requests"] = []
     data["result"] = None
     for phase in data["plan"]["phases"]:
-        phase["log"] = None
+        phase["log"] = []
         for step in phase["steps"]:
             step["state"] = "pending"
     path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
@@ -157,6 +157,13 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
     )
     assert approved.exit_code == 0
 
+    logged = runner.invoke(
+        main,
+        ["task", "log", "001", "001", "--log", "discussion finding", "--log", "second discussion"],
+        catch_exceptions=False,
+    )
+    assert logged.exit_code == 0
+
     done = runner.invoke(
         main,
         [
@@ -165,8 +172,8 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
             "001",
             "--log",
             "current style located",
-            "--evidence",
-            "src/whub/webapp",
+            "--log",
+            "second finding",
         ],
         catch_exceptions=False,
     )
@@ -186,7 +193,12 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
 
     updated = yaml.safe_load(path.read_text())
     assert updated["task"]["state"] == "in_progress"
-    assert updated["plan"]["phases"][0]["log"]["summary"] == "current style located"
+    assert updated["plan"]["phases"][0]["log"] == [
+        "discussion finding",
+        "second discussion",
+        "current style located",
+        "second finding",
+    ]
     assert updated["plan"]["phases"][1]["steps"][1]["skip_reason"] == "not needed"
     assert updated["acceptance_results"] == [{"acceptance": "ACC-001", "status": "passed", "evidence": []}]
 
@@ -195,6 +207,8 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
     assert show.exit_code == 0
     assert "[001-001] [x] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
     assert "- current style located" in show.output
+    assert "- second finding" in show.output
+    assert "- discussion finding" in show.output
     assert "[002-002] [-] READMEに記載した手順でテストを実行する" in show.output
     assert "- skipped: not needed" in show.output
     assert "ACC-" not in show.output

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from whub.wflow.services import (
     WflowError,
+    append_phase_log,
     apply_transition,
     list_tasks,
     load_task,
@@ -127,8 +128,8 @@ def show(task_ref: str) -> None:
                 click.echo(f" [{phase_number:03}-{step_number:03}] [{marker}] {step.description}")
                 if step.skip_reason is not None:
                     click.echo(f"    - skipped: {step.skip_reason}")
-            if phase.log is not None:
-                click.echo(f"    - {phase.log.summary}")
+            for log in phase.log:
+                click.echo(f"    - {log}")
     except WflowError as error:
         raise click.ClickException(str(error)) from error
 
@@ -178,16 +179,29 @@ def accept(
     click.echo(f"accepted {acceptance}: {status}")
 
 
+@task.command("log")
+@click.argument("task_ref")
+@click.argument("phase_ref")
+@click.option("--log", "logs", multiple=True, required=True, help="Line appended to the Phase log.")
+def log(task_ref: str, phase_ref: str, logs: tuple[str, ...]) -> None:
+    """Append lines to one Phase log without changing Task progress."""
+    try:
+        task_path = resolve_task_reference(task_ref)
+        updated = append_phase_log(load_task(task_path), phase_ref, logs)
+        write_task(task_path, updated)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"logged {phase_ref}")
+
+
 @task.command()
 @click.argument("task_ref")
 @click.argument("step_ref", required=False)
-@click.option("--log", "log_summary", help="Required when this completes a Phase.")
-@click.option("--evidence", multiple=True, help="Evidence for the completed Phase.")
+@click.option("--log", "logs", multiple=True, help="Record a Phase log; required when this completes a Phase.")
 def done(
     task_ref: str,
     step_ref: str | None,
-    log_summary: str | None,
-    evidence: tuple[str, ...],
+    logs: tuple[str, ...],
 ) -> None:
     """Mark a selected or next incomplete Step done."""
     try:
@@ -197,8 +211,7 @@ def done(
             load_task_workflow(),
             step_ref,
             "done",
-            log_summary=log_summary,
-            log_evidence=evidence,
+            logs=logs,
         )
         write_task(task_path, updated)
     except WflowError as error:
@@ -210,14 +223,12 @@ def done(
 @click.argument("task_ref")
 @click.argument("step_ref", required=False)
 @click.option("--reason", required=True, help="Reason for skipping the Step.")
-@click.option("--log", "log_summary", help="Required when this completes a Phase.")
-@click.option("--evidence", multiple=True, help="Evidence for the completed Phase.")
+@click.option("--log", "logs", multiple=True, help="Record a Phase log; required when this completes a Phase.")
 def skip(
     task_ref: str,
     step_ref: str | None,
     reason: str,
-    log_summary: str | None,
-    evidence: tuple[str, ...],
+    logs: tuple[str, ...],
 ) -> None:
     """Skip a selected or next incomplete Step with a reason."""
     try:
@@ -228,8 +239,7 @@ def skip(
             step_ref,
             "skipped",
             reason,
-            log_summary,
-            evidence,
+            logs=logs,
         )
         write_task(task_path, updated)
     except WflowError as error:

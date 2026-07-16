@@ -1,0 +1,49 @@
+schema_version: 1
+
+task:
+  id: TASK-001
+  state: completed
+  title: READMEへ開発環境セットアップ手順を追加する
+  objective: 新規参加者がREADMEだけでテストを実行できるようにする
+  approach:
+    - Python環境と依存管理にはuvを使用する
+    - 現行コマンドを確認してからREADMEを更新し、記載した手順を検証する
+
+plan:
+  acceptance:
+    - id: ACC-001
+      statement: READMEに前提条件・依存導入・テスト手順が記載され、その手順の成功が検証されている
+  phases:
+    - title: 現行手順の確認
+      steps:
+        - description: 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する
+          state: done
+      log:
+        - 現行のセットアップ手順を確認した
+
+    - title: README更新と検証
+      steps:
+        - description: READMEへ開発環境セットアップ手順を追加する
+          state: done
+        - description: READMEに記載した手順でテストを実行する
+          state: done
+        - description: READMEだけを参照してセットアップ手順を再現できることを確認する
+          state: done
+      log:
+        - README更新と再現確認を完了した
+
+approvals:
+  - actor: user
+
+acceptance_results:
+  - acceptance: ACC-001
+    status: passed
+    evidence:
+      - 架空Taskの想定検証としてREADME記載手順の成功を確認した
+
+change_requests:
+  - reason: コマンド成功だけではREADME単独で手順を再現できるか確認できない
+
+cancellation: null
+result:
+  summary: READMEへセットアップ手順を追加し、READMEだけを参照した再現確認まで完了した

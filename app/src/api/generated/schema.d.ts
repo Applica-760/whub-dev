@@ -424,13 +424,6 @@ export interface components {
             /** Definition */
             definition: string;
         };
-        /** PhaseLog */
-        PhaseLog: {
-            /** Summary */
-            summary: string;
-            /** Evidence */
-            evidence?: string[];
-        };
         /** PlanApproval */
         PlanApproval: {
             /** Actor */
@@ -444,7 +437,8 @@ export interface components {
             acceptance?: components["schemas"]["AcceptanceCriterion"][];
             /** Steps */
             steps: components["schemas"]["PlanStep"][];
-            log?: components["schemas"]["PhaseLog"] | null;
+            /** Log */
+            log?: string[];
         };
         /** PlanStep */
         PlanStep: {

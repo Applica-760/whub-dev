@@ -33,7 +33,7 @@ from whub.wflow.services import (
 
 _ROOT = Path(__file__).parents[5]
 _WORKFLOW_PATH = _ROOT / "src/whub/wflow/definitions/task.yaml"
-_TASK_PATH = _ROOT / "docs/tasks/20260713_2236_whub-task-planning-task-example.yaml"
+_TASK_PATH = _ROOT / "src/whub/tests/wflow/fixtures/task.yaml"
 
 
 def _workflow_data() -> dict:

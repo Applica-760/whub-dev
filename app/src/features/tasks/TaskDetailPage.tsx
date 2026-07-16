@@ -58,6 +58,14 @@ export function TaskDetailPage() {
             ) : task ? (
               <Stack gap="md">
                 <Text>state: {task.task?.state ?? '-'}</Text>
+                {(task.task?.approach ?? []).length > 0 && (
+                  <Stack gap={2}>
+                    <Text fw={600}>Approach</Text>
+                    {(task.task?.approach ?? []).map((item, index) => (
+                      <Text key={`${index}-${item}`} pl="md" size="sm">- {item}</Text>
+                    ))}
+                  </Stack>
+                )}
                 {task.plan ? phases.map((phase, phaseIndex) => (
                   <Stack gap="xs" key={`${phaseIndex}-${phase.title}`}>
                     <Text fw={600}>Phase {phaseIndex + 1}: {phase.title}</Text>
@@ -67,7 +75,9 @@ export function TaskDetailPage() {
                         {step.skip_reason && <Text c="dimmed" pl="md" size="sm">- skipped: {step.skip_reason}</Text>}
                       </Stack>
                     ))}
-                    {phase.log && <Text c="dimmed" size="sm">- {phase.log.summary}</Text>}
+                    {(phase.log ?? []).map((item, logIndex) => (
+                      <Text c="dimmed" key={`${logIndex}-${item}`} pl="md" size="sm">- {item}</Text>
+                    ))}
                   </Stack>
                 )) : <Text c="dimmed">plan: -</Text>}
               </Stack>

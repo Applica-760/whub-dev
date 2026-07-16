@@ -6,6 +6,7 @@ from whub.wflow.services.task_graph import (
     render_task_flow,
 )
 from whub.wflow.services.task import (
+    append_phase_log,
     apply_transition,
     available_transitions,
     record_acceptance,
@@ -26,6 +27,7 @@ from whub.wflow.services.workflow import (
 
 __all__ = [
     "WflowError",
+    "append_phase_log",
     "apply_transition",
     "available_transitions",
     "check_workflow",
