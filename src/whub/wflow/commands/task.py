@@ -88,7 +88,7 @@ def graph(task_ref: str | None, task_dir: Path) -> None:
     """Print a Task dependency graph or one Task's detailed flow as Mermaid."""
     try:
         if task_ref is None:
-            output = render_task_dependency_graph(task_dir)
+            output = render_task_dependency_graph(list_tasks(task_dir))
         else:
             task_path = resolve_task_reference(task_ref, task_dir)
             record = load_task(task_path)

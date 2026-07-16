@@ -241,7 +241,7 @@ def test_renders_task_dependency_graph_with_independent_tasks(tmp_path: Path) ->
     _write_task(tmp_path, "dependent.yaml", dependent)
     _write_task(tmp_path, "independent.yaml", independent)
 
-    graph = render_task_dependency_graph(tmp_path)
+    graph = render_task_dependency_graph(list_tasks(tmp_path))
 
     assert "flowchart TD" in graph
     assert 'TASK_001["TASK-001:' in graph

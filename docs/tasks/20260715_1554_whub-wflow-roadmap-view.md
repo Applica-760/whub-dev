@@ -124,5 +124,10 @@
 - 結果: 数値Task IDの詳細フローと、デモTaskディレクトリを指定した全体依存グラフが成功した
 - 判断: 続行
 
+### 試行 15: Mermaid変換Serviceの分離
+- 実施内容: `task_graph.py`へTask情報からMermaidへ変換する処理だけを移し、Task YAMLの走査は`task_query.py`に残した
+- 結果: CLIの出力契約を維持し、wflowテスト35件が成功した
+- 判断: 続行
+
 ## 結果
 - Phase 3: `wflow task ls [TASK_DIR]`とTask横断集計を追加し、246テストと既存Task一覧で検証した
