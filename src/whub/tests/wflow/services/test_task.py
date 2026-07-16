@@ -13,17 +13,20 @@ import pytest
 import yaml
 
 from whub.wflow.models import TaskDocument
+from whub.wflow.models.task import AcceptanceCriterion
 from whub.wflow.services import (
     WflowError,
     apply_transition,
     available_transitions,
-    check_task,
     list_tasks,
     load_task,
     load_task_workflow,
     record_acceptance,
+    render_task_dependency_graph,
+    render_task_flow,
     resolve_task_reference,
     update_step,
+    validate_task,
     write_task,
 )
 
@@ -42,7 +45,7 @@ def _write_task(root: Path, name: str, data: dict) -> None:
 
 def _codes(data: dict) -> set[str]:
     task = TaskDocument.model_validate(data)
-    return {diagnostic.code for diagnostic in check_task(task, load_task_workflow())}
+    return {diagnostic.code for diagnostic in validate_task(task, load_task_workflow())}
 
 
 def test_builtin_task_matches_the_builtin_workflow() -> None:
@@ -141,7 +144,7 @@ def test_updates_selected_step_out_of_order() -> None:
     updated = update_step(active, workflow, "002-001", "done")
 
     assert updated.plan.phases[1].steps[0].state == "done"
-    assert check_task(updated, workflow) == ()
+    assert validate_task(updated, workflow) == ()
 
 
 def test_skip_records_its_reason_and_write_is_loadable(tmp_path: Path) -> None:
@@ -221,6 +224,47 @@ def test_lists_missing_and_duplicate_dependencies_as_blocked(tmp_path: Path) -> 
         "missing dependency: TASK-999",
     ]
     assert tasks["dependent.yaml"].ready is False
+
+
+def test_renders_task_dependency_graph_with_independent_tasks(tmp_path: Path) -> None:
+    prerequisite = _task_data()
+    dependent = _task_data()
+    independent = _task_data()
+    dependent["task"].update(
+        id="TASK-003",
+        title="depends on TASK-001",
+        state="draft",
+        depends_on=["TASK-001"],
+    )
+    independent["task"].update(id="TASK-004", title="independent task", state="draft")
+    _write_task(tmp_path, "prerequisite.yaml", prerequisite)
+    _write_task(tmp_path, "dependent.yaml", dependent)
+    _write_task(tmp_path, "independent.yaml", independent)
+
+    graph = render_task_dependency_graph(tmp_path)
+
+    assert "flowchart TD" in graph
+    assert 'TASK_001["TASK-001:' in graph
+    assert 'TASK_003["TASK-003: depends on TASK-001"]' in graph
+    assert 'TASK_004["TASK-004: independent task"]' in graph
+    assert "TASK_001 --> TASK_003" in graph
+
+
+def test_renders_task_flow_with_phase_and_task_acceptance() -> None:
+    task = _draft_task()
+    task.plan.phases[0].acceptance = [
+        AcceptanceCriterion(id="ACC-002", statement="first phase is verified")
+    ]
+
+    graph = render_task_flow(task)
+
+    assert 'phase_001["Phase 1: 現行手順の確認"]' in graph
+    assert 'phase_002["Phase 2: README更新と検証"]' in graph
+    assert "phase_001 --> phase_002" in graph
+    assert 'phase_001_ACC_002["ACC-002: first phase is verified"]' in graph
+    assert "phase_001 --> phase_001_ACC_002" in graph
+    assert 'task_ACC_001["ACC-001:' in graph
+    assert "phase_002 --> task_ACC_001" in graph
 
 
 def test_resolves_task_ids_and_rejects_missing_or_ambiguous_ids(tmp_path: Path) -> None:

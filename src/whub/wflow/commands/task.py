@@ -8,13 +8,13 @@ from pathlib import Path
 from whub.wflow.services import (
     WflowError,
     apply_transition,
-    check_task,
     list_tasks,
     load_task,
     load_task_workflow,
     record_acceptance,
     resolve_task_reference,
     update_step,
+    validate_task,
     write_task,
 )
 from whub.utils.render import render_table
@@ -31,7 +31,7 @@ def check(task_ref: str) -> None:
     """Check one task execution record."""
     try:
         task_path = resolve_task_reference(task_ref)
-        diagnostics = check_task(load_task(task_path), load_task_workflow())
+        diagnostics = validate_task(load_task(task_path), load_task_workflow())
     except WflowError as error:
         raise click.ClickException(str(error)) from error
 
@@ -82,7 +82,7 @@ def show(task_ref: str) -> None:
         task_path = resolve_task_reference(task_ref)
         record = load_task(task_path)
         workflow = load_task_workflow()
-        diagnostics = check_task(record, workflow)
+        diagnostics = validate_task(record, workflow)
         if diagnostics:
             raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
         click.echo(f"state: {record.task.state}")

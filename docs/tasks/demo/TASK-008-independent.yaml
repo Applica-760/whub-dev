@@ -1,0 +1,23 @@
+schema_version: 1
+task:
+  id: TASK-008
+  state: draft
+  title: 独立Taskを実装する
+  objective: 依存を持たない島を表す
+  approach: []
+  depends_on: []
+plan:
+  acceptance: []
+  phases:
+    - title: 独立Taskを実装する
+      acceptance: []
+      steps:
+        - description: 独立Taskを実装する
+          state: pending
+          skip_reason: null
+      log: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

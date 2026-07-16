@@ -27,6 +27,11 @@
 - [ ] boot skills配布の削除伝播
     - local `copytree(dirs_exist_ok)` / remote `rsync -a`（--deleteなし）のため廃止Skillが残骸として残り続ける
     - remoteは`--delete`、localは配布先を消してからcopyで揃える
+- [ ] wflow Taskの計画変更を安全に反映するCLIを追加する
+    - `request_plan_change`で理由を記録して`draft`へ戻した後、改訂したplan全体を`wflow task plan replace TASK --file PLAN.yaml`で検証・原子的に反映する
+    - Phase／Stepを逐次編集するCLIは、順序ベースの`PPP-SSS`参照を途中挿入で変え、個別操作ごとの中間状態も増やすため、初期実装では設けない
+    - 反映時は承認・受け入れ結果を失効させ、再承認を必須にする。完了済みPhase／Stepは実績として不変にし、未完了部分だけを変更対象にする
+    - Task YAMLの直編集を禁止せず、plan断片の記述とレビューにはYAMLを使う。Task YAMLへの反映・整合性検査・履歴管理はCLIへ一本化する
 
 ## whub アーキテクチャ・設定
 

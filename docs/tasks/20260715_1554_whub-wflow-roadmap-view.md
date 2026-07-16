@@ -45,10 +45,10 @@
 - [x] CLIテストと`uv run pytest`で表示契約を検証する
 
 ### Phase 4: Web appの読み取り専用ロードマップビューを追加
-- [] `wflow task graph [TASK_DIR]`でTask依存関係をMermaidとして出力し検証する
-- [] Phaseをノード、順序とAcceptance完了条件を矢印で表すTaskフローをMermaidとして出力する
-- [] Taskをノード、Task依存を矢印、独立Taskを島として表すTask全体フローをMermaidとして出力する
-- [] Task集計APIと一覧・依存関係・進捗を表示する画面を実装し検証する
+- [] Service層にTask全体依存グラフと任意Taskの詳細フローをMermaidとして導出する機能を実装し、Web APIと共有する
+- [] `wflow task graph [TASK_DIR]`はTask依存グラフを既定出力し、`--task TASK_ID`でPhase・順序・Acceptance完了条件の詳細フローを出力する
+- [] Taskをノード、Task依存を矢印、独立Taskを島として表す全体フローをCLIテストで検証する
+- [] Task集計・Mermaid出力の読取APIと、一覧・依存関係・進捗を表示する画面を実装し検証する
 - [] 遷移履歴の出力は、記録粒度を別途設計してから扱う
 
 ## 実行ログ
@@ -97,6 +97,21 @@
 ### 試行 9: Task YAMLの実行記録化
 - 実施内容: TASK-003を生成し、承認後にPhase 1から3までのStepとPhaseログを順に記録した
 - 結果: Task YAMLは有効で、次の未完了StepはPhase 5の1番目になった
+- 判断: 続行
+
+### 試行 10: Mermaid導出ServiceとデモTask
+- 実施内容: Task依存・Task詳細フローをMermaidへ導出するServiceと、分岐・合流・独立を表す5件のデモTaskを追加した
+- 結果: Serviceテスト13件と`wflow task ls docs/tasks/demo`が成功し、全体グラフに4本の依存矢印と独立Taskを出力した
+- 判断: 続行
+
+### 試行 11: Task Serviceの責務分割
+- 実施内容: `task_query.py`へ読取・派生ビュー、`task_validation.py`へ意味的検査、`task.py`へ更新操作を分離した
+- 結果: 公開Facadeを維持したままwflowテスト33件が成功した
+- 判断: 続行
+
+### 試行 12: Task検査の命名統一
+- 実施内容: `task_validation.py`の`check_task`を`validate_task`へ改名し、CLIの`check`操作名は維持した
+- 結果: 意味的検査のService名とmodule名が一致し、wflowテスト33件が成功した
 - 判断: 続行
 
 ## 結果

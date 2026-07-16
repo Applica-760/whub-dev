@@ -1,0 +1,25 @@
+schema_version: 1
+task:
+  id: TASK-007
+  state: draft
+  title: 分岐を統合する
+  objective: 複数依存の合流を表す
+  approach: []
+  depends_on:
+    - TASK-005
+    - TASK-006
+plan:
+  acceptance: []
+  phases:
+    - title: 分岐を統合する
+      acceptance: []
+      steps:
+        - description: 分岐を統合する
+          state: pending
+          skip_reason: null
+      log: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

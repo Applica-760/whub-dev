@@ -1,7 +1,6 @@
-"""Task record loading and built-in Workflow resolution."""
+"""Task execution record mutations."""
 from __future__ import annotations
 
-from importlib.resources import as_file, files
 import os
 from pathlib import Path
 import re
@@ -11,132 +10,18 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from whub.wflow.models.task import TASK_ID_PATTERN, TaskDocument, TaskSummary
+from whub.wflow.models.task import TaskDocument
 from whub.wflow.models.workflow import TransitionRequirement, WorkflowDefinition
-from whub.wflow.services.errors import Diagnostic, WflowError
+from whub.wflow.services.errors import WflowError
+from whub.wflow.services.task_validation import validate_task
 from whub.wflow.services.workflow import (
     apply_transition as apply_workflow_transition,
     available_transitions as available_workflow_transitions,
-    load_workflow,
     values_at,
 )
 
+
 STEP_REFERENCE_PATTERN = r"^[0-9]{3}-[0-9]{3}$"
-
-
-def load_task(path: Path) -> TaskDocument:
-    """Load one task execution record from YAML."""
-    try:
-        return TaskDocument.model_validate(yaml.safe_load(path.read_text()))
-    except (OSError, yaml.YAMLError, ValidationError) as error:
-        raise WflowError(f"failed to load task YAML: {path}: {error}") from error
-
-
-def resolve_task_reference(
-    reference: str,
-    root: Path = Path("docs/tasks"),
-) -> Path:
-    """Resolve a Task ID or its numeric part in ROOT, or a YAML path."""
-    task_id = (
-        reference
-        if re.fullmatch(TASK_ID_PATTERN, reference) is not None
-        else f"TASK-{reference}" if re.fullmatch(r"[0-9]+", reference) else None
-    )
-    if task_id is None:
-        return Path(reference)
-    if not root.is_dir():
-        raise WflowError(f"task directory does not exist: {root}")
-
-    matches: list[Path] = []
-    for path in sorted(root.rglob("*.yaml")):
-        try:
-            if load_task(path).task.id == task_id:
-                matches.append(path)
-        except WflowError:
-            continue
-    if not matches:
-        raise WflowError(f"task ID not found: {task_id}")
-    if len(matches) > 1:
-        paths = ", ".join(str(path) for path in matches)
-        raise WflowError(f"task ID is ambiguous: {task_id}: {paths}")
-    return matches[0]
-
-
-def load_task_workflow() -> WorkflowDefinition:
-    """Load the built-in Workflow definition for task records."""
-    resource = files("whub.wflow.definitions").joinpath("task.yaml")
-    with as_file(resource) as path:
-        return load_workflow(path)
-
-
-def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
-    """Discover Task YAML files below ROOT and derive their dependency status."""
-    if not root.is_dir():
-        raise WflowError(f"task directory does not exist: {root}")
-
-    workflow = load_task_workflow()
-    summaries: list[TaskSummary] = []
-    for path in sorted(root.rglob("*.yaml")):
-        relative_path = path.relative_to(root).as_posix()
-        try:
-            record = load_task(path)
-        except WflowError as error:
-            summaries.append(
-                TaskSummary(
-                    path=relative_path,
-                    diagnostics=[" ".join(str(error).splitlines())],
-                )
-            )
-            continue
-
-        diagnostics = [
-            f"{item.code}: {item.message}" for item in check_task(record, workflow)
-        ]
-        summaries.append(
-            TaskSummary(
-                path=relative_path,
-                id=record.task.id,
-                title=record.task.title,
-                state=record.task.state,
-                depends_on=record.task.depends_on,
-                diagnostics=diagnostics,
-            )
-        )
-    ids: dict[str, list[TaskSummary]] = {}
-    for summary in summaries:
-        if summary.id is not None and not summary.diagnostics:
-            ids.setdefault(summary.id, []).append(summary)
-    duplicate_ids = {task_id for task_id, items in ids.items() if len(items) > 1}
-
-    updated: list[TaskSummary] = []
-    for summary in summaries:
-        diagnostics = list(summary.diagnostics)
-        if summary.id in duplicate_ids:
-            diagnostics.append(f"duplicate task id: {summary.id}")
-        if diagnostics:
-            updated.append(summary.model_copy(update={"diagnostics": diagnostics}))
-            continue
-
-        blockers: list[str] = []
-        for dependency in summary.depends_on:
-            targets = ids.get(dependency, [])
-            if not targets:
-                blockers.append(f"missing dependency: {dependency}")
-            elif dependency in duplicate_ids:
-                blockers.append(f"ambiguous dependency: {dependency}")
-            elif targets[0].state != "completed":
-                blockers.append(
-                    f"incomplete dependency: {dependency} ({targets[0].state})"
-                )
-        updated.append(
-            summary.model_copy(
-                update={
-                    "blocked_by": blockers,
-                    "ready": summary.state == "draft" and not blockers,
-                }
-            )
-        )
-    return tuple(updated)
 
 
 def _satisfied_if_defined(
@@ -189,7 +74,7 @@ def apply_transition(
     input_data: dict[str, Any] | None = None,
 ) -> TaskDocument:
     """Apply one declared Workflow transition after validating its requirements."""
-    diagnostics = check_task(task, workflow)
+    diagnostics = validate_task(task, workflow)
     if diagnostics:
         raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
 
@@ -209,7 +94,7 @@ def apply_transition(
         updated = TaskDocument.model_validate(data)
     except ValidationError as error:
         raise WflowError(f"transition '{trigger}' produced an invalid task: {error}") from error
-    diagnostics = check_task(updated, workflow)
+    diagnostics = validate_task(updated, workflow)
     if diagnostics:
         raise WflowError(
             f"transition '{trigger}' produced an invalid task: "
@@ -230,7 +115,7 @@ def update_step(
     """Update a selected or next incomplete Step, logging a completed Phase."""
     if task.task.state != "in_progress":
         raise WflowError("steps can only be updated while the task is in_progress")
-    diagnostics = check_task(task, workflow)
+    diagnostics = validate_task(task, workflow)
     if diagnostics:
         raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
     if task.plan is None:
@@ -350,71 +235,3 @@ def write_task(path: Path, task: TaskDocument) -> None:
         os.replace(temporary_path, path)
     except OSError as error:
         raise WflowError(f"failed to write task YAML: {path}: {error}") from error
-
-
-def check_task(
-    task: TaskDocument,
-    workflow: WorkflowDefinition,
-) -> tuple[Diagnostic, ...]:
-    """Return semantic errors in TASK against WORKFLOW."""
-    diagnostics: list[Diagnostic] = []
-
-    # ケース1: Taskの状態はWorkflow定義の状態に含まれる。
-    if task.task.state not in workflow.states:
-        diagnostics.append(
-            Diagnostic(
-                "unknown_task_state",
-                f"task state '{task.task.state}' is not defined by the Workflow",
-            )
-        )
-
-    plan = task.plan
-    requires_approval = task.task.state in {"in_progress", "completed"}
-
-    # ケース2: 実行・完了にはplan承認がある。
-    if requires_approval and (plan is None or not task.approvals):
-        diagnostics.append(
-            Diagnostic(
-                "missing_plan_approval",
-                "plan is not approved",
-            )
-        )
-
-    if plan is not None:
-        steps = [step for phase in plan.phases for step in phase.steps]
-        complete_states = {"done", "skipped"}
-
-        # ケース3: 完了Taskは全Step・受け入れ条件・結果を持つ。
-        if task.task.state == "completed":
-            if any(step.state not in complete_states for step in steps):
-                diagnostics.append(
-                    Diagnostic("incomplete_steps", "completed task has incomplete steps")
-                )
-            criteria = [
-                *plan.acceptance,
-                *(criterion for phase in plan.phases for criterion in phase.acceptance),
-            ]
-            passed = {
-                result.acceptance
-                for result in task.acceptance_results
-                if result.status == "passed"
-            }
-            missing = [criterion.id for criterion in criteria if criterion.id not in passed]
-            if missing:
-                diagnostics.append(
-                    Diagnostic(
-                        "unsatisfied_acceptance",
-                        f"completed task has unsatisfied acceptance: {', '.join(missing)}",
-                    )
-                )
-            if task.result is None:
-                diagnostics.append(
-                    Diagnostic("missing_result", "completed task has no result")
-                )
-
-    # ケース4: 中止Taskは中止理由と実行者を記録する。
-    if task.task.state == "cancelled" and task.cancellation is None:
-        diagnostics.append(
-            Diagnostic("missing_cancellation", "cancelled task has no cancellation"))
-
-    return tuple(diagnostics)
