@@ -12,6 +12,8 @@ from whub.wflow.services import (
     load_task,
     load_task_workflow,
     record_acceptance,
+    render_task_dependency_graph,
+    render_task_flow,
     resolve_task_reference,
     update_step,
     validate_task,
@@ -72,6 +74,33 @@ def ls(task_dir: Path) -> None:
         ],
         headers=("path", "id", "state", "depends_on", "blocked_by", "ready", "diagnostics"),
     )
+
+
+@task.command()
+@click.argument("task_ref", required=False)
+@click.option(
+    "--task-dir",
+    default=Path("docs/tasks"),
+    type=click.Path(path_type=Path),
+    help="Directory to scan instead of docs/tasks.",
+)
+def graph(task_ref: str | None, task_dir: Path) -> None:
+    """Print a Task dependency graph or one Task's detailed flow as Mermaid."""
+    try:
+        if task_ref is None:
+            output = render_task_dependency_graph(task_dir)
+        else:
+            task_path = resolve_task_reference(task_ref, task_dir)
+            record = load_task(task_path)
+            diagnostics = validate_task(record, load_task_workflow())
+            if diagnostics:
+                raise WflowError(
+                    "task is invalid: " + "; ".join(item.message for item in diagnostics)
+                )
+            output = render_task_flow(record)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(output)
 
 
 @task.command()

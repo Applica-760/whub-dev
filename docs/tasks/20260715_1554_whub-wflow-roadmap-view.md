@@ -46,8 +46,8 @@
 
 ### Phase 4: Web appの読み取り専用ロードマップビューを追加
 - [] Service層にTask全体依存グラフと任意Taskの詳細フローをMermaidとして導出する機能を実装し、Web APIと共有する
-- [] `wflow task graph [TASK_DIR]`はTask依存グラフを既定出力し、`--task TASK_ID`でPhase・順序・Acceptance完了条件の詳細フローを出力する
-- [] Taskをノード、Task依存を矢印、独立Taskを島として表す全体フローをCLIテストで検証する
+- [x] `wflow task graph [TASK_REF]`はTask依存グラフを既定出力し、TASK-ID・数字部分・Task YAML pathでPhase・順序・Acceptance完了条件の詳細フローを出力する
+- [x] Taskをノード、Task依存を矢印、独立Taskを島として表す全体フローをCLIテストで検証する
 - [] Task集計・Mermaid出力の読取APIと、一覧・依存関係・進捗を表示する画面を実装し検証する
 - [] 遷移履歴の出力は、記録粒度を別途設計してから扱う
 
@@ -112,6 +112,16 @@
 ### 試行 12: Task検査の命名統一
 - 実施内容: `task_validation.py`の`check_task`を`validate_task`へ改名し、CLIの`check`操作名は維持した
 - 結果: 意味的検査のService名とmodule名が一致し、wflowテスト33件が成功した
+- 判断: 続行
+
+### 試行 13: TaskグラフCLI
+- 実施内容: `wflow task graph`へService出力を標準出力する薄いCLIを追加した
+- 結果: wflowテスト35件と、デモTask群の全体依存・TASK-004詳細フローのMermaid出力が成功した
+- 判断: 続行
+
+### 試行 14: Taskグラフの既定参照
+- 実施内容: CON-040に合わせて`graph 004`を既定の`docs/tasks`から解決し、任意の走査先は`--task-dir`へ分離した
+- 結果: 数値Task IDの詳細フローと、デモTaskディレクトリを指定した全体依存グラフが成功した
 - 判断: 続行
 
 ## 結果

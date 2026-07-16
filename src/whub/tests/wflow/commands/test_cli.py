@@ -73,6 +73,60 @@ def test_task_ls_uses_docs_tasks_by_default(tmp_path: Path, monkeypatch) -> None
     assert "\t" not in result.output
 
 
+def test_task_graph_prints_task_dependencies_as_mermaid(tmp_path: Path) -> None:
+    prerequisite = yaml.safe_load(_TASK_PATH.read_text())
+    dependent = yaml.safe_load(_TASK_PATH.read_text())
+    dependent["task"].update(
+        id="TASK-003",
+        title="depends on TASK-001",
+        state="draft",
+        depends_on=["TASK-001"],
+    )
+    dependent["approvals"] = []
+    dependent["acceptance_results"] = []
+    dependent["result"] = None
+    for phase in dependent["plan"]["phases"]:
+        phase["log"] = None
+        for step in phase["steps"]:
+            step["state"] = "pending"
+    (tmp_path / "prerequisite.yaml").write_text(
+        yaml.safe_dump(prerequisite, allow_unicode=True, sort_keys=False)
+    )
+    (tmp_path / "dependent.yaml").write_text(
+        yaml.safe_dump(dependent, allow_unicode=True, sort_keys=False)
+    )
+
+    result = CliRunner().invoke(
+        main,
+        ["task", "graph", "--task-dir", str(tmp_path)],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert result.output.startswith("flowchart TD\n")
+    assert 'TASK_001["TASK-001:' in result.output
+    assert 'TASK_003["TASK-003: depends on TASK-001"]' in result.output
+    assert "TASK_001 --> TASK_003" in result.output
+
+
+def test_task_graph_resolves_a_task_id_from_docs_tasks(tmp_path: Path, monkeypatch) -> None:
+    task_dir = tmp_path / "docs/tasks"
+    task_dir.mkdir(parents=True)
+    (task_dir / "example.yaml").write_text(_TASK_PATH.read_text())
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        main,
+        ["task", "graph", "001"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert result.output.startswith("flowchart TD\n")
+    assert 'phase_001["Phase 1: 現行手順の確認"]' in result.output
+    assert "phase_001 --> phase_002" in result.output
+
+
 def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None:
     path = tmp_path / "docs/tasks/task.yaml"
     path.parent.mkdir(parents=True)
