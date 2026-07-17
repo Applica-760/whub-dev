@@ -28,12 +28,15 @@ plan:
     - description: task initの草案形式、Task ID・標準パスの生成、検証失敗時の非書込みを定義する
       state: done
       skip_reason: null
+      deleted: false
     - description: request_plan_change後に参照番号PPPまたはPPP-SSSで論理削除し、削除済み計画をWeb viewで取り消し線表示する契約を定義する
       state: done
       skip_reason: null
+      deleted: false
     - description: plan insertが1 Stepを挿入し、--after PPP-SSSでは同Phase内、--after PPPでは直後の挿入フェーズ、指定なしでは計画先頭に置く契約を定義する
       state: done
       skip_reason: null
+      deleted: false
     log:
     - '合意済みCLI: wflow task plan delete TASK PPP は指定Phaseを、wflow task plan delete TASK
       PPP-SSS は指定Stepを論理削除する。対象は説明文の完全一致ではなく参照番号で特定する。'
@@ -51,39 +54,51 @@ plan:
     - PPP／PPP-SSSは削除済み要素を含む現在のYAML配列位置を表す。挿入による後続番号の変更はshowで再確認して扱う。Phaseとそのlogは同じYAMLオブジェクトとして移動するため、順序変更後もログとの対応は保たれる。
     - 論理削除済みPhase/Stepに対するdone、skip、再削除、または挿入先指定はCLIで拒否する。--after未指定のinsertは削除済み要素を除く計画先頭に置く。
     - Task init、論理削除、1 Step挿入、参照番号、Web取り消し線表示、再承認のCLI契約を確定し、詳細をPhase 1ログへ記録した。
+    deleted: false
   - title: Task初期生成を実装する
     acceptance: []
     steps:
     - description: 草案を検証してdraft Taskを原子的に生成するserviceを実装する
-      state: pending
+      state: done
       skip_reason: null
+      deleted: false
     - description: wflow task initのCLIと生成・重複・不正草案のテストを実装する
-      state: pending
+      state: done
       skip_reason: null
-    log: []
+      deleted: false
+    log:
+    - create_taskの自動採番・標準パス・原子的非上書きをServiceテストで確認し、wflow task initの複数--approach入力、生成Task、無効入力時のYAML非生成をCLIテストで確認した。
+    deleted: false
   - title: 計画の削除と挿入を実装する
     acceptance: []
     steps:
     - description: plan deleteがPPPまたはPPP-SSSを論理削除し、完了済み実績の削除を拒否するserviceを実装する
-      state: pending
+      state: done
       skip_reason: null
+      deleted: false
     - description: plan insertが1 Stepを挿入し、--after PPPでは挿入フェーズを作るserviceを実装する
-      state: pending
+      state: done
       skip_reason: null
+      deleted: false
     - description: plan deleteとplan insertのCLI、Web viewの取り消し線表示、再承認・不正更新・原子性のテストを実装する
       state: pending
       skip_reason: null
+      deleted: false
     log: []
+    deleted: false
   - title: 運用を検証する
     acceptance: []
     steps:
     - description: initからapprove_plan、request_plan_change、plan delete、plan insert、再承認までの受け入れ検証を実装する
       state: pending
       skip_reason: null
+      deleted: false
     - description: wflow関連テストとTask整合性検査を実行する
       state: pending
       skip_reason: null
+      deleted: false
     log: []
+    deleted: false
 approvals:
 - actor: user
 - actor: user

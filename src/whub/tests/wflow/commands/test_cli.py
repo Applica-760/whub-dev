@@ -45,6 +45,53 @@ def test_task_check_accepts_a_task_path() -> None:
     assert f"valid {_TASK_PATH}" in result.output
 
 
+def test_task_init_creates_a_draft_with_repeated_approaches(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "task",
+            "init",
+            "新しいTask",
+            "目的",
+            "--approach",
+            "方針1",
+            "--approach",
+            "方針2",
+        ],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert "initialized TASK-001:" in result.output
+    paths = list((tmp_path / "docs/tasks").glob("*_task-001.yaml"))
+    assert len(paths) == 1
+    created = yaml.safe_load(paths[0].read_text())
+    assert created["task"] == {
+        "id": "TASK-001",
+        "state": "draft",
+        "title": "新しいTask",
+        "objective": "目的",
+        "approach": ["方針1", "方針2"],
+        "depends_on": [],
+        "interruption_task_id": None,
+        "interruption_reason": None,
+        "interruption_source_task_id": None,
+    }
+    assert created["plan"] is None
+
+
+def test_task_init_rejects_invalid_input_without_creating_yaml(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["task", "init", "", "目的"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert "invalid task input" in result.output
+    assert list((tmp_path / "docs/tasks").glob("*.yaml")) == []
+
+
 def test_task_check_resolves_a_task_id(tmp_path: Path, monkeypatch) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)

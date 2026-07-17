@@ -6,6 +6,8 @@ from whub.wflow.services.task.integrity import validate_task, validate_task_inte
 from whub.wflow.services.task.common import create_task, write_task
 from whub.wflow.services.task.operation import (
     append_phase_log,
+    delete_plan_item,
+    insert_plan_step,
     record_acceptance,
     update_step,
 )
@@ -23,7 +25,9 @@ __all__ = [
     "apply_transition",
     "available_transitions",
     "create_task",
+    "delete_plan_item",
     "interrupt_task",
+    "insert_plan_step",
     "list_tasks",
     "load_task",
     "load_task_records",

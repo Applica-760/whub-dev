@@ -48,7 +48,10 @@ def create_task(root: Path, title: str, objective: str, approaches: tuple[str, .
     root.mkdir(parents=True, exist_ok=True)
     numbers = [int(task_id.removeprefix("TASK-")) for path in root.rglob("*.yaml") if (task_id := _task_id(path)) is not None]
     number = max(numbers, default=0) + 1
-    task = TaskDocument(schema_version=1, task=TaskHeader(id=f"TASK-{number:03}", state="draft", title=title, objective=objective, approach=list(approaches)))
+    try:
+        task = TaskDocument(schema_version=1, task=TaskHeader(id=f"TASK-{number:03}", state="draft", title=title, objective=objective, approach=list(approaches)))
+    except ValidationError as error:
+        raise WflowError(f"invalid task input: {error}") from error
     path = root / f"{(now or datetime.now()):%Y%m%d_%H%M}_task-{number:03}.yaml"
     _write(path, task, create=True)
     return path, task

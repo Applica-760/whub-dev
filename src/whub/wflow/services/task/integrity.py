@@ -45,7 +45,13 @@ def validate_task(
         )
 
     if plan is not None:
-        steps = [step for phase in plan.phases for step in phase.steps]
+        steps = [
+            step
+            for phase in plan.phases
+            if not phase.deleted
+            for step in phase.steps
+            if not step.deleted
+        ]
         complete_states = {"done", "skipped"}
 
         # ケース3: 完了Taskは全Step・受け入れ条件・結果を持つ。
@@ -56,7 +62,7 @@ def validate_task(
                 )
             criteria = [
                 *plan.acceptance,
-                *(criterion for phase in plan.phases for criterion in phase.acceptance),
+                *(criterion for phase in plan.phases if not phase.deleted for criterion in phase.acceptance),
             ]
             passed = {
                 result.acceptance

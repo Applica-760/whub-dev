@@ -10,6 +10,7 @@ from whub.wflow.services import (
     WflowError,
     append_phase_log,
     apply_transition,
+    create_task,
     interrupt_task,
     list_tasks,
     load_task,
@@ -28,6 +29,19 @@ from whub.utils.render import render_table
 @click.group()
 def task() -> None:
     """Operate task execution records."""
+
+
+@task.command("init")
+@click.argument("title")
+@click.argument("objective")
+@click.option("--approach", "approaches", multiple=True, help="Add one implementation approach.")
+def init(title: str, objective: str, approaches: tuple[str, ...]) -> None:
+    """Create a draft Task execution record."""
+    try:
+        path, record = create_task(Path("docs/tasks"), title, objective, approaches)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"initialized {record.task.id}: {path}")
 
 
 @task.command()

@@ -47,6 +47,7 @@ class PlanStep(TaskModel):
     description: NonEmptyStr
     state: StateName
     skip_reason: NonEmptyStr | None = None
+    deleted: bool = False
 
     @model_validator(mode="after")
     def _validate_skip_reason(self) -> PlanStep:
@@ -62,6 +63,7 @@ class PlanPhase(TaskModel):
     acceptance: list[AcceptanceCriterion] = Field(default_factory=list)
     steps: list[PlanStep] = Field(min_length=1)
     log: list[NonEmptyStr] = Field(default_factory=list)
+    deleted: bool = False
 
 
 class TaskPlan(TaskModel):
