@@ -13,7 +13,7 @@ from whub.wflow.services.task.eligibility import (
 from whub.wflow.services.task.integrity import (
     validate_task_set,
 )
-from whub.wflow.services.task.operations import apply_transition
+from whub.wflow.services.task.transition import apply_transition
 
 
 def _require_no_diagnostics(diagnostics: tuple[tuple[str, Diagnostic], ...]) -> None:

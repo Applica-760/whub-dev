@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from datetime import datetime
 
 import pytest
 import yaml
@@ -19,6 +20,7 @@ from whub.wflow.services import (
     append_phase_log,
     apply_transition,
     available_transitions,
+    create_task,
     interrupt_task,
     list_tasks,
     load_task,
@@ -44,6 +46,37 @@ def _task_data() -> dict:
 
 def _write_task(root: Path, name: str, data: dict) -> None:
     (root / name).write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
+
+
+def test_creates_draft_task_with_next_id_and_standard_path(tmp_path: Path) -> None:
+    existing = _task_data()
+    existing["task"]["id"] = "TASK-014"
+    _write_task(tmp_path, "existing.yaml", existing)
+
+    path, task = create_task(
+        tmp_path,
+        "新しいTask",
+        "目的",
+        ("方針1", "方針2"),
+        now=datetime(2026, 7, 17, 15, 30),
+    )
+
+    assert path == tmp_path / "20260717_1530_task-015.yaml"
+    assert task.task.id == "TASK-015"
+    assert task.task.state == "draft"
+    assert task.task.approach == ["方針1", "方針2"]
+    assert task.plan is None
+    assert load_task(path) == task
+
+
+def test_create_task_rejects_existing_target_without_overwriting(tmp_path: Path) -> None:
+    target = tmp_path / "20260717_1530_task-001.yaml"
+    target.write_text("original")
+
+    with pytest.raises(WflowError, match="already exists"):
+        create_task(tmp_path, "title", "objective", now=datetime(2026, 7, 17, 15, 30))
+
+    assert target.read_text() == "original"
 
 
 def _codes(data: dict) -> set[str]:
