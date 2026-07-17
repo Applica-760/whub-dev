@@ -1,0 +1,97 @@
+schema_version: 1
+task:
+  id: TASK-012
+  state: completed
+  title: whub appの開発モードを追加する
+  objective: フロントエンドとPython APIの変更をビルドや手動再起動なしで確認でき、既存の常駐起動・停止契約を維持する
+  approach:
+  - 既存の無引数`whub app`はビルド済みdistを配信する通常モードとして維持する
+  - '`whub app dev`を追加し、ViteのHMRとFastAPIのリロードを端末非依存の開発プロセスとして管理する'
+  - 通常・開発のいずれも`whub app down`だけで関連する全プロセスを停止する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: '`whub app dev`が端末終了後もFastAPIとViteを維持し、フロントエンド変更をHMRで反映する'
+  - id: ACC-002
+    statement: 開発モードでPython APIの変更がリロードされ、Viteの`/api`プロキシを通じて応答できる
+  - id: ACC-003
+    statement: '`whub app down`が通常・開発のどちらで起動した場合も管理対象の全プロセスを停止し、PID記録を削除する'
+  - id: ACC-004
+    statement: 無引数`whub app`のdist配信・起動済み再利用・port指定の既存契約を維持する
+  phases:
+  - title: 開発・通常モードのCLI契約を確定する
+    acceptance: []
+    steps:
+    - description: '`whub app`、`whub app dev`、`whub app down`の起動済み・ポート競合・通常/開発切替時の振る舞いをテスト可能な契約として定義する'
+      state: done
+      skip_reason: null
+    - description: PID記録をモードと管理対象プロセスを識別できる形式へ拡張し、stale記録の掃除と互換性を定義する
+      state: done
+      skip_reason: null
+    log:
+    - 通常・開発とも公開URLを http://127.0.0.1:8710 に固定し、通常・開発の同時起動を再利用として扱うCLI契約を実装した
+    - PID記録へmodeを追加し、旧 {pid, port} 形式はnormalとして読み込める互換性を実装した。関連pytest 15件が成功した
+  - title: 開発プロセスを常駐管理する
+    acceptance: []
+    steps:
+    - description: FastAPIの開発用リロードとVite devサーバを同じ管理単位でバックグラウンド起動するrunnerを実装する
+      state: done
+      skip_reason: null
+    - description: '`whub app down`から通常・開発モードの親子プロセスを確実に停止し、異常終了時もPID記録を回収する'
+      state: done
+      skip_reason: null
+    - description: 無引数のdist静的配信と開発モードのAPI配信を責務分離し、通常モードの既存挙動を保つ
+      state: done
+      skip_reason: null
+    log:
+    - whub app devはViteを8710、FastAPIのreloadを8711で常駐起動し、Viteの/apiプロキシ経由で公開するように実装した
+    - whub app downはrunnerの実プロセスグループを停止する。whub app devからAPI health確認、down後のPID記録削除まで実環境で確認した
+  - title: 開発フローを検証・文書化する
+    acceptance: []
+    steps:
+    - description: Task詳細ビューでTask IDをstateの上に表示し、開発モードで表示を確認する
+      state: done
+      skip_reason: null
+    - description: CLIとrunnerの単体テストで起動・再利用・停止・stale PID・モード競合を検証する
+      state: done
+      skip_reason: null
+    - description: '`uv run pytest`、`npm run typecheck`、開発モードのHMR・APIリロード・停止を実環境で確認する'
+      state: done
+      skip_reason: null
+    - description: app READMEの開発手順を`whub app dev`へ更新し、存在しない`--no-open`指定を除去する
+      state: done
+      skip_reason: null
+    log:
+    - app READMEをwhub app devとwhub app downの開発手順へ更新し、存在しない--no-open指定を削除した
+    - uv run pytestは264件、npm testは5件、npm run typecheckとnpm run buildが成功した。whub app
+      devのAPI healthとdown後のPID記録削除も確認した
+    - Task ID表示はフロントエンド単体テストで確認した。実ブラウザ接続は環境のsandboxPolicyメタデータ不整合で開始できず、HMR・APIリロード・画面表示の手動確認は未完了とする
+    - ユーザーが開発モードでHMR、APIリロード、Task詳細のTask ID表示を確認した
+    - 通常モードも新規起動・静的配信・起動済み再利用・停止を実環境で確認した
+approvals:
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - ユーザーがwhub app devのHMRを確認した
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - ユーザーがAPIリロードとViteの/api経由の応答を確認した
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - whub app down後に管理プロセスとPID記録が残らないことを確認した
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - 通常モードのdist配信・起動済み再利用・port 8710での停止を実環境で確認した
+change_requests: []
+cancellation: null
+result:
+  summary: whub app devの固定URL開発モード、Task ID表示、通常モード互換を実装・検証した

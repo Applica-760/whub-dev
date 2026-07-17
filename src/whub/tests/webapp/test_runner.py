@@ -1,6 +1,7 @@
 """Managed web app runner tests."""
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -19,7 +20,18 @@ def test_pid_record_round_trip(tmp_path: Path) -> None:
 
     write_pid_record(pid_path, 8710)
 
-    assert read_pid_record(pid_path) == AppProcessRecord(pid=os.getpid(), port=8710)
+    assert read_pid_record(pid_path) == AppProcessRecord(
+        pid=os.getpid(),
+        port=8710,
+        processes={"server": os.getpid()},
+    )
+
+
+def test_reads_legacy_pid_record_as_normal_mode(tmp_path: Path) -> None:
+    pid_path = tmp_path / "app.pid"
+    pid_path.write_text(json.dumps({"pid": 42, "port": 8710}) + "\n")
+
+    assert read_pid_record(pid_path) == AppProcessRecord(pid=42, port=8710)
 
 
 def test_remove_pid_record_only_removes_expected_process(tmp_path: Path) -> None:
@@ -38,7 +50,11 @@ def test_serve_removes_its_pid_record_after_shutdown(tmp_path: Path) -> None:
 
     def run_server(app, **kwargs) -> None:
         del app
-        assert read_pid_record(pid_path) == AppProcessRecord(pid=os.getpid(), port=8710)
+        assert read_pid_record(pid_path) == AppProcessRecord(
+            pid=os.getpid(),
+            port=8710,
+            processes={"server": os.getpid()},
+        )
         assert kwargs == {
             "host": "127.0.0.1",
             "port": 8710,

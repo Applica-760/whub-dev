@@ -77,4 +77,5 @@
 <!-- hub:backlog:appended:start -->
 - せめてtaskのページはホットリロードにしたい
 - リロード時にスクロール位置を保持したい
+- タスクをCompletedする時に、KnowledgeやBacklogに更新する点がないか調べるトリガーを置きたい
 <!-- hub:backlog:appended:end -->

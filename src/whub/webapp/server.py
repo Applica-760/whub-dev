@@ -20,10 +20,8 @@ from whub.webapp.routers.vault import router as vault_router
 from whub.wflow.services import WflowError
 
 
-def create_app(dist_dir: Path) -> FastAPI:
-    """Create the whub web application serving DIST_DIR."""
-    resolved_dist_dir = dist_dir.resolve()
-    index_path = resolved_dist_dir / "index.html"
+def create_api_app() -> FastAPI:
+    """Create the API application used by the development server."""
     app = FastAPI()
 
     @app.exception_handler(NotFoundError)
@@ -78,6 +76,15 @@ def create_app(dist_dir: Path) -> FastAPI:
     @app.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    return app
+
+
+def create_app(dist_dir: Path) -> FastAPI:
+    """Create the whub web application serving DIST_DIR."""
+    resolved_dist_dir = dist_dir.resolve()
+    index_path = resolved_dist_dir / "index.html"
+    app = create_api_app()
 
     @app.get("/{path:path}", include_in_schema=False)
     def serve_spa(path: str) -> FileResponse:

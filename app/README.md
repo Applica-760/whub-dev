@@ -16,13 +16,13 @@ npm run generate:types
 
 ## 開発
 
-別ターミナルでリポジトリルートから`whub app --no-open`を起動してから、Viteを起動する。
+リポジトリルートから開発モードを起動する。
 
 ```sh
-npm run dev
+whub app dev
 ```
 
-Viteは`/api`を`http://127.0.0.1:8710`へプロキシする。
+画面は`http://127.0.0.1:8710`で配信され、ViteのHMRとFastAPIのリロードが有効になる。`/api`は内部のFastAPI（`8711`）へプロキシされる。停止は`whub app down`を使う。
 
 ## ビルドと検証
 

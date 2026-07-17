@@ -7,8 +7,11 @@ export default defineConfig({
     environment: 'jsdom',
   },
   server: {
+    host: '127.0.0.1',
+    port: 8710,
+    strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:8710',
+      '/api': 'http://127.0.0.1:8711',
     },
   },
 });

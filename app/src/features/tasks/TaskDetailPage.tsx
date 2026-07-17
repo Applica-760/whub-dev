@@ -57,6 +57,7 @@ export function TaskDetailPage() {
               <Text c="dimmed">Taskを読み込んでいます…</Text>
             ) : task ? (
               <Stack gap="md">
+                <Text>Task ID: {task.task?.id ?? '-'}</Text>
                 <Text>state: {task.task?.state ?? '-'}</Text>
                 {(task.task?.approach ?? []).length > 0 && (
                   <Stack gap={2}>

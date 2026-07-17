@@ -125,8 +125,9 @@ class TestAppCommand:
                 "whub.commands.app._read_running_process",
                 return_value=AppProcessRecord(pid=42, port=8710),
             ),
+            patch("whub.commands.app.os.getpgid", return_value=42),
             patch("whub.commands.app._is_running", return_value=False),
-            patch("whub.commands.app.os.kill") as mock_kill,
+            patch("whub.commands.app.os.killpg") as mock_killpg,
             patch("whub.commands.app.time.sleep"),
             patch("whub.commands.app.remove_pid_record") as mock_remove,
         ):
@@ -134,7 +135,7 @@ class TestAppCommand:
 
         assert result.exit_code == 0
         assert "app stopped" in result.output
-        mock_kill.assert_called_once_with(42, signal.SIGTERM)
+        mock_killpg.assert_called_once_with(42, signal.SIGTERM)
         mock_remove.assert_called_once_with(tmp_path / "app.pid", expected_pid=42)
 
     def test_down_escalates_to_sigkill(self, tmp_path):
@@ -144,18 +145,53 @@ class TestAppCommand:
                 "whub.commands.app._read_running_process",
                 return_value=AppProcessRecord(pid=42, port=8710),
             ),
+            patch("whub.commands.app.os.getpgid", return_value=42),
             patch("whub.commands.app._is_running", return_value=True),
-            patch("whub.commands.app.os.kill") as mock_kill,
+            patch("whub.commands.app.os.killpg") as mock_killpg,
             patch("whub.commands.app.time.sleep"),
             patch("whub.commands.app.remove_pid_record"),
         ):
             result = CliRunner().invoke(app, ["down"])
 
         assert result.exit_code == 0
-        assert mock_kill.call_args_list == [
+        assert mock_killpg.call_args_list == [
             call(42, signal.SIGTERM),
             call(42, signal.SIGKILL),
         ]
+
+    def test_dev_starts_fixed_url(self, tmp_path):
+        app_dir = tmp_path / "app"
+        app_dir.mkdir()
+        (app_dir / "package.json").write_text("{}")
+        with (
+            patch("whub.commands.app.app_dist_path", return_value=app_dir / "dist"),
+            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch("whub.commands.app._read_running_process", return_value=None),
+            patch("whub.commands.app.subprocess.Popen") as mock_popen,
+        ):
+            result = CliRunner().invoke(app, ["dev"])
+
+        assert result.exit_code == 0
+        assert "app starting: http://127.0.0.1:8710" in result.output
+        command = mock_popen.call_args.args[0]
+        assert command[1:4] == ["-m", "whub.webapp.runner", "--dev"]
+        assert "8710" in command
+        assert "8711" in command
+
+    def test_dev_reuses_running_normal_mode(self, tmp_path):
+        with (
+            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch(
+                "whub.commands.app._read_running_process",
+                return_value=AppProcessRecord(pid=42, port=8710),
+            ),
+            patch("whub.commands.app.subprocess.Popen") as mock_popen,
+        ):
+            result = CliRunner().invoke(app, ["dev"])
+
+        assert result.exit_code == 0
+        assert "app already running: http://127.0.0.1:8710" in result.output
+        mock_popen.assert_not_called()
 
     def test_down_skips_when_not_running(self, tmp_path):
         with (
