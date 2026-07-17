@@ -82,6 +82,55 @@ def test_task_check_reports_interruption_relationship_errors(tmp_path: Path, mon
     assert "interruption_link_mismatch" in result.output
 
 
+def test_task_interrupt_and_resume_use_cross_task_validation(tmp_path: Path, monkeypatch) -> None:
+    task_dir = tmp_path / "docs/tasks"
+    task_dir.mkdir(parents=True)
+    parent = yaml.safe_load(_TASK_PATH.read_text())
+    parent["task"]["state"] = "in_progress"
+    parent["result"] = None
+    child = yaml.safe_load(_TASK_PATH.read_text())
+    child["task"].update(id="TASK-002", state="draft")
+    child["approvals"] = []
+    child["acceptance_results"] = []
+    child["change_requests"] = []
+    child["result"] = None
+    for phase in child["plan"]["phases"]:
+        phase["log"] = []
+        for step in phase["steps"]:
+            step["state"] = "pending"
+    (task_dir / "parent.yaml").write_text(yaml.safe_dump(parent, allow_unicode=True))
+    (task_dir / "child.yaml").write_text(yaml.safe_dump(child, allow_unicode=True))
+    monkeypatch.chdir(tmp_path)
+
+    rejected = CliRunner().invoke(
+        main,
+        ["task", "transition", "001", "interrupt_task", "--actor", "agent"],
+    )
+    assert rejected.exit_code == 1
+    assert "dedicated interruption command" in rejected.output
+
+    runner = CliRunner()
+    interrupted = runner.invoke(
+        main,
+        ["task", "interrupt", "001", "002", "--reason", "urgent", "--task-dir", str(task_dir)],
+    )
+    assert interrupted.exit_code == 0
+    assert "interrupted TASK-001 with TASK-002" in interrupted.output
+
+    blocked_resume = runner.invoke(main, ["task", "resume", "001", "--task-dir", str(task_dir)])
+    assert blocked_resume.exit_code == 1
+    assert "not terminal" in blocked_resume.output
+
+    started_child = yaml.safe_load((task_dir / "child.yaml").read_text())
+    started_child["task"]["state"] = "cancelled"
+    started_child["cancellation"] = {"reason": "done", "actor": "user"}
+    (task_dir / "child.yaml").write_text(yaml.safe_dump(started_child, allow_unicode=True))
+
+    resumed = runner.invoke(main, ["task", "resume", "001", "--task-dir", str(task_dir)])
+    assert resumed.exit_code == 0
+    assert "resumed TASK-001" in resumed.output
+
+
 def test_task_ls_uses_docs_tasks_by_default(tmp_path: Path, monkeypatch) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)

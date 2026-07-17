@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from whub.wflow.models.task import TASK_ID_PATTERN, TaskDocument, TaskSummary
 from whub.wflow.models.workflow import WorkflowDefinition
 from whub.wflow.services.errors import WflowError
-from whub.wflow.services.task_validation import validate_task, validate_task_interruption
+from whub.wflow.services.task_integrity import validate_task, validate_task_interruption
 from whub.wflow.services.workflow import load_workflow
 
 
@@ -58,6 +58,21 @@ def load_task_workflow() -> WorkflowDefinition:
     resource = files("whub.wflow.definitions").joinpath("task.yaml")
     with as_file(resource) as path:
         return load_workflow(path)
+
+
+def load_task_records(root: Path) -> dict[str, tuple[Path, TaskDocument]]:
+    """Load uniquely identified Task records below ROOT."""
+    if not root.is_dir():
+        raise WflowError(f"task directory does not exist: {root}")
+
+    records: dict[str, tuple[Path, TaskDocument]] = {}
+    for path in sorted(root.rglob("*.yaml")):
+        record = load_task(path)
+        task_id = record.task.id
+        if task_id in records:
+            raise WflowError(f"duplicate task id: {task_id}: {records[task_id][0]}, {path}")
+        records[task_id] = (path, record)
+    return records
 
 
 def list_tasks(root: Path) -> tuple[TaskSummary, ...]:

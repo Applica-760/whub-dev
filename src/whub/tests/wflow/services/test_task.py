@@ -19,6 +19,7 @@ from whub.wflow.services import (
     append_phase_log,
     apply_transition,
     available_transitions,
+    interrupt_task,
     list_tasks,
     load_task,
     load_task_workflow,
@@ -26,6 +27,7 @@ from whub.wflow.services import (
     render_task_dependency_graph,
     render_task_flow,
     resolve_task_reference,
+    resume_task,
     update_step,
     validate_task,
     validate_task_interruption,
@@ -153,9 +155,9 @@ def test_interrupts_and_resumes_with_paused_operation_limits() -> None:
         "interruption noted"
     ]
 
-    with pytest.raises(WflowError, match="in_progress"):
+    with pytest.raises(WflowError, match="paused"):
         update_step(paused, workflow, "001-001", "done")
-    with pytest.raises(WflowError, match="in_progress"):
+    with pytest.raises(WflowError, match="paused"):
         record_acceptance(paused, "ACC-001", "passed")
     with pytest.raises(WflowError, match="not allowed from state 'paused'"):
         apply_transition(paused, workflow, "request_plan_change", "agent", {"reason": "later"})
@@ -167,6 +169,35 @@ def test_interrupts_and_resumes_with_paused_operation_limits() -> None:
     paused_again = apply_transition(resumed, workflow, "interrupt_task", "agent")
     cancelled = apply_transition(paused_again, workflow, "cancel_task", "user", {"reason": "stop"})
     assert cancelled.task.state == "cancelled"
+
+
+def test_interrupt_operation_requires_terminal_child_before_resume() -> None:
+    workflow = load_task_workflow()
+    parent = apply_transition(_draft_task(), workflow, "approve_plan", "user")
+    child = _draft_task().model_copy(
+        update={"task": _draft_task().task.model_copy(update={"id": "TASK-002"})}
+    )
+    tasks = {parent.task.id: parent, child.task.id: child}
+
+    paused, started = interrupt_task(parent, child, tasks, workflow, "urgent issue")
+    assert paused.task.state == "paused"
+    assert paused.task.interruption_task_id == started.task.id
+    assert paused.task.interruption_reason == "urgent issue"
+    assert started.task.state == "in_progress"
+    assert started.task.interruption_source_task_id == paused.task.id
+    assert started.approvals[-1].actor == "user"
+
+    updated_tasks = {paused.task.id: paused, started.task.id: started}
+    with pytest.raises(WflowError, match="not terminal"):
+        resume_task(paused, updated_tasks, workflow)
+
+    cancelled_child = apply_transition(started, workflow, "cancel_task", "user", {"reason": "done"})
+    resumed = resume_task(
+        paused,
+        {paused.task.id: paused, cancelled_child.task.id: cancelled_child},
+        workflow,
+    )
+    assert resumed.task.state == "in_progress"
 
 
 def test_validates_interruption_relationships() -> None:

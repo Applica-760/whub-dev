@@ -154,6 +154,21 @@ definitions:
     name: task workflow
     definition: task-planningの後継として、個別作業の計画・承認・実行・完了を管理する具体的なWorkflow
 
+  - id: DEF-039
+    name: task integrity
+    definition: 保存済みTask YAMLとTask間関係の構造・不変条件を検証する責務
+    ref: src/whub/wflow/services/task_integrity.py
+
+  - id: DEF-040
+    name: task eligibility
+    definition: 現在のTask状態・依存・関係に対して操作を実行できるか判定する責務
+    ref: src/whub/wflow/services/task_eligibility.py
+
+  - id: DEF-041
+    name: task interruption
+    definition: 親Taskの凍結、割り込みTaskの開始、子Task終端後の親Task再開を整合した操作として実行する責務
+    ref: src/whub/wflow/services/task_interruption.py
+
 relation_types:
   - name: has_resource
     definition: subjectのprojectがobjectのresourceを持つ
@@ -277,6 +292,9 @@ constraints:
 
   - id: CON-002
     statement: manifestのprojectで必須とするフィールドはnameだけとする
+
+  - id: CON-043
+    statement: Task Workflowでは保存済みYAMLの整合性をtask_integrity、操作可否をtask_eligibility、割り込みによる複数Task更新をtask_interruptionへ分離する
 
   - id: CON-003
     statement: manifestではresourceを独立したtop-level一覧にせず、対応するprojectのresourceフィールド直下に定義する

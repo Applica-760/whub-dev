@@ -13,7 +13,8 @@ from pydantic import ValidationError
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.models.workflow import TransitionRequirement, WorkflowDefinition
 from whub.wflow.services.errors import WflowError
-from whub.wflow.services.task_validation import validate_task
+from whub.wflow.services.task_eligibility import in_progress_error
+from whub.wflow.services.task_integrity import validate_task
 from whub.wflow.services.workflow import (
     apply_transition as apply_workflow_transition,
     available_transitions as available_workflow_transitions,
@@ -113,8 +114,8 @@ def update_step(
     logs: tuple[str, ...] = (),
 ) -> TaskDocument:
     """Update a selected or next incomplete Step, logging a completed Phase."""
-    if task.task.state != "in_progress":
-        raise WflowError("steps can only be updated while the task is in_progress")
+    if error := in_progress_error(task, "steps"):
+        raise WflowError(error)
     diagnostics = validate_task(task, workflow)
     if diagnostics:
         raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
@@ -205,8 +206,8 @@ def record_acceptance(
     evidence: tuple[str, ...] = (),
 ) -> TaskDocument:
     """Record one acceptance result while a Task is in progress."""
-    if task.task.state != "in_progress":
-        raise WflowError("acceptance can only be recorded while the task is in_progress")
+    if error := in_progress_error(task, "acceptance"):
+        raise WflowError(error)
     if task.plan is None:
         raise WflowError("task has no plan")
     if status not in {"passed", "failed"}:

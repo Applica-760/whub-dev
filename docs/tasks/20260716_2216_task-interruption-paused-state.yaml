@@ -97,15 +97,17 @@ plan:
     acceptance: []
     steps:
     - description: 親Taskの凍結と割り込みTaskへの焦点移動を整合した操作として実装する
-      state: pending
+      state: done
       skip_reason: null
     - description: 割り込みTaskの終端後に親Taskへ戻る操作を実装する
-      state: pending
+      state: done
       skip_reason: null
     - description: Taskの現在地・親子関係・再開可能性をCLI表示へ反映する
       state: pending
       skip_reason: null
-    log: []
+    log:
+    - 汎用transitionからinterrupt_task・resume_taskを遮断し、専用のinterrupt・resume操作を実装した。割り込み開始は親子・依存・理由を検証後に親をpaused、子を直接in_progressへ更新し、再開は子がcompletedまたはcancelledの場合だけ許可する。Task整合性、操作可否、割り込み実行をtask_integrity.py・task_eligibility.py・task_interruption.pyへ分離し、wflowテスト42件とWorkflow・Task検査が成功した。
+    - Task Workflowの責務を保存済みYAML整合性のtask_integrity、現在状態に対する操作可否のtask_eligibility、複数Taskを更新する割り込み操作のtask_interruptionへ分離し、docs/knowledge.yamlへ記録した。
   - title: Task間グラフへ割り込み関係を描画する
     acceptance: []
     steps:

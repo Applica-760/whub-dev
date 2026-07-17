@@ -5,17 +5,21 @@ import click
 
 from pathlib import Path
 
+from whub.wflow.models.task import TaskDocument
 from whub.wflow.services import (
     WflowError,
     append_phase_log,
     apply_transition,
+    interrupt_task,
     list_tasks,
     load_task,
+    load_task_records,
     load_task_workflow,
     record_acceptance,
     render_task_dependency_graph,
     render_task_flow,
     resolve_task_reference,
+    resume_task,
     update_step,
     validate_task,
     write_task,
@@ -152,6 +156,8 @@ def show(task_ref: str) -> None:
 @click.option("--result", help="Summary recorded when completing a task.")
 def transition(task_ref: str, trigger: str, actor: str, reason: str | None, result: str | None) -> None:
     """Apply one declared Workflow trigger."""
+    if trigger in {"interrupt_task", "resume_task"}:
+        raise click.ClickException(f"trigger '{trigger}' requires the dedicated interruption command")
     input_data = {
         key: value
         for key, value in {"reason": reason, "result": result}.items()
@@ -166,6 +172,57 @@ def transition(task_ref: str, trigger: str, actor: str, reason: str | None, resu
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"transitioned {trigger}: {updated.task.state}")
+
+
+def _record_for_path(
+    path: Path,
+    records: dict[str, tuple[Path, TaskDocument]],
+) -> tuple[str, TaskDocument]:
+    for task_id, (record_path, record) in records.items():
+        if record_path.resolve() == path.resolve():
+            return task_id, record
+    raise WflowError(f"task is not in the task directory: {path}")
+
+
+@task.command("interrupt")
+@click.argument("parent_ref")
+@click.argument("child_ref")
+@click.option("--reason", required=True, help="Why the parent Task is interrupted.")
+@click.option("--task-dir", default=Path("docs/tasks"), type=click.Path(path_type=Path))
+def interrupt(parent_ref: str, child_ref: str, reason: str, task_dir: Path) -> None:
+    """Freeze PARENT_REF and directly start CHILD_REF as its interruption Task."""
+    try:
+        records = load_task_records(task_dir)
+        parent_path = resolve_task_reference(parent_ref, task_dir)
+        child_path = resolve_task_reference(child_ref, task_dir)
+        parent_id, parent = _record_for_path(parent_path, records)
+        child_id, child = _record_for_path(child_path, records)
+        tasks = {task_id: record for task_id, (_, record) in records.items()}
+        paused_parent, started_child = interrupt_task(
+            parent, child, tasks, load_task_workflow(), reason
+        )
+        write_task(records[parent_id][0], paused_parent)
+        write_task(records[child_id][0], started_child)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"interrupted {parent_id} with {child_id}")
+
+
+@task.command("resume")
+@click.argument("parent_ref")
+@click.option("--task-dir", default=Path("docs/tasks"), type=click.Path(path_type=Path))
+def resume(parent_ref: str, task_dir: Path) -> None:
+    """Resume a paused Task after its interruption Task reaches a terminal state."""
+    try:
+        records = load_task_records(task_dir)
+        parent_path = resolve_task_reference(parent_ref, task_dir)
+        parent_id, parent = _record_for_path(parent_path, records)
+        tasks = {task_id: record for task_id, (_, record) in records.items()}
+        resumed = resume_task(parent, tasks, load_task_workflow())
+        write_task(records[parent_id][0], resumed)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"resumed {parent_id}")
 
 
 @task.command()

@@ -158,3 +158,15 @@ def validate_task_interruption(
         )
 
     return tuple(diagnostics)
+
+
+def validate_task_set(
+    tasks: Mapping[str, TaskDocument],
+    workflow: WorkflowDefinition,
+) -> tuple[tuple[str, Diagnostic], ...]:
+    """Return structural and interruption diagnostics for a Task set."""
+    return tuple(
+        (task_id, diagnostic)
+        for task_id, task in tasks.items()
+        for diagnostic in (*validate_task(task, workflow), *validate_task_interruption(task, tasks))
+    )
