@@ -1,4 +1,4 @@
-"""Task execution record mutations."""
+"""Task execution record operations."""
 from __future__ import annotations
 
 import os
@@ -13,8 +13,8 @@ from pydantic import ValidationError
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.models.workflow import TransitionRequirement, WorkflowDefinition
 from whub.wflow.services.errors import WflowError
-from whub.wflow.services.task_eligibility import in_progress_error
-from whub.wflow.services.task_integrity import validate_task
+from whub.wflow.services.task.eligibility import in_progress_error
+from whub.wflow.services.task.integrity import validate_task
 from whub.wflow.services.workflow import (
     apply_transition as apply_workflow_transition,
     available_transitions as available_workflow_transitions,

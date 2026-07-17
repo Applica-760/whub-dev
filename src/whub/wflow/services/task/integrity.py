@@ -1,4 +1,4 @@
-"""Semantic validation for Task execution records."""
+"""Task execution record semantic validation."""
 from __future__ import annotations
 
 from collections.abc import Mapping

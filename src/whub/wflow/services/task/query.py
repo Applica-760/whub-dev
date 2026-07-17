@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from whub.wflow.models.task import TASK_ID_PATTERN, TaskDocument, TaskSummary
 from whub.wflow.models.workflow import WorkflowDefinition
 from whub.wflow.services.errors import WflowError
-from whub.wflow.services.task_integrity import validate_task, validate_task_interruption
+from whub.wflow.services.task.integrity import validate_task, validate_task_interruption
 from whub.wflow.services.workflow import load_workflow
 
 

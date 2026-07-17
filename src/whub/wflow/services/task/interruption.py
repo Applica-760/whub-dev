@@ -6,14 +6,14 @@ from collections.abc import Mapping
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.models.workflow import WorkflowDefinition
 from whub.wflow.services.errors import Diagnostic, WflowError
-from whub.wflow.services.task import apply_transition
-from whub.wflow.services.task_eligibility import (
+from whub.wflow.services.task.eligibility import (
     interruption_resume_diagnostics,
     interruption_start_diagnostics,
 )
-from whub.wflow.services.task_integrity import (
+from whub.wflow.services.task.integrity import (
     validate_task_set,
 )
+from whub.wflow.services.task.operations import apply_transition
 
 
 def _require_no_diagnostics(diagnostics: tuple[tuple[str, Diagnostic], ...]) -> None:

@@ -1,27 +1,24 @@
 """Use cases for loading, checking, and operating wflow documents."""
 
 from whub.wflow.services.errors import WflowError
-from whub.wflow.services.task_graph import (
-    render_task_dependency_graph,
-    render_task_flow,
-)
 from whub.wflow.services.task import (
     append_phase_log,
     apply_transition,
     available_transitions,
-    record_acceptance,
-    update_step,
-    write_task,
-)
-from whub.wflow.services.task_interruption import interrupt_task, resume_task
-from whub.wflow.services.task_query import (
+    interrupt_task,
     list_tasks,
     load_task,
     load_task_records,
     load_task_workflow,
+    record_acceptance,
+    render_task_dependency_graph,
+    render_task_flow,
     resolve_task_reference,
+    resume_task,
+    update_step,
+    write_task,
 )
-from whub.wflow.services.task_integrity import validate_task, validate_task_interruption
+from whub.wflow.services.task.integrity import validate_task, validate_task_interruption
 from whub.wflow.services.workflow import (
     check_workflow,
     load_workflow,

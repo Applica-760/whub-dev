@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.models.workflow import WorkflowDefinition
 from whub.wflow.services.errors import Diagnostic
-from whub.wflow.services.task_integrity import validate_task_set
+from whub.wflow.services.task.integrity import validate_task_set
 
 
 def in_progress_error(task: TaskDocument, operation: str) -> str | None:

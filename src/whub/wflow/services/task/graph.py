@@ -1,4 +1,4 @@
-"""Mermaid views derived from Task information."""
+"""Task Mermaid views."""
 from __future__ import annotations
 
 import re
