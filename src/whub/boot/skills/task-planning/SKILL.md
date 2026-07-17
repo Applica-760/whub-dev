@@ -26,5 +26,4 @@ description: 下記に従いタスクの計画・記録ドキュメントを作�
 6. Stepの完了・skipは`wflow task done`・`skip --reason`で記録し、`--log`は複数回指定できる
 7. 想定外の事象、バグ、再利用すべき発見に遭遇したら、該当Stepの記録時に`--log`で該当Phaseの`log`へ追記する
 8. 計画を変更する場合は`request_plan_change`で理由を記録して再承認を得る
-9. 受け入れ条件があれば`wflow task accept`で結果を記録し、全Step完了後に`complete_task`で完了する
-10. 完了したTask YAMLを`docs/tasks/done`へ移動する
+9. 受け入れ条件があれば`wflow task accept`で結果を記録し、全Step完了後に`wflow task complete TASK --result "…"`で完了と`docs/tasks/done`へのアーカイブを一操作として行う。完了後の手動移動・移動後checkは通常手順に含めない

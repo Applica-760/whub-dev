@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-010
-  state: paused
+  state: in_progress
   title: task-planningをYAML Task運用へ完全移行する
   objective: 新規・未完了の個別作業をYAML Taskとwflowで運用し、Markdown Taskは履歴として凍結する
   approach:
@@ -22,23 +22,29 @@ plan:
     - description: Knowledge YAMLのtask-planning・backlog・FOCUS関連規約をYAML Task運用とMarkdown履歴凍結へ更新する
       state: done
       skip_reason: null
+      deleted: false
     - description: 新規・未完了TaskをYAMLへ統一し、完了済みMarkdown Taskを遡及変換しない移行境界を確認する
       state: done
       skip_reason: null
+      deleted: false
     log:
     - 未完了Taskは2件ともYAMLで、Markdownはdone配下の履歴のみ
+    deleted: false
   - title: Task運用SkillとPhase logをYAMLへ移行する
     acceptance: []
     steps:
     - description: Phaseごとのlogを任意行数記録するTaskモデル、完了時の記録、表示を実装する
       state: done
       skip_reason: null
+      deleted: false
     - description: task-planning SkillとYAML雛形を、新規起票時の整理・初回YAML作成・承認・進行記録・計画変更・割り込み・完了前検査の手順へ更新する
       state: pending
       skip_reason: null
+      deleted: false
     - description: boot配布元と`.agents`・`.claude`の利用中task-planning SkillとYAML雛形を同一内容へ同期する
       state: pending
       skip_reason: null
+      deleted: false
     log:
     - Phase logを任意行数の文字列リストへ変更した
     - wflowテスト35件が成功した
@@ -46,26 +52,34 @@ plan:
     - Skillは新規Taskで目的・前提・方針・受け入れ条件・未確定事項を整理し、不明点は質問する。現時点で確定できない事項は該当Phase開始時の再議論としてPlanに明記する。
     - Skillは進行記録、計画変更、割り込み・再開、acceptance、complete_task後のcheckからdone移動までを扱う。KnowledgeのCLI参照を全作業へ求める上位ルール化は別Taskとし、TASK-010の対象外とする。
     - Task YAMLの初期生成と計画差し替えもCLIで制約するため、task initとplan replaceを実装する割り込みTaskを起票する。
+    - TASK-013でwflow task completeがcompleted遷移とdocs/tasks/doneへのアーカイブを一操作として実装された。完了後の手動移動や移動後checkは通常手順に含めず、ID解決・一覧はdone配下も対象として扱う。Skillと配布先へこの規約を反映する。
+    deleted: false
   - title: Agent向け導線を更新する
     acceptance: []
     steps:
     - description: READMEにwflow Taskのコマンドチートシートを追加し、運用手順との責務を分離する
       state: pending
       skip_reason: null
+      deleted: false
     - description: AGENTS.mdをYAML Task運用へ最小限更新し、詳細手順はSkillを参照させる
       state: pending
       skip_reason: null
+      deleted: false
     log: []
+    deleted: false
   - title: 移行後の運用を検証する
     acceptance: []
     steps:
     - description: 更新済みTaskとTask Workflowの整合性をwflow task checkで検証する
       state: pending
       skip_reason: null
+      deleted: false
     - description: テストとSkill配布元・利用先の一致確認により移行後の運用を検証する
       state: pending
       skip_reason: null
+      deleted: false
     log: []
+    deleted: false
 approvals:
 - actor: user
 - actor: user

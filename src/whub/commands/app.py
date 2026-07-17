@@ -10,8 +10,11 @@ from pathlib import Path
 
 import click
 
-from whub.core.paths import app_dist_path, app_pid_path
+from whub.core.paths import app_dev_pid_path, app_dist_path, app_pid_path
 from whub.webapp.runner import AppProcessRecord, read_pid_record, remove_pid_record
+
+DEV_PORT = 8712
+DEV_API_PORT = 8713
 
 
 def _is_running(pid: int) -> bool:
@@ -74,12 +77,14 @@ def app(ctx: click.Context, port: int) -> None:
 
 
 @app.command()
-def down() -> None:
-    """Stop the managed local web app server."""
-    pid_path = app_pid_path()
+@click.option("--dev", "dev_mode", is_flag=True, help="Stop the development server.")
+def down(dev_mode: bool) -> None:
+    """Stop a managed local web app server."""
+    pid_path = app_dev_pid_path() if dev_mode else app_pid_path()
+    name = "app dev" if dev_mode else "app"
     process = _read_running_process(pid_path)
     if process is None:
-        click.echo("app not running")
+        click.echo(f"{name} not running")
         return
 
     try:
@@ -87,7 +92,7 @@ def down() -> None:
         os.killpg(process_group, signal.SIGTERM)
     except ProcessLookupError:
         remove_pid_record(pid_path, expected_pid=process.pid)
-        click.echo("app stopped")
+        click.echo(f"{name} stopped")
         return
     time.sleep(0.1)
     if _is_running(process.pid):
@@ -96,16 +101,16 @@ def down() -> None:
         except ProcessLookupError:
             pass
     remove_pid_record(pid_path, expected_pid=process.pid)
-    click.echo("app stopped")
+    click.echo(f"{name} stopped")
 
 
 @app.command()
 def dev() -> None:
     """Start the local web app with HMR and API reload."""
-    pid_path = app_pid_path()
+    pid_path = app_dev_pid_path()
     process = _read_running_process(pid_path)
     if process is not None:
-        click.echo(f"app already running: http://127.0.0.1:{process.port}")
+        click.echo(f"app dev already running: http://127.0.0.1:{process.port}")
         return
 
     app_dir = app_dist_path().parent
@@ -121,9 +126,9 @@ def dev() -> None:
             "--app-dir",
             str(app_dir),
             "--port",
-            "8710",
+            str(DEV_PORT),
             "--api-port",
-            "8711",
+            str(DEV_API_PORT),
             "--pid-path",
             str(pid_path),
         ],
@@ -131,4 +136,4 @@ def dev() -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    click.echo("app starting: http://127.0.0.1:8710")
+    click.echo(f"app dev starting: http://127.0.0.1:{DEV_PORT}")

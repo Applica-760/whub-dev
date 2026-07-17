@@ -61,6 +61,29 @@ def write_task(path: Path, task: TaskDocument) -> None:
     _write(path, task, create=False)
 
 
+def archive_task(path: Path, task: TaskDocument) -> Path:
+    """Atomically place a completed Task beneath the sibling done directory."""
+    if task.task.state != "completed":
+        raise WflowError("only completed tasks can be archived")
+    destination = path.parent / "done" / path.name
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=destination.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as temporary:
+            temporary.write(yaml.safe_dump(task.model_dump(mode="json"), allow_unicode=True, sort_keys=False))
+            temporary_path = Path(temporary.name)
+        os.link(temporary_path, destination)
+        path.unlink()
+    except FileExistsError as error:
+        raise WflowError(f"archived task already exists: {destination}") from error
+    except OSError as error:
+        raise WflowError(f"failed to archive task YAML: {path}: {error}") from error
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+    return destination
+
+
 def _write(path: Path, task: TaskDocument, create: bool) -> None:
     temporary_path: Path | None = None
     try:

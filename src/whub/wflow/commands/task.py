@@ -9,6 +9,7 @@ from whub.wflow.models.task import TaskDocument
 from whub.wflow.services import (
     WflowError,
     append_phase_log,
+    archive_task,
     apply_transition,
     create_task,
     delete_plan_item,
@@ -200,7 +201,7 @@ def show(task_ref: str) -> None:
 @click.option("--result", help="Summary recorded when completing a task.")
 def transition(task_ref: str, trigger: str, actor: str, reason: str | None, result: str | None) -> None:
     """Apply one declared Workflow trigger."""
-    if trigger in {"interrupt_task", "resume_task"}:
+    if trigger in {"interrupt_task", "resume_task", "complete_task"}:
         raise click.ClickException(f"trigger '{trigger}' requires the dedicated interruption command")
     input_data = {
         key: value
@@ -216,6 +217,26 @@ def transition(task_ref: str, trigger: str, actor: str, reason: str | None, resu
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"transitioned {trigger}: {updated.task.state}")
+
+
+@task.command("complete")
+@click.argument("task_ref")
+@click.option("--result", help="Summary recorded when completing an in-progress Task.")
+def complete(task_ref: str, result: str | None) -> None:
+    """Complete TASK_REF and archive its YAML below docs/tasks/done."""
+    try:
+        path = resolve_task_reference(task_ref)
+        record = load_task(path)
+        if record.task.state == "completed":
+            updated = record
+        else:
+            if result is None:
+                raise WflowError("--result is required unless task is already completed")
+            updated = apply_transition(record, load_task_workflow(), "complete_task", "agent", {"result": result})
+        destination = archive_task(path, updated)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"completed {updated.task.id}: {destination}")
 
 
 def _record_for_path(

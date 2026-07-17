@@ -119,6 +119,19 @@ def test_task_plan_insert_and_delete_update_a_draft(tmp_path: Path, monkeypatch)
     assert updated["plan"]["phases"][0]["steps"][0]["deleted"] is True
 
 
+def test_task_complete_archives_an_already_completed_task(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "docs/tasks/task.yaml"
+    source.parent.mkdir(parents=True)
+    source.write_text(_TASK_PATH.read_text())
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["task", "complete", "001"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert not source.exists()
+    assert (tmp_path / "docs/tasks/done/task.yaml").exists()
+
+
 def test_task_check_resolves_a_task_id(tmp_path: Path, monkeypatch) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)

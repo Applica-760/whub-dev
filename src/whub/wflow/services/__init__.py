@@ -3,6 +3,7 @@
 from whub.wflow.services.errors import WflowError
 from whub.wflow.services.task import (
     append_phase_log,
+    archive_task,
     apply_transition,
     available_transitions,
     create_task,
@@ -29,6 +30,7 @@ from whub.wflow.services.workflow import (
 __all__ = [
     "WflowError",
     "append_phase_log",
+    "archive_task",
     "apply_transition",
     "available_transitions",
     "check_workflow",

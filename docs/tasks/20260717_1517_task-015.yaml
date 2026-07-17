@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-015
-  state: draft
+  state: in_progress
   title: whub cd後の端末状態を復旧し、whub app devの起動不全を診断する
   objective: whub cdで起動したtmuxまたはSSHの終了後、ローカル端末に残留しうる入力モードを安全に解除し、通常のシェル操作を維持する。また、whub
     app devの起動不全を端末復旧とは独立して再現・診断する
@@ -10,6 +10,7 @@ task:
   - tmuxが有効化しうる既知の端末モードだけを解除し、stty saneなどユーザー設定を変更する復旧は行わない
   - SSH終了コードの伝播と端末復旧出力をテストし、実TTYで受け入れ確認する
   - whub app devの起動過程・子プロセス・ポートを観測し、失敗出力を根拠として原因を特定する
+  - 通常モードと開発モードのポート、PID記録、停止操作を分離し、同時起動できるようにする
   depends_on: []
   interruption_task_id: null
   interruption_reason: null
@@ -24,6 +25,10 @@ plan:
     statement: 実TTYでtmux接続を終了した後、矢印キーとスクロールがローカルシェルで正常に使えることを確認する
   - id: ACC-004
     statement: whub app devの起動不全を端末復旧とは独立して再現し、Vite・API・プロセス管理・実行環境のいずれに起因するかを根拠とともに記録する
+  - id: ACC-006
+    statement: 通常モードは8710、開発モードはViteを8712・APIを8713で待受し、両モードを同時に起動できる
+  - id: ACC-007
+    statement: 通常モードと開発モードのPID記録および停止操作は独立し、一方を停止しても他方を停止・削除しない
   phases:
   - title: 復旧対象と実装契約を確定する
     acceptance: []
@@ -69,7 +74,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: tmuxセッションのdetachとSSH切断後に、矢印キーとスクロールが正常に使えることを実TTYで確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 関連テストとwflow task checkを実行する
@@ -80,6 +85,7 @@ plan:
     - test_cd.pyにTTYでのSSH起動、終了コード23の伝播、復旧シーケンス出力とflush、OSError時のfinally復旧、非TTY時にSSHを起動しないケースを追加した。対象テスト8件は成功した。
     - uv run pytestは274 passed、wflow task check 015はvalid。Ruffは開発依存に含まれず実行できなかったため、構文解析とgit
       diff --checkで補完した。
+    - ユーザーが実TTYでtmux detach後に矢印キーとマウススクロールが正常であることを確認した。
     deleted: false
   - title: whub app devの起動不全を独立して診断する
     acceptance:
@@ -106,10 +112,42 @@ plan:
     - 通常モードのapp.pidはPID 46595・8710を記録し、whub app devはmodeを区別せず既存PIDがあるため起動しない。8711にはPID記録にないuvicorn
       reload子プロセスが残留していた。Node/npm/node_modulesと通常サーバーのhealthは正常だった。
     deleted: false
+  - title: 通常モードと開発モードを完全に分離する
+    acceptance: []
+    steps:
+    - description: 通常モード8710、開発モードのVite 8712・API 8713、モード別PID記録、および開発モード停止のCLI契約を定義する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 開発モードのポート・PID記録・Vite API proxy・停止操作を通常モードから独立させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 両モードの同時起動、各モードのhealth、片方を停止した際の他方の存続、およびプロセス残留なしを自動・実行環境で検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - 通常モードは8710とapp.pidを維持する。開発モードはVite 8712・API 8713・app-dev.pidを使用し、whub app down
+      --devで開発モードだけを停止する。各起動コマンドは同一モードのPID記録だけを参照する。
+    deleted: false
 approvals:
 - actor: user
 - actor: user
-acceptance_results: []
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - 実TTYでtmux接続を終了後、矢印キーとスクロールが正常に動作することをユーザーが確認した。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - SSH終了コード伝播と例外時復旧を自動テストで確認した。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - 実TTYでtmux接続を終了後、矢印キーとスクロールが正常に動作することをユーザーが確認した。
 change_requests:
 - reason: whub app devの起動不全は端末復旧と独立した原因の可能性があるため、同一Task内に独立した診断Phaseと受け入れ条件を追加する
 - reason: 通常モードと開発モードを同時に利用できるよう、ポート・PID記録・停止操作を完全分離する実装と検証を追加する

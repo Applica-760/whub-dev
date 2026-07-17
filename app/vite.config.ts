@@ -8,10 +8,10 @@ export default defineConfig({
   },
   server: {
     host: '127.0.0.1',
-    port: 8710,
+    port: 8712,
     strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:8711',
+      '/api': 'http://127.0.0.1:8713',
     },
   },
 });

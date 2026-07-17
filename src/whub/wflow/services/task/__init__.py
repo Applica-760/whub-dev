@@ -3,7 +3,7 @@
 from whub.wflow.services.task.graph import render_task_flow
 from whub.wflow.services.task.interruption import interrupt_task, resume_task
 from whub.wflow.services.task.integrity import validate_task, validate_task_interruption
-from whub.wflow.services.task.common import create_task, write_task
+from whub.wflow.services.task.common import archive_task, create_task, write_task
 from whub.wflow.services.task.operation import (
     append_phase_log,
     delete_plan_item,
@@ -22,6 +22,7 @@ from whub.wflow.services.task.query import (
 
 __all__ = [
     "append_phase_log",
+    "archive_task",
     "apply_transition",
     "available_transitions",
     "create_task",

@@ -25,7 +25,7 @@ from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
 from whub.commands.app import app
-from whub.core.paths import app_dist_path, app_pid_path
+from whub.core.paths import app_dev_pid_path, app_dist_path, app_pid_path
 from whub.webapp.runner import AppProcessRecord
 from whub.webapp.server import create_app
 
@@ -45,6 +45,7 @@ class TestWebappServer:
 
         assert app_dist_path() == tmp_path / "app" / "dist"
         assert app_pid_path() == tmp_path / ".whub" / "app.pid"
+        assert app_dev_pid_path() == tmp_path / ".whub" / "app-dev.pid"
 
     def test_health(self, tmp_path):
         # ケース1
@@ -143,7 +144,7 @@ class TestAppCommand:
             patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
             patch(
                 "whub.commands.app._read_running_process",
-                return_value=AppProcessRecord(pid=42, port=8710),
+                return_value=AppProcessRecord(pid=42, port=8712, mode="dev"),
             ),
             patch("whub.commands.app.os.getpgid", return_value=42),
             patch("whub.commands.app._is_running", return_value=True),
@@ -165,33 +166,53 @@ class TestAppCommand:
         (app_dir / "package.json").write_text("{}")
         with (
             patch("whub.commands.app.app_dist_path", return_value=app_dir / "dist"),
-            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch("whub.commands.app.app_dev_pid_path", return_value=tmp_path / "app-dev.pid"),
             patch("whub.commands.app._read_running_process", return_value=None),
             patch("whub.commands.app.subprocess.Popen") as mock_popen,
         ):
             result = CliRunner().invoke(app, ["dev"])
 
         assert result.exit_code == 0
-        assert "app starting: http://127.0.0.1:8710" in result.output
+        assert "app dev starting: http://127.0.0.1:8712" in result.output
         command = mock_popen.call_args.args[0]
         assert command[1:4] == ["-m", "whub.webapp.runner", "--dev"]
-        assert "8710" in command
-        assert "8711" in command
+        assert "8712" in command
+        assert "8713" in command
 
-    def test_dev_reuses_running_normal_mode(self, tmp_path):
+    def test_dev_reuses_running_development_mode(self, tmp_path):
         with (
-            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch("whub.commands.app.app_dev_pid_path", return_value=tmp_path / "app-dev.pid"),
             patch(
                 "whub.commands.app._read_running_process",
-                return_value=AppProcessRecord(pid=42, port=8710),
+                return_value=AppProcessRecord(pid=42, port=8712, mode="dev"),
             ),
             patch("whub.commands.app.subprocess.Popen") as mock_popen,
         ):
             result = CliRunner().invoke(app, ["dev"])
 
         assert result.exit_code == 0
-        assert "app already running: http://127.0.0.1:8710" in result.output
+        assert "app dev already running: http://127.0.0.1:8712" in result.output
         mock_popen.assert_not_called()
+
+    def test_down_dev_stops_only_development_server(self, tmp_path):
+        with (
+            patch("whub.commands.app.app_dev_pid_path", return_value=tmp_path / "app-dev.pid"),
+            patch(
+                "whub.commands.app._read_running_process",
+                return_value=AppProcessRecord(pid=42, port=8712, mode="dev"),
+            ),
+            patch("whub.commands.app.os.getpgid", return_value=42),
+            patch("whub.commands.app._is_running", return_value=False),
+            patch("whub.commands.app.os.killpg") as mock_killpg,
+            patch("whub.commands.app.time.sleep"),
+            patch("whub.commands.app.remove_pid_record") as mock_remove,
+        ):
+            result = CliRunner().invoke(app, ["down", "--dev"])
+
+        assert result.exit_code == 0
+        assert "app dev stopped" in result.output
+        mock_killpg.assert_called_once_with(42, signal.SIGTERM)
+        mock_remove.assert_called_once_with(tmp_path / "app-dev.pid", expected_pid=42)
 
     def test_down_skips_when_not_running(self, tmp_path):
         with (
