@@ -422,6 +422,11 @@ export interface components {
             steps: components["schemas"]["PlanStep"][];
             /** Log */
             log?: string[];
+            /**
+             * Deleted
+             * @default false
+             */
+            deleted: boolean;
         };
         /** PlanStep */
         PlanStep: {
@@ -431,6 +436,11 @@ export interface components {
             state: string;
             /** Skip Reason */
             skip_reason?: string | null;
+            /**
+             * Deleted
+             * @default false
+             */
+            deleted: boolean;
         };
         /** ProjectsResponse */
         ProjectsResponse: {

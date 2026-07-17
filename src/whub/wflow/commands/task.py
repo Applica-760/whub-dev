@@ -11,7 +11,9 @@ from whub.wflow.services import (
     append_phase_log,
     apply_transition,
     create_task,
+    delete_plan_item,
     interrupt_task,
+    insert_plan_step,
     list_tasks,
     load_task,
     load_task_records,
@@ -42,6 +44,38 @@ def init(title: str, objective: str, approaches: tuple[str, ...]) -> None:
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"initialized {record.task.id}: {path}")
+
+
+@task.group("plan")
+def plan() -> None:
+    """Edit a draft Task plan."""
+
+
+@plan.command("delete")
+@click.argument("task_ref")
+@click.argument("reference")
+def delete(task_ref: str, reference: str) -> None:
+    """Logically delete Phase PPP or Step PPP-SSS."""
+    try:
+        path = resolve_task_reference(task_ref)
+        write_task(path, delete_plan_item(load_task(path), reference))
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"deleted {reference}")
+
+
+@plan.command("insert")
+@click.argument("task_ref")
+@click.argument("description")
+@click.option("--after", help="Insert after Phase PPP or Step PPP-SSS.")
+def insert(task_ref: str, description: str, after: str | None) -> None:
+    """Insert one Step into a draft Task plan."""
+    try:
+        path = resolve_task_reference(task_ref)
+        write_task(path, insert_plan_step(load_task(path), description, after))
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"inserted {description}")
 
 
 @task.command()

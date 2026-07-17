@@ -130,19 +130,19 @@ def test_rejects_duplicate_and_unknown_workflow_states() -> None:
 
 
 def test_rejects_missing_operator_fields() -> None:
-    all_in = _workflow_data()
+    active_steps = _workflow_data()
     complete = next(
         transition
-        for transition in all_in["transitions"]
+        for transition in active_steps["transitions"]
         if transition["trigger"] == "complete_task"
     )
     next(
         requirement
         for requirement in complete["requires"]
-        if requirement["operator"] == "all_in"
+        if requirement["operator"] == "active_steps_all_in"
     ).pop("value")
-    with pytest.raises(ValidationError, match="all_in requires a list value"):
-        WorkflowDefinition.model_validate(all_in)
+    with pytest.raises(ValidationError, match="active_steps_all_in requires a list value"):
+        WorkflowDefinition.model_validate(active_steps)
 
     satisfied = _workflow_data()
     complete = next(

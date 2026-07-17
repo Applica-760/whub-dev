@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-013
-  state: in_progress
+  state: completed
   title: Task初期生成と計画更新をCLIで管理する
   objective: Task YAMLの初期生成と計画更新をwflow CLIで検証・原子的に反映し、実行記録の直接編集を不要にする
   approach:
@@ -80,30 +80,53 @@ plan:
       state: done
       skip_reason: null
       deleted: false
-    - description: plan deleteとplan insertのCLI、Web viewの取り消し線表示、再承認・不正更新・原子性のテストを実装する
+    - description: 表示確認用の削除Step
       state: pending
       skip_reason: null
+      deleted: true
+    - description: plan deleteとplan insertのCLI、Web viewの取り消し線表示、再承認・不正更新・原子性のテストを実装する
+      state: done
+      skip_reason: null
       deleted: false
-    log: []
+    log:
+    - wflow task plan delete TASK PPP|PPP-SSS と plan insert TASK "Step内容" --after
+      PPP|PPP-SSS をServiceへ接続し、CLIテストでdraft Taskの挿入・論理削除を確認した。Task詳細Web viewは削除済みPhase/Stepを取り消し線・dimmedで表示し、OpenAPI型を再生成してWebビルドを確認した。
     deleted: false
   - title: 運用を検証する
     acceptance: []
     steps:
     - description: initからapprove_plan、request_plan_change、plan delete、plan insert、再承認までの受け入れ検証を実装する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: wflow関連テストとTask整合性検査を実行する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 隔離環境でtask init、plan insert、check、approve_plan、request_plan_change、plan delete、check、再approve_planを順に実行して受け入れフローを確認し、全テストを実行した。
+    - complete_taskが論理削除済みpending Stepを一般all_in条件へ含めて拒否したため、削除済みPhase/Stepを除外するactive_steps_all_in条件へ修正した。
     deleted: false
 approvals:
 - actor: user
 - actor: user
-acceptance_results: []
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - create_task Serviceテストとtask init CLIテストで確認
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - 計画削除・挿入のService/CLIテストと隔離環境の受け入れフローで確認
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - Task 013のWeb viewで論理削除Stepの取り消し線表示を確認
 change_requests:
 - reason: 計画差し替えを、参照番号による論理削除と1 Stepずつの挿入操作へ具体化するため
+- reason: Web viewの論理削除表示を確認するため
 cancellation: null
-result: null
+result:
+  summary: Task初期生成と計画更新をCLIとWeb viewで管理できるようにした

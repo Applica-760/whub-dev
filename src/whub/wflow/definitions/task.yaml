@@ -50,8 +50,8 @@ transitions:
     requires:
       - field: $input.result
         operator: exists
-      - field: plan.phases.*.steps.*.state
-        operator: all_in
+      - field: plan.phases
+        operator: active_steps_all_in
         value: [done, skipped]
       - field: plan.acceptance
         operator: satisfied_if_defined

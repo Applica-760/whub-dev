@@ -1,7 +1,7 @@
 """whub cd and shell integration."""
 from __future__ import annotations
-import os
 import shlex
+import subprocess
 import sys
 import click
 from whub.commands import get_manifest
@@ -11,6 +11,15 @@ from whub.core.tmux import build_shell_command, session_name
 from whub.core.target import TargetError, TargetItem, on_targets, resolve_project_resource
 
 EXIT_SSH = 100
+
+_TERMINAL_RECOVERY = "".join(
+    (
+        "\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l",
+        "\x1b[?1004l\x1b[?2004l",
+        "\x1b[?1l\x1b>",
+        "\x1b[?1049l",
+    )
+)
 
 _SHELL_INIT = r"""
 whub() {
@@ -47,7 +56,12 @@ def _cd_remote(resource: RemoteResource, data: tuple[str, bool]) -> None:
     cmd = build_ssh_command(host, remote_command, tty=True)
     if not sys.stdout.isatty():
         sys.exit(EXIT_SSH)
-    os.execvp("ssh", cmd)
+    try:
+        result = subprocess.run(cmd)
+    finally:
+        sys.stdout.write(_TERMINAL_RECOVERY)
+        sys.stdout.flush()
+    sys.exit(result.returncode)
 
 
 @click.command()

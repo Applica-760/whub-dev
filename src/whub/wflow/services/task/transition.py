@@ -24,7 +24,15 @@ def _satisfied_if_defined(requirement: TransitionRequirement, data: dict[str, An
     return None if all(criterion["id"] in passed for criterion in criteria) else f"requirement not satisfied: {requirement.field} ({requirement.operator})"
 
 
-_TASK_REQUIREMENT_EVALUATORS = {"satisfied_if_defined": _satisfied_if_defined}
+def _active_steps_all_in(requirement: TransitionRequirement, data: dict[str, Any], input_data: dict[str, Any]) -> str | None:
+    plan = data.get("plan") or {}
+    active_steps = [step for phase in plan.get("phases", []) if not phase.get("deleted", False) for step in phase.get("steps", []) if not step.get("deleted", False)]
+    if active_steps and all(step.get("state") in requirement.value for step in active_steps):
+        return None
+    return f"requirement not satisfied: {requirement.field} ({requirement.operator})"
+
+
+_TASK_REQUIREMENT_EVALUATORS = {"satisfied_if_defined": _satisfied_if_defined, "active_steps_all_in": _active_steps_all_in}
 
 
 def available_transitions(task: TaskDocument, workflow: WorkflowDefinition, input_data: dict[str, Any] | None = None) -> tuple[str, ...]:

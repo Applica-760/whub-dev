@@ -92,6 +92,33 @@ def test_task_init_rejects_invalid_input_without_creating_yaml(tmp_path: Path, m
     assert list((tmp_path / "docs/tasks").glob("*.yaml")) == []
 
 
+def test_task_plan_insert_and_delete_update_a_draft(tmp_path: Path, monkeypatch) -> None:
+    task_dir = tmp_path / "docs/tasks"
+    task_dir.mkdir(parents=True)
+    data = yaml.safe_load(_TASK_PATH.read_text())
+    data["task"]["state"] = "draft"
+    data["approvals"] = []
+    data["acceptance_results"] = []
+    data["change_requests"] = []
+    data["result"] = None
+    for phase in data["plan"]["phases"]:
+        phase["log"] = []
+        for step in phase["steps"]:
+            step["state"] = "pending"
+    path = task_dir / "task.yaml"
+    path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
+    monkeypatch.chdir(tmp_path)
+
+    inserted = CliRunner().invoke(main, ["task", "plan", "insert", "001", "追加", "--after", "002-001"], catch_exceptions=False)
+    deleted = CliRunner().invoke(main, ["task", "plan", "delete", "001", "001-001"], catch_exceptions=False)
+
+    assert inserted.exit_code == 0
+    assert deleted.exit_code == 0
+    updated = yaml.safe_load(path.read_text())
+    assert updated["plan"]["phases"][1]["steps"][1]["description"] == "追加"
+    assert updated["plan"]["phases"][0]["steps"][0]["deleted"] is True
+
+
 def test_task_check_resolves_a_task_id(tmp_path: Path, monkeypatch) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)

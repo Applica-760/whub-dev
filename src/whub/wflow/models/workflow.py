@@ -29,14 +29,14 @@ class WorkflowHeader(WorkflowModel):
 
 class TransitionRequirement(WorkflowModel):
     field: NonEmptyStr
-    operator: Literal["exists", "all_in", "satisfied_if_defined"]
+    operator: Literal["exists", "all_in", "satisfied_if_defined", "active_steps_all_in"]
     value: JsonValue = None
     result_field: NonEmptyStr | None = None
 
     @model_validator(mode="after")
     def _validate_operator_fields(self) -> TransitionRequirement:
-        if self.operator == "all_in" and not isinstance(self.value, list):
-            raise ValueError("all_in requires a list value")
+        if self.operator in {"all_in", "active_steps_all_in"} and not isinstance(self.value, list):
+            raise ValueError(f"{self.operator} requires a list value")
         if self.operator == "satisfied_if_defined" and self.result_field is None:
             raise ValueError("satisfied_if_defined requires result_field")
         return self

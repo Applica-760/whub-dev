@@ -69,10 +69,10 @@ export function TaskDetailPage() {
                 )}
                 {task.plan ? phases.map((phase, phaseIndex) => (
                   <Stack gap="xs" key={`${phaseIndex}-${phase.title}`}>
-                    <Text fw={600}>Phase {phaseIndex + 1}: {phase.title}</Text>
+                    <Text c={phase.deleted ? 'dimmed' : undefined} fw={600} td={phase.deleted ? 'line-through' : undefined}>Phase {phaseIndex + 1}: {phase.title}</Text>
                     {(phase.steps ?? []).map((step, stepIndex) => (
                       <Stack gap={0} key={`${stepIndex}-${step.description}`}>
-                        <Text pl="xl">[{stepMarker(step.state)}] {step.description}</Text>
+                        <Text c={phase.deleted || step.deleted ? 'dimmed' : undefined} pl="xl" td={phase.deleted || step.deleted ? 'line-through' : undefined}>[{stepMarker(step.state)}] {step.description}</Text>
                         {step.skip_reason && <Text c="dimmed" pl="md" size="sm">- skipped: {step.skip_reason}</Text>}
                       </Stack>
                     ))}
