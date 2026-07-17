@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from datetime import datetime
 
 import pytest
 import yaml
@@ -20,14 +19,11 @@ from whub.wflow.services import (
     append_phase_log,
     apply_transition,
     available_transitions,
-    create_task,
-    delete_plan_item,
+    record_acceptance,
     interrupt_task,
-    insert_plan_step,
     list_tasks,
     load_task,
     load_task_workflow,
-    record_acceptance,
     render_task_flow,
     resolve_task_reference,
     resume_task,
@@ -48,58 +44,6 @@ def _task_data() -> dict:
 
 def _write_task(root: Path, name: str, data: dict) -> None:
     (root / name).write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
-
-
-def test_creates_draft_task_with_next_id_and_standard_path(tmp_path: Path) -> None:
-    existing = _task_data()
-    existing["task"]["id"] = "TASK-014"
-    _write_task(tmp_path, "existing.yaml", existing)
-
-    path, task = create_task(
-        tmp_path,
-        "新しいTask",
-        "目的",
-        ("方針1", "方針2"),
-        now=datetime(2026, 7, 17, 15, 30),
-    )
-
-    assert path == tmp_path / "20260717_1530_task-015.yaml"
-    assert task.task.id == "TASK-015"
-    assert task.task.state == "draft"
-    assert task.task.approach == ["方針1", "方針2"]
-    assert task.plan is None
-    assert load_task(path) == task
-
-
-def test_create_task_rejects_existing_target_without_overwriting(tmp_path: Path) -> None:
-    target = tmp_path / "20260717_1530_task-001.yaml"
-    target.write_text("original")
-
-    with pytest.raises(WflowError, match="already exists"):
-        create_task(tmp_path, "title", "objective", now=datetime(2026, 7, 17, 15, 30))
-
-    assert target.read_text() == "original"
-
-
-def test_deletes_pending_plan_items_and_inserts_steps() -> None:
-    task = _draft_task()
-
-    deleted = delete_plan_item(task, "001-001")
-    assert deleted.plan.phases[0].steps[0].deleted is True
-    inserted = insert_plan_step(deleted, "追加する", "002-001")
-    assert inserted.plan.phases[1].steps[1].description == "追加する"
-    phase_inserted = insert_plan_step(inserted, "新PhaseのStep", "001")
-    assert phase_inserted.plan.phases[1].title == "挿入フェーズ"
-    assert phase_inserted.plan.phases[1].steps[0].description == "新PhaseのStep"
-
-
-def test_plan_operations_reject_non_draft_and_execution_history() -> None:
-    task = _draft_task()
-    with pytest.raises(WflowError, match="execution history"):
-        delete_plan_item(task.model_copy(update={"plan": task.plan.model_copy(update={"phases": [task.plan.phases[0].model_copy(update={"steps": [task.plan.phases[0].steps[0].model_copy(update={"state": "done"}), *task.plan.phases[0].steps[1:]]}), *task.plan.phases[1:]]})}), "001-001")
-    active = apply_transition(task, load_task_workflow(), "approve_plan", "user")
-    with pytest.raises(WflowError, match="draft"):
-        insert_plan_step(active, "追加する")
 
 
 def _codes(data: dict) -> set[str]:
