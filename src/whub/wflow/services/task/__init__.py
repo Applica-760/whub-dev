@@ -1,9 +1,6 @@
 """Task-specific wflow services."""
 
-from whub.wflow.services.task.graph import (
-    render_task_dependency_graph,
-    render_task_flow,
-)
+from whub.wflow.services.task.graph import render_task_flow
 from whub.wflow.services.task.interruption import interrupt_task, resume_task
 from whub.wflow.services.task.integrity import validate_task, validate_task_interruption
 from whub.wflow.services.task.operations import (
@@ -32,7 +29,6 @@ __all__ = [
     "load_task_records",
     "load_task_workflow",
     "record_acceptance",
-    "render_task_dependency_graph",
     "render_task_flow",
     "resolve_task_reference",
     "resume_task",

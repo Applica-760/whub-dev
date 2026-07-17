@@ -1,0 +1,69 @@
+schema_version: 1
+task:
+  id: TASK-013
+  state: in_progress
+  title: Task初期生成と計画更新をCLIで管理する
+  objective: Task YAMLの初期生成と計画更新をwflow CLIで検証・原子的に反映し、実行記録の直接編集を不要にする
+  approach:
+  - レビュー可能なYAML草案を入力にし、task initがTask ID・標準パス・draft状態・初期実行記録を生成する
+  - request_plan_change後はplan replaceだけが未完了部分の計画を検証・反映し、完了済みの実績を不変にする
+  - 計画差し替え後は再承認を必須にし、既存のTask整合性・Workflow責務境界を保つ
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: TASK-010
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: wflow task initが検証済みの草案から標準配置のdraft Taskを生成し、生成後のTaskをcheckできる
+  - id: ACC-002
+    statement: request_plan_change後のwflow task plan replaceが未完了部分だけを原子的に更新し、完了済み実績の改変と不正なPlanを拒否する
+  - id: ACC-003
+    statement: 計画差し替え後は再承認を経てTaskを再開でき、CLI・service・整合性検査のテストで確認できる
+  phases:
+  - title: 初期生成と計画更新の契約を確定する
+    acceptance: []
+    steps:
+    - description: task initの草案形式、Task ID・標準パスの生成、検証失敗時の非書込みを定義する
+      state: pending
+      skip_reason: null
+    - description: request_plan_changeとplan replaceの入力形式、未完了部分の更新境界、承認・受け入れ結果の扱いを定義する
+      state: pending
+      skip_reason: null
+    log: []
+  - title: Task初期生成を実装する
+    acceptance: []
+    steps:
+    - description: 草案を検証してdraft Taskを原子的に生成するserviceを実装する
+      state: pending
+      skip_reason: null
+    - description: wflow task initのCLIと生成・重複・不正草案のテストを実装する
+      state: pending
+      skip_reason: null
+    log: []
+  - title: 計画差し替えを実装する
+    acceptance: []
+    steps:
+    - description: 完了済み実績を保持しつつ未完了Planだけを検証・差し替えするserviceを実装する
+      state: pending
+      skip_reason: null
+    - description: wflow task plan replaceのCLIと再承認・不正更新・原子性のテストを実装する
+      state: pending
+      skip_reason: null
+    log: []
+  - title: 運用を検証する
+    acceptance: []
+    steps:
+    - description: initからapprove_plan、request_plan_change、plan replace、再承認までの受け入れ検証を実装する
+      state: pending
+      skip_reason: null
+    - description: wflow関連テストとTask整合性検査を実行する
+      state: pending
+      skip_reason: null
+    log: []
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

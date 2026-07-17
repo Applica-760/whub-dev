@@ -219,13 +219,7 @@ def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
     mock_validate.assert_called_once_with(document, mock_workflow.return_value)
 
 
-def test_task_graph_endpoints_return_task_graph_service_results(client: TestClient) -> None:
-    summary = TaskSummary(
-        path="20260715_task.yaml",
-        id="TASK-003",
-        title="Task view",
-        state="draft",
-    )
+def test_task_flow_graph_endpoint_returns_service_result(client: TestClient) -> None:
     document = TaskDocument.model_validate(
         {
             "schema_version": 1,
@@ -239,11 +233,6 @@ def test_task_graph_endpoints_return_task_graph_service_results(client: TestClie
     )
     path = Path("docs/tasks/20260715_task.yaml")
     with (
-        patch("whub.webapp.routers.tasks.list_tasks", return_value=(summary,)) as mock_list,
-        patch(
-            "whub.webapp.routers.tasks.render_task_dependency_graph",
-            return_value="flowchart TD\n  TASK_003",
-        ) as mock_dependency_graph,
         patch("whub.webapp.routers.tasks.resolve_task_reference", return_value=path),
         patch("whub.webapp.routers.tasks.load_task", return_value=document),
         patch("whub.webapp.routers.tasks.load_task_workflow") as mock_workflow,
@@ -253,13 +242,8 @@ def test_task_graph_endpoints_return_task_graph_service_results(client: TestClie
             return_value="flowchart TD\n  phase_001",
         ) as mock_flow_graph,
     ):
-        dependency_response = client.get("/api/tasks/graph")
         flow_response = client.get("/api/tasks/TASK-003/graph")
 
-    assert dependency_response.status_code == 200
-    assert dependency_response.json() == {"mermaid": "flowchart TD\n  TASK_003"}
-    mock_list.assert_called_once_with(Path("docs/tasks"))
-    mock_dependency_graph.assert_called_once_with((summary,))
     assert flow_response.status_code == 200
     assert flow_response.json() == {"mermaid": "flowchart TD\n  phase_001"}
     mock_validate.assert_called_once_with(document, mock_workflow.return_value)

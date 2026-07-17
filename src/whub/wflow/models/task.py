@@ -100,6 +100,10 @@ class TaskSummary(TaskModel):
     title: str | None = None
     state: StateName | None = None
     depends_on: list[str] = Field(default_factory=list)
+    interruption_task_id: str | None = None
+    interruption_reason: str | None = None
+    interruption_source_task_id: str | None = None
+    resumable: bool = False
     blocked_by: list[NonEmptyStr] = Field(default_factory=list)
     ready: bool = False
     diagnostics: list[NonEmptyStr] = Field(default_factory=list)

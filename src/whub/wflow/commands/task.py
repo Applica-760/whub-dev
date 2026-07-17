@@ -16,8 +16,6 @@ from whub.wflow.services import (
     load_task_records,
     load_task_workflow,
     record_acceptance,
-    render_task_dependency_graph,
-    render_task_flow,
     resolve_task_reference,
     resume_task,
     update_step,
@@ -81,41 +79,28 @@ def ls(task_dir: Path) -> None:
                 item.id or "-",
                 item.state or "invalid",
                 ",".join(item.depends_on) or "-",
+                item.interruption_source_task_id or "-",
+                item.interruption_task_id or "-",
+                "yes" if item.resumable else "no",
                 "; ".join(item.blocked_by) or "-",
                 "yes" if item.ready else "no",
                 "; ".join(item.diagnostics) or "-",
             )
             for item in tasks
         ],
-        headers=("path", "id", "state", "depends_on", "blocked_by", "ready", "diagnostics"),
+        headers=(
+            "path",
+            "id",
+            "state",
+            "depends_on",
+            "interruption_source",
+            "interruption_task",
+            "resumable",
+            "blocked_by",
+            "ready",
+            "diagnostics",
+        ),
     )
-
-
-@task.command()
-@click.argument("task_ref", required=False)
-@click.option(
-    "--task-dir",
-    default=Path("docs/tasks"),
-    type=click.Path(path_type=Path),
-    help="Directory to scan instead of docs/tasks.",
-)
-def graph(task_ref: str | None, task_dir: Path) -> None:
-    """Print a Task dependency graph or one Task's detailed flow as Mermaid."""
-    try:
-        if task_ref is None:
-            output = render_task_dependency_graph(list_tasks(task_dir))
-        else:
-            task_path = resolve_task_reference(task_ref, task_dir)
-            record = load_task(task_path)
-            diagnostics = validate_task(record, load_task_workflow())
-            if diagnostics:
-                raise WflowError(
-                    "task is invalid: " + "; ".join(item.message for item in diagnostics)
-                )
-            output = render_task_flow(record)
-    except WflowError as error:
-        raise click.ClickException(str(error)) from error
-    click.echo(output)
 
 
 @task.command()
@@ -130,6 +115,17 @@ def show(task_ref: str) -> None:
         if diagnostics:
             raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
         click.echo(f"state: {record.task.state}")
+        summary = next(
+            (item for item in list_tasks(Path("docs/tasks")) if item.id == record.task.id), None
+        )
+        if summary is not None:
+            if summary.interruption_source_task_id is not None:
+                click.echo(f"interruption source: {summary.interruption_source_task_id}")
+            if summary.interruption_task_id is not None:
+                click.echo(f"interruption task: {summary.interruption_task_id}")
+                click.echo(f"interruption reason: {summary.interruption_reason}")
+            if record.task.state == "paused":
+                click.echo(f"resumable: {'yes' if summary.resumable else 'no'}")
         if record.plan is None:
             click.echo("plan: -")
             return

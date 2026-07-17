@@ -12,7 +12,6 @@ from whub.wflow.services import (
     list_tasks,
     load_task,
     load_task_workflow,
-    render_task_dependency_graph,
     render_task_flow,
     resolve_task_reference,
     validate_task,
@@ -35,11 +34,6 @@ class TaskGraphResponse(BaseModel):
 @router.get("", response_model=TaskListResponse)
 def get_tasks() -> TaskListResponse:
     return TaskListResponse(tasks=list_tasks(TASK_DIR))
-
-
-@router.get("/graph", response_model=TaskGraphResponse)
-def get_task_dependency_graph() -> TaskGraphResponse:
-    return TaskGraphResponse(mermaid=render_task_dependency_graph(list_tasks(TASK_DIR)))
 
 
 @router.get("/{task_id}", response_model=TaskDocument)

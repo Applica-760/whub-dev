@@ -2,21 +2,8 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
 
-from whub.wflow.models.task import TaskDocument, TaskSummary
-
-
-def render_task_dependency_graph(tasks: Sequence[TaskSummary]) -> str:
-    """Render valid Task summaries and their dependencies as Mermaid."""
-    valid_tasks = [item for item in tasks if item.id is not None and not item.diagnostics]
-    lines = ["flowchart TD"]
-    for item in valid_tasks:
-        lines.append(f'  {_mermaid_id(item.id)}["{_mermaid_label(item.id, item.title)}"]')
-    for item in valid_tasks:
-        for dependency in item.depends_on:
-            lines.append(f"  {_mermaid_id(dependency)} --> {_mermaid_id(item.id)}")
-    return "\n".join(lines)
+from whub.wflow.models.task import TaskDocument
 
 
 def render_task_flow(task: TaskDocument) -> str:

@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-011
-  state: in_progress
+  state: completed
   title: Taskの割り込み・凍結・再開を管理するpaused Stateを導入する
   objective: 実行中Taskを割り込みで凍結し、割り込みTaskへ焦点を移した後に主Taskへ戻れるようにする
   approach:
@@ -103,43 +103,60 @@ plan:
       state: done
       skip_reason: null
     - description: Taskの現在地・親子関係・再開可能性をCLI表示へ反映する
-      state: pending
+      state: done
       skip_reason: null
     log:
     - 汎用transitionからinterrupt_task・resume_taskを遮断し、専用のinterrupt・resume操作を実装した。割り込み開始は親子・依存・理由を検証後に親をpaused、子を直接in_progressへ更新し、再開は子がcompletedまたはcancelledの場合だけ許可する。Task整合性、操作可否、割り込み実行をtask_integrity.py・task_eligibility.py・task_interruption.pyへ分離し、wflowテスト42件とWorkflow・Task検査が成功した。
     - Task Workflowの責務を保存済みYAML整合性のtask_integrity、現在状態に対する操作可否のtask_eligibility、複数Taskを更新する割り込み操作のtask_interruptionへ分離し、docs/knowledge.yamlへ記録した。
+    - showとlsへ割り込み元・子・理由・再開可否を表示し、CLIテストで確認した
   - title: Task間グラフへ割り込み関係を描画する
     acceptance: []
     steps:
     - description: 通常依存と割り込みを区別するNode・Edge・方向・状態の描画規則を確定する
-      state: pending
+      state: done
       skip_reason: null
     - description: 親Taskからネストした割り込みTaskへの関係をTask間グラフへ描画する
-      state: pending
+      state: done
       skip_reason: null
     - description: 通常依存との共存とネストした割り込みの描画をテストで検証する
-      state: pending
+      state: done
       skip_reason: null
-    log: []
+    log:
+    - 横断ビューをCytoscapeに統一し、通常依存は実線、割り込みはinterruptラベル付き破線で描画することをWebビルドで確認した
   - title: ネストした割り込みを検証する
     acceptance: []
     steps:
     - description: 主Taskから2段の割り込みへ移動し、終端後に逆順で再開する受け入れ検証を実装する
-      state: pending
+      state: done
       skip_reason: null
     - description: 複数の直接割り込み、停止中の通常操作、不正な再開を拒否するテストを実装する
-      state: pending
+      state: done
       skip_reason: null
-    log: []
+    log:
+    - 2段の割り込みから逆順に再開するテストと、重複・paused中・非終端の再開拒否を含む全263テストの成功を確認した
 approvals:
 - actor: user
 - actor: user
 - actor: user
 - actor: user
-acceptance_results: []
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - src/whub/tests/wflow/services/test_task.pyのネスト割り込みテスト
+  - 'uv run pytest: 263 passed'
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - src/whub/tests/wflow/services/test_task.pyの複数直接割り込み・paused中操作・再開拒否テスト
+  - 'uv run pytest: 263 passed'
 change_requests:
 - reason: Step状態を変えずにPhase logを追記するwflow task logを追加するため
 - reason: Task詳細Webビューでapproachと任意Phase logを表示するため
 - reason: Task間グラフで割り込み関係を描画する規則と検証を追加するため
+- reason: 割り込み関係のグラフ表示対象をCLI MermaidとWebのCytoscape表示へ明確化するため
+- reason: タスク横断ビューをCytoscapeへ統一し、横断Mermaid出力を廃止するため
 cancellation: null
-result: null
+result:
+  summary: 割り込みの凍結・再開、Cytoscape横断ビュー、CLI読取表示、ネスト受け入れ検証を完了した

@@ -1,0 +1,17 @@
+schema_version: 1
+task:
+  id: TASK-014
+  state: draft
+  title: Knowledge CLIを全作業の上位ルールへ導入する
+  objective: Agentがdocs/knowledge.yamlを直接読まず、whub knowledge CLIを通じて関連Knowledgeを確認する運用へ移行する
+  approach:
+  - Knowledgeへのアクセスは`whub knowledge query`と`whub knowledge check`を使い、YAMLの直接参照をAgentへの標準指示から外す
+  - task-planningなど個別Skillではなく、Skillsより上位のAgentルールとして全作業へ適用する
+  - 対象ファイル、問い合わせトリガー、配布方法の詳細は計画時に整理してユーザー承認を得る
+  depends_on: []
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

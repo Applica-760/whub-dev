@@ -9,10 +9,6 @@ export async function getTask(taskId: string): Promise<TaskResponse> {
   return requestJson<TaskResponse>(`/api/tasks/${encodeURIComponent(taskId)}`);
 }
 
-export async function getTaskDependencyGraph(): Promise<TaskGraphResponse> {
-  return requestJson<TaskGraphResponse>('/api/tasks/graph');
-}
-
 export async function getTaskFlowGraph(taskId: string): Promise<TaskGraphResponse> {
   return requestJson<TaskGraphResponse>(`/api/tasks/${encodeURIComponent(taskId)}/graph`);
 }

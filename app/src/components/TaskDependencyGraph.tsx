@@ -8,6 +8,7 @@ type TaskGraphItem = {
   title?: string | null;
   state?: string | null;
   depends_on?: string[];
+  interruption_source_task_id?: string | null;
 };
 
 type TaskDependencyGraphProps = {
@@ -37,7 +38,8 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
       cytoscape.use(fcose);
 
       const visibleTasks = tasks.filter(
-        (task): task is TaskGraphItem & { id: string } => Boolean(task.id) && task.state !== 'completed',
+        (task): task is TaskGraphItem & { id: string } => Boolean(task.id)
+          && (task.state !== 'completed' || task.interruption_source_task_id != null),
       );
       const taskIds = new Set(visibleTasks.map((task) => task.id));
       const elements: ElementDefinition[] = [
@@ -51,8 +53,20 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
         ...visibleTasks.flatMap((task) => (task.depends_on ?? [])
           .filter((dependency) => taskIds.has(dependency))
           .map((dependency) => ({
-            data: { id: `${dependency}-${task.id}`, source: dependency, target: task.id },
+            data: { id: `dependency-${dependency}-${task.id}`, source: dependency, target: task.id },
           }))),
+        ...visibleTasks.flatMap((task) => (task.interruption_source_task_id != null
+          && taskIds.has(task.interruption_source_task_id)
+          ? [{
+            data: {
+              id: `interrupt-${task.interruption_source_task_id}-${task.id}`,
+              source: task.interruption_source_task_id,
+              target: task.id,
+              label: 'interrupt',
+            },
+            classes: 'interrupt',
+          }]
+          : [])),
       ];
       const graph = cytoscape({
         container: containerRef.current,
@@ -78,6 +92,7 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
             },
           },
           { selector: 'node.in_progress', style: { 'background-color': '#e7f5ff', 'border-color': '#228be6' } },
+          { selector: 'node.paused', style: { 'background-color': '#fff3bf', 'border-color': '#f08c00' } },
           { selector: 'node.draft', style: { 'background-color': '#f8f9fa', 'border-color': '#868e96' } },
           {
             selector: 'edge',
@@ -87,6 +102,17 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
               'target-arrow-color': '#adb5bd',
               'target-arrow-shape': 'triangle',
               width: 2,
+            },
+          },
+          {
+            selector: 'edge.interrupt',
+            style: {
+              'line-color': '#f08c00',
+              'line-style': 'dashed',
+              'target-arrow-color': '#f08c00',
+              label: 'data(label)',
+              'font-size': 11,
+              color: '#c26a00',
             },
           },
         ],

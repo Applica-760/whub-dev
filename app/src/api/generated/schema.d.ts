@@ -143,23 +143,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/tasks/graph": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Task Dependency Graph */
-        get: operations["get_task_dependency_graph_api_tasks_graph_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/tasks/{task_id}": {
         parameters: {
             query?: never;
@@ -524,6 +507,12 @@ export interface components {
             approach?: string[];
             /** Depends On */
             depends_on?: string[];
+            /** Interruption Task Id */
+            interruption_task_id?: string | null;
+            /** Interruption Reason */
+            interruption_reason?: string | null;
+            /** Interruption Source Task Id */
+            interruption_source_task_id?: string | null;
         };
         /** TaskListResponse */
         TaskListResponse: {
@@ -557,6 +546,17 @@ export interface components {
             state?: string | null;
             /** Depends On */
             depends_on?: string[];
+            /** Interruption Task Id */
+            interruption_task_id?: string | null;
+            /** Interruption Reason */
+            interruption_reason?: string | null;
+            /** Interruption Source Task Id */
+            interruption_source_task_id?: string | null;
+            /**
+             * Resumable
+             * @default false
+             */
+            resumable: boolean;
             /** Blocked By */
             blocked_by?: string[];
             /**
@@ -956,26 +956,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskListResponse"];
-                };
-            };
-        };
-    };
-    get_task_dependency_graph_api_tasks_graph_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TaskGraphResponse"];
                 };
             };
         };

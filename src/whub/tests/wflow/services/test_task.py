@@ -24,7 +24,6 @@ from whub.wflow.services import (
     load_task,
     load_task_workflow,
     record_acceptance,
-    render_task_dependency_graph,
     render_task_flow,
     resolve_task_reference,
     resume_task,
@@ -200,6 +199,64 @@ def test_interrupt_operation_requires_terminal_child_before_resume() -> None:
     assert resumed.task.state == "in_progress"
 
 
+def test_nested_interruptions_resume_in_reverse_order() -> None:
+    workflow = load_task_workflow()
+    parent = apply_transition(_draft_task(), workflow, "approve_plan", "user")
+    child = _draft_task().model_copy(
+        update={"task": _draft_task().task.model_copy(update={"id": "TASK-002"})}
+    )
+    grandchild = _draft_task().model_copy(
+        update={"task": _draft_task().task.model_copy(update={"id": "TASK-003"})}
+    )
+
+    paused_parent, active_child = interrupt_task(
+        parent,
+        child,
+        {parent.task.id: parent, child.task.id: child, grandchild.task.id: grandchild},
+        workflow,
+        "first interruption",
+    )
+    paused_child, active_grandchild = interrupt_task(
+        active_child,
+        grandchild,
+        {
+            paused_parent.task.id: paused_parent,
+            active_child.task.id: active_child,
+            grandchild.task.id: grandchild,
+        },
+        workflow,
+        "second interruption",
+    )
+
+    cancelled_grandchild = apply_transition(
+        active_grandchild, workflow, "cancel_task", "user", {"reason": "resolved"}
+    )
+    resumed_child = resume_task(
+        paused_child,
+        {
+            paused_parent.task.id: paused_parent,
+            paused_child.task.id: paused_child,
+            cancelled_grandchild.task.id: cancelled_grandchild,
+        },
+        workflow,
+    )
+    cancelled_child = apply_transition(
+        resumed_child, workflow, "cancel_task", "user", {"reason": "resolved"}
+    )
+    resumed_parent = resume_task(
+        paused_parent,
+        {
+            paused_parent.task.id: paused_parent,
+            cancelled_child.task.id: cancelled_child,
+            cancelled_grandchild.task.id: cancelled_grandchild,
+        },
+        workflow,
+    )
+
+    assert resumed_child.task.state == "in_progress"
+    assert resumed_parent.task.state == "in_progress"
+
+
 def test_validates_interruption_relationships() -> None:
     parent_data = _task_data()
     parent_data["task"].update(
@@ -331,6 +388,27 @@ def test_lists_tasks_with_dependency_status_and_invalid_records(tmp_path: Path) 
     assert "\n" not in tasks["broken.yaml"].diagnostics[0]
 
 
+def test_lists_interruption_relationships_and_resumability(tmp_path: Path) -> None:
+    parent = _task_data()
+    parent["task"].update(
+        state="paused",
+        interruption_task_id="TASK-002",
+        interruption_reason="urgent issue",
+    )
+    parent["result"] = None
+    child = _task_data()
+    child["task"].update(id="TASK-002", interruption_source_task_id="TASK-001")
+    _write_task(tmp_path, "parent.yaml", parent)
+    _write_task(tmp_path, "child.yaml", child)
+
+    tasks = {item.id: item for item in list_tasks(tmp_path)}
+
+    assert tasks["TASK-001"].interruption_task_id == "TASK-002"
+    assert tasks["TASK-001"].interruption_reason == "urgent issue"
+    assert tasks["TASK-001"].resumable is True
+    assert tasks["TASK-002"].interruption_source_task_id == "TASK-001"
+
+
 def test_lists_missing_and_duplicate_dependencies_as_blocked(tmp_path: Path) -> None:
     first = _task_data()
     second = _task_data()
@@ -355,30 +433,6 @@ def test_lists_missing_and_duplicate_dependencies_as_blocked(tmp_path: Path) -> 
         "missing dependency: TASK-999",
     ]
     assert tasks["dependent.yaml"].ready is False
-
-
-def test_renders_task_dependency_graph_with_independent_tasks(tmp_path: Path) -> None:
-    prerequisite = _task_data()
-    dependent = _task_data()
-    independent = _task_data()
-    dependent["task"].update(
-        id="TASK-003",
-        title="depends on TASK-001",
-        state="draft",
-        depends_on=["TASK-001"],
-    )
-    independent["task"].update(id="TASK-004", title="independent task", state="draft")
-    _write_task(tmp_path, "prerequisite.yaml", prerequisite)
-    _write_task(tmp_path, "dependent.yaml", dependent)
-    _write_task(tmp_path, "independent.yaml", independent)
-
-    graph = render_task_dependency_graph(list_tasks(tmp_path))
-
-    assert "flowchart TD" in graph
-    assert 'TASK_001["TASK-001:' in graph
-    assert 'TASK_003["TASK-003: depends on TASK-001"]' in graph
-    assert 'TASK_004["TASK-004: independent task"]' in graph
-    assert "TASK_001 --> TASK_003" in graph
 
 
 def test_renders_task_flow_with_phase_and_task_acceptance() -> None:

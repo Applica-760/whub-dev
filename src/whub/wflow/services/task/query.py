@@ -108,6 +108,9 @@ def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
                 title=record.task.title,
                 state=record.task.state,
                 depends_on=record.task.depends_on,
+                interruption_task_id=record.task.interruption_task_id,
+                interruption_reason=record.task.interruption_reason,
+                interruption_source_task_id=record.task.interruption_source_task_id,
                 diagnostics=diagnostics,
             )
         )
@@ -152,6 +155,12 @@ def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
                 update={
                     "blocked_by": blockers,
                     "ready": summary.state == "draft" and not blockers,
+                    "resumable": (
+                        summary.state == "paused"
+                        and summary.interruption_task_id in records_by_id
+                        and records_by_id[summary.interruption_task_id].task.state
+                        in {"completed", "cancelled"}
+                    ),
                 }
             )
         )

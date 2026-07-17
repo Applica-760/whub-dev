@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-010
-  state: in_progress
+  state: paused
   title: task-planningをYAML Task運用へ完全移行する
   objective: 新規・未完了の個別作業をYAML Taskとwflowで運用し、Markdown Taskは履歴として凍結する
   approach:
@@ -10,6 +10,9 @@ task:
   - wflow CLIの操作契約はREADMEのチートシートに集約し、詳細な運用手順はSkillへ残す
   depends_on:
   - TASK-003
+  interruption_task_id: TASK-013
+  interruption_reason: Task YAMLの初期生成と計画更新をCLIで制約する機能を先に実装するため
+  interruption_source_task_id: null
 plan:
   acceptance: []
   phases:
@@ -30,16 +33,19 @@ plan:
     - description: Phaseごとのlogを任意行数記録するTaskモデル、完了時の記録、表示を実装する
       state: done
       skip_reason: null
-    - description: task-planning SkillとYAML雛形を計画・承認・実行・完了手順へ更新する
+    - description: task-planning SkillとYAML雛形を、新規起票時の整理・初回YAML作成・承認・進行記録・計画変更・割り込み・完了前検査の手順へ更新する
       state: pending
       skip_reason: null
-    - description: boot配布元と利用中のtask-planning Skillを同一内容へ同期する
+    - description: boot配布元と`.agents`・`.claude`の利用中task-planning SkillとYAML雛形を同一内容へ同期する
       state: pending
       skip_reason: null
     log:
     - Phase logを任意行数の文字列リストへ変更した
     - wflowテスト35件が成功した
     - 計画の内容は`wflow task show TTT`で確認するよう、Skillに指示を追加
+    - Skillは新規Taskで目的・前提・方針・受け入れ条件・未確定事項を整理し、不明点は質問する。現時点で確定できない事項は該当Phase開始時の再議論としてPlanに明記する。
+    - Skillは進行記録、計画変更、割り込み・再開、acceptance、complete_task後のcheckからdone移動までを扱う。KnowledgeのCLI参照を全作業へ求める上位ルール化は別Taskとし、TASK-010の対象外とする。
+    - Task YAMLの初期生成と計画差し替えもCLIで制約するため、task initとplan replaceを実装する割り込みTaskを起票する。
   - title: Agent向け導線を更新する
     acceptance: []
     steps:
@@ -64,9 +70,11 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: Phaseごとの任意件数ログとwflow task logを追加するため
 - reason: Phaseログの専用CLIを設けず、既存のdoneとskipによる複数ログ記録へ範囲を縮小するため
+- reason: 新規Task起票時の整理と初回YAML作成、未確定事項、進行記録、割り込み、完了前検査の運用をtask-planningへ明記するため
 cancellation: null
 result: null
