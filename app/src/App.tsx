@@ -9,6 +9,7 @@ import { OverviewPage } from './features/overview/OverviewPage';
 import { ResourceStatusPage } from './features/status/ResourceStatusPage';
 import { TaskDetailPage } from './features/tasks/TaskDetailPage';
 import { TasksPage } from './features/tasks/TasksPage';
+import { isTasksRoute, TASKS_PATH } from './features/tasks/routes';
 import { TodosPage } from './features/todos/TodosPage';
 
 // react-markdownの依存ツリーを初回チャンクから外すため、Backlog/Vaultは遅延読込する
@@ -19,13 +20,19 @@ const VaultPage = lazy(() =>
   import('./features/vault/VaultPage').then((module) => ({ default: module.VaultPage })),
 );
 
-const navigation = [
+type NavigationItem = {
+  label: string;
+  to: string;
+  isActive?: (pathname: string) => boolean;
+};
+
+const navigation: NavigationItem[] = [
   { label: 'Overview', to: '/' },
   { label: 'Backlog', to: '/backlog' },
   { label: 'Vault', to: '/vault' },
   { label: 'Knowledge', to: '/knowledge' },
   { label: 'Todo', to: '/todos' },
-  { label: 'Task', to: '/tasks' },
+  { label: 'Task', to: TASKS_PATH, isActive: isTasksRoute },
   { label: 'Inbox', to: '/inbox' },
   { label: 'Status', to: '/status' },
 ];
@@ -39,18 +46,22 @@ export function App() {
         <Group align="end" gap="xl" h="100%" px="md" wrap="nowrap">
           <Text fw={700} pb={10}>whub</Text>
           <div className="whub-tabs">
-            {navigation.map((item) => (
-              <Anchor
-                aria-current={location.pathname === item.to ? 'page' : undefined}
-                className="whub-tab"
-                component={NavLink}
-                data-active={location.pathname === item.to}
-                key={item.to}
-                to={item.to}
-              >
-                {item.label}
-              </Anchor>
-            ))}
+            {navigation.map((item) => {
+              const active = item.isActive?.(location.pathname) ?? location.pathname === item.to;
+
+              return (
+                <Anchor
+                  aria-current={active ? 'page' : undefined}
+                  className="whub-tab"
+                  component={NavLink}
+                  data-active={active}
+                  key={item.to}
+                  to={item.to}
+                >
+                  {item.label}
+                </Anchor>
+              );
+            })}
           </div>
           <ColorSchemeToggle />
         </Group>
