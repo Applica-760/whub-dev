@@ -60,8 +60,8 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
           ? [{
             data: {
               id: `interrupt-${task.interruption_source_task_id}-${task.id}`,
-              source: task.interruption_source_task_id,
-              target: task.id,
+              source: task.id,
+              target: task.interruption_source_task_id,
               label: 'interrupt',
             },
             classes: 'interrupt',
@@ -107,12 +107,12 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
           {
             selector: 'edge.interrupt',
             style: {
-              'line-color': '#f08c00',
+              'line-color': '#eca035',
               'line-style': 'dashed',
-              'target-arrow-color': '#f08c00',
+              'target-arrow-color': '#eca035',
               label: 'data(label)',
-              'font-size': 11,
-              color: '#c26a00',
+              'font-size': 20,
+              color: '#ff8c00',
             },
           },
         ],
