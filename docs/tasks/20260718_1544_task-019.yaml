@@ -1,0 +1,72 @@
+schema_version: 1
+task:
+  id: TASK-019
+  state: in_progress
+  title: Task計画を手編集なしで管理するCLIを整備する
+  objective: 名前付きPhase、Task依存、受け入れ条件を含むTask計画を、Task YAMLを直接編集せずCLIで作成・変更できるようにする
+  approach:
+  - Task YAMLモデルとtask-planningの運用規則を正とし、CLIに不足する作成・変更操作だけを追加する
+  - Taskの状態・依存・整合性の検証責務は既存のTask serviceへ保ち、CLIは操作の入口に留める
+  - 既存Task YAMLとの互換性を保ち、CLI経由の実Task操作とテストで検証する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 計画CLIの操作契約を確定する
+    acceptance: []
+    steps:
+    - description: 名前付きPhase、Step、depends_on、受け入れ条件に必要な作成・変更・削除操作と引数を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 名前付きPhaseとStepの計画操作を実装する
+    acceptance: []
+    steps:
+    - description: 名前を指定してPhaseを追加し、対象PhaseへStepを追加・変更・削除できるCLIとserviceを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Task依存と受け入れ条件の操作を実装する
+    acceptance: []
+    steps:
+    - description: depends_onとTask・Phaseの受け入れ条件をCLIで追加・削除し、既存の整合性検証へ接続する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: CLI完結の計画運用を検証する
+    acceptance: []
+    steps:
+    - description: 新規Taskから計画、依存、受け入れ条件をCLIだけで記録し、checkと関連テストで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 完了済みTaskの関係ビュー表示を是正する
+    acceptance: []
+    steps:
+    - description: 完了済みの依存・割り込み関係をアクティブなTask間ビューから除外する表示規則を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: TASK-010とTASK-013の完了済み割り込み関係を回帰例として、表示条件とグラフのテストを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

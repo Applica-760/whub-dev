@@ -1,0 +1,20 @@
+schema_version: 1
+task:
+  id: TASK-018
+  state: draft
+  title: whub/wflowを実績として公開する
+  objective: whub/wflowを公開し、全体像を伝える紹介ブログと開発段階ごとのブログを通じて、設計・実装・運用の実績を公開可能な形にする
+  approach:
+  - 第1段階として、機微情報を監査し、公開方法を確定してリポジトリを公開する
+  - 第2段階として、READMEと整合する全体像の紹介ブログを公開する
+  - 第3段階として、既存の開発ログ草案をレビューし、段階ごとに公開する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
