@@ -60,7 +60,7 @@ definitions:
 
   - id: DEF-015
     name: whub boot
-    definition: Agent設定・Skill・CodeGraph初期化を各resourceへ配布するコマンド
+    definition: Agent設定・Skill・CodeGraph初期化を各resourceへ配布し、boot対象remote resourceのhostへwflow CLIを1回頒布するコマンド
 
   - id: DEF-016
     name: whub backlog
@@ -316,6 +316,9 @@ constraints:
 
   - id: CON-045
     statement: Task固有MermaidビューのPhaseは、deletedを削除済み、削除されていないStepがすべてdoneまたはskippedなら完了、それ以外を未完了として色分けする
+
+  - id: CON-046
+    statement: whub bootはbootが有効なremote resourceのhostを重複排除し、wflowだけをXDG_DATA_HOME配下へcontent hash差分時に頒布してwhubは頒布しない
 
   - id: CON-003
     statement: manifestではresourceを独立したtop-level一覧にせず、対応するprojectのresourceフィールド直下に定義する

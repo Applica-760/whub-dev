@@ -1,0 +1,91 @@
+schema_version: 1
+task:
+  id: TASK-020
+  state: completed
+  title: wflowをwhub bootでSkillと共に頒布する
+  objective: boot対象のlocal・remote projectでtask-planning Skillと互換性のあるwflow CLIを利用できるようにする
+  approach:
+  - whub bootの既存頒布フローへwflowのinstall・updateを統合する
+  - task-planning Skillと互換wflow版を一つの頒布単位として扱う
+  - local・remoteでの冪等性、前提不足、更新失敗を検証可能にする
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 頒布契約を確定する
+    acceptance: []
+    steps:
+    - description: wflowのinstall・update先とtask-planning Skillとの互換バージョン規則を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: local・remote環境の前提条件と失敗時の表示・継続規則を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '合意事項: wflowのinstall・updateはproject/resource単位ではなくhost単位とし、対象はhome-serverのみとする。Macではwhubのuv
+      tool環境からwflowもグローバル公開済みのためinstall対象外とし、supercomputerも対象外とする。home-serverはPython導入済みを前提とする。whubはremoteへ頒布せず、wflowだけを頒布可能な境界にする。wflow外への唯一の内部依存であるwhub.utils.render.render_tableは共有せず、task
+      lsで必要な通常rows・headers・日本語表示幅・header強調だけを持つprivate render関数をsrc/whub/wflow/commands/task.pyへ新設する。install失敗時は既存bootに合わせて「WARN  home-server:
+      wflow install failed: ...」と表示し、後続処理を継続する。頒布形式とSkill互換バージョンの具体的な管理方法はPhase 1で確定する。'
+    - 頒布契約を確定した。wflowのhost-local実体は${XDG_DATA_HOME:-$HOME/.local/share}/wflow、実行入口は$HOME/.local/bin/wflowとする。whubは頒布せず、src/whub/wflowを頒布境界とし、task.pyに必要最小限のprivate
+      render関数を置く。task-planning Skillとwflow sourceは同じboot package由来を互換単位とし、wflow source・組込定義・依存仕様・launcherのcontent
+      hashが一致すれば転送・installをskipし、差分時だけstaging後に置換する。
+    - '実行環境・失敗契約を確定した。boot:trueなremote resourceをhostで重複排除して各hostへ1回だけ頒布し、現行manifestではhome-serverだけを対象とする。Macのlocal
+      resourceは既存のグローバルwflowを使い、supercomputerは対象外とする。home-serverはPython 3.12、venv、pipを利用可能な前提とし、不足・転送・install失敗は既存bootと同じ「WARN  <host>:
+      wflow install failed: ...」で表示する。失敗時は旧installを維持し、後続のboot処理を継続して終了コード0とする。'
+    deleted: false
+  - title: boot頒布を実装する
+    acceptance: []
+    steps:
+    - description: whub bootへwflow CLIのinstall・updateをSkill頒布と一体化して実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: boot再実行時に安全に更新でき、環境ごとの失敗を識別できるようにする
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - wflowをwhub本体から独立して頒布できる境界を実装した。commands/task.pyへtask ls専用の簡素版render関数を置いてwhub.utils依存を除去し、whub.wflow.__main__と依存仕様を追加した。whub
+      bootはboot:trueなremote resourceをhostで重複排除し、wflow sourceだけをXDG_DATA_HOME配下のhost-local環境へ1回頒布する。whub本体はremote
+      payloadへ含めない。
+    - 'wflow source・組込定義・依存仕様・launcherをSHA-256で検査し、同一hashかつ既存wflowが起動可能なら転送をskipする更新経路を実装した。差分時はremote
+      stagingへ転送して専用venvを構築し、成功後だけversion directoryとcurrent symlink・launcherを切り替える。失敗は「WARN  <host>:
+      wflow install failed: ...」として後続bootを継続する。standalone payload、host重複排除、hash skip、staging更新、失敗表示をテストし、全289
+      pytest、Knowledge検査、Task検査、wheel内容確認が成功した。'
+    deleted: false
+  - title: 頒布動作を検証する
+    acceptance: []
+    steps:
+    - description: local・remote相当環境で初回頒布・再実行・更新・失敗経路をテストする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: knowledgeと運用文書を実装結果に合わせ、CLI・Skillの互換性を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 実環境でMacからwhub bootを実行し、初回は「done home-server (wflow)」で終了コード0となった。直後の再実行は「skip
+      home-server (wflow unchanged)」となり、content hash一致時に再転送・再installされないことを確認した。Mac側ではwhub・wflowのconsole
+      entry point、python -m whub.wflow --help、wflow checkが成功した。home-server内のCLI動作確認は安全な読み取りコマンドをユーザーへ依頼し、その結果を待ってPhase
+      3を継続する。
+    - home-serverでユーザーが読み取り確認を実施し、のPATH解決、launcherからの--help、wflow
+      check、実行可能launcher、current symlink、content hash、esn-labでのwflow task lsがすべて成功した。実環境の初回頒布とhash一致再実行skipを確認し、更新時のstaging・atomic
+      switchおよび失敗時のWARN・後続継続はtest_boot.pyで検証した。安全性を優先し、実remoteへ意図的な更新・失敗は発生させていない。
+    - READMEのwhub boot説明を、remote host単位のwflow頒布、XDG_DATA_HOME配下の配置、content hash skip、失敗時継続、whub非頒布という実装結果へ更新した。KnowledgeはDEF-015・CON-046と整合し、whub
+      knowledge check、wflow check、wflow task check 020、git diff --check、全289 pytestが成功した。Macとhome-serverの両方で同じ組込task
+      Workflowをwflow checkでき、task-planning Skillが利用するtask lsをremote projectで実行できることを確認した。
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: wflowをwhubから独立したpayloadとしてboot:trueなremote resourceのhostへ1回頒布する機能を実装した。home-serverで初回install、hash一致時skip、CLI起動、Workflow検査、task
+    lsを実測し、更新・失敗経路を含む全289 pytestとKnowledge・Task検査が成功した。

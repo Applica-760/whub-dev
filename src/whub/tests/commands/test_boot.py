@@ -7,6 +7,10 @@
 4. boot=falseは_collect_boot_targetsで除外される
 5. _merge_json：再帰マージ・リスト重複排除（ADR-0009例外：複雑分岐）
 6. CodeGraph init失敗が後続ターゲットの配布を止めない（fail-safe）
+7. wflow payload hashがcacheを除外し、内容変更を検出する
+8. remote boot targetをhost単位で重複排除する
+9. 同一hashのwflowは転送せず、差分時だけ安全に更新する
+10. wflow install失敗を警告してbootを継続する
 
 検証しないケース:
 - 実際のrsync/SSH実行
@@ -16,7 +20,9 @@
 """
 from __future__ import annotations
 
+import os
 import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -25,7 +31,11 @@ from click.testing import CliRunner
 from whub.commands.boot import (
     boot,
     _collect_boot_targets,
+    _collect_wflow_hosts,
+    _copy_wflow_payload,
+    _install_remote_wflow,
     _merge_json,
+    _wflow_content_hash,
 )
 from whub.models import Manifest, SymlinkResource
 from whub.tests.helpers import manifest
@@ -130,6 +140,130 @@ class TestBootSpec:
         assert "first: CodeGraph init failed" in result.output
         assert "second (CodeGraph)" in result.output
 
+    def test_collects_each_remote_boot_host_once(self):
+        m = manifest()
+        m.resolve_project("remote").resource.boot = True
+        m.resolve_project("nested").resource.boot = True
+
+        hosts = _collect_wflow_hosts(_collect_boot_targets(m))
+
+        assert [name for name, _ in hosts] == ["home"]
+
+    def test_boot_installs_wflow_once_per_remote_host(self):
+        m = manifest()
+        m.resolve_project("remote").resource.boot = True
+        m.resolve_project("nested").resource.boot = True
+
+        with (
+            patch("whub.commands.boot.get_manifest", return_value=m),
+            patch("whub.commands.boot._apply_workspace_boot"),
+            patch("whub.commands.boot._install_remote_wflow") as install,
+            patch("whub.commands.boot.on_targets"),
+        ):
+            result = CliRunner().invoke(boot, catch_exceptions=False)
+
+        assert result.exit_code == 0
+        install.assert_called_once_with("home", m.hosts["home"])
+
+
+class TestWflowDeploySpec:
+    def test_payload_runs_without_the_rest_of_whub(self, tmp_path):
+        source = Path(__file__).parents[2] / "wflow"
+        package_root = tmp_path / "src/whub"
+        package_root.mkdir(parents=True)
+        (package_root / "__init__.py").write_text("")
+        _copy_wflow_payload(source, package_root / "wflow")
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = str(tmp_path / "src")
+
+        result = subprocess.run(
+            [sys.executable, "-m", "whub.wflow", "--help"],
+            cwd=tmp_path,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        assert "Manage declarative Workflows and task records." in result.stdout
+
+    def test_content_hash_ignores_cache_and_detects_source_changes(self, tmp_path):
+        source = _wflow_source(tmp_path)
+        initial = _wflow_content_hash(source)
+        cache = source / "__pycache__"
+        cache.mkdir()
+        (cache / "cli.pyc").write_bytes(b"cache")
+
+        assert _wflow_content_hash(source) == initial
+
+        (source / "cli.py").write_text("changed\n")
+        assert _wflow_content_hash(source) != initial
+
+    def test_skips_transfer_when_installed_hash_matches(self, tmp_path, capsys):
+        source = _wflow_source(tmp_path)
+        content_hash = _wflow_content_hash(source)
+        with (
+            patch("whub.commands.boot._wflow_assets", return_value=source),
+            patch(
+                "whub.commands.boot._remote_wflow_state",
+                return_value=("/home/test/.local/share/wflow", "/home/test/.local/bin", content_hash),
+            ),
+            patch("whub.commands.boot.run_ssh_command") as ssh,
+            patch("whub.commands.boot.run_rsync_command") as rsync,
+        ):
+            _install_remote_wflow("home", manifest().hosts["home"])
+
+        ssh.assert_not_called()
+        rsync.assert_not_called()
+        assert "skip    home (wflow unchanged)" in capsys.readouterr().out
+
+    def test_installs_changed_payload_through_staging(self, tmp_path, capsys):
+        source = _wflow_source(tmp_path)
+
+        def rsync(host, local_src, remote_dest, **kwargs):
+            del host, kwargs
+            payload = Path(local_src)
+            assert (payload / "__main__.py").is_file()
+            assert (payload / "requirements.txt").is_file()
+            assert "__pycache__" not in {part for path in payload.rglob("*") for part in path.parts}
+            assert remote_dest.endswith("/src/whub/wflow")
+            return subprocess.CompletedProcess([], 0)
+
+        with (
+            patch("whub.commands.boot._wflow_assets", return_value=source),
+            patch(
+                "whub.commands.boot._remote_wflow_state",
+                return_value=("/home/test/.local/share/wflow", "/home/test/.local/bin", None),
+            ),
+            patch(
+                "whub.commands.boot.run_ssh_command",
+                return_value=subprocess.CompletedProcess([], 0, stdout=""),
+            ) as ssh,
+            patch("whub.commands.boot.run_rsync_command", side_effect=rsync),
+            patch("whub.commands.boot.secrets.token_hex", return_value="version"),
+        ):
+            _install_remote_wflow("home", manifest().hosts["home"])
+
+        assert ssh.call_count == 2
+        install_command = ssh.call_args_list[-1].args[1]
+        assert "python3 -m venv" in install_command
+        assert "mv -Tf" in install_command
+        assert ssh.call_args_list[-1].kwargs["input"].startswith("#!/bin/sh")
+        assert "done    home (wflow)" in capsys.readouterr().out
+
+    def test_warns_when_install_fails(self, tmp_path, capsys):
+        source = _wflow_source(tmp_path)
+        with (
+            patch("whub.commands.boot._wflow_assets", return_value=source),
+            patch(
+                "whub.commands.boot._remote_wflow_state",
+                side_effect=OSError("offline"),
+            ),
+        ):
+            _install_remote_wflow("home", manifest().hosts["home"])
+
+        assert "WARN    home: wflow install failed: offline" in capsys.readouterr().out
+
 
 class TestMergeJsonSpec:
     def test_recursive_merge(self):
@@ -153,3 +287,13 @@ class TestMergeJsonSpec:
         import json
         data = json.loads(result)
         assert data["items"] == [2, 3, 4, 1]
+
+
+def _wflow_source(root: Path) -> Path:
+    source = root / "wflow"
+    source.mkdir()
+    (source / "__init__.py").write_text("")
+    (source / "__main__.py").write_text("from whub.wflow.cli import main\nmain()\n")
+    (source / "cli.py").write_text("def main(): pass\n")
+    (source / "requirements.txt").write_text("click>=8.1\n")
+    return source
