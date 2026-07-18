@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-010
-  state: in_progress
+  state: completed
   title: task-planningをYAML Task運用へ完全移行する
   objective: 新規・未完了の個別作業をYAML Taskとwflowで運用し、Markdown Taskは履歴として凍結する
   approach:
@@ -38,16 +38,16 @@ plan:
       skip_reason: null
       deleted: false
     - description: task-planning SkillとYAML雛形を、新規起票時の整理・初回YAML作成・承認・進行記録・計画変更・割り込み・完了前検査の手順へ更新する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: task init、plan insert/delete、task log、interrupt/resume、再承認、completeの運用をtask-planning
         Skillへ反映し、不要なtemplate.mdを廃止する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: boot配布元と`.agents`・`.claude`の利用中task-planning SkillとYAML雛形を同一内容へ同期する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -58,32 +58,43 @@ plan:
     - Skillは進行記録、計画変更、割り込み・再開、acceptance、complete_task後のcheckからdone移動までを扱う。KnowledgeのCLI参照を全作業へ求める上位ルール化は別Taskとし、TASK-010の対象外とする。
     - Task YAMLの初期生成と計画差し替えもCLIで制約するため、task initとplan replaceを実装する割り込みTaskを起票する。
     - TASK-013でwflow task completeがcompleted遷移とdocs/tasks/doneへのアーカイブを一操作として実装された。完了後の手動移動や移動後checkは通常手順に含めず、ID解決・一覧はdone配下も対象として扱う。Skillと配布先へこの規約を反映する。
+    - .agentsのtask-planning Skillをtask init、plan insert/delete、request_plan_change、task
+      log、interrupt/resume、completeのCLI運用へ更新し、wflowテスト50件が成功した。
+    - task initがdraft YAMLを生成するため、.agents・.claude・boot配布元の旧Markdown template.mdを廃止した。
+    - 更新済みSkillをboot配布元、.agents、.claudeへ同期し、3箇所の一致とtemplate.md不在を確認した。boot・wflowテスト57件が成功した。
     deleted: false
   - title: Agent向け導線を更新する
     acceptance: []
     steps:
     - description: READMEにwflow Taskのコマンドチートシートを追加し、運用手順との責務を分離する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: AGENTS.mdをYAML Task運用へ最小限更新し、詳細手順はSkillを参照させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - READMEへwflow Taskの確認、初期生成、計画、進捗、計画変更、割り込み、受入・完了のコマンドチートシートを追加し、対話・承認はtask-planning
+      Skillの責務として分離した。
+    - AGENTS.mdと.claude/CLAUDE.mdへ、Task YAML SSOT、wflow task操作、task-planning Skill参照、完了済みMarkdown履歴凍結の最小導線を同文で追加した。git
+      diff --checkが成功した。
     deleted: false
   - title: 移行後の運用を検証する
     acceptance: []
     steps:
     - description: 更新済みTaskとTask Workflowの整合性をwflow task checkで検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: テストとSkill配布元・利用先の一致確認により移行後の運用を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 更新済みTask 010はwflow task checkでvalid、Task Workflow定義はwflow checkでvalidを確認した。
+    - task-planning Skillはboot配布元・.agents・.claudeで一致し、旧template.mdは3箇所とも不在を確認した。uv
+      run pytestは278件すべて成功し、git diff --checkも成功した。
     deleted: false
 approvals:
 - actor: user
@@ -98,4 +109,5 @@ change_requests:
 - reason: 新規Task起票時の整理と初回YAML作成、未確定事項、進行記録、割り込み、完了前検査の運用をtask-planningへ明記するため
 - reason: TASK-011・TASK-013で確定した割り込み、task init、plan insert/delete、task log、完了一操作アーカイブの運用をSkillと導線へ反映し、不要になったtemplate.mdの廃止を計画へ追加するため
 cancellation: null
-result: null
+result:
+  summary: 新規・未完了TaskのYAML SSOT化、task-planning Skillと配布先同期、wflowコマンド導線、運用検証を完了した。

@@ -1,0 +1,21 @@
+schema_version: 1
+task:
+  id: TASK-017
+  state: draft
+  title: wflowをboot対象プロジェクトへ頒布する
+  objective: task-planning Skillを頒布した各プロジェクトで、互換性のあるwflowコマンドを利用可能にする
+  approach:
+  - 各プロジェクトへwflowをinstall・updateする配布方式を決める
+  - Skillが前提とするwflow版と互換性の扱いを決める
+  - boot時のlocal・remote前提確認と失敗表示を設計する
+  - 頒布済みlocal・remote環境での実行検証を定義する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

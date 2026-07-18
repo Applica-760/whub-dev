@@ -37,6 +37,23 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub boot` | パッケージ内のAgent設定を`boot: true`な`resource`へ配布 |
 | `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
 
+## Task Workflow
+
+新規・未完了の個別作業はTask YAMLをSSOTとし、完了済みMarkdown Taskは履歴として扱う。対話・承認の詳細は`task-planning` Skillに従う。
+表内で`wflow task`を省略したコマンドは、すべてそのサブコマンドを表す。
+
+| 区分 | コマンド |
+|---|---|
+| 確認 | `wflow task ls` / `check TASK` / `show TASK` |
+| 新規作成 | `wflow task init "タイトル" "目的" --approach "方針"` |
+| 計画追加・承認 | `plan insert TASK "Step"` → `check` → `transition TASK approve_plan --actor user` |
+| 進行記録 | `done` / `skip --reason` / `log TASK PPP --log` |
+| 計画変更 | `transition TASK request_plan_change --actor agent --reason "…"` → `plan delete` / `plan insert` → 再承認 |
+| 割り込み | `interrupt PARENT CHILD --reason "…"` / `resume PARENT` |
+| 受入・完了 | `accept` / `complete TASK --result "…"` |
+
+`wflow task complete`はTaskの完了記録と`docs/tasks/done`へのアーカイブを一操作で行う。
+
 ## `.whub/manifest.yaml` の構造
 
 ```yaml
