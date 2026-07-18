@@ -19,15 +19,16 @@ from whub.wflow.services import (
     append_phase_log,
     apply_transition,
     available_transitions,
-    record_acceptance,
+    complete_step,
     interrupt_task,
     list_tasks,
     load_task,
     load_task_workflow,
     render_task_flow,
+    record_acceptance,
     resolve_task_reference,
     resume_task,
-    update_step,
+    skip_step,
     validate_task,
     validate_task_interruption,
     write_task,
@@ -113,11 +114,10 @@ def test_applies_lifecycle_transitions_and_records() -> None:
 
     for phase_index, phase in enumerate(task.plan.phases, start=1):
         for step_index, step in enumerate(phase.steps, start=1):
-            task = update_step(
+            task = complete_step(
                 task,
                 workflow,
                 f"{phase_index:03}-{step_index:03}",
-                "done",
                 logs=(f"phase {phase_index} complete",)
                 if step_index == len(phase.steps)
                 else (),
@@ -155,7 +155,7 @@ def test_interrupts_and_resumes_with_paused_operation_limits() -> None:
     ]
 
     with pytest.raises(WflowError, match="paused"):
-        update_step(paused, workflow, "001-001", "done")
+        complete_step(paused, workflow, "001-001")
     with pytest.raises(WflowError, match="paused"):
         record_acceptance(paused, "ACC-001", "passed")
     with pytest.raises(WflowError, match="not allowed from state 'paused'"):
@@ -300,21 +300,20 @@ def test_rejects_wrong_actor_and_invalid_step_reference() -> None:
 
     active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
     with pytest.raises(WflowError, match="must be PPP-SSS"):
-        update_step(active, workflow, "2-1", "done")
+        complete_step(active, workflow, "2-1")
 
     with pytest.raises(WflowError, match="requires a log"):
-        update_step(active, workflow, None, "done")
+        complete_step(active, workflow)
 
 
 def test_updates_selected_step_out_of_order() -> None:
     workflow = load_task_workflow()
     active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
 
-    updated = update_step(
+    updated = complete_step(
         active,
         workflow,
         "002-001",
-        "done",
         logs=("first finding", "second finding"),
     )
 
@@ -339,11 +338,10 @@ def test_appends_multiple_lines_to_a_phase_log() -> None:
 def test_skip_records_its_reason_and_write_is_loadable(tmp_path: Path) -> None:
     workflow = load_task_workflow()
     active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
-    skipped = update_step(
+    skipped = skip_step(
         active,
         workflow,
         None,
-        "skipped",
         "not needed",
         ("phase skipped", "no work required"),
     )

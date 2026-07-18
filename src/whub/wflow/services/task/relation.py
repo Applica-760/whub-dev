@@ -1,7 +1,9 @@
-"""Cross-Task interruption operations."""
+"""Task dependency and interruption relation operations."""
 from __future__ import annotations
 
 from collections.abc import Mapping
+
+from pydantic import ValidationError
 
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.models.workflow import WorkflowDefinition
@@ -14,6 +16,34 @@ from whub.wflow.services.task.integrity import (
     validate_task_set,
 )
 from whub.wflow.services.task.transition import apply_transition
+
+
+def update_dependency(
+    task: TaskDocument,
+    dependency: str,
+    add: bool,
+) -> TaskDocument:
+    """Add or remove one Task dependency while the Task is draft."""
+    if task.task.state != "draft":
+        raise WflowError("dependency operations require a draft task")
+    if dependency == task.task.id:
+        raise WflowError("task cannot depend on itself")
+    data = task.model_dump(mode="python")
+    dependencies = data["task"]["depends_on"]
+    if add:
+        if dependency in dependencies:
+            raise WflowError(f"dependency already exists: {dependency}")
+        dependencies.append(dependency)
+    else:
+        if dependency not in dependencies:
+            raise WflowError(f"dependency not found: {dependency}")
+        dependencies.remove(dependency)
+    try:
+        return TaskDocument.model_validate(data)
+    except ValidationError as error:
+        raise WflowError(
+            f"failed to update dependency '{dependency}': {error}"
+        ) from error
 
 
 def _require_no_diagnostics(diagnostics: tuple[tuple[str, Diagnostic], ...]) -> None:

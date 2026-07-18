@@ -46,6 +46,24 @@ plan:
     log:
     - task depends add/deleteとtask acceptance add/deleteを実装した。依存の重複・自己依存を拒否し、Taskまたは指定PhaseへACC連番を採番する。service・CLIテスト19件が成功した。
     deleted: false
+  - title: Task操作serviceの責務とAPIを再編する
+    acceptance: []
+    steps:
+    - description: dependencyとinterruptionをTask間関係の操作として同じmoduleへ配置し、各機能の責務分離を維持する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: operation内部へPhase・Step参照の解析と位置解決を担うhelperを導入し、重複する条件分岐を削減する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: update_stepをStep完了とskipの役割別APIへ分け、CLIとtestを移行する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Task間関係操作をrelation.pyへ集約して依存編集と割り込み操作を別関数のまま維持した。operation.pyへPhase・Step参照helperを導入してif/elifを81件から65件へ削減し、update_stepをcomplete_step・skip_stepへ分離した。関連38件と全281件のtest、Knowledge・Task検証が成功した。
+    deleted: false
   - title: CLI完結の計画運用を検証する
     acceptance: []
     steps:
@@ -71,7 +89,9 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: Task間関係操作の配置、計画参照解決の共通化、Step完了APIの責務分離を計画へ追加する
 cancellation: null
 result: null

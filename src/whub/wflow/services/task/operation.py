@@ -16,8 +16,70 @@ STEP_REFERENCE_PATTERN = r"^[0-9]{3}-[0-9]{3}$"
 PHASE_REFERENCE_PATTERN = r"^[0-9]{3}$"
 
 
-def update_step(task: TaskDocument, workflow: WorkflowDefinition, step_ref: str | None, state: str, reason: str | None = None, logs: tuple[str, ...] = ()) -> TaskDocument:
-    """Update a selected or next incomplete Step, logging a completed Phase."""
+def _phase_index(phases: list[dict], reference: str) -> int:
+    if re.fullmatch(PHASE_REFERENCE_PATTERN, reference) is None:
+        raise WflowError("phase reference must be PPP, for example '002'")
+    phase_index = int(reference) - 1
+    if phase_index < 0 or phase_index >= len(phases):
+        raise WflowError(f"phase reference not found: {reference}")
+    return phase_index
+
+
+def _step_indices(phases: list[dict], reference: str) -> tuple[int, int]:
+    if re.fullmatch(STEP_REFERENCE_PATTERN, reference) is None:
+        raise WflowError("step reference must be PPP-SSS, for example '002-003'")
+    phase_index, step_index = (int(part) - 1 for part in reference.split("-"))
+    if (
+        phase_index < 0
+        or phase_index >= len(phases)
+        or step_index < 0
+        or step_index >= len(phases[phase_index]["steps"])
+    ):
+        raise WflowError(f"step reference not found: {reference}")
+    return phase_index, step_index
+
+
+def _plan_indices(
+    phases: list[dict],
+    reference: str,
+) -> tuple[int, int | None]:
+    if re.fullmatch(PHASE_REFERENCE_PATTERN, reference):
+        return _phase_index(phases, reference), None
+    if re.fullmatch(STEP_REFERENCE_PATTERN, reference):
+        return _step_indices(phases, reference)
+    raise WflowError("plan reference must be PPP or PPP-SSS")
+
+
+def complete_step(
+    task: TaskDocument,
+    workflow: WorkflowDefinition,
+    step_ref: str | None = None,
+    logs: tuple[str, ...] = (),
+) -> TaskDocument:
+    """Mark a selected or next incomplete Step done."""
+    return _finish_step(task, workflow, step_ref, "done", None, logs)
+
+
+def skip_step(
+    task: TaskDocument,
+    workflow: WorkflowDefinition,
+    step_ref: str | None,
+    reason: str,
+    logs: tuple[str, ...] = (),
+) -> TaskDocument:
+    """Skip a selected or next incomplete Step with a reason."""
+    return _finish_step(task, workflow, step_ref, "skipped", reason, logs)
+
+
+def _finish_step(
+    task: TaskDocument,
+    workflow: WorkflowDefinition,
+    step_ref: str | None,
+    state: str,
+    reason: str | None,
+    logs: tuple[str, ...],
+) -> TaskDocument:
+    """Record one terminal Step outcome, logging a completed Phase."""
     if error := in_progress_error(task, "steps"):
         raise WflowError(error)
     diagnostics = validate_task(task, workflow)
@@ -25,8 +87,6 @@ def update_step(task: TaskDocument, workflow: WorkflowDefinition, step_ref: str 
         raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
     if task.plan is None:
         raise WflowError("task has no plan")
-    if state not in {"done", "skipped"}:
-        raise WflowError(f"unsupported step state '{state}'")
     if state == "skipped" and not reason:
         raise WflowError("skipped step requires a reason")
     data = task.model_dump(mode="python")
@@ -37,11 +97,7 @@ def update_step(task: TaskDocument, workflow: WorkflowDefinition, step_ref: str 
             raise WflowError("all steps are already complete")
         phase_index, step_index = selected
     else:
-        if re.fullmatch(STEP_REFERENCE_PATTERN, step_ref) is None:
-            raise WflowError("step reference must be PPP-SSS, for example '002-003'")
-        phase_index, step_index = (int(part) - 1 for part in step_ref.split("-"))
-        if phase_index < 0 or phase_index >= len(phases) or step_index < 0 or step_index >= len(phases[phase_index]["steps"]):
-            raise WflowError(f"step reference not found: {step_ref}")
+        phase_index, step_index = _step_indices(phases, step_ref)
     phase = phases[phase_index]
     step = phase["steps"][step_index]
     if phase["deleted"] or step["deleted"]:
@@ -67,12 +123,8 @@ def append_phase_log(task: TaskDocument, phase_ref: str, logs: tuple[str, ...]) 
         raise WflowError("task has no plan")
     if not logs:
         raise WflowError("at least one log is required")
-    if re.fullmatch(PHASE_REFERENCE_PATTERN, phase_ref) is None:
-        raise WflowError("phase reference must be PPP, for example '002'")
-    phase_index = int(phase_ref) - 1
-    if phase_index < 0 or phase_index >= len(task.plan.phases):
-        raise WflowError(f"phase reference not found: {phase_ref}")
     data = task.model_dump(mode="python")
+    phase_index = _phase_index(data["plan"]["phases"], phase_ref)
     data["plan"]["phases"][phase_index]["log"].extend(logs)
     try:
         return TaskDocument.model_validate(data)
@@ -109,20 +161,15 @@ def delete_plan_item(task: TaskDocument, reference: str) -> TaskDocument:
         raise WflowError("task has no plan")
     data = task.model_dump(mode="python")
     phases = data["plan"]["phases"]
-    if re.fullmatch(PHASE_REFERENCE_PATTERN, reference):
-        phase_index = int(reference) - 1
-        if phase_index < 0 or phase_index >= len(phases):
-            raise WflowError(f"phase reference not found: {reference}")
+    phase_index, step_index = _plan_indices(phases, reference)
+    if step_index is None:
         phase = phases[phase_index]
         if phase["deleted"]:
             raise WflowError(f"phase is deleted: {reference}")
         if phase["log"] or any(step["state"] in {"done", "skipped"} for step in phase["steps"]):
             raise WflowError(f"phase has execution history: {reference}")
         phase["deleted"] = True
-    elif re.fullmatch(STEP_REFERENCE_PATTERN, reference):
-        phase_index, step_index = (int(part) - 1 for part in reference.split("-"))
-        if phase_index < 0 or phase_index >= len(phases) or step_index < 0 or step_index >= len(phases[phase_index]["steps"]):
-            raise WflowError(f"step reference not found: {reference}")
+    else:
         phase = phases[phase_index]
         step = phase["steps"][step_index]
         if phase["deleted"] or step["deleted"]:
@@ -130,8 +177,6 @@ def delete_plan_item(task: TaskDocument, reference: str) -> TaskDocument:
         if step["state"] in {"done", "skipped"}:
             raise WflowError(f"step has execution history: {reference}")
         step["deleted"] = True
-    else:
-        raise WflowError("plan reference must be PPP or PPP-SSS")
     return TaskDocument.model_validate(data)
 
 
@@ -165,52 +210,42 @@ def insert_plan_step(
         if phase_title is not None:
             if after is None:
                 phases.append(phase)
-            elif re.fullmatch(PHASE_REFERENCE_PATTERN, after):
-                phase_index = int(after) - 1
-                if phase_index < 0 or phase_index >= len(phases) or phases[phase_index]["deleted"]:
+            else:
+                phase_index = _phase_index(phases, after)
+                if phases[phase_index]["deleted"]:
                     raise WflowError(f"phase reference not found: {after}")
                 phases.insert(phase_index + 1, phase)
-            else:
-                raise WflowError("phase reference must be PPP, for example '002'")
         elif phase_ref is not None:
-            if re.fullmatch(PHASE_REFERENCE_PATTERN, phase_ref) is None:
-                raise WflowError("phase reference must be PPP, for example '002'")
-            phase_index = int(phase_ref) - 1
-            if phase_index < 0 or phase_index >= len(phases) or phases[phase_index]["deleted"]:
+            phase_index = _phase_index(phases, phase_ref)
+            if phases[phase_index]["deleted"]:
                 raise WflowError(f"phase reference not found: {phase_ref}")
             steps = phases[phase_index]["steps"]
             if after is None:
                 steps.append(step)
-            elif re.fullmatch(STEP_REFERENCE_PATTERN, after):
-                after_phase_index, step_index = (int(part) - 1 for part in after.split("-"))
+            else:
+                after_phase_index, step_index = _step_indices(phases, after)
                 if after_phase_index != phase_index:
                     raise WflowError(f"step reference is not in phase {phase_ref}: {after}")
-                if step_index < 0 or step_index >= len(steps) or steps[step_index]["deleted"]:
+                if steps[step_index]["deleted"]:
                     raise WflowError(f"step reference not found: {after}")
                 steps.insert(step_index + 1, step)
-            else:
-                raise WflowError("step reference must be PPP-SSS, for example '002-003'")
         elif after is None:
             first = next((item for item in phases if not item["deleted"]), None)
             if first is None:
                 phases.insert(0, phase)
             else:
                 first["steps"].insert(0, step)
-        elif re.fullmatch(PHASE_REFERENCE_PATTERN, after):
-            phase_index = int(after) - 1
-            if phase_index < 0 or phase_index >= len(phases) or phases[phase_index]["deleted"]:
-                raise WflowError(f"phase reference not found: {after}")
-            phases.insert(phase_index + 1, phase)
-        elif re.fullmatch(STEP_REFERENCE_PATTERN, after):
-            phase_index, step_index = (int(part) - 1 for part in after.split("-"))
-            if phase_index < 0 or phase_index >= len(phases) or step_index < 0 or step_index >= len(phases[phase_index]["steps"]):
-                raise WflowError(f"step reference not found: {after}")
-            target_phase = phases[phase_index]
-            if target_phase["deleted"] or target_phase["steps"][step_index]["deleted"]:
-                raise WflowError(f"step is deleted: {after}")
-            target_phase["steps"].insert(step_index + 1, step)
         else:
-            raise WflowError("plan reference must be PPP or PPP-SSS")
+            phase_index, step_index = _plan_indices(phases, after)
+            if step_index is None:
+                if phases[phase_index]["deleted"]:
+                    raise WflowError(f"phase reference not found: {after}")
+                phases.insert(phase_index + 1, phase)
+            else:
+                target_phase = phases[phase_index]
+                if target_phase["deleted"] or target_phase["steps"][step_index]["deleted"]:
+                    raise WflowError(f"step is deleted: {after}")
+                target_phase["steps"].insert(step_index + 1, step)
     try:
         return TaskDocument.model_validate(data)
     except ValidationError as error:
@@ -225,15 +260,12 @@ def update_plan_item(task: TaskDocument, reference: str, description: str) -> Ta
         raise WflowError("task has no plan")
     data = task.model_dump(mode="python")
     phases = data["plan"]["phases"]
-    if re.fullmatch(PHASE_REFERENCE_PATTERN, reference):
-        phase_index = int(reference) - 1
-        if phase_index < 0 or phase_index >= len(phases) or phases[phase_index]["deleted"]:
+    phase_index, step_index = _plan_indices(phases, reference)
+    if step_index is None:
+        if phases[phase_index]["deleted"]:
             raise WflowError(f"phase reference not found: {reference}")
         phases[phase_index]["title"] = description
-    elif re.fullmatch(STEP_REFERENCE_PATTERN, reference):
-        phase_index, step_index = (int(part) - 1 for part in reference.split("-"))
-        if phase_index < 0 or phase_index >= len(phases) or step_index < 0 or step_index >= len(phases[phase_index]["steps"]):
-            raise WflowError(f"step reference not found: {reference}")
+    else:
         phase = phases[phase_index]
         step = phase["steps"][step_index]
         if phase["deleted"] or step["deleted"]:
@@ -241,34 +273,10 @@ def update_plan_item(task: TaskDocument, reference: str, description: str) -> Ta
         if step["state"] in {"done", "skipped"}:
             raise WflowError(f"step has execution history: {reference}")
         step["description"] = description
-    else:
-        raise WflowError("plan reference must be PPP or PPP-SSS")
     try:
         return TaskDocument.model_validate(data)
     except ValidationError as error:
         raise WflowError(f"failed to update plan item '{reference}': {error}") from error
-
-
-def update_dependency(task: TaskDocument, dependency: str, add: bool) -> TaskDocument:
-    """Add or remove one Task dependency while the Task is draft."""
-    if task.task.state != "draft":
-        raise WflowError("dependency operations require a draft task")
-    if dependency == task.task.id:
-        raise WflowError("task cannot depend on itself")
-    data = task.model_dump(mode="python")
-    dependencies = data["task"]["depends_on"]
-    if add:
-        if dependency in dependencies:
-            raise WflowError(f"dependency already exists: {dependency}")
-        dependencies.append(dependency)
-    else:
-        if dependency not in dependencies:
-            raise WflowError(f"dependency not found: {dependency}")
-        dependencies.remove(dependency)
-    try:
-        return TaskDocument.model_validate(data)
-    except ValidationError as error:
-        raise WflowError(f"failed to update dependency '{dependency}': {error}") from error
 
 
 def update_acceptance(
@@ -295,16 +303,12 @@ def update_acceptance(
         criterion = {"id": f"ACC-{max(numbers, default=0) + 1:03}", "statement": value}
         if phase_ref is None:
             plan["acceptance"].append(criterion)
-        elif re.fullmatch(PHASE_REFERENCE_PATTERN, phase_ref):
-            phase_index = int(phase_ref) - 1
-            if phase_index < 0 or phase_index >= len(plan["phases"]):
-                raise WflowError(f"phase reference not found: {phase_ref}")
+        else:
+            phase_index = _phase_index(plan["phases"], phase_ref)
             phase = plan["phases"][phase_index]
             if phase["deleted"]:
                 raise WflowError(f"phase is deleted: {phase_ref}")
             phase["acceptance"].append(criterion)
-        else:
-            raise WflowError("phase reference must be PPP, for example '002'")
     else:
         containers = [plan["acceptance"], *(phase["acceptance"] for phase in plan["phases"])]
         for criteria in containers:

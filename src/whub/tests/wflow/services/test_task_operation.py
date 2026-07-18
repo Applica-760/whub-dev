@@ -9,9 +9,9 @@ import yaml
 
 from whub.wflow.models import TaskDocument
 from whub.wflow.services import (
-    WflowError, append_phase_log, apply_transition, create_task, delete_plan_item,
+    WflowError, append_phase_log, apply_transition, complete_step, create_task, delete_plan_item,
     insert_plan_step, load_task, load_task_workflow, record_acceptance, update_plan_item,
-    update_acceptance, update_dependency, update_step, write_task,
+    skip_step, update_acceptance, update_dependency, write_task,
 )
 
 
@@ -103,7 +103,7 @@ def test_plan_operations_reject_non_draft_and_execution_history() -> None:
     with pytest.raises(WflowError, match="draft"):
         insert_plan_step(active, "追加する")
 
-    completed_step = update_step(active, load_task_workflow(), "002-001", "done", logs=("done",))
+    completed_step = complete_step(active, load_task_workflow(), "002-001", logs=("done",))
     changed = apply_transition(
         completed_step,
         load_task_workflow(),
@@ -117,10 +117,12 @@ def test_plan_operations_reject_non_draft_and_execution_history() -> None:
 
 def test_step_log_skip_and_acceptance_operations(tmp_path: Path) -> None:
     workflow = load_task_workflow(); active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
-    updated = update_step(active, workflow, "002-001", "done", logs=("first",))
+    updated = complete_step(active, workflow, "002-001", logs=("first",))
     assert updated.plan.phases[1].steps[0].state == "done"
     logged = append_phase_log(updated, "001", ("second",))
-    skipped = update_step(logged, workflow, "001-001", "skipped", "not needed", ("skipped",))
+    with pytest.raises(WflowError, match="requires a reason"):
+        skip_step(logged, workflow, "001-001", "")
+    skipped = skip_step(logged, workflow, "001-001", "not needed", ("skipped",))
     assert skipped.plan.phases[0].steps[0].skip_reason == "not needed"
     path = tmp_path / "task.yaml"; write_task(path, skipped); assert load_task(path) == skipped
     accepted = record_acceptance(active, "ACC-001", "passed")

@@ -167,7 +167,12 @@ definitions:
   - id: DEF-041
     name: task interruption
     definition: 親Taskの凍結、割り込みTaskの開始、子Task終端後の親Task再開を整合した操作として実行する責務
-    ref: src/whub/wflow/services/task_interruption.py
+    ref: src/whub/wflow/services/task/relation.py
+
+  - id: DEF-042
+    name: task relation
+    definition: Task依存とTask割り込みをTask間の有向関係として操作・参照する責務
+    ref: src/whub/wflow/services/task/relation.py
 
 relation_types:
   - name: has_resource
@@ -237,6 +242,16 @@ relations:
     predicate: promotes_to
     object: DEF-028
 
+  - id: REL-011
+    subject: DEF-037
+    predicate: is_a
+    object: DEF-042
+
+  - id: REL-012
+    subject: DEF-041
+    predicate: is_a
+    object: DEF-042
+
 policies:
   - id: POL-001
     statement: remote resourceの編集・コード確認・project横断のコンテキスト参照はmountで行う
@@ -294,7 +309,7 @@ constraints:
     statement: manifestのprojectで必須とするフィールドはnameだけとする
 
   - id: CON-043
-    statement: Task Workflowでは保存済みYAMLの整合性をtask_integrity、操作可否をtask_eligibility、割り込みによる複数Task更新をtask_interruptionへ分離する
+    statement: Task Workflowでは保存済みYAMLの整合性をtask_integrity、操作可否をtask_eligibility、Task間関係の更新をservices/task/relation.pyへ分離し、その内部で単一Taskの依存編集と複数Taskの割り込み操作を別関数として分離する
 
   - id: CON-003
     statement: manifestではresourceを独立したtop-level一覧にせず、対応するprojectのresourceフィールド直下に定義する

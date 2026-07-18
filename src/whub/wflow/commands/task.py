@@ -11,6 +11,7 @@ from whub.wflow.services import (
     append_phase_log,
     archive_task,
     apply_transition,
+    complete_step,
     create_task,
     dependency_start_diagnostics,
     delete_plan_item,
@@ -23,10 +24,10 @@ from whub.wflow.services import (
     record_acceptance,
     resolve_task_reference,
     resume_task,
+    skip_step,
     update_acceptance,
     update_dependency,
     update_plan_item,
-    update_step,
     validate_task,
     write_task,
 )
@@ -461,12 +462,11 @@ def done(
     """Mark a selected or next incomplete Step done."""
     try:
         task_path = resolve_task_reference(task_ref)
-        updated = update_step(
+        updated = complete_step(
             load_task(task_path),
             load_task_workflow(),
             step_ref,
-            "done",
-            logs=logs,
+            logs,
         )
         write_task(task_path, updated)
     except WflowError as error:
@@ -488,13 +488,12 @@ def skip(
     """Skip a selected or next incomplete Step with a reason."""
     try:
         task_path = resolve_task_reference(task_ref)
-        updated = update_step(
+        updated = skip_step(
             load_task(task_path),
             load_task_workflow(),
             step_ref,
-            "skipped",
             reason,
-            logs=logs,
+            logs,
         )
         write_task(task_path, updated)
     except WflowError as error:
