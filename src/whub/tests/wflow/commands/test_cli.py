@@ -111,12 +111,67 @@ def test_task_plan_insert_and_delete_update_a_draft(tmp_path: Path, monkeypatch)
 
     inserted = CliRunner().invoke(main, ["task", "plan", "insert", "001", "追加", "--after", "002-001"], catch_exceptions=False)
     deleted = CliRunner().invoke(main, ["task", "plan", "delete", "001", "001-001"], catch_exceptions=False)
+    named_phase = CliRunner().invoke(
+        main,
+        ["task", "plan", "insert", "001", "最初のStep", "--phase-title", "名前付きPhase"],
+        catch_exceptions=False,
+    )
+    selected_phase = CliRunner().invoke(
+        main,
+        ["task", "plan", "insert", "001", "追加Step", "--phase", "002"],
+        catch_exceptions=False,
+    )
+    updated = CliRunner().invoke(
+        main,
+        ["task", "plan", "update", "001", "002-003", "更新済みStep"],
+        catch_exceptions=False,
+    )
+    dependency_added = CliRunner().invoke(
+        main,
+        ["task", "depends", "add", "001", "TASK-002"],
+        catch_exceptions=False,
+    )
+    task_acceptance = CliRunner().invoke(
+        main,
+        ["task", "acceptance", "add", "001", "Taskを検証する"],
+        catch_exceptions=False,
+    )
+    phase_acceptance = CliRunner().invoke(
+        main,
+        ["task", "acceptance", "add", "001", "Phaseを検証する", "--phase", "001"],
+        catch_exceptions=False,
+    )
+    acceptance_deleted = CliRunner().invoke(
+        main,
+        ["task", "acceptance", "delete", "001", "ACC-002"],
+        catch_exceptions=False,
+    )
+    dependency_deleted = CliRunner().invoke(
+        main,
+        ["task", "depends", "delete", "001", "TASK-002"],
+        catch_exceptions=False,
+    )
 
     assert inserted.exit_code == 0
     assert deleted.exit_code == 0
+    assert named_phase.exit_code == 0
+    assert selected_phase.exit_code == 0
+    assert updated.exit_code == 0
+    assert dependency_added.exit_code == 0
+    assert task_acceptance.exit_code == 0
+    assert "ACC-002" in task_acceptance.output
+    assert phase_acceptance.exit_code == 0
+    assert "ACC-003" in phase_acceptance.output
+    assert acceptance_deleted.exit_code == 0
+    assert dependency_deleted.exit_code == 0
     updated = yaml.safe_load(path.read_text())
     assert updated["plan"]["phases"][1]["steps"][1]["description"] == "追加"
+    assert updated["plan"]["phases"][1]["steps"][2]["description"] == "更新済みStep"
+    assert updated["plan"]["phases"][2]["title"] == "名前付きPhase"
     assert updated["plan"]["phases"][0]["steps"][0]["deleted"] is True
+    assert updated["task"]["depends_on"] == []
+    assert [item["id"] for item in updated["plan"]["acceptance"]] == ["ACC-001"]
+    assert updated["plan"]["phases"][0]["acceptance"][0]["id"] == "ACC-003"
 
 
 def test_task_complete_archives_an_already_completed_task(tmp_path: Path, monkeypatch) -> None:
@@ -167,6 +222,54 @@ def test_task_check_reports_interruption_relationship_errors(tmp_path: Path, mon
 
     assert result.exit_code == 1
     assert "interruption_link_mismatch" in result.output
+
+
+def test_task_approve_plan_requires_completed_dependencies(tmp_path: Path, monkeypatch) -> None:
+    task_dir = tmp_path / "docs/tasks"
+    task_dir.mkdir(parents=True)
+    prerequisite = yaml.safe_load(_TASK_PATH.read_text())
+    prerequisite["task"]["state"] = "in_progress"
+    dependent = yaml.safe_load(_TASK_PATH.read_text())
+    dependent["task"].update(id="TASK-002", state="draft", depends_on=["TASK-001"])
+    dependent["approvals"] = []
+    dependent["acceptance_results"] = []
+    dependent["change_requests"] = []
+    dependent["result"] = None
+    for phase in dependent["plan"]["phases"]:
+        phase["log"] = []
+        for step in phase["steps"]:
+            step["state"] = "pending"
+    prerequisite_path = task_dir / "prerequisite.yaml"
+    dependent_path = task_dir / "dependent.yaml"
+    prerequisite_path.write_text(yaml.safe_dump(prerequisite, allow_unicode=True))
+    dependent_path.write_text(yaml.safe_dump(dependent, allow_unicode=True))
+    monkeypatch.chdir(tmp_path)
+
+    runner = CliRunner()
+    incomplete = runner.invoke(
+        main,
+        ["task", "transition", "002", "approve_plan", "--actor", "user"],
+        catch_exceptions=False,
+    )
+    assert incomplete.exit_code == 1
+    assert "incomplete dependency: TASK-001" in incomplete.output
+
+    prerequisite["task"]["state"] = "completed"
+    prerequisite_path.write_text(yaml.safe_dump(prerequisite, allow_unicode=True))
+    dependent["task"]["depends_on"] = ["TASK-999"]
+    dependent_path.write_text(yaml.safe_dump(dependent, allow_unicode=True))
+    missing = runner.invoke(main, ["task", "transition", "002", "approve_plan", "--actor", "user"])
+    assert missing.exit_code == 1
+    assert "missing dependency: TASK-999" in missing.output
+
+    dependent["task"]["depends_on"] = ["TASK-001"]
+    dependent_path.write_text(yaml.safe_dump(dependent, allow_unicode=True))
+    approved = runner.invoke(
+        main,
+        ["task", "transition", "002", "approve_plan", "--actor", "user"],
+        catch_exceptions=False,
+    )
+    assert approved.exit_code == 0
 
 
 def test_task_interrupt_and_resume_use_cross_task_validation(tmp_path: Path, monkeypatch) -> None:

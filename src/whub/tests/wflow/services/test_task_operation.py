@@ -10,7 +10,8 @@ import yaml
 from whub.wflow.models import TaskDocument
 from whub.wflow.services import (
     WflowError, append_phase_log, apply_transition, create_task, delete_plan_item,
-    insert_plan_step, load_task, load_task_workflow, record_acceptance, update_step, write_task,
+    insert_plan_step, load_task, load_task_workflow, record_acceptance, update_plan_item,
+    update_acceptance, update_dependency, update_step, write_task,
 )
 
 
@@ -61,10 +62,57 @@ def test_deletes_pending_plan_items_and_inserts_steps() -> None:
     assert phase_inserted.plan.phases[1].title == "挿入フェーズ"
 
 
+def test_inserts_named_phases_and_steps_in_selected_phases_and_updates_items() -> None:
+    named_phase = insert_plan_step(
+        _draft_task(),
+        "最初のStep",
+        phase_title="名前付きPhase",
+    )
+    assert named_phase.plan.phases[-1].title == "名前付きPhase"
+    assert named_phase.plan.phases[-1].steps[0].description == "最初のStep"
+
+    inserted_step = insert_plan_step(named_phase, "追加Step", phase_ref="002")
+    assert inserted_step.plan.phases[1].steps[-1].description == "追加Step"
+
+    updated_phase = update_plan_item(inserted_step, "003", "更新済みPhase")
+    updated_step = update_plan_item(updated_phase, "002-002", "更新済みStep")
+    assert updated_step.plan.phases[2].title == "更新済みPhase"
+    assert updated_step.plan.phases[1].steps[1].description == "更新済みStep"
+
+
+def test_updates_draft_dependencies_and_task_or_phase_acceptance() -> None:
+    dependency_added = update_dependency(_draft_task(), "TASK-002", True)
+    assert dependency_added.task.depends_on == ["TASK-002"]
+    with pytest.raises(WflowError, match="already exists"):
+        update_dependency(dependency_added, "TASK-002", True)
+    with pytest.raises(WflowError, match="itself"):
+        update_dependency(dependency_added, "TASK-001", True)
+    dependency_removed = update_dependency(dependency_added, "TASK-002", False)
+    assert dependency_removed.task.depends_on == []
+
+    task_acceptance = update_acceptance(dependency_removed, "Taskを検証する", True)
+    assert task_acceptance.plan.acceptance[-1].id == "ACC-002"
+    phase_acceptance = update_acceptance(task_acceptance, "Phaseを検証する", True, "001")
+    assert phase_acceptance.plan.phases[0].acceptance[-1].id == "ACC-003"
+    removed = update_acceptance(phase_acceptance, "ACC-002", False)
+    assert [item.id for item in removed.plan.acceptance] == ["ACC-001"]
+
+
 def test_plan_operations_reject_non_draft_and_execution_history() -> None:
     task = _draft_task(); active = apply_transition(task, load_task_workflow(), "approve_plan", "user")
     with pytest.raises(WflowError, match="draft"):
         insert_plan_step(active, "追加する")
+
+    completed_step = update_step(active, load_task_workflow(), "002-001", "done", logs=("done",))
+    changed = apply_transition(
+        completed_step,
+        load_task_workflow(),
+        "request_plan_change",
+        "agent",
+        {"reason": "revise pending work"},
+    )
+    with pytest.raises(WflowError, match="execution history"):
+        update_plan_item(changed, "002-001", "書き換え")
 
 
 def test_step_log_skip_and_acceptance_operations(tmp_path: Path) -> None:

@@ -18,6 +18,26 @@ def in_progress_error(task: TaskDocument, operation: str) -> str | None:
     return None
 
 
+def dependency_start_diagnostics(
+    task: TaskDocument,
+    tasks: Mapping[str, TaskDocument],
+) -> tuple[Diagnostic, ...]:
+    """Return unmet dependencies that prevent TASK from starting."""
+    diagnostics: list[Diagnostic] = []
+    for dependency in task.task.depends_on:
+        target = tasks.get(dependency)
+        if target is None:
+            diagnostics.append(Diagnostic("missing_dependency", f"missing dependency: {dependency}"))
+        elif target.task.state != "completed":
+            diagnostics.append(
+                Diagnostic(
+                    "incomplete_dependency",
+                    f"incomplete dependency: {dependency} ({target.task.state})",
+                )
+            )
+    return tuple(diagnostics)
+
+
 def interruption_start_diagnostics(
     parent: TaskDocument,
     child: TaskDocument,
@@ -57,22 +77,10 @@ def interruption_start_diagnostics(
             diagnostics.append(
                 (parent.task.id, Diagnostic("active_interruption_exists", "interruption parent already has an active child"))
             )
-    for dependency in child.task.depends_on:
-        target = tasks.get(dependency)
-        if target is None:
-            diagnostics.append(
-                (child.task.id, Diagnostic("missing_dependency", f"interruption child has missing dependency: {dependency}"))
-            )
-        elif target.task.state != "completed":
-            diagnostics.append(
-                (
-                    child.task.id,
-                    Diagnostic(
-                        "incomplete_dependency",
-                        f"interruption child has incomplete dependency: {dependency} ({target.task.state})",
-                    ),
-                )
-            )
+    diagnostics.extend(
+        (child.task.id, diagnostic)
+        for diagnostic in dependency_start_diagnostics(child, tasks)
+    )
     return tuple(diagnostics)
 
 

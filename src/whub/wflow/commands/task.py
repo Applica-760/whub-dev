@@ -12,6 +12,7 @@ from whub.wflow.services import (
     archive_task,
     apply_transition,
     create_task,
+    dependency_start_diagnostics,
     delete_plan_item,
     interrupt_task,
     insert_plan_step,
@@ -22,6 +23,9 @@ from whub.wflow.services import (
     record_acceptance,
     resolve_task_reference,
     resume_task,
+    update_acceptance,
+    update_dependency,
+    update_plan_item,
     update_step,
     validate_task,
     write_task,
@@ -69,14 +73,123 @@ def delete(task_ref: str, reference: str) -> None:
 @click.argument("task_ref")
 @click.argument("description")
 @click.option("--after", help="Insert after Phase PPP or Step PPP-SSS.")
-def insert(task_ref: str, description: str, after: str | None) -> None:
-    """Insert one Step into a draft Task plan."""
+@click.option("--phase-title", help="Create a named Phase with DESCRIPTION as its first Step.")
+@click.option("--phase", "phase_ref", help="Add DESCRIPTION to Phase PPP.")
+def insert(
+    task_ref: str,
+    description: str,
+    after: str | None,
+    phase_title: str | None,
+    phase_ref: str | None,
+) -> None:
+    """Insert a Phase or Step into a draft Task plan."""
     try:
         path = resolve_task_reference(task_ref)
-        write_task(path, insert_plan_step(load_task(path), description, after))
+        write_task(
+            path,
+            insert_plan_step(
+                load_task(path),
+                description,
+                after,
+                phase_title,
+                phase_ref,
+            ),
+        )
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"inserted {description}")
+
+
+@plan.command("update")
+@click.argument("task_ref")
+@click.argument("reference")
+@click.argument("description")
+def update(task_ref: str, reference: str, description: str) -> None:
+    """Update the title of Phase PPP or description of Step PPP-SSS."""
+    try:
+        path = resolve_task_reference(task_ref)
+        write_task(path, update_plan_item(load_task(path), reference, description))
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"updated {reference}")
+
+
+@task.group("depends")
+def depends() -> None:
+    """Edit draft Task dependencies."""
+
+
+@depends.command("add")
+@click.argument("task_ref")
+@click.argument("dependency")
+def add_dependency(task_ref: str, dependency: str) -> None:
+    """Add one dependency TASK-NNN."""
+    try:
+        path = resolve_task_reference(task_ref)
+        write_task(path, update_dependency(load_task(path), dependency, True))
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"added dependency {dependency}")
+
+
+@depends.command("delete")
+@click.argument("task_ref")
+@click.argument("dependency")
+def delete_dependency(task_ref: str, dependency: str) -> None:
+    """Delete one dependency TASK-NNN."""
+    try:
+        path = resolve_task_reference(task_ref)
+        write_task(path, update_dependency(load_task(path), dependency, False))
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"deleted dependency {dependency}")
+
+
+@task.group("acceptance")
+def acceptance() -> None:
+    """Edit draft Task acceptance criteria."""
+
+
+@acceptance.command("add")
+@click.argument("task_ref")
+@click.argument("statement")
+@click.option("--phase", "phase_ref", help="Add the criterion to Phase PPP.")
+def add_acceptance(task_ref: str, statement: str, phase_ref: str | None) -> None:
+    """Add one acceptance criterion."""
+    try:
+        path = resolve_task_reference(task_ref)
+        record = load_task(path)
+        known_ids = {
+            criterion.id
+            for phase in record.plan.phases
+            for criterion in phase.acceptance
+        } | {criterion.id for criterion in record.plan.acceptance} if record.plan else set()
+        updated = update_acceptance(record, statement, True, phase_ref)
+        added_id = next(
+            criterion.id
+            for criterion in [
+                *updated.plan.acceptance,
+                *(criterion for phase in updated.plan.phases for criterion in phase.acceptance),
+            ]
+            if criterion.id not in known_ids
+        )
+        write_task(path, updated)
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"added acceptance {added_id}")
+
+
+@acceptance.command("delete")
+@click.argument("task_ref")
+@click.argument("acceptance_ref")
+def delete_acceptance(task_ref: str, acceptance_ref: str) -> None:
+    """Delete one acceptance criterion ACC-NNN."""
+    try:
+        path = resolve_task_reference(task_ref)
+        write_task(path, update_acceptance(load_task(path), acceptance_ref, False))
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"deleted acceptance {acceptance_ref}")
 
 
 @task.command()
@@ -210,8 +323,18 @@ def transition(task_ref: str, trigger: str, actor: str, reason: str | None, resu
     }
     try:
         task_path = resolve_task_reference(task_ref)
+        record = load_task(task_path)
+        if trigger == "approve_plan":
+            records = load_task_records(Path("docs/tasks"))
+            tasks = {task_id: item for task_id, (_, item) in records.items()}
+            tasks[record.task.id] = record
+            if diagnostics := dependency_start_diagnostics(record, tasks):
+                raise WflowError(
+                    "cannot approve plan: "
+                    + "; ".join(item.message for item in diagnostics)
+                )
         updated = apply_transition(
-            load_task(task_path), load_task_workflow(), trigger, actor, input_data
+            record, load_task_workflow(), trigger, actor, input_data
         )
         write_task(task_path, updated)
     except WflowError as error:
