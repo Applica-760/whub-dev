@@ -19,12 +19,13 @@
 from __future__ import annotations
 
 import signal
+import subprocess
 from unittest.mock import call, patch
 
 from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
-from whub.commands.app import app
+from whub.commands.app import _stop_process_groups, app
 from whub.core.paths import app_dev_pid_path, app_dist_path, app_pid_path
 from whub.webapp.runner import AppProcessRecord
 from whub.webapp.server import create_app
@@ -76,6 +77,20 @@ class TestWebappServer:
 
 
 class TestAppCommand:
+    def test_stop_process_groups_kills_remaining_development_group(self):
+        with (
+            patch("whub.commands.app.os.getpgid", return_value=42),
+            patch("whub.commands.app.os.killpg") as killpg,
+            patch("whub.commands.app.time.sleep"),
+        ):
+            _stop_process_groups({"vite": 42})
+
+        assert killpg.call_args_list == [
+            call(42, signal.SIGTERM),
+            call(42, 0),
+            call(42, signal.SIGKILL),
+        ]
+
     def test_missing_dist_shows_build_instruction(self, tmp_path):
         # ケース5
         with patch("whub.commands.app.app_dist_path", return_value=tmp_path / "dist"):
@@ -178,6 +193,12 @@ class TestAppCommand:
         assert command[1:4] == ["-m", "whub.webapp.runner", "--dev"]
         assert "8712" in command
         assert "8713" in command
+        assert mock_popen.call_args.kwargs == {
+            "start_new_session": True,
+            "stdin": subprocess.DEVNULL,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+        }
 
     def test_dev_reuses_running_development_mode(self, tmp_path):
         with (

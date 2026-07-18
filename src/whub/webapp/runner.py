@@ -91,6 +91,24 @@ def serve(dist_dir: Path, port: int, pid_path: Path) -> None:
         remove_pid_record(pid_path, expected_pid=process_id)
 
 
+def _stop_process_group(process: subprocess.Popen[object]) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        process_group = os.getpgid(process.pid)
+        os.killpg(process_group, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=1)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process_group, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+
+
 def serve_dev(app_dir: Path, port: int, api_port: int, pid_path: Path) -> None:
     """Run Vite and the reloading API server as one managed process group."""
     process_id = os.getpid()
@@ -108,6 +126,7 @@ def serve_dev(app_dir: Path, port: int, api_port: int, pid_path: Path) -> None:
             str(api_port),
         ],
         cwd=app_dir.parent,
+        start_new_session=True,
     )
     try:
         vite = subprocess.Popen(
@@ -123,10 +142,10 @@ def serve_dev(app_dir: Path, port: int, api_port: int, pid_path: Path) -> None:
                 "--strictPort",
             ],
             cwd=app_dir,
+            start_new_session=True,
         )
     except BaseException:
-        api.terminate()
-        api.wait()
+        _stop_process_group(api)
         raise
     children = [api, vite]
     write_pid_record(
@@ -149,13 +168,7 @@ def serve_dev(app_dir: Path, port: int, api_port: int, pid_path: Path) -> None:
             time.sleep(0.1)
     finally:
         for child in children:
-            if child.poll() is None:
-                child.terminate()
-        for child in children:
-            try:
-                child.wait(timeout=1)
-            except subprocess.TimeoutExpired:
-                child.kill()
+            _stop_process_group(child)
         for signum, handler in previous_handlers.items():
             signal.signal(signum, handler)
         remove_pid_record(pid_path, expected_pid=process_id)
@@ -174,6 +187,7 @@ def main() -> None:
     if args.dev:
         if args.app_dir is None or args.api_port is None:
             parser.error("--dev requires --app-dir and --api-port")
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
         serve_dev(args.app_dir, args.port, args.api_port, args.pid_path)
     elif args.dist_dir is None:
         parser.error("--dist-dir is required without --dev")

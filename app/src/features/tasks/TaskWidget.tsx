@@ -47,7 +47,7 @@ export function TaskWidget({ overviewOnly = false, showAllLink = false }: TaskWi
               <Stack gap={2} key={task.path}>
                 {task.id ? (
                   <Anchor component={NavLink} fw={500} to={`/tasks/${task.id}`}>
-                    {task.title ?? task.id}
+                    {task.title ? `${task.id.replace(/^TASK-/, '')}: ${task.title}` : task.id.replace(/^TASK-/, '')}
                   </Anchor>
                 ) : (
                   <Text fw={500}>{task.path}</Text>

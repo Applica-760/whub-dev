@@ -39,6 +39,29 @@ def _read_running_process(pid_path: Path) -> AppProcessRecord | None:
     return process
 
 
+def _stop_process_groups(processes: dict[str, int]) -> None:
+    groups: set[int] = set()
+    for pid in processes.values():
+        try:
+            groups.add(os.getpgid(pid))
+        except ProcessLookupError:
+            continue
+    if not groups:
+        return
+    for process_group in groups:
+        try:
+            os.killpg(process_group, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    time.sleep(0.1)
+    for process_group in groups:
+        try:
+            os.killpg(process_group, 0)
+        except ProcessLookupError:
+            continue
+        os.killpg(process_group, signal.SIGKILL)
+
+
 @click.group(invoke_without_command=True)
 @click.option("--port", type=int, default=8710, show_default=True)
 @click.pass_context
@@ -100,6 +123,8 @@ def down(dev_mode: bool) -> None:
             os.killpg(process_group, signal.SIGKILL)
         except ProcessLookupError:
             pass
+    if dev_mode:
+        _stop_process_groups(process.processes)
     remove_pid_record(pid_path, expected_pid=process.pid)
     click.echo(f"{name} stopped")
 
@@ -133,6 +158,7 @@ def dev() -> None:
             str(pid_path),
         ],
         start_new_session=True,
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

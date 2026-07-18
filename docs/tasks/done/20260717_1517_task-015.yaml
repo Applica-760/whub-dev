@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-015
-  state: in_progress
+  state: completed
   title: whub cd後の端末状態を復旧し、whub app devの起動不全を診断する
   objective: whub cdで起動したtmuxまたはSSHの終了後、ローカル端末に残留しうる入力モードを安全に解除し、通常のシェル操作を維持する。また、whub
     app devの起動不全を端末復旧とは独立して再現・診断する
@@ -97,20 +97,23 @@ plan:
       skip_reason: null
       deleted: false
     - description: 出力を観測可能な条件で起動を再現し、ViteとAPIの各子プロセスの終了状態・失敗出力を採取する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 観測結果から原因と影響範囲を記録し、修正が必要な場合は最小の修正案と検証条件を提示する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 診断で起動したプロセスを停止し、PID記録とポートが残留していないことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - 通常モードのapp.pidはPID 46595・8710を記録し、whub app devはmodeを区別せず既存PIDがあるため起動しない。8711にはPID記録にないuvicorn
       reload子プロセスが残留していた。Node/npm/node_modulesと通常サーバーのhealthは正常だった。
+    - 通常モードを起動せず、whub app devを8712/8713で実起動した。Vite経由のhttp://127.0.0.1:8712/api/healthは正常応答し、app-dev.pidにはrunner・API・ViteのPIDが記録された。
+    - 起動阻害の直接原因は、devが通常モードと同じapp.pid・8710を参照していたこと。8711の孤立uvicorn reload子プロセスは、以前の失敗したdev起動由来で、診断開始前から存在した。
+    - 検証用のwhub app devをwhub app down --devで停止した。app-dev.pidと8712/8713の待受は消え、診断前からの8711孤立プロセスは変更しなかった。
     deleted: false
   - title: 通常モードと開発モードを完全に分離する
     acceptance: []
@@ -120,16 +123,23 @@ plan:
       skip_reason: null
       deleted: false
     - description: 開発モードのポート・PID記録・Vite API proxy・停止操作を通常モードから独立させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 両モードの同時起動、各モードのhealth、片方を停止した際の他方の存続、およびプロセス残留なしを自動・実行環境で検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - 通常モードは8710とapp.pidを維持する。開発モードはVite 8712・API 8713・app-dev.pidを使用し、whub app down
       --devで開発モードだけを停止する。各起動コマンドは同一モードのPID記録だけを参照する。
+    - 開発モードをVite 8712・API 8713・app-dev.pidへ変更し、Vite API proxyとwhub app down --devを通常モードから分離した。対象pytest
+      17件とnpm buildは成功した。
+    - 実行環境で開発モードの8712/8713待受、Vite経由health、app-dev.pid、down --dev後のPID・ポート残留なしを確認した。全pytestは276
+      passed、wflow task checkはvalid。
+    - '注記: ターミナル終了時にrunnerが終了してapp-dev.pidを削除し、uvicorn reloadの子孫だけが8713に残留する事象を後続確認で検出した。'
+    - '対応: 開発runnerのstdinをDEVNULLへ切り離し、SIGHUPを無視するようにした。API/Viteは個別プロセスグループで起動し、down --devはPID記録の各開発プロセスグループも直接終了する。'
+    - '再検証: runnerへのSIGHUP後もPID記録・8712/8713・Vite経由healthが維持され、down --dev後にrunner・API reload子孫・Vite・PID記録・8712/8713がすべて消えることを確認した。全pytestは278 passed。'
     deleted: false
 approvals:
 - actor: user
@@ -148,8 +158,25 @@ acceptance_results:
   status: passed
   evidence:
   - 実TTYでtmux接続を終了後、矢印キーとスクロールが正常に動作することをユーザーが確認した。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - 通常モードと共用するapp.pid・8710がdev起動を阻害する原因、および8711に残った過去のuvicorn reload子プロセスを確認した。
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - 診断で起動した開発モードはdown --devで停止し、app-dev.pid・8712・8713に残留がないことを確認した。
+- acceptance: ACC-006
+  status: passed
+  evidence:
+  - 開発モードはVite 8712・API 8713で起動し、通常モード用のapp.pid・8710がない状態でhealthを確認した。PIDとポートは通常モードから分離済み。
+- acceptance: ACC-007
+  status: passed
+  evidence:
+  - 開発モードはapp-dev.pidだけを作成し、down --dev後にこれだけを削除した。通常モード用app.pidには触れていない。
 change_requests:
 - reason: whub app devの起動不全は端末復旧と独立した原因の可能性があるため、同一Task内に独立した診断Phaseと受け入れ条件を追加する
 - reason: 通常モードと開発モードを同時に利用できるよう、ポート・PID記録・停止操作を完全分離する実装と検証を追加する
 cancellation: null
-result: null
+result:
+  summary: whub cd後の端末復旧を実装・実TTY確認し、whub app devを通常モードからポート・PID・停止操作ごと分離して実起動検証した。

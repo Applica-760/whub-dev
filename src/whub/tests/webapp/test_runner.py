@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 
 from whub.webapp.runner import (
     AppProcessRecord,
+    _stop_process_group,
     read_pid_record,
     remove_pid_record,
     serve,
@@ -66,3 +68,18 @@ def test_serve_removes_its_pid_record_after_shutdown(tmp_path: Path) -> None:
         serve(tmp_path / "dist", 8710, pid_path)
 
     assert not pid_path.exists()
+
+
+def test_stop_process_group_terminates_all_children() -> None:
+    process = Mock()
+    process.pid = 42
+    process.poll.return_value = None
+
+    with (
+        patch("whub.webapp.runner.os.getpgid", return_value=42),
+        patch("whub.webapp.runner.os.killpg") as killpg,
+    ):
+        _stop_process_group(process)
+
+    assert killpg.call_args_list == [call(42, signal.SIGTERM)]
+    process.wait.assert_called_once_with(timeout=1)

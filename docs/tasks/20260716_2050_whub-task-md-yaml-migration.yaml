@@ -41,6 +41,11 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
+    - description: task init、plan insert/delete、task log、interrupt/resume、再承認、completeの運用をtask-planning
+        Skillへ反映し、不要なtemplate.mdを廃止する
+      state: pending
+      skip_reason: null
+      deleted: false
     - description: boot配布元と`.agents`・`.claude`の利用中task-planning SkillとYAML雛形を同一内容へ同期する
       state: pending
       skip_reason: null
@@ -85,10 +90,12 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: Phaseごとの任意件数ログとwflow task logを追加するため
 - reason: Phaseログの専用CLIを設けず、既存のdoneとskipによる複数ログ記録へ範囲を縮小するため
 - reason: 新規Task起票時の整理と初回YAML作成、未確定事項、進行記録、割り込み、完了前検査の運用をtask-planningへ明記するため
+- reason: TASK-011・TASK-013で確定した割り込み、task init、plan insert/delete、task log、完了一操作アーカイブの運用をSkillと導線へ反映し、不要になったtemplate.mdの廃止を計画へ追加するため
 cancellation: null
 result: null

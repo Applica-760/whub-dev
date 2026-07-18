@@ -78,4 +78,6 @@
 - せめてtaskのページはホットリロードにしたい
 - リロード時にスクロール位置を保持したい
 - タスクをCompletedする時に、KnowledgeやBacklogに更新する点がないか調べるトリガーを置きたい
+- InterruptしたタスクがCompleteしてもタスク間グラフビューに残り続ける
+- 結局YamlがAgentから見えるから、.agentsignoreとかできたらいいな
 <!-- hub:backlog:appended:end -->
