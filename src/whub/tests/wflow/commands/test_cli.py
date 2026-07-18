@@ -92,6 +92,57 @@ def test_task_init_rejects_invalid_input_without_creating_yaml(tmp_path: Path, m
     assert list((tmp_path / "docs/tasks").glob("*.yaml")) == []
 
 
+def test_task_plan_is_created_and_approved_only_through_cli(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+
+    prerequisite_commands = [
+        ["task", "init", "前提Task", "依存先を完了する"],
+        ["task", "plan", "insert", "001", "前提Step", "--phase-title", "前提Phase"],
+        ["task", "transition", "001", "approve_plan", "--actor", "user"],
+        ["task", "done", "001", "--log", "前提を完了した"],
+        ["task", "complete", "001", "--result", "前提完了"],
+    ]
+    for command in prerequisite_commands:
+        result = runner.invoke(main, command, catch_exceptions=False)
+        assert result.exit_code == 0, result.output
+
+    plan_commands = [
+        ["task", "init", "対象Task", "CLIだけで計画する", "--approach", "CLIを使う"],
+        ["task", "plan", "insert", "002", "最初のStep", "--phase-title", "計画Phase"],
+        ["task", "plan", "insert", "002", "次のStep", "--phase", "001"],
+        ["task", "plan", "update", "002", "001", "実行Phase"],
+        ["task", "depends", "add", "002", "TASK-001"],
+        ["task", "acceptance", "add", "002", "Taskを検証する"],
+        ["task", "acceptance", "add", "002", "Phaseを検証する", "--phase", "001"],
+    ]
+    for command in plan_commands:
+        result = runner.invoke(main, command, catch_exceptions=False)
+        assert result.exit_code == 0, result.output
+
+    checked = runner.invoke(main, ["task", "check", "002"], catch_exceptions=False)
+    approved = runner.invoke(
+        main,
+        ["task", "transition", "002", "approve_plan", "--actor", "user"],
+        catch_exceptions=False,
+    )
+
+    assert checked.exit_code == 0
+    assert "valid" in checked.output
+    assert approved.exit_code == 0
+    assert "in_progress" in approved.output
+    active_path = next((tmp_path / "docs/tasks").glob("*.yaml"))
+    active = yaml.safe_load(active_path.read_text())
+    assert active["task"]["depends_on"] == ["TASK-001"]
+    assert active["plan"]["phases"][0]["title"] == "実行Phase"
+    assert [step["description"] for step in active["plan"]["phases"][0]["steps"]] == [
+        "最初のStep",
+        "次のStep",
+    ]
+    assert [criterion["id"] for criterion in active["plan"]["acceptance"]] == ["ACC-001"]
+    assert [criterion["id"] for criterion in active["plan"]["phases"][0]["acceptance"]] == ["ACC-002"]
+
+
 def test_task_plan_insert_and_delete_update_a_draft(tmp_path: Path, monkeypatch) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)

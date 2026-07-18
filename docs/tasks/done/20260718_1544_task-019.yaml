@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-019
-  state: in_progress
+  state: completed
   title: Task計画を手編集なしで管理するCLIを整備する
   objective: 名前付きPhase、Task依存、受け入れ条件を含むTask計画を、Task YAMLを直接編集せずCLIで作成・変更できるようにする
   approach:
@@ -68,30 +68,41 @@ plan:
     acceptance: []
     steps:
     - description: 新規Taskから計画、依存、受け入れ条件をCLIだけで記録し、checkと関連テストで検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - レビュー指摘により、approve_planで依存先の存在・完了を確認し、計画変更後もdone/skipped Stepの記述変更を拒否する回帰テストを追加した。関連テスト38件が成功した。
+    - task initから前提Taskの計画・承認・完了・archive、対象Taskの名前付きPhase・Step、depends_on、Task/Phase受け入れ条件、check、approve_planまでをCLIだけで実行する統合testを追加した。追加test
+      1件と全282件のtestが成功した。
     deleted: false
   - title: 完了済みTaskの関係ビュー表示を是正する
     acceptance: []
     steps:
     - description: 完了済みの依存・割り込み関係をアクティブなTask間ビューから除外する表示規則を定義する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: TASK-010とTASK-013の完了済み割り込み関係を回帰例として、表示条件とグラフのテストを実装する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    - description: Task固有MermaidビューでPhaseの完了状態をStepから導出し、完了・未完了・削除済みPhaseを色分けして回帰testを追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Task間関係グラフからcompleted Taskと接続edgeを除外し、TASK-010/013を回帰例として固定。Task固有Mermaidへcompleted/incomplete/deletedのPhase
+      classを追加。Python 282件、Web 9件、Web build、knowledge/task検証が成功。
     deleted: false
 approvals:
+- actor: user
 - actor: user
 - actor: user
 acceptance_results: []
 change_requests:
 - reason: Task間関係操作の配置、計画参照解決の共通化、Step完了APIの責務分離を計画へ追加する
+- reason: Phase 6へTask固有MermaidのPhase完了状態による色分けを追加する
 cancellation: null
-result: null
+result:
+  summary: Task操作serviceの責務再編、CLI完結検証、Task間関係グラフ規則の是正、Task固有MermaidのPhase状態色分けを実装し、全体回帰テストで検証した。

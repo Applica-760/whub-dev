@@ -1,0 +1,21 @@
+schema_version: 1
+task:
+  id: TASK-021
+  state: draft
+  title: OverviewのProject別ビューと共通フロント部品を再設計する
+  objective: OverviewでProjectを切り替え、Task関係グラフを含むProject関連Widgetを一貫した共通部品で表示できるようにする
+  approach:
+  - OverviewPageで共通のProject選択状態とタブを管理する
+  - Task一覧・Task関係グラフ・Todo・StatusへProject選択を適用し、Inboxはproject非依存として維持する
+  - 改修範囲をOverviewとその共通Widget部品に限定し、個別機能ページの全面再設計は含めない
+  depends_on:
+  - TASK-020
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { ElementDefinition, LayoutOptions } from 'cytoscape';
 import { useNavigate } from 'react-router';
 
-type TaskGraphItem = {
+export type TaskGraphItem = {
   id?: string | null;
   title?: string | null;
   state?: string | null;
@@ -15,6 +15,46 @@ type TaskDependencyGraphProps = {
   tasks: TaskGraphItem[];
   height?: number;
 };
+
+export function buildTaskGraphElements(tasks: TaskGraphItem[]): ElementDefinition[] {
+  const visibleTasks = tasks.filter(
+    (task): task is TaskGraphItem & { id: string } => Boolean(task.id)
+      && task.state !== 'completed'
+      && task.state !== 'cancelled',
+  );
+  const taskIds = new Set(visibleTasks.map((task) => task.id));
+
+  return [
+    ...visibleTasks.map((task) => ({
+      data: {
+        id: task.id,
+        label: `${task.id}\n${task.title ?? task.id}`,
+      },
+      classes: task.state ?? 'invalid',
+    })),
+    ...visibleTasks.flatMap((task) => (task.depends_on ?? [])
+      .filter((dependency) => taskIds.has(dependency))
+      .map((dependency) => ({
+        data: {
+          id: `dependency-${dependency}-${task.id}`,
+          source: dependency,
+          target: task.id,
+        },
+      }))),
+    ...visibleTasks.flatMap((task) => (task.interruption_source_task_id != null
+      && taskIds.has(task.interruption_source_task_id)
+      ? [{
+        data: {
+          id: `interrupt-${task.interruption_source_task_id}-${task.id}`,
+          source: task.id,
+          target: task.interruption_source_task_id,
+          label: 'interrupt',
+        },
+        classes: 'interrupt',
+      }]
+      : [])),
+  ];
+}
 
 export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,37 +77,7 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
       }
       cytoscape.use(fcose);
 
-      const visibleTasks = tasks.filter(
-        (task): task is TaskGraphItem & { id: string } => Boolean(task.id)
-          && (task.state !== 'completed' || task.interruption_source_task_id != null),
-      );
-      const taskIds = new Set(visibleTasks.map((task) => task.id));
-      const elements: ElementDefinition[] = [
-        ...visibleTasks.map((task) => ({
-          data: {
-            id: task.id,
-            label: `${task.id}\n${task.title ?? task.id}`,
-          },
-          classes: task.state ?? 'invalid',
-        })),
-        ...visibleTasks.flatMap((task) => (task.depends_on ?? [])
-          .filter((dependency) => taskIds.has(dependency))
-          .map((dependency) => ({
-            data: { id: `dependency-${dependency}-${task.id}`, source: dependency, target: task.id },
-          }))),
-        ...visibleTasks.flatMap((task) => (task.interruption_source_task_id != null
-          && taskIds.has(task.interruption_source_task_id)
-          ? [{
-            data: {
-              id: `interrupt-${task.interruption_source_task_id}-${task.id}`,
-              source: task.id,
-              target: task.interruption_source_task_id,
-              label: 'interrupt',
-            },
-            classes: 'interrupt',
-          }]
-          : [])),
-      ];
+      const elements = buildTaskGraphElements(tasks);
       const graph = cytoscape({
         container: containerRef.current,
         elements,

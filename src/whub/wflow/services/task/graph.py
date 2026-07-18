@@ -8,7 +8,12 @@ from whub.wflow.models.task import TaskDocument
 
 def render_task_flow(task: TaskDocument) -> str:
     """Render one Task's Phase order and Phase acceptance criteria as Mermaid."""
-    lines = ["flowchart TD"]
+    lines = [
+        "flowchart TD",
+        "  classDef completed fill:#d3f9d8,stroke:#2b8a3e,color:#1b4332",
+        "  classDef incomplete fill:#e7f5ff,stroke:#228be6,color:#1864ab",
+        "  classDef deleted fill:#f1f3f5,stroke:#adb5bd,color:#868e96,stroke-dasharray:5 5",
+    ]
     if task.plan is None:
         return "\n".join(lines)
 
@@ -19,6 +24,15 @@ def render_task_flow(task: TaskDocument) -> str:
         lines.append(
             f'  {phase_id}["{_mermaid_label(f"Phase {phase_number}", phase.title)}"]'
         )
+        active_steps = [step for step in phase.steps if not step.deleted]
+        phase_class = (
+            "deleted"
+            if phase.deleted
+            else "completed"
+            if all(step.state in {"done", "skipped"} for step in active_steps)
+            else "incomplete"
+        )
+        lines.append(f"  class {phase_id} {phase_class}")
         for criterion in phase.acceptance:
             acceptance_id = f"{phase_id}_{_mermaid_id(criterion.id)}"
             lines.append(

@@ -8,7 +8,8 @@ task:
   - 第1段階として、機微情報を監査し、公開方法を確定してリポジトリを公開する
   - 第2段階として、READMEと整合する全体像の紹介ブログを公開する
   - 第3段階として、既存の開発ログ草案をレビューし、段階ごとに公開する
-  depends_on: []
+  depends_on:
+  - TASK-016
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null

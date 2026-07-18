@@ -311,6 +311,12 @@ constraints:
   - id: CON-043
     statement: Task Workflowでは保存済みYAMLの整合性をtask_integrity、操作可否をtask_eligibility、Task間関係の更新をservices/task/relation.pyへ分離し、その内部で単一Taskの依存編集と複数Taskの割り込み操作を別関数として分離する
 
+  - id: CON-044
+    statement: Task間関係グラフはstateがcompletedまたはcancelledのTask nodeを表示せず、表示対象外Taskをsourceまたはtargetとする依存・割り込みedgeも表示しない
+
+  - id: CON-045
+    statement: Task固有MermaidビューのPhaseは、deletedを削除済み、削除されていないStepがすべてdoneまたはskippedなら完了、それ以外を未完了として色分けする
+
   - id: CON-003
     statement: manifestではresourceを独立したtop-level一覧にせず、対応するprojectのresourceフィールド直下に定義する
 

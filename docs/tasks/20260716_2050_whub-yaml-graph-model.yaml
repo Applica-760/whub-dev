@@ -1,60 +1,106 @@
 schema_version: 1
-
 task:
   id: TASK-009
-  state: draft
+  state: cancelled
   title: YAMLグラフモデルの未実装範囲を実現する
   objective: グラフモデル適用案に残るYAML責務・派生Execution Graph・Agent利用・評価の未実装範囲を整理し実現する
   approach:
-    - TASK-003で実装済みのTask Workflow・Task横断読取・ロードマップビューを前提にする
-    - Task・State・Execution Graph・FOCUSのSSOTと派生境界を段階ごとに検証する
+  - TASK-003で実装済みのTask Workflow・Task横断読取・ロードマップビューを前提にする
+  - Task・State・Execution Graph・FOCUSのSSOTと派生境界を段階ごとに検証する
   depends_on:
-    - TASK-003
-    - TASK-010
-
+  - TASK-003
+  - TASK-010
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
 plan:
+  acceptance: []
   phases:
-    - title: YAML責務とSSOTを確定する
-      steps:
-        - description: YAMLグラフで答える問いと各YAMLが保持する事実の境界を確定する
-          state: pending
-        - description: YAML・Markdown・派生ビュー間で同一事実を二重管理しないSSOT規則を確定する
-          state: pending
-    - title: Task・State・Execution Graphを整備する
-      steps:
-        - description: Task YAMLの未定義項目とState YAMLの現在状態・証跡・待機理由の表現を確定する
-          state: pending
-        - description: Execution GraphのNode・Edge・循環・actionable・未完了依存の出力形式を定義する
-          state: pending
-        - description: Task依存の参照切れ・循環・開始・完了条件を検証する
-          state: pending
-    - title: Project選択タブを追加する
-      steps:
-        - description: Overviewで選択するProjectのSSOTと、Task・State・Execution Graphへの適用範囲を確定する
-          state: pending
-        - description: Project選択タブを実装し、選択したProjectに対応する派生ビューだけを表示する
-          state: pending
-        - description: 未選択時とProject未紐付けデータの表示規則を検証する
-          state: pending
-    - title: Agent利用と可搬CLIを整備する
-      steps:
-        - description: Taskに関連するKnowledge・Workflow・Stateを集約するcontext taskを定義する
-          state: pending
-        - description: Agentの着手前・計画変更前・完了前のコマンドと引用形式を規約化する
-          state: pending
-        - description: 可搬CLI・Mac専用whub・CodeGraphの責務境界を明文化する
-          state: pending
-    - title: デモ評価と次段階を判断する
-      steps:
-        - description: 新規デモProjectでBacklogからTask依存と次の着手対象までを検証する
-          state: pending
-        - description: Task・StateからFOCUS派生ビューを生成できるか検証する
-          state: pending
-        - description: YAML利用の効果と限界を評価し、必要な後続Taskを分離する
-          state: pending
-
+  - title: YAML責務とSSOTを確定する
+    acceptance: []
+    steps:
+    - description: YAMLグラフで答える問いと各YAMLが保持する事実の境界を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: YAML・Markdown・派生ビュー間で同一事実を二重管理しないSSOT規則を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Task・State・Execution Graphを整備する
+    acceptance: []
+    steps:
+    - description: Task YAMLの未定義項目とState YAMLの現在状態・証跡・待機理由の表現を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Execution GraphのNode・Edge・循環・actionable・未完了依存の出力形式を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Task依存の参照切れ・循環・開始・完了条件を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Project選択タブを追加する
+    acceptance: []
+    steps:
+    - description: Overviewで選択するProjectのSSOTと、Task・State・Execution Graphへの適用範囲を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Project選択タブを実装し、選択したProjectに対応する派生ビューだけを表示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 未選択時とProject未紐付けデータの表示規則を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Agent利用と可搬CLIを整備する
+    acceptance: []
+    steps:
+    - description: Taskに関連するKnowledge・Workflow・Stateを集約するcontext taskを定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Agentの着手前・計画変更前・完了前のコマンドと引用形式を規約化する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 可搬CLI・Mac専用whub・CodeGraphの責務境界を明文化する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: デモ評価と次段階を判断する
+    acceptance: []
+    steps:
+    - description: 新規デモProjectでBacklogからTask依存と次の着手対象までを検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Task・StateからFOCUS派生ビューを生成できるか検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: YAML利用の効果と限界を評価し、必要な後続Taskを分離する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
 approvals: []
 acceptance_results: []
 change_requests: []
-cancellation: null
+cancellation:
+  reason: 現行設計で不要・実現済みとなった旧範囲を終了し、残作業をTASK-020とTASK-021へ再定義する
+  actor: user
 result: null

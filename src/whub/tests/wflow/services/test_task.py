@@ -438,16 +438,26 @@ def test_renders_task_flow_with_phase_and_task_acceptance() -> None:
     task.plan.phases[0].acceptance = [
         AcceptanceCriterion(id="ACC-002", statement="first phase is verified")
     ]
+    for step in task.plan.phases[0].steps:
+        step.state = "done"
 
     graph = render_task_flow(task)
 
+    assert "classDef completed" in graph
+    assert "classDef incomplete" in graph
+    assert "classDef deleted" in graph
     assert 'phase_001["Phase 1: 現行手順の確認"]' in graph
     assert 'phase_002["Phase 2: README更新と検証"]' in graph
+    assert "class phase_001 completed" in graph
+    assert "class phase_002 incomplete" in graph
     assert "phase_001 --> phase_002" in graph
     assert 'phase_001_ACC_002["ACC-002: first phase is verified"]' in graph
     assert "phase_001 --> phase_001_ACC_002" in graph
     assert 'task_ACC_001["ACC-001:' in graph
     assert "phase_002 --> task_ACC_001" in graph
+
+    task.plan.phases[1].deleted = True
+    assert "class phase_002 deleted" in render_task_flow(task)
 
 
 def test_resolves_task_ids_and_rejects_missing_or_ambiguous_ids(tmp_path: Path) -> None:

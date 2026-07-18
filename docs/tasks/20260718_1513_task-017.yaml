@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-017
-  state: draft
+  state: cancelled
   title: wflowをboot対象プロジェクトへ頒布する
   objective: task-planning Skillを頒布した各プロジェクトで、互換性のあるwflowコマンドを利用可能にする
   approach:
@@ -17,5 +17,7 @@ plan: null
 approvals: []
 acceptance_results: []
 change_requests: []
-cancellation: null
+cancellation:
+  reason: wflow頒布範囲をTASK-020へ再発行し、Overview改修を依存するTASK-021へ分離する
+  actor: user
 result: null
