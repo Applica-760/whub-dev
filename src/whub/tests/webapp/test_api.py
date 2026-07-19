@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -197,57 +197,54 @@ def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
             },
         }
     )
-    path = Path("docs/tasks/20260715_task.yaml")
+    m = manifest()
     with (
-        patch("whub.webapp.routers.tasks.list_tasks", return_value=(summary,)) as mock_list,
-        patch("whub.webapp.routers.tasks.resolve_task_reference", return_value=path) as mock_resolve,
-        patch("whub.webapp.routers.tasks.load_task", return_value=document) as mock_load,
-        patch("whub.webapp.routers.tasks.load_task_workflow") as mock_workflow,
-        patch("whub.webapp.routers.tasks.validate_task", return_value=()) as mock_validate,
+        patch("whub.webapp.routers.tasks.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.tasks.list_project_tasks",
+            return_value=(summary,),
+        ) as mock_list,
+        patch(
+            "whub.webapp.routers.tasks.load_project_task",
+            return_value=document,
+        ) as mock_load,
     ):
-        list_response = client.get("/api/tasks")
-        detail_response = client.get("/api/tasks/TASK-003")
+        list_response = client.get("/api/tasks", params={"project": "local"})
+        default_response = client.get("/api/tasks")
+        detail_response = client.get(
+            "/api/tasks/TASK-003",
+            params={"project": "local"},
+        )
 
     assert list_response.status_code == 200
     assert list_response.json() == {"tasks": [summary.model_dump()]}
-    mock_list.assert_called_once_with(Path("docs/tasks"))
+    assert default_response.status_code == 200
+    assert mock_list.call_args_list == [
+        call(m, "local"),
+        call(m, "workspace-hub"),
+    ]
     assert detail_response.status_code == 200
     assert detail_response.json() == document.model_dump()
-    mock_resolve.assert_called_once_with("TASK-003", Path("docs/tasks"))
-    mock_load.assert_called_once_with(path)
-    mock_workflow.assert_called_once_with()
-    mock_validate.assert_called_once_with(document, mock_workflow.return_value)
+    mock_load.assert_called_once_with(m, "local", "TASK-003")
 
 
 def test_task_flow_graph_endpoint_returns_service_result(client: TestClient) -> None:
-    document = TaskDocument.model_validate(
-        {
-            "schema_version": 1,
-            "task": {
-                "id": "TASK-003",
-                "state": "draft",
-                "title": "Task view",
-                "objective": "Show tasks",
-            },
-        }
-    )
-    path = Path("docs/tasks/20260715_task.yaml")
+    m = manifest()
     with (
-        patch("whub.webapp.routers.tasks.resolve_task_reference", return_value=path),
-        patch("whub.webapp.routers.tasks.load_task", return_value=document),
-        patch("whub.webapp.routers.tasks.load_task_workflow") as mock_workflow,
-        patch("whub.webapp.routers.tasks.validate_task", return_value=()) as mock_validate,
+        patch("whub.webapp.routers.tasks.load_manifest", return_value=m),
         patch(
-            "whub.webapp.routers.tasks.render_task_flow",
+            "whub.webapp.routers.tasks.render_project_task_flow",
             return_value="flowchart TD\n  phase_001",
         ) as mock_flow_graph,
     ):
-        flow_response = client.get("/api/tasks/TASK-003/graph")
+        flow_response = client.get(
+            "/api/tasks/TASK-003/graph",
+            params={"project": "local"},
+        )
 
     assert flow_response.status_code == 200
     assert flow_response.json() == {"mermaid": "flowchart TD\n  phase_001"}
-    mock_validate.assert_called_once_with(document, mock_workflow.return_value)
-    mock_flow_graph.assert_called_once_with(document)
+    mock_flow_graph.assert_called_once_with(m, "local", "TASK-003")
 
 
 def test_get_resource_status_returns_service_results(client: TestClient) -> None:

@@ -20,6 +20,18 @@ def test_openapi_schema_contains_all_resource_endpoints() -> None:
         "/api/tasks/{task_id}",
         "/api/tasks/{task_id}/graph",
     }
+    for path in (
+        "/api/tasks",
+        "/api/tasks/{task_id}",
+        "/api/tasks/{task_id}/graph",
+    ):
+        project = next(
+            parameter
+            for parameter in schema["paths"][path]["get"]["parameters"]
+            if parameter["name"] == "project"
+        )
+        assert project["required"] is False
+        assert project["schema"]["default"] == "workspace-hub"
 
 
 def test_main_writes_valid_json(capsys) -> None:

@@ -18,9 +18,9 @@ from whub.models import (
     RemoteResource,
     SymlinkResource,
     load_knowledge,
-    workspace_hub_resource,
 )
 from whub.services.errors import NotFoundError, ServiceError
+from whub.services.project_content import resolve_project_content_resource
 
 
 KNOWLEDGE_RELATIVE_PATH = Path("docs/knowledge.yaml")
@@ -54,20 +54,6 @@ def _load_path(path: Path) -> Knowledge:
     return load_knowledge(path)
 
 
-def _resolve_resource(
-    manifest: Manifest,
-    project: str,
-) -> SymlinkResource | RemoteResource:
-    resolved_project = manifest.resolve_project(project)
-    if resolved_project is None:
-        raise ServiceError(f"unknown project: {project}")
-    if resolved_project.resource is None:
-        if resolved_project.name == "workspace-hub":
-            return workspace_hub_resource()
-        raise ServiceError(f"project has no resource: {project}")
-    return resolved_project.resource
-
-
 def _load_local(
     resource: SymlinkResource,
     data: None,
@@ -89,7 +75,7 @@ def _load_remote(
 
 def load_project_knowledge(manifest: Manifest, project: str) -> Knowledge:
     """Load a project's fixed-path Knowledge YAML."""
-    target = TargetItem(_resolve_resource(manifest, project), None)
+    target = TargetItem(resolve_project_content_resource(manifest, project), None)
     try:
         return on_targets([target], local=_load_local, remote=_load_remote)[0]
     except KnowledgeError as error:

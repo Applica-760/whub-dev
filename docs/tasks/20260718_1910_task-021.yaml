@@ -1,20 +1,100 @@
 schema_version: 1
 task:
   id: TASK-021
-  state: draft
+  state: in_progress
   title: OverviewのProject別ビューと共通フロント部品を再設計する
-  objective: OverviewでProjectを切り替え、Task関係グラフを含むProject関連Widgetを一貫した共通部品で表示できるようにする
+  objective: OverviewでProjectを切り替え、選択ProjectのTask一覧・Task関係グラフ・Backlogを共通の選択UIから一貫して表示できるようにする
   approach:
-  - OverviewPageで共通のProject選択状態とタブを管理する
-  - Task一覧・Task関係グラフ・Todo・StatusへProject選択を適用し、Inboxはproject非依存として維持する
-  - 改修範囲をOverviewとその共通Widget部品に限定し、個別機能ページの全面再設計は含めない
+  - OverviewPageで1つのProject選択状態と横長のProjectタブを管理し、Task一覧・Task関係グラフ・Backlogへ適用する
+  - TaskのWeb閲覧をProject単位にし、Project間でTask IDが重複しても一覧・グラフ・詳細を正しく識別する
+  - Todo・Inbox・StatusはProject選択の対象外とし、既存のBacklog・Task専用ページとナビゲーションを維持する
+  - 共通Projectタブと既存WidgetをOverview・専用ページで再利用し、Vaultは対象外とする
   depends_on:
   - TASK-020
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: Overview上部の1つのProject選択でTask一覧・Task関係グラフ・Backlogの3Widgetが同じProjectへ切り替わる
+  - id: ACC-002
+    statement: Todo・Inbox・StatusはProject選択の影響を受けず、Statusは表示専用のまま維持される
+  - id: ACC-003
+    statement: Backlog・Taskの専用ページとナビゲーションが維持され、共通Projectタブと既存Widgetが再利用される
+  - id: ACC-004
+    statement: Project間で同じTask IDが存在しても、一覧・グラフ・詳細が選択ProjectのTaskを正しく扱う
+  - id: ACC-005
+    statement: workspace-hubを選択でき、Task未配置Projectは空表示、閲覧不能Projectは選択可能なまま理由をWidget内へ表示する
+  phases:
+  - title: Project別閲覧契約を確定する
+    acceptance: []
+    steps:
+    - description: TaskのWeb上の識別子をProjectとTask IDの組として定義し、Project単位の閲覧契約をKnowledgeへ反映する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 初期Project、Task未配置・閲覧不能時の表示、専用ページ維持、Status非連携の境界を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Project別TaskのWeb識別子をProject名とrepository内TASK-IDの組とし、関係解決を同一Project内に限定した。Project選択はworkspace-hubを初期値とし、OverviewではTask一覧・Task間関係グラフ・Backlogだけへ適用する。resource閲覧不可とTaskなしを区別する契約をCON-047〜CON-050へ記録し、専用ページ維持とStatus非連携の細部はTask
+      021内の合意に留めた。Knowledge・Workflow・Task・diff検査が成功した。
+    deleted: false
+  - title: Project対応Task APIを実装する
+    acceptance: []
+    steps:
+    - description: workspace-hubを含むProject root解決を共通化し、wflow CLIの既存契約を変えずにProject単位のTask読取serviceを実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Project単位のTask一覧・詳細・関係グラフAPIとエラー契約を実装し、APIテストで検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Backlog・Knowledgeに重複していたProject content resource解決をservices/project_content.pyへ共通化し、workspace-hub合成resourceを含むlocal・remote解決を統一した。services/task.pyはProjectのdocs/tasksをwflow
+      serviceで読み、Task未配置を空一覧、resource未接続をServiceError、Task不在をNotFoundErrorとして区別する。既存Task
+      APIへ任意のproject queryを追加し、未指定時はworkspace-hubを維持したため現行フロントを壊さない。wflow CLIは未変更。対象28テストと全294
+      pytest、Knowledge・Workflow・Task・diff検査が成功した。
+    deleted: false
+  - title: 共通Project選択とWidget連携を実装する
+    acceptance: []
+    steps:
+    - description: 横長の共通Projectタブと選択状態を実装し、workspace-hubを既定選択にする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Task一覧・Task関係グラフ・Task詳細をProject対応にし、Project間でTask IDが重複しても正しく遷移させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 既存BacklogWidgetをOverviewへ追加し、1つのProject選択で3Widgetを同期させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Backlog・Task専用ページとナビゲーションを維持して共通部品を再利用し、Todo・Inbox・Statusを選択状態から分離する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 統合動作を検証する
+    acceptance: []
+    steps:
+    - description: OpenAPI型生成、pytest、Vitest、typecheck、buildを実行してAPI・共通部品・既存ページの回帰を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: ブラウザでProject切替、Task未配置・閲覧不能表示、3Widget同期、専用ページ維持を目視確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null

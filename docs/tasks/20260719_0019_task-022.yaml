@@ -1,0 +1,36 @@
+schema_version: 1
+task:
+  id: TASK-022
+  state: draft
+  title: literature・inbox・backlogの振り分け運用再編案の検討
+  objective: vaultに蓄積した外部知識・思いつきを漏らさず活用できるよう、振り分け運用の前提を整理し、改修案をブラッシュアップして固める
+  approach:
+  - sources・log.jsonlには、記録しておきたい面白い研究（literature向き）・人のものの考え方（mind親和）・whub含む自分のプロジェクトへ導入したいアイデアやSkill（理想はbacklog行き）が散在している
+  - 導入アイデアは即backlogへ組み込める解像度のものばかりではなく、後から壁打ちして解像度を高めてから組み込みたいものが多い
+  - inboxには思いつきかつmind親和の高いものが蓄積される。プロジェクト紐付きの思いつきは最初からbacklogへ入れ、外部ソースは最初からdiscourse
+    Skillを使うため
+  - '構想: 入り口はとりあえずinboxとし、その後に 純粋な外部情報→literature / 思想・考え方→mind / 実装アイデア→backlog へ振り分ける。この2段目の振り分けを行うSkillを再編する'
+  - log.jsonlはnoteするほどではない外部情報も含め外部情報であることに変わりないため、リンクのインデックスとして現行どおりliterature直下に置く
+  - '悩み: backlogへ入れたアイデアが参照されず陳腐化し、後回しで消化されない。Taskまで降りれば目に入るが、backlogは自由記述で長くなりがちで読む気になれない'
+  - discourse Skill等との連携を深めて組み込めば、より機能的で思いつきを漏らさない運用になる。元々「次に何をすべきかやその日の計画を提案する総合機能」（Backlog・FOCUS・Daily連携）の構想もあった
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: ブラッシュアップして改修案を考える
+    acceptance: []
+    steps:
+    - description: ユーザーの前提を踏まえ、壁打ちで改修案をブラッシュアップして提示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

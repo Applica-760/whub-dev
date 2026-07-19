@@ -1,24 +1,16 @@
 """Task read-only JSON API."""
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from whub.wflow.models.task import TaskDocument, TaskSummary
-from whub.wflow.services import (
-    WflowError,
-    list_tasks,
-    load_task,
-    load_task_workflow,
-    render_task_flow,
-    resolve_task_reference,
-    validate_task,
+from whub.models import load_manifest
+from whub.services.task import (
+    list_project_tasks,
+    load_project_task,
+    render_project_task_flow,
 )
-
-
-TASK_DIR = Path("docs/tasks")
+from whub.wflow.models.task import TaskDocument, TaskSummary
 
 router = APIRouter(prefix="/api/tasks")
 
@@ -32,25 +24,20 @@ class TaskGraphResponse(BaseModel):
 
 
 @router.get("", response_model=TaskListResponse)
-def get_tasks() -> TaskListResponse:
-    return TaskListResponse(tasks=list_tasks(TASK_DIR))
+def get_tasks(project: str = "workspace-hub") -> TaskListResponse:
+    return TaskListResponse(tasks=list_project_tasks(load_manifest(), project))
 
 
 @router.get("/{task_id}", response_model=TaskDocument)
-def get_task(task_id: str) -> TaskDocument:
-    path = resolve_task_reference(task_id, TASK_DIR)
-    document = load_task(path)
-    diagnostics = validate_task(document, load_task_workflow())
-    if diagnostics:
-        raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
-    return document
+def get_task(task_id: str, project: str = "workspace-hub") -> TaskDocument:
+    return load_project_task(load_manifest(), project, task_id)
 
 
 @router.get("/{task_id}/graph", response_model=TaskGraphResponse)
-def get_task_flow_graph(task_id: str) -> TaskGraphResponse:
-    path = resolve_task_reference(task_id, TASK_DIR)
-    document = load_task(path)
-    diagnostics = validate_task(document, load_task_workflow())
-    if diagnostics:
-        raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
-    return TaskGraphResponse(mermaid=render_task_flow(document))
+def get_task_flow_graph(
+    task_id: str,
+    project: str = "workspace-hub",
+) -> TaskGraphResponse:
+    return TaskGraphResponse(
+        mermaid=render_project_task_flow(load_manifest(), project, task_id),
+    )

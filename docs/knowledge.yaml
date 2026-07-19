@@ -320,6 +320,18 @@ constraints:
   - id: CON-046
     statement: whub bootはbootが有効なremote resourceのhostを重複排除し、wflowだけをXDG_DATA_HOME配下へcontent hash差分時に頒布してwhubは頒布しない
 
+  - id: CON-047
+    statement: Web appでProject別Taskを扱う識別子はProject名とrepository内のTASK-IDの組とし、Task依存・割り込み関係は同じProjectのdocs/tasks内で解決する
+
+  - id: CON-048
+    statement: Web appのProject選択はmanifestに定義されたProjectから1つを選び、workspace-hubを初期選択する
+
+  - id: CON-049
+    statement: OverviewのProject選択はTask一覧・Task間関係グラフ・Backlogだけに適用し、Todo・Inbox・Statusには適用しない
+
+  - id: CON-050
+    statement: Project別Task閲覧ではresourceを閲覧できない状態とTaskが存在しない状態を区別して表示する
+
   - id: CON-003
     statement: manifestではresourceを独立したtop-level一覧にせず、対応するprojectのresourceフィールド直下に定義する
 

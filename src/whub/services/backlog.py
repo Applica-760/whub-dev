@@ -5,9 +5,10 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from whub.models import Manifest, RemoteResource, SymlinkResource, workspace_hub_resource
+from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.core.remote import run_ssh_command
 from whub.services.errors import ServiceError
+from whub.services.project_content import resolve_project_content_resource
 from whub.core.target import TargetItem, on_targets
 from whub.utils.managed_block import format_block, insert_before_end_marker
 from whub.utils.process import format_process_error
@@ -21,20 +22,6 @@ def _insert_memo(content: str, memo: str) -> str:
     if content.index(MARKERS[0]) > content.index(MARKERS[1]):
         raise ServiceError("backlog start marker appears after end marker")
     return insert_before_end_marker(content, f"- {memo}\n", MARKERS)
-
-
-def _resolve_resource(
-    manifest: Manifest,
-    project: str,
-) -> SymlinkResource | RemoteResource:
-    resolved_project = manifest.resolve_project(project)
-    if resolved_project is None:
-        raise ServiceError(f"unknown project: {project}")
-    if resolved_project.resource is None:
-        if resolved_project.name == "workspace-hub":
-            return workspace_hub_resource()
-        raise ServiceError(f"project has no resource: {project}")
-    return resolved_project.resource
 
 
 def _append_local_backlog(
@@ -121,7 +108,7 @@ def _append_remote_backlog(
 
 def append_backlog(manifest: Manifest, project: str, memo: str) -> None:
     """Append MEMO to PROJECT's local or remote backlog."""
-    target = TargetItem(_resolve_resource(manifest, project), memo)
+    target = TargetItem(resolve_project_content_resource(manifest, project), memo)
     on_targets(
         [target],
         local=_append_local_backlog,
@@ -157,7 +144,7 @@ def _read_remote_backlog(resource: RemoteResource, data: None) -> str:
 
 def read_backlog(manifest: Manifest, project: str) -> str:
     """Return PROJECT's local or mounted backlog content."""
-    target = TargetItem(_resolve_resource(manifest, project), None)
+    target = TargetItem(resolve_project_content_resource(manifest, project), None)
     return on_targets(
         [target],
         local=_read_local_backlog,
