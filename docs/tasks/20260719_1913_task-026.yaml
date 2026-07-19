@@ -1,0 +1,59 @@
+schema_version: 1
+task:
+  id: TASK-026
+  state: in_progress
+  title: backlog・todo addのProject指定を--projectへ変更する
+  objective: Projectが付帯情報であるbacklogとtodo addで、位置引数Projectを--project optionへ変更する
+  approach:
+  - backlogは未指定時workspace-hub、todo addは未指定時Projectなしを維持し、旧位置引数互換は残さない。cd・run・mount・unmountは変更しない
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: TASK-014
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: backlogは--project省略時にworkspace-hub、指定時に対象Projectへ追記する
+  - id: ACC-002
+    statement: todo addは--project省略時にProjectなし、指定時に対象Projectを記録する
+  - id: ACC-003
+    statement: cd・run・mount・unmountのCLI契約を変更せず全テストが成功する
+  phases:
+  - title: CLI契約変更
+    acceptance: []
+    steps:
+    - description: backlogのProject位置引数を--projectへ変更し、省略時はworkspace-hubを対象にする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: todo addのProject位置引数を任意の--projectへ変更し、省略時はProjectなしを維持する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: cd・run・mount・unmountのCLI契約に差分がないことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: backlog・todo addのdefault・明示Project・入力不正をcommand testで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 対象テストとuv run pytest全件を実行する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: wflow task interruptはdraft childを直接開始するため、先行approve_planを取り消して操作順を修正する
+cancellation: null
+result: null

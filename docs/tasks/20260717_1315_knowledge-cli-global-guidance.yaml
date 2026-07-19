@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-014
-  state: in_progress
+  state: paused
   title: Knowledge CLIを全作業の上位ルールへ導入する
   objective: Agentがdocs/knowledge.yamlを直接読まず、whub knowledge CLIを通じて関連Knowledgeを確認する運用へ移行する
   approach:
@@ -9,8 +9,8 @@ task:
   - task-planningなど個別Skillではなく、Skillsより上位のAgentルールとして全作業へ適用する
   - 対象ファイル、問い合わせトリガー、配布方法の詳細は計画時に整理してユーザー承認を得る
   depends_on: []
-  interruption_task_id: null
-  interruption_reason: null
+  interruption_task_id: TASK-026
+  interruption_reason: Phase 2で確定したProject option方針をbacklog・todo addへ適用するため
   interruption_source_task_id: null
 plan:
   acceptance:
@@ -29,55 +29,66 @@ plan:
     acceptance: []
     steps:
     - description: local source・mount済みremote・workspace-hubの書込み先を解決する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: schema v3の空Knowledge YAMLを作成するinit処理を実装する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Pydantic検証後に一時ファイルと原子的置換で保存し、失敗時は元ファイルを維持する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Relation typeを含む全分類の追加処理とprefix別の最大ID+1採番を実装する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Relation・Exceptionの参照整合性を保ち、参照中の対象削除を拒否する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 更新ServiceとKnowledgeモデルの単体テストを追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - Knowledge読取り・更新Serviceをknowledge.pyとknowledge_operation.pyへ分離。targetでlocal・mount済みremote・workspace-hubを解決し、schema
+      v3 init、Pydantic再検証、原子的置換、全分類追加、最大ID+1採番、参照中削除拒否を実装。Knowledge関連21 tests passed。ruffはuv環境に未導入のため未実行。
     deleted: false
   - title: whub knowledge CLIのCRUD整備
     acceptance: []
     steps:
     - description: init・ls・add・rmをClickコマンドとして追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: add配下にdefinition・relation-type・relation・policy・constraint・exceptionを実装し、refとcardinalityを対応する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: IDまたはRelation type名を対象とするrmと分類絞込み可能なlsを実装する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 既存のquery TERM PROJECT・check PROJECTとYAML出力の互換性を維持する
       state: pending
       skip_reason: null
-      deleted: false
+      deleted: true
     - description: CLIの正常系・入力不正・参照削除拒否・Project解決失敗をテストする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - '2026-07-19 user decision: lsは単一Projectと必須categoryを指定して、そのカテゴリだけを表示する。Project横断の全件表示と、1
+      Projectの全カテゴリ表示は提供しない。'
+    - '2026-07-19 user decision: Knowledge CLIの対象Projectは--projectで指定し、省略時はworkspace-hubとする。check・queryの既存位置引数Project構文は維持しない。lsはdef・relation-type・rel・pol・con・excのcategoryを必須とする。addはcategory別subcommandで異なる引数を定義する。rmはID分類ではprefixと番号を分け、Relation
+      typeは名前を指定する。Phase 2完了後、他のwhub CLIも単数形--projectへ統一する割り込みTaskを作成して挿入する。'
+    - Knowledge CLIへdefault workspace-hubの--project、init、category必須ls、category別add（def・relation-type・rel・pol・con・exc）、prefix+番号またはRelation
+      type名を受けるrmを実装。既存check・queryも--projectへ変更し旧位置引数は廃止。Knowledge関連29 tests passed、実CLI
+      helpとworkspace-hub check成功、git diff --check成功。command層は約300行だがcallbackが薄く責務分離できているため現時点では単一ファイルを維持。
+    - '2026-07-19 revised user decision: --project化はProjectが付帯情報のbacklogとtodo addだけを対象候補とする。Projectが主オペランドのcd・runは位置引数を維持し、省略時に全件操作するmount・unmountも変更しない。全whub
+      CLI統一Taskは作成しない。'
     deleted: false
   - title: Agent運用のCLI一元化
     acceptance: []
@@ -131,7 +142,9 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: 'Knowledge CLIは後方互換の条件分岐を持たず、--project（default: workspace-hub）へ統一するため'
 cancellation: null
 result: null

@@ -14,7 +14,18 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
+plan:
+  acceptance: []
+  phases:
+  - title: Project指定CLI契約
+    acceptance: []
+    steps:
+    - description: wflow CLIのProject名は位置引数ではなく--project PROJECTで指定し、未指定時は既存のカレントディレクトリ動作を維持する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
 approvals: []
 acceptance_results: []
 change_requests: []

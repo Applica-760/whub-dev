@@ -1,8 +1,13 @@
 """Knowledge operations shared by CLI and web adapters."""
 from __future__ import annotations
 
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
+from pydantic import ValidationError
 
 from whub.core.target import TargetItem, on_targets
 from whub.models import (
@@ -48,38 +53,69 @@ class KnowledgeQueryResult:
         )
 
 
+def resolve_project_knowledge_path(manifest: Manifest, project: str) -> Path:
+    target = TargetItem(resolve_project_content_resource(manifest, project), None)
+
+    def local(resource: SymlinkResource, data: None) -> Path:
+        del data
+        return Path(resource.source) / KNOWLEDGE_RELATIVE_PATH
+
+    def remote(resource: RemoteResource, data: None) -> Path:
+        del data
+        root = resource._resolved_workspace_path
+        if not root.is_dir():
+            raise ServiceError(f"remote workspace path is not available: {root}")
+        return root / KNOWLEDGE_RELATIVE_PATH
+
+    return on_targets([target], local=local, remote=remote)[0]
+
+
 def _load_path(path: Path) -> Knowledge:
     if not path.is_file():
         raise NotFoundError(f"knowledge file not found: {path}")
     return load_knowledge(path)
 
 
-def _load_local(
-    resource: SymlinkResource,
-    data: None,
-) -> Knowledge:
-    del data
-    return _load_path(Path(resource.source) / KNOWLEDGE_RELATIVE_PATH)
-
-
-def _load_remote(
-    resource: RemoteResource,
-    data: None,
-) -> Knowledge:
-    del data
-    root = resource._resolved_workspace_path
-    if not root.is_dir():
-        raise ServiceError(f"remote workspace path is not available: {root}")
-    return _load_path(root / KNOWLEDGE_RELATIVE_PATH)
-
-
 def load_project_knowledge(manifest: Manifest, project: str) -> Knowledge:
     """Load a project's fixed-path Knowledge YAML."""
-    target = TargetItem(resolve_project_content_resource(manifest, project), None)
     try:
-        return on_targets([target], local=_load_local, remote=_load_remote)[0]
+        return _load_path(resolve_project_knowledge_path(manifest, project))
     except KnowledgeError as error:
         raise ServiceError(str(error)) from error
+
+
+def _validate_knowledge(knowledge: Knowledge) -> Knowledge:
+    try:
+        return Knowledge.model_validate(knowledge.model_dump())
+    except ValidationError as error:
+        raise ServiceError(f"invalid Knowledge update: {error}") from error
+
+
+def save_project_knowledge(path: Path, knowledge: Knowledge) -> None:
+    validated = _validate_knowledge(knowledge)
+    content = yaml.safe_dump(
+        validated.model_dump(exclude_none=True),
+        allow_unicode=True,
+        sort_keys=False,
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if path.exists():
+            temporary_path.chmod(path.stat().st_mode)
+        os.replace(temporary_path, path)
+    except BaseException:
+        temporary_path.unlink(missing_ok=True)
+        raise
 
 
 def _matches(term: str, *values: str | None) -> bool:
