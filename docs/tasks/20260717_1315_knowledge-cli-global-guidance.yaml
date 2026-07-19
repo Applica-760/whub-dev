@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-014
-  state: paused
+  state: in_progress
   title: Knowledge CLIを全作業の上位ルールへ導入する
   objective: Agentがdocs/knowledge.yamlを直接読まず、whub knowledge CLIを通じて関連Knowledgeを確認する運用へ移行する
   approach:

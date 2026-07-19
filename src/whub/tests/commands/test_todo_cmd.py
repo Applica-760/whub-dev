@@ -4,8 +4,8 @@
 1. pending一覧表示（デフォルト）
 2. -aで完了済みも表示
 3. add正常系：serviceが入力を受け取る
-4. add＋未知project → エラー
-5. add＋project=none → project_nameがNoneでserviceへ渡る
+4. add＋未知--project → エラー
+5. add＋--project省略 → projectがNoneでserviceへ渡る
 6. done正常系：serviceを呼ぶ
 7. done＋未存在ID → エラー
 8. done＋既完了 → エラー
@@ -84,7 +84,9 @@ class TestTodoCmdSpec:
             patch("whub.commands.todo.add_todo", return_value=item) as mock_add,
         ):
             result = CliRunner().invoke(
-                todo, ["add", "new task", "local", "red"], catch_exceptions=False,
+                todo,
+                ["add", "new task", "red", "--project", "local"],
+                catch_exceptions=False,
             )
 
         assert result.exit_code == 0
@@ -101,12 +103,15 @@ class TestTodoCmdSpec:
                 side_effect=ServiceError("unknown project: nonexistent"),
             ),
         ):
-            result = CliRunner().invoke(todo, ["add", "task", "nonexistent", "none"])
+            result = CliRunner().invoke(
+                todo,
+                ["add", "task", "none", "--project", "nonexistent"],
+            )
 
         assert result.exit_code != 0
         assert "unknown project" in result.output
 
-    def test_add_none_project(self):
+    def test_add_without_project(self):
         # ケース5
         item = _pending_todo(1, title="orphan task", priority="blue")
         with (
@@ -114,8 +119,10 @@ class TestTodoCmdSpec:
             patch("whub.commands.todo.add_todo", return_value=item) as mock_add,
         ):
             result = CliRunner().invoke(
-                todo, ["add", "orphan task", "none", "blue"], catch_exceptions=False,
-        )
+                todo,
+                ["add", "orphan task", "blue"],
+                catch_exceptions=False,
+            )
 
         assert result.exit_code == 0
         assert mock_add.call_args.args[2] is None

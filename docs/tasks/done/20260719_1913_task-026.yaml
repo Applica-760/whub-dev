@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-026
-  state: in_progress
+  state: completed
   title: backlog・todo addのProject指定を--projectへ変更する
   objective: Projectが付帯情報であるbacklogとtodo addで、位置引数Projectを--project optionへ変更する
   approach:
@@ -23,37 +23,55 @@ plan:
     acceptance: []
     steps:
     - description: backlogのProject位置引数を--projectへ変更し、省略時はworkspace-hubを対象にする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: todo addのProject位置引数を任意の--projectへ変更し、省略時はProjectなしを維持する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: cd・run・mount・unmountのCLI契約に差分がないことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - backlogをTEXT [--project PROJECT]（default workspace-hub）、todo addをTITLE PRIORITY
+      [DUE_DATE] [--project PROJECT]（default None）へ変更。cd・run・mount・unmountは無変更。対象19
+      tests passed、両command help確認成功。
     deleted: false
   - title: 検証
     acceptance: []
     steps:
     - description: backlog・todo addのdefault・明示Project・入力不正をcommand testで検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 対象テストとuv run pytest全件を実行する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - backlog・todo addのdefault・明示Project・未知Projectをcommand testで検証。対象19 testsと全308
+      tests passed、help出力とgit diff --check成功。
     deleted: false
 approvals:
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - test_backlog.pyでdefault workspace-hubと--project localを検証
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - test_todo_cmd.pyで--project省略Noneと明示Projectを検証
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - cd・run・mount・unmount差分なし、全308 tests passed
 change_requests:
 - reason: wflow task interruptはdraft childを直接開始するため、先行approve_planを取り消して操作順を修正する
 cancellation: null
-result: null
+result:
+  summary: backlogとtodo addのProject位置引数を--projectへ変更し、各既定動作を維持した

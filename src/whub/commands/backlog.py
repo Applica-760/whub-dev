@@ -11,7 +11,12 @@ from whub.services.errors import ServiceError
 
 @click.command()
 @click.argument("text")
-@click.argument("project", shell_complete=project_names)
+@click.option(
+    "--project",
+    default="workspace-hub",
+    show_default=True,
+    shell_complete=project_names,
+)
 @click.pass_context
 def backlog(ctx: click.Context, text: str, project: str) -> None:
     """Append a raw memo to a project's backlog."""

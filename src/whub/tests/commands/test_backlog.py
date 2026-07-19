@@ -1,10 +1,11 @@
 """`whub backlog`コマンドのCLI振る舞いテスト。
 
 検証するケース:
-1. serviceへの正常な追記依頼と成功表示
-2. 入力メモの前後空白除去
-3. 空メモの拒否
-4. ServiceErrorのClickException化
+1. Project未指定時はworkspace-hubへ追記
+2. --projectで明示したProjectへ追記
+3. 入力メモの前後空白除去
+4. 空メモの拒否
+5. ServiceErrorのClickException化
 
 検証しないケース:
 - local/remoteの書込・マーカー検証（serviceでカバー）
@@ -22,7 +23,7 @@ from whub.tests.helpers import manifest
 
 
 class TestBacklogCmdSpec:
-    def test_appends_memo(self):
+    def test_defaults_to_workspace_hub(self):
         # ケース1
         m = manifest()
         with (
@@ -30,14 +31,14 @@ class TestBacklogCmdSpec:
             patch("whub.commands.backlog.append_backlog") as mock_append,
         ):
             result = CliRunner().invoke(
-                backlog, ["add feature X", "local"], catch_exceptions=False,
+                backlog, ["add feature X"], catch_exceptions=False,
             )
 
         assert result.exit_code == 0
-        assert "backlog local: add feature X" in result.output
-        mock_append.assert_called_once_with(m, "local", "add feature X")
+        assert "backlog workspace-hub: add feature X" in result.output
+        mock_append.assert_called_once_with(m, "workspace-hub", "add feature X")
 
-    def test_strips_memo(self):
+    def test_accepts_project_option(self):
         # ケース2
         m = manifest()
         with (
@@ -45,19 +46,38 @@ class TestBacklogCmdSpec:
             patch("whub.commands.backlog.append_backlog") as mock_append,
         ):
             result = CliRunner().invoke(
-                backlog, ["  first memo  ", "local"], catch_exceptions=False,
+                backlog,
+                ["add feature X", "--project", "local"],
+                catch_exceptions=False,
+            )
+
+        assert result.exit_code == 0
+        assert "backlog local: add feature X" in result.output
+        mock_append.assert_called_once_with(m, "local", "add feature X")
+
+    def test_strips_memo(self):
+        # ケース3
+        m = manifest()
+        with (
+            patch("whub.commands.backlog.get_manifest", return_value=m),
+            patch("whub.commands.backlog.append_backlog") as mock_append,
+        ):
+            result = CliRunner().invoke(
+                backlog,
+                ["  first memo  ", "--project", "local"],
+                catch_exceptions=False,
             )
 
         assert result.exit_code == 0
         mock_append.assert_called_once_with(m, "local", "first memo")
 
     def test_empty_memo_errors(self):
-        # ケース3
+        # ケース4
         with (
             patch("whub.commands.backlog.get_manifest", return_value=manifest()),
             patch("whub.commands.backlog.append_backlog") as mock_append,
         ):
-            result = CliRunner().invoke(backlog, ["", "local"])
+            result = CliRunner().invoke(backlog, [""])
 
         assert result.exit_code != 0
         assert "memo text is required" in result.output
@@ -72,7 +92,7 @@ class TestBacklogCmdSpec:
         ],
     )
     def test_service_error_is_rendered(self, message: str):
-        # ケース4
+        # ケース5
         with (
             patch("whub.commands.backlog.get_manifest", return_value=manifest()),
             patch(
@@ -80,7 +100,7 @@ class TestBacklogCmdSpec:
                 side_effect=ServiceError(message),
             ),
         ):
-            result = CliRunner().invoke(backlog, ["memo", "local"])
+            result = CliRunner().invoke(backlog, ["memo", "--project", "local"])
 
         assert result.exit_code != 0
         assert message in result.output

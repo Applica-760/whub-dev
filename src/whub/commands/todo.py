@@ -19,11 +19,6 @@ from whub.services.todo import (
 from whub.utils.render import TableCell, render_table
 
 
-def _project_names(ctx, param, incomplete: str) -> list[str]:
-    none = ["none"] if "none".startswith(incomplete) else []
-    return none + project_names(ctx, param, incomplete)
-
-
 def _format_date_cell(value: date | None, *, urgent: bool) -> object:
     if value is None:
         return "-"
@@ -117,24 +112,23 @@ def todo(ctx: click.Context, a: bool) -> None:
 
 @todo.command()
 @click.argument("title")
-@click.argument("project", shell_complete=_project_names)
 @click.argument("priority", type=click.Choice(PRIORITIES))
 @click.argument("due_date", required=False)
+@click.option("--project", shell_complete=project_names)
 @click.pass_context
 def add(
     ctx: click.Context,
     title: str,
-    project: str,
     priority: str,
     due_date: str | None,
+    project: str | None,
 ) -> None:
     """Add a todo."""
-    project_name = None if project == "none" else project
     try:
         item = add_todo(
             get_manifest(ctx),
             title,
-            project_name,
+            project,
             priority,
             _parse_due_date(due_date),
         )
