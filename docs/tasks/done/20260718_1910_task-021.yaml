@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-021
-  state: in_progress
+  state: completed
   title: OverviewのProject別ビューと共通フロント部品を再設計する
   objective: OverviewでProjectを切り替え、選択ProjectのTask一覧・Task関係グラフ・Backlogを共通の選択UIから一貫して表示できるようにする
   approach:
@@ -87,18 +87,43 @@ plan:
     acceptance: []
     steps:
     - description: OpenAPI型生成、pytest、Vitest、typecheck、buildを実行してAPI・共通部品・既存ページの回帰を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: ブラウザでProject切替、Task未配置・閲覧不能表示、3Widget同期、専用ページ維持を目視確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - ユーザーがブラウザでOverviewのProject切替と、Task一覧・Task関係グラフ・Backlogの3 Widget同期を確認し、問題なしと報告した。残る目視確認はTask未配置・resource閲覧不能の表示区別と、Backlog・Knowledge・Task専用ページ維持。
+    - ユーザーが残るTask未配置・resource閲覧不能の表示区別、Backlog・Knowledge・Task専用ページ、Project付きTask詳細遷移を目視確認し、全項目問題なしと報告した。
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - ユーザーがOverviewのProject切替と3 Widget同期を目視確認
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Project選択を3 Widgetだけへ渡す実装とユーザー目視確認
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - 共通左Projectタブを含む専用3ページとナビゲーションをユーザーが目視確認
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - Project付きTask API・詳細URLの既存テストとユーザー目視確認
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - workspace-hub既定選択、APIテスト、未配置・閲覧不能表示のユーザー目視確認
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: Overviewにworkspace-hub既定の横Projectタブを追加し、Task一覧・Task関係グラフ・Backlogを同期した。Project別Task
+    APIとProject付き詳細遷移を実装し、Backlog・Knowledge・Task専用ページでは共通左Projectタブを維持した。OpenAPI型生成、pytest
+    294件、Vitest 11件、typecheck、build、ユーザー目視確認がすべて成功した。

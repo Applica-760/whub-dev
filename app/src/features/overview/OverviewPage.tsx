@@ -26,18 +26,18 @@ export function OverviewPage() {
       </OverviewColumn>
       <OverviewColumn>
         <TodoPendingWidget controller={todoController} showAllLink />
+        <TaskDependencyGraphWidget
+          height={480}
+          project={projectSelection.selectedProject}
+        />
         <TaskWidget
           overviewOnly
           project={projectSelection.selectedProject}
           showAllLink
         />
-        <BacklogWidget project={projectSelection.selectedProject} />
       </OverviewColumn>
       <OverviewColumn>
-        <TaskDependencyGraphWidget
-          height={480}
-          project={projectSelection.selectedProject}
-        />
+        <BacklogWidget project={projectSelection.selectedProject} />
       </OverviewColumn>
     </OverviewFrame>
   );

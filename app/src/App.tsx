@@ -33,11 +33,11 @@ type NavigationItem = {
 
 const navigation: NavigationItem[] = [
   { label: 'Overview', to: '/' },
-  { label: 'Backlog', to: '/backlog' },
-  { label: 'Vault', to: '/vault' },
-  { label: 'Knowledge', to: '/knowledge' },
-  { label: 'Todo', to: '/todos' },
   { label: 'Task', to: TASKS_PATH, isActive: isTasksRoute },
+  { label: 'Backlog', to: '/backlog' },
+  { label: 'Knowledge', to: '/knowledge' },
+  { label: 'Vault', to: '/vault' },
+  { label: 'Todo', to: '/todos' },
   { label: 'Inbox', to: '/inbox' },
   { label: 'Status', to: '/status' },
 ];

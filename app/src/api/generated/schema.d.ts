@@ -952,7 +952,9 @@ export interface operations {
     };
     get_tasks_api_tasks_get: {
         parameters: {
-            query?: never;
+            query?: {
+                project?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -968,11 +970,22 @@ export interface operations {
                     "application/json": components["schemas"]["TaskListResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     get_task_api_tasks__task_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                project?: string;
+            };
             header?: never;
             path: {
                 task_id: string;
@@ -1003,7 +1016,9 @@ export interface operations {
     };
     get_task_flow_graph_api_tasks__task_id__graph_get: {
         parameters: {
-            query?: never;
+            query?: {
+                project?: string;
+            };
             header?: never;
             path: {
                 task_id: string;
