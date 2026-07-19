@@ -29,8 +29,8 @@ function response(body: unknown): Response {
 }
 
 describe('TaskDetailPage', () => {
-  it('stateの上にTask IDを表示する', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({
+  it('Projectを指定してTaskを取得し、stateの上に識別子を表示する', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({
       schema_version: 1,
       task: {
         id: 'TASK-012',
@@ -49,19 +49,25 @@ describe('TaskDetailPage', () => {
       change_requests: [],
       cancellation: null,
       result: null,
-    })));
+    }));
+    vi.stubGlobal('fetch', fetchMock);
 
     render(
       <MantineProvider env="test">
-        <MemoryRouter initialEntries={['/tasks/TASK-012']}>
+        <MemoryRouter initialEntries={['/tasks/local/TASK-012']}>
           <Routes>
-            <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+            <Route path="/tasks/:project/:taskId" element={<TaskDetailPage />} />
           </Routes>
         </MemoryRouter>
       </MantineProvider>,
     );
 
+    expect(await screen.findByText('Project: local')).toBeTruthy();
     expect(await screen.findByText('Task ID: TASK-012')).toBeTruthy();
     expect(screen.getByText('state: in_progress')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/tasks/TASK-012?project=local',
+      undefined,
+    );
   });
 });

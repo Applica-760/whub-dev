@@ -1,15 +1,25 @@
 import { Alert, Box, Text } from '@mantine/core';
+import { useCallback } from 'react';
+import { useNavigate } from 'react-router';
 
 import { TaskDependencyGraph } from '../../components/TaskDependencyGraph';
 import { WidgetFrame } from '../../components/WidgetFrame';
+import { taskDetailPath } from './routes';
 import { useTasks } from './useTasks';
 
 type TaskDependencyGraphWidgetProps = {
+  project: string | null;
   height?: number;
 };
 
-export function TaskDependencyGraphWidget({ height }: TaskDependencyGraphWidgetProps) {
-  const { tasks, loading, error } = useTasks();
+export function TaskDependencyGraphWidget({ project, height }: TaskDependencyGraphWidgetProps) {
+  const { tasks, loading, error } = useTasks(project);
+  const navigate = useNavigate();
+  const handleSelectTask = useCallback((taskId: string) => {
+    if (project) {
+      void navigate(taskDetailPath(project, taskId));
+    }
+  }, [navigate, project]);
 
   return (
     <WidgetFrame title={<Text c="dimmed" fw={600} size="sm">Task dependencies</Text>}>
@@ -18,8 +28,14 @@ export function TaskDependencyGraphWidget({ height }: TaskDependencyGraphWidgetP
           <Alert color="red" title="Taskグラフを取得できませんでした">{error}</Alert>
         ) : loading ? (
           <Text c="dimmed">Taskグラフを読み込んでいます…</Text>
+        ) : !project ? (
+          <Text c="dimmed">表示するProjectを選択してください</Text>
         ) : (
-          <TaskDependencyGraph height={height} tasks={tasks} />
+          <TaskDependencyGraph
+            height={height}
+            onSelectTask={handleSelectTask}
+            tasks={tasks}
+          />
         )}
       </Box>
     </WidgetFrame>

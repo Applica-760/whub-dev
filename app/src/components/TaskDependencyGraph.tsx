@@ -1,7 +1,6 @@
 import { Box } from '@mantine/core';
 import { useEffect, useRef } from 'react';
 import type { ElementDefinition, LayoutOptions } from 'cytoscape';
-import { useNavigate } from 'react-router';
 
 export type TaskGraphItem = {
   id?: string | null;
@@ -14,6 +13,7 @@ export type TaskGraphItem = {
 type TaskDependencyGraphProps = {
   tasks: TaskGraphItem[];
   height?: number;
+  onSelectTask?: (taskId: string) => void;
 };
 
 export function buildTaskGraphElements(tasks: TaskGraphItem[]): ElementDefinition[] {
@@ -56,9 +56,12 @@ export function buildTaskGraphElements(tasks: TaskGraphItem[]): ElementDefinitio
   ];
 }
 
-export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraphProps) {
+export function TaskDependencyGraph({
+  tasks,
+  height = 360,
+  onSelectTask,
+}: TaskDependencyGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -137,9 +140,11 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
         } as LayoutOptions,
         wheelSensitivity: 0.2,
       });
-      graph.on('tap', 'node', (event) => {
-        navigate(`/tasks/${event.target.id()}`);
-      });
+      if (onSelectTask) {
+        graph.on('tap', 'node', (event) => {
+          onSelectTask(event.target.id());
+        });
+      }
       destroy = () => graph.destroy();
     }
 
@@ -148,7 +153,7 @@ export function TaskDependencyGraph({ tasks, height = 360 }: TaskDependencyGraph
       cancelled = true;
       destroy?.();
     };
-  }, [navigate, tasks]);
+  }, [onSelectTask, tasks]);
 
   return <Box h={height} ref={containerRef} w="100%" />;
 }

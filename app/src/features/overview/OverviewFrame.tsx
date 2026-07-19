@@ -10,8 +10,16 @@ type OverviewColumnProps = {
   children: ReactNode;
 };
 
+type OverviewWideProps = {
+  children: ReactNode;
+};
+
 export function OverviewFrame({ children }: OverviewFrameProps) {
   return <main className="overview-frame">{children}</main>;
+}
+
+export function OverviewWide({ children }: OverviewWideProps) {
+  return <div className="overview-wide">{children}</div>;
 }
 
 export function OverviewColumn({ children }: OverviewColumnProps) {

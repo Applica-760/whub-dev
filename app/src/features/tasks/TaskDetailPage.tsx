@@ -14,7 +14,7 @@ function stepMarker(state: string | null | undefined): string {
 }
 
 export function TaskDetailPage() {
-  const { taskId } = useParams();
+  const { project, taskId } = useParams();
   const [task, setTask] = useState<TaskResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +28,13 @@ export function TaskDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      setTask(await getTask(taskId));
+      setTask(await getTask(taskId, project));
     } catch (requestError) {
       setError(errorMessage(requestError));
     } finally {
       setLoading(false);
     }
-  }, [taskId]);
+  }, [project, taskId]);
 
   useEffect(() => {
     void loadTask();
@@ -45,7 +45,7 @@ export function TaskDetailPage() {
   return (
     <PageFrame>
       <Stack gap="md">
-        {taskId && <TaskFlowGraphWidget taskId={taskId} />}
+        {taskId && <TaskFlowGraphWidget project={project} taskId={taskId} />}
         <WidgetFrame
           action={<Anchor component={NavLink} size="sm" to="/tasks">一覧へ戻る</Anchor>}
           title={<Text c="dimmed" fw={600} size="sm">{task?.task?.title ?? 'Task'}</Text>}
@@ -57,6 +57,7 @@ export function TaskDetailPage() {
               <Text c="dimmed">Taskを読み込んでいます…</Text>
             ) : task ? (
               <Stack gap="md">
+                {project && <Text>Project: {project}</Text>}
                 <Text>Task ID: {task.task?.id ?? '-'}</Text>
                 <Text>state: {task.task?.state ?? '-'}</Text>
                 {(task.task?.approach ?? []).length > 0 && (

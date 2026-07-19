@@ -63,22 +63,25 @@ plan:
     acceptance: []
     steps:
     - description: 横長の共通Projectタブと選択状態を実装し、workspace-hubを既定選択にする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Task一覧・Task関係グラフ・Task詳細をProject対応にし、Project間でTask IDが重複しても正しく遷移させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 既存BacklogWidgetをOverviewへ追加し、1つのProject選択で3Widgetを同期させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Backlog・Task専用ページとナビゲーションを維持して共通部品を再利用し、Todo・Inbox・Statusを選択状態から分離する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - Project一覧取得とworkspace-hub既定選択をuseProjectSelectionへ共通化し、Overview専用の薄い横Projectタブと、Backlog・Knowledge・Task専用ページ共通の左Projectタブを実装した。Overviewの1選択でTask一覧・Task関係グラフ・Backlogを同期し、Task
+      API呼出しと詳細URLをProject対応にした。Todo・Inbox・Statusは選択から分離したまま維持し、typecheckと既存Vitest
+      11件が成功した。
     deleted: false
   - title: 統合動作を検証する
     acceptance: []

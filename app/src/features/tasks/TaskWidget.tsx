@@ -2,9 +2,11 @@ import { Alert, Anchor, Badge, Box, Stack, Text } from '@mantine/core';
 import { NavLink } from 'react-router';
 
 import { WidgetFrame } from '../../components/WidgetFrame';
+import { taskDetailPath } from './routes';
 import { useTasks } from './useTasks';
 
 type TaskWidgetProps = {
+  project: string | null;
   overviewOnly?: boolean;
   showAllLink?: boolean;
 };
@@ -23,8 +25,8 @@ function listStateOrder(state: string | null | undefined): number {
   return { in_progress: 0, draft: 1, completed: 2 }[state ?? ''] ?? 3;
 }
 
-export function TaskWidget({ overviewOnly = false, showAllLink = false }: TaskWidgetProps) {
-  const { tasks, loading, error } = useTasks();
+export function TaskWidget({ project, overviewOnly = false, showAllLink = false }: TaskWidgetProps) {
+  const { tasks, loading, error } = useTasks(project);
   const visibleTasks = overviewOnly
     ? tasks.filter((task) => task.ready || task.state === 'in_progress')
     : [...tasks].sort((left, right) => listStateOrder(left.state) - listStateOrder(right.state));
@@ -39,6 +41,8 @@ export function TaskWidget({ overviewOnly = false, showAllLink = false }: TaskWi
           <Alert color="red" title="Taskを取得できませんでした">{error}</Alert>
         ) : loading ? (
           <Text c="dimmed">Taskを読み込んでいます…</Text>
+        ) : !project ? (
+          <Text c="dimmed">表示するProjectを選択してください</Text>
         ) : visibleTasks.length === 0 ? (
           <Text c="dimmed">{overviewOnly ? '着手中・着手可能なTaskはありません' : 'Taskはありません'}</Text>
         ) : (
@@ -46,7 +50,7 @@ export function TaskWidget({ overviewOnly = false, showAllLink = false }: TaskWi
             {visibleTasks.map((task) => (
               <Stack gap={2} key={task.path}>
                 {task.id ? (
-                  <Anchor component={NavLink} fw={500} to={`/tasks/${task.id}`}>
+                  <Anchor component={NavLink} fw={500} to={taskDetailPath(project, task.id)}>
                     {task.title ? `${task.id.replace(/^TASK-/, '')}: ${task.title}` : task.id.replace(/^TASK-/, '')}
                   </Anchor>
                 ) : (

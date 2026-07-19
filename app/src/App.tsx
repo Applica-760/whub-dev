@@ -9,7 +9,12 @@ import { OverviewPage } from './features/overview/OverviewPage';
 import { ResourceStatusPage } from './features/status/ResourceStatusPage';
 import { TaskDetailPage } from './features/tasks/TaskDetailPage';
 import { TasksPage } from './features/tasks/TasksPage';
-import { isTasksRoute, TASKS_PATH } from './features/tasks/routes';
+import {
+  isTasksRoute,
+  LEGACY_TASK_DETAIL_PATH,
+  TASK_DETAIL_PATH,
+  TASKS_PATH,
+} from './features/tasks/routes';
 import { TodosPage } from './features/todos/TodosPage';
 
 // react-markdownの依存ツリーを初回チャンクから外すため、Backlog/Vaultは遅延読込する
@@ -82,7 +87,8 @@ export function App() {
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
             <Route element={<TasksPage />} path="/tasks" />
-            <Route element={<TaskDetailPage />} path="/tasks/:taskId" />
+            <Route element={<TaskDetailPage />} path={TASK_DETAIL_PATH} />
+            <Route element={<TaskDetailPage />} path={LEGACY_TASK_DETAIL_PATH} />
             <Route element={<InboxPage />} path="/inbox" />
             <Route element={<ResourceStatusPage />} path="/status" />
           </Routes>

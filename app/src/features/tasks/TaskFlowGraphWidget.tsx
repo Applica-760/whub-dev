@@ -8,20 +8,22 @@ import { getTaskFlowGraph } from './api';
 
 type TaskFlowGraphWidgetProps = {
   taskId: string;
+  project?: string;
 };
 
-export function TaskFlowGraphWidget({ taskId }: TaskFlowGraphWidgetProps) {
+export function TaskFlowGraphWidget({ taskId, project }: TaskFlowGraphWidgetProps) {
   const [chart, setChart] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadGraph = useCallback(async () => {
     setError(null);
+    setChart(null);
     try {
-      setChart((await getTaskFlowGraph(taskId)).mermaid);
+      setChart((await getTaskFlowGraph(taskId, project)).mermaid);
     } catch (requestError) {
       setError(errorMessage(requestError));
     }
-  }, [taskId]);
+  }, [project, taskId]);
 
   useEffect(() => {
     void loadGraph();

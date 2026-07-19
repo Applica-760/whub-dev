@@ -5,6 +5,11 @@
   padding: 1rem;
 }
 
+.overview-wide {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
 .overview-column {
   align-self: start;
   display: flex;
