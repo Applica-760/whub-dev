@@ -1,0 +1,82 @@
+schema_version: 1
+task:
+  id: TASK-023
+  state: in_progress
+  title: 全Projectの残存Markdown TaskをYAMLへ移行する
+  objective: manifest配下の全Projectに残る未完了Markdown Taskを、既存の計画・意思決定・実行事実を保持したYAML Taskへ移行し、YAMLを実行記録のSSOTに統一する
+  approach:
+  - 全Projectを再棚卸しし、docs/tasks/done配下の完了済みMarkdownは凍結履歴として対象外にする
+  - 各Markdown Taskはwflow task initで同一Project内にYAMLを新設し、計画・完了Step・実行ログ・残作業を移して検証する
+  - 移行元Markdownは削除せずYAMLへの参照を付けた凍結履歴とし、以後の更新先をYAMLだけにする
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 移行対象を着手時に確定する
+    acceptance: []
+    steps:
+    - description: remoteを含むmanifest全Projectへアクセスできる状態を確認し、着手時点のdocs/tasks配下にあるMarkdown
+        Taskを再走査する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 各Markdownを内容と配置に基づいて未完了の移行対象または完了済みの凍結履歴へ分類し、Project別の対象一覧をPhase
+        logへ記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: ProjectごとにYAML Taskへ移行する
+    acceptance: []
+    steps:
+    - description: 各移行対象について同一Projectでwflow task initを実行し、移行元MarkdownのProject相対リンクをYAML
+        Taskのapproachへ追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 元Markdownの目的・方針・意思決定・Phase・Step・実行ログ・結果を、推測で補完せずYAMLの対応項目へ移す
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 再構成したTaskごとに計画と状態の対応をユーザーへ提示し、承認後に既完了Stepと残作業をwflowで反映する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 移行元Markdownを凍結する
+    acceptance: []
+    steps:
+    - description: 移行先YAMLをwflow task checkで検証し、YAMLがSSOTになったことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 移行元Markdownの本文を保持したまま移行先YAMLへのProject相対リンクを付け、以後更新しない凍結履歴として明示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 全Projectの移行結果を検証する
+    acceptance: []
+    steps:
+    - description: manifest全Projectを再走査し、未移行の活動中Markdown Taskが残っていないことと完了済みMarkdownが変更されていないことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 作成した全YAMLのwflow task check結果とProject別の移行結果をPhase logへ記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

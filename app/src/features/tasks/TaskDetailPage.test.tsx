@@ -29,27 +29,35 @@ function response(body: unknown): Response {
 }
 
 describe('TaskDetailPage', () => {
-  it('Projectを指定してTaskを取得し、stateの上に識別子を表示する', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(response({
-      schema_version: 1,
-      task: {
-        id: 'TASK-012',
-        state: 'in_progress',
-        title: '開発モード',
-        objective: '確認を速くする',
-        approach: [],
-        depends_on: [],
-        interruption_task_id: null,
-        interruption_reason: null,
-        interruption_source_task_id: null,
-      },
-      plan: null,
-      approvals: [],
-      acceptance_results: [],
-      change_requests: [],
-      cancellation: null,
-      result: null,
-    }));
+  it('Projectを指定してTaskと依存関係を表示する', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({
+        schema_version: 1,
+        task: {
+          id: 'TASK-012',
+          state: 'in_progress',
+          title: '開発モード',
+          objective: '確認を速くする',
+          approach: [],
+          depends_on: ['TASK-010'],
+          interruption_task_id: null,
+          interruption_reason: null,
+          interruption_source_task_id: null,
+        },
+        plan: null,
+        approvals: [],
+        acceptance_results: [],
+        change_requests: [],
+        cancellation: null,
+        result: null,
+      }))
+      .mockResolvedValueOnce(response({
+        tasks: [
+          { depends_on: [], id: 'TASK-010', path: 'done/task-010.yaml' },
+          { depends_on: ['TASK-012'], id: 'TASK-019', path: 'task-019.yaml' },
+          { depends_on: ['TASK-012'], id: 'TASK-020', path: 'task-020.yaml' },
+        ],
+      }));
     vi.stubGlobal('fetch', fetchMock);
 
     render(
@@ -65,8 +73,16 @@ describe('TaskDetailPage', () => {
     expect(await screen.findByText('Project: local')).toBeTruthy();
     expect(await screen.findByText('Task ID: TASK-012')).toBeTruthy();
     expect(screen.getByText('state: in_progress')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith(
+    expect(screen.getByText('Depends on: TASK-010')).toBeTruthy();
+    expect(screen.getByText('Depended on by: TASK-019, TASK-020')).toBeTruthy();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
       '/api/tasks/TASK-012?project=local',
+      undefined,
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/tasks?project=local',
       undefined,
     );
   });

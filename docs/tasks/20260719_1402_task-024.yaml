@@ -1,0 +1,22 @@
+schema_version: 1
+task:
+  id: TASK-024
+  state: draft
+  title: wflowにProject指定を追加する
+  objective: Mac上のworkspace-hubからmanifestで対象Projectを選択し、各ProjectのTask YAMLを一元操作できるようにする
+  approach:
+  - wflowをworkspace-hub付属CLIとしてmanifestのProject解決に接続し、local sourceまたはmount済みremote
+    workspaceのTask YAMLを操作する
+  - Project指定による集中操作を先に導入し、remote wflow頒布の廃止はLinux Desktopログ取得の検証後に判断する
+  - 移行中はProject未指定時の既存カレントディレクトリ動作を維持する
+  depends_on:
+  - TASK-014
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

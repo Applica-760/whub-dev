@@ -6,7 +6,7 @@ import type { TaskResponse } from '../../api/client';
 import { errorMessage } from '../../api/errorMessage';
 import { PageFrame } from '../../components/PageFrame';
 import { WidgetFrame } from '../../components/WidgetFrame';
-import { getTask } from './api';
+import { getTask, listTasks } from './api';
 import { TaskFlowGraphWidget } from './TaskFlowGraphWidget';
 
 function stepMarker(state: string | null | undefined): string {
@@ -16,6 +16,7 @@ function stepMarker(state: string | null | undefined): string {
 export function TaskDetailPage() {
   const { project, taskId } = useParams();
   const [task, setTask] = useState<TaskResponse | null>(null);
+  const [dependents, setDependents] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,8 +28,22 @@ export function TaskDetailPage() {
     }
     setLoading(true);
     setError(null);
+    setDependents([]);
     try {
-      setTask(await getTask(taskId, project));
+      const [loadedTask, taskList] = await Promise.all([
+        getTask(taskId, project),
+        listTasks(project),
+      ]);
+      setTask(loadedTask);
+      setDependents(
+        taskList.tasks
+          .flatMap((item) => (
+            item.id != null && (item.depends_on ?? []).includes(taskId)
+              ? [item.id]
+              : []
+          ))
+          .sort(),
+      );
     } catch (requestError) {
       setError(errorMessage(requestError));
     } finally {
@@ -60,6 +75,8 @@ export function TaskDetailPage() {
                 {project && <Text>Project: {project}</Text>}
                 <Text>Task ID: {task.task?.id ?? '-'}</Text>
                 <Text>state: {task.task?.state ?? '-'}</Text>
+                <Text>Depends on: {(task.task?.depends_on ?? []).join(', ') || '-'}</Text>
+                <Text>Depended on by: {dependents.join(', ') || '-'}</Text>
                 {(task.task?.approach ?? []).length > 0 && (
                   <Stack gap={2}>
                     <Text fw={600}>Approach</Text>

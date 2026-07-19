@@ -17,11 +17,44 @@ type TaskDependencyGraphProps = {
 };
 
 export function buildTaskGraphElements(tasks: TaskGraphItem[]): ElementDefinition[] {
-  const visibleTasks = tasks.filter(
-    (task): task is TaskGraphItem & { id: string } => Boolean(task.id)
-      && task.state !== 'completed'
-      && task.state !== 'cancelled',
+  const identifiedTasks = tasks.filter(
+    (task): task is TaskGraphItem & { id: string } => Boolean(task.id),
   );
+  const tasksById = new Map(identifiedTasks.map((task) => [task.id, task]));
+  const interruptingTasks = new Map<string, string[]>();
+  identifiedTasks.forEach((task) => {
+    if (task.interruption_source_task_id != null) {
+      const sources = interruptingTasks.get(task.interruption_source_task_id) ?? [];
+      sources.push(task.id);
+      interruptingTasks.set(task.interruption_source_task_id, sources);
+    }
+  });
+
+  const visibleIds = new Set(
+    identifiedTasks
+      .filter((task) => task.state !== 'completed' && task.state !== 'cancelled')
+      .map((task) => task.id),
+  );
+  const pending = [...visibleIds];
+  while (pending.length > 0) {
+    const taskId = pending.pop();
+    if (taskId == null) {
+      continue;
+    }
+    const task = tasksById.get(taskId);
+    const upstreamIds = [
+      ...(task?.depends_on ?? []),
+      ...(interruptingTasks.get(taskId) ?? []),
+    ];
+    upstreamIds.forEach((upstreamId) => {
+      if (tasksById.has(upstreamId) && !visibleIds.has(upstreamId)) {
+        visibleIds.add(upstreamId);
+        pending.push(upstreamId);
+      }
+    });
+  }
+
+  const visibleTasks = identifiedTasks.filter((task) => visibleIds.has(task.id));
   const taskIds = new Set(visibleTasks.map((task) => task.id));
 
   return [
@@ -107,6 +140,8 @@ export function TaskDependencyGraph({
           { selector: 'node.in_progress', style: { 'background-color': '#e7f5ff', 'border-color': '#228be6' } },
           { selector: 'node.paused', style: { 'background-color': '#fff3bf', 'border-color': '#f08c00' } },
           { selector: 'node.draft', style: { 'background-color': '#f8f9fa', 'border-color': '#868e96' } },
+          { selector: 'node.completed', style: { 'background-color': '#ebfbee', 'border-color': '#40c057' } },
+          { selector: 'node.cancelled', style: { 'background-color': '#f1f3f5', 'border-color': '#adb5bd', color: '#868e96' } },
           {
             selector: 'edge',
             style: {

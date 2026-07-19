@@ -1,0 +1,21 @@
+schema_version: 1
+task:
+  id: TASK-025
+  state: draft
+  title: Linux Desktop実行ログをwhubから取得する方式を検証する
+  objective: 画面出力が必要なLinux Desktop上の処理について、手作業の転記なしにMac側Agentがwhub経由で診断情報を取得できる方式を確定する
+  approach:
+  - la-imitation-learningを実証対象とし、whub run・mount・fetchとProject側のログ保存規約を比較検証する
+  - stdout・stderr・終了状態をMac側Agentが取得するための責務とデータ経路を整理する
+  - 本Taskは方式の検証と判断に留め、remote wflow・Skill・Agentルール頒布の廃止は結論を受けた後続Taskで扱う
+  depends_on:
+  - TASK-024
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
