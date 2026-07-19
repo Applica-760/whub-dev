@@ -1,0 +1,47 @@
+schema_version: 1
+task:
+  id: TASK-027
+  state: draft
+  title: Knowledge refの実在検証
+  objective: whub knowledge checkでproject相対パス形式のref切れを検出できるようにする
+  approach:
+  - refの形式を分類し、project root基準で検証可能な参照だけを存在確認する
+  depends_on:
+  - TASK-014
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 検証仕様
+    acceptance: []
+    steps:
+    - description: 相対パス・URL等のref形式を分類し、存在検証の対象と非対象を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 実装と検証
+    acceptance:
+    - id: ACC-001
+      statement: 欠損したproject相対refがKnowledge IDとパスを伴うエラーになる
+    - id: ACC-002
+      statement: 有効なrefと仕様上の検証対象外refはcheckを通過する
+    steps:
+    - description: project rootを基準に対象refの存在をwhub knowledge checkで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 有効なref・欠損ref・検証対象外refのCLIテストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

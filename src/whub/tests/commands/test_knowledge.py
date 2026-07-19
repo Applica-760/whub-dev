@@ -1,6 +1,7 @@
 """`whub knowledge` CLIの読取り・更新境界テスト。"""
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -9,8 +10,9 @@ import yaml
 from click.testing import CliRunner
 
 from whub.commands.knowledge import knowledge as knowledge_command
+from whub.models import Manifest
 from whub.services.errors import ServiceError
-from whub.tests.helpers import knowledge, manifest
+from whub.tests.helpers import knowledge, manifest, manifest_data
 
 
 def test_check_defaults_to_workspace_hub() -> None:
@@ -239,3 +241,95 @@ def test_reports_invalid_target_no_match_and_service_error() -> None:
         service_error = CliRunner().invoke(knowledge_command, ["check"])
     assert service_error.exit_code != 0
     assert "knowledge unavailable" in service_error.output
+
+
+def test_crud_roundtrip_in_temporary_project(tmp_path: Path) -> None:
+    data = manifest_data()
+    source = tmp_path / "project"
+    source.mkdir()
+    data["projects"][0]["resource"]["source"] = str(source)
+    loaded_manifest = Manifest.model_validate(data)
+    runner = CliRunner()
+
+    with patch(
+        "whub.commands.knowledge.get_manifest",
+        return_value=loaded_manifest,
+    ):
+        for arguments in (
+            ["init", "--project", "local"],
+            ["add", "def", "alpha", "最初の定義", "--project", "local"],
+            ["add", "def", "beta", "次の定義", "--project", "local"],
+            [
+                "add",
+                "relation-type",
+                "uses",
+                "subjectがobjectを使う",
+                "--project",
+                "local",
+            ],
+            [
+                "add",
+                "rel",
+                "DEF-001",
+                "uses",
+                "DEF-002",
+                "--project",
+                "local",
+            ],
+        ):
+            result = runner.invoke(
+                knowledge_command,
+                arguments,
+                catch_exceptions=False,
+            )
+            assert result.exit_code == 0
+
+        listed = runner.invoke(
+            knowledge_command,
+            ["ls", "def", "--project", "local"],
+            catch_exceptions=False,
+        )
+        queried = runner.invoke(
+            knowledge_command,
+            ["query", "alpha", "--project", "local"],
+            catch_exceptions=False,
+        )
+        checked = runner.invoke(
+            knowledge_command,
+            ["check", "--project", "local"],
+            catch_exceptions=False,
+        )
+
+        assert [item["id"] for item in yaml.safe_load(listed.output)["definitions"]] == [
+            "DEF-001",
+            "DEF-002",
+        ]
+        query_output = yaml.safe_load(queried.output)
+        assert query_output["definitions"][0]["id"] == "DEF-001"
+        assert query_output["relations"][0]["id"] == "REL-001"
+        assert checked.output.startswith("valid local:")
+
+        for arguments in (
+            ["rm", "rel", "1", "--project", "local"],
+            ["rm", "relation-type", "uses", "--project", "local"],
+            ["rm", "def", "1", "--project", "local"],
+            ["rm", "def", "2", "--project", "local"],
+        ):
+            result = runner.invoke(
+                knowledge_command,
+                arguments,
+                catch_exceptions=False,
+            )
+            assert result.exit_code == 0
+
+    knowledge_path = source / "docs" / "knowledge.yaml"
+    assert yaml.safe_load(knowledge_path.read_text()) == {
+        "schema_version": 3,
+        "definitions": [],
+        "relation_types": [],
+        "relations": [],
+        "policies": [],
+        "constraints": [],
+        "exceptions": [],
+    }
+    assert not list(source.rglob("*.tmp"))

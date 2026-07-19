@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-014
-  state: in_progress
+  state: completed
   title: Knowledge CLIを全作業の上位ルールへ導入する
   objective: Agentがdocs/knowledge.yamlを直接読まず、whub knowledge CLIを通じて関連Knowledgeを確認する運用へ移行する
   approach:
@@ -94,57 +94,85 @@ plan:
     acceptance: []
     steps:
     - description: ルートAGENTS.mdのKnowledge直接参照をwhub knowledge queryへ変更する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Knowledge変更にadd・rmを使いYAMLを直接編集しない規則を追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: refileを含む有効なSkillからKnowledge YAMLの直接参照・編集指示を調査して更新する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: standalone Knowledge CLIとwhub bootへのKnowledge実行ファイル頒布を追加しないことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Agentルールの適用範囲をworkspace-hub起点に限定し、remote共通ルールの全面移行をTASK-025まで保留する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - workspace-hub起点のローカル有効設定AGENTS.md・.claude/CLAUDE.md・両refile Skillをwhub knowledge
+      queryへ移行し、Knowledge変更はadd/rmのみ・YAML直接編集禁止とした。旧POL-013をCLIでPOL-017へ置換。旧直接参照指示0件、残るdocs/knowledge.yaml記載は直接編集禁止のみ。boot資産に直接参照なし、pyproject
+      scriptsはwhub/wflowのみ、bootのremote実行ファイル頒布はwflowのみを確認。ローカル有効設定4ファイルはgitignore対象で、boot資産・remote共通ルールはTASK-025まで未変更。Knowledge
+      check、boot/Knowledge 26 tests、git diff --check成功。
     deleted: false
   - title: 統合検証
     acceptance: []
     steps:
     - description: 一時Projectでinit・add・ls・query・rm・checkの往復動作を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: local・mount済みremote・workspace-hubのパス解決を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 不正な更新で既存Knowledge YAMLが変化しないことを検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 既存Web API・Knowledge Widget・query・checkとの互換性を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: uv run pytestで全テストを実行し、workspace-hubではcheck・queryの読取り確認を行う
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - pytest tmp_path内の一時local Projectでinit・全主要add・ls・query・rm・check往復を追加し、終了時に空schemaと一時ファイル0件を確認。既存Serviceテストでlocal・mount済みremote・workspace-hub解決と不正更新時不変性を検証。Web
+      API含むPython 309 tests、frontend 13 tests、typecheck、実workspace-hub check/query、git
+      diff --check成功。workspace内の一時ファイル・生成物0件。既存tmp/display.drawioは今回以前からあるユーザー所有物のため未変更。
     deleted: false
 approvals:
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - 一時Project CRUD往復testとKnowledge command/service tests
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - 原子的置換失敗・検証失敗時の既存ファイル不変test
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - AGENTS・CLAUDE・両refile Skillの旧直接参照指示0件
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - bootはwflowのみ頒布、Web API 13 tests・frontend 13 tests・typecheck成功
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - Python全309 testsとKnowledge CRUD往復成功
 change_requests:
 - reason: 'Knowledge CLIは後方互換の条件分岐を持たず、--project（default: workspace-hub）へ統一するため'
 cancellation: null
-result: null
+result:
+  summary: Knowledge CRUD CLIと安全な更新基盤を実装し、workspace-hub起点のAgent運用をwhub knowledge query・add・rmへ移行した
