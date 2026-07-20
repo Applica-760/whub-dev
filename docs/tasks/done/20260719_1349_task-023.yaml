@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-023
-  state: in_progress
+  state: completed
   title: 全Projectの残存Markdown TaskをYAMLへ移行する
   objective: manifest配下の全Projectに残る未完了Markdown Taskを、既存の計画・意思決定・実行事実を保持したYAML Taskへ移行し、YAMLを実行記録のSSOTに統一する
   approach:
@@ -37,47 +37,60 @@ plan:
     steps:
     - description: 各移行対象について同一Projectでwflow task initを実行し、移行元MarkdownのProject相対リンクをYAML
         Taskのapproachへ追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 元Markdownの目的・方針・意思決定・Phase・Step・実行ログ・結果を、推測で補完せずYAMLの対応項目へ移す
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 再構成したTaskごとに計画と状態の対応をユーザーへ提示し、承認後に既完了Stepと残作業をwflowで反映する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - '2026-07-20 移行中断: sns-lab TASK-001 draftは再構成済み。la-imitation-learning TASK-001（DSRL）を作成して計画挿入中、remote
       mountがAppleDouble sidecar docs/tasks/._20260720_1417_task-001.yamlを生成。wflowのTask探索が全*.yamlをUTF-8として読むためUnicodeDecodeErrorで停止した。DSRL
       draftはPhase 1途中まで有効。根本修正の判断待ち。'
+    - '2026-07-20 AppleDouble修正後に移行先draft 4件を作成・検証: sns-lab TASK-001（20260526_0056_chat-ui-polish.md）、la-imitation-learning
+      TASK-001（20260618_1030_dsrl_implementation.md）、TASK-002（20260708_1230_hilserl_sq_only_termination.md）、TASK-003（20260711_1157_hilserl_action_scale_fix.md）。全Taskに移行元Project相対pathをapproachとして記録し、wflow
+      task check成功。'
+    - 4件の状態対応をユーザー承認後に反映。全Taskをin_progressへ移行。sns-lab TASK-001はPhase 1〜5完了・Phase 6残、IL
+      TASK-001は全Step未完了、TASK-002はPhase 1〜3完了・Phase 4残、TASK-003はPhase 1〜2とPhase 3先頭3
+      Step完了・残作業維持。元Markdownの実行ログ空欄/なしも明記し、TASK-002の試行1〜6・引き継ぎ・運用注意、TASK-003の実測・検証結果・追加デモ注意を対応Phase
+      logへ移した。4件すべてwflow task check成功。
     deleted: false
   - title: 移行元Markdownを凍結する
     acceptance: []
     steps:
     - description: 移行先YAMLをwflow task checkで検証し、YAMLがSSOTになったことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 移行元Markdownの本文を保持したまま移行先YAMLへのProject相対リンクを付け、以後更新しない凍結履歴として明示する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 移行元Markdown 4件のタイトル直後へ、本文を保持したまま移行先YAMLのProject相対path表示・兄弟file link・以後更新しない凍結履歴の明示を追加。sns-lab→TASK-001、IL
+      DSRL→TASK-001、s/q-only→TASK-002、action scale→TASK-003。
     deleted: false
   - title: 対象Projectの移行結果を検証する
     acceptance: []
     steps:
     - description: 対象Projectを再走査し、未移行の活動中Markdown Taskが残っていないことと完了済みMarkdownが変更されていないことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 作成した全YAMLのwflow task check結果とProject別の移行結果をPhase logへ記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - '対象Project再走査結果: migrated-frozenはsns-lab 1件・la-imitation-learning 3件、completed-historyはesn-lab
+      2件、unmigrated-activeは0件。esn-lab完了済みMarkdown 2件はgit diff --exit-code成功で無変更を確認。'
+    - 移行先4 YAMLは全てwflow task check成功、全てin_progress。Markdownリンク先4 fileの存在確認、sns-lab/ILの対象差分はタイトル直後の凍結表示追加のみ、各repositoryのgit
+      diff --check成功。
     deleted: false
 approvals:
 - actor: user
@@ -86,4 +99,6 @@ acceptance_results: []
 change_requests:
 - reason: ユーザー判断によりTaskのないesn-lab-runを除外し、現在アクセス可能なProjectだけを移行対象とするため
 cancellation: null
-result: null
+result:
+  summary: 現在アクセス可能なProjectを棚卸しし、活動中Markdown Task 4件をProject別YAML Taskへ移行した。既完了状態・意思決定・試行ログ・引き継ぎ・残作業を保持して全Taskをin_progressへ移し、元Markdownを移行先参照付き凍結履歴にした。完了済みMarkdown
+    2件は変更せず、未移行の活動中Markdownが0件であることを確認した。
