@@ -1,0 +1,21 @@
+schema_version: 1
+task:
+  id: TASK-033
+  state: draft
+  title: フロントエンド・Pythonのフォーマッタとpre-commit検査を導入する
+  objective: フロントエンドとPythonのコードについて、commit前にフォーマット不整合を検出できる状態にする
+  approach:
+  - 対象はフロントエンドとPythonとし、各言語へフォーマッタを導入する。
+  - pre-commitではフォーマット検査を実行し、commit前に不整合を検出する。
+  - 今回の範囲はフォーマッタ導入とpre-commitによるフォーマット検査に限定し、Linter・CI・Agentコードレビューは含めない。
+  - 具体的なフォーマッタは未決定とし、既存構成を確認した上で選択肢とトレードオフを提示して承認を得る。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

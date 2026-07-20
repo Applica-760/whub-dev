@@ -1,0 +1,22 @@
+schema_version: 1
+task:
+  id: TASK-034
+  state: draft
+  title: WhubのGit worktree安全対応を検討する
+  objective: Whub CLIをGit worktreeから実行した場合のコード・workspace・data・runtime stateの参照を調査し、安全な対応方針を決定する
+  approach:
+  - Git worktreeで複数Taskを並列処理する運用を前提に、Whub CLIが動かない場合と意図しないcheckoutを操作する場合を調査する。
+  - この会話で確認した、通常のwhubが本体checkoutの仮想環境を参照し得ること、uv run whubではworktree側の設定不足が起こり得ること、whub_rootがworkspace_path等の基準にも使われることを検討の出発点とする。
+  - 実行コードの場所、workspace root、data dir、runtime stateの分離、実際の参照先表示、参照先不一致時の警告、共有状態の安全性を候補として比較し、採否は調査結果とユーザー承認に基づいて決める。
+  - 本Taskは対応方針の検討までを対象とし、未承認の実装内容を確定しない。
+  depends_on:
+  - TASK-033
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

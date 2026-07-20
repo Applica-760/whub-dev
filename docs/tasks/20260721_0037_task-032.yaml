@@ -1,0 +1,100 @@
+schema_version: 1
+task:
+  id: TASK-032
+  state: in_progress
+  title: 任意タイミングのDaily追記をInbox Widgetへ統合
+  objective: 感じた時点の思考・感情を日末まで記憶せず低負担で残せるよう、Overviewの既存Inbox Widgetから当日のvault/dailyへ時刻付き生ログを追記できるようにする
+  approach:
+  - Daily入力は強制通知や定時要求を行わず、利用者が任意タイミングで本文だけを送信する
+  - 実行時のローカル日時からvault/daily/YYYY-MM-DD.mdを決定し、HH:MMの時刻見出しと入力本文を既存内容を壊さず追記する
+  - InboxとDailyは保存契約が異なるためservice/APIを分離し、UIフォームとWidgetFrameだけを共通化する
+  - OverviewではWidgetFrameを増やさず、Inbox/Daily切替を配置してモード別の入力状態・検証・結果表示を保持する
+  - Agentic分析・日次要約・活動量スコア・明示的な日付変更・CLI入力は本Taskの対象外とし、蓄積後の別Taskで検討する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: Dailyモードは通知や定時入力を要求せず、任意タイミングで空白でない複数行本文を送信できる
+  - id: ACC-002
+    statement: 送信時のローカル日付に対応するvault/daily/YYYY-MM-DD.mdへ、HH:MMの見出しと入力本文が既存内容を失わず追記される
+  - id: ACC-003
+    statement: 同日中の複数投稿は順序どおり蓄積され、日付が変われば別のDailyファイルへ保存される
+  - id: ACC-004
+    statement: Overviewには単一のWidgetFrameだけが置かれ、その内部でInbox/Dailyを明確に切り替えられ、Inboxの既存投函動作が維持される
+  - id: ACC-005
+    statement: InboxとDailyの入力状態・必須項目・送信結果がモード別に管理され、切替操作による入力消失や誤投函を防げる
+  - id: ACC-006
+    statement: 新規Dailyはvault規約に沿う最小frontmatterを持ち、既存形式のDailyにも破壊的変更なく追記できる
+  - id: ACC-007
+    statement: Agentic分析・日次要約・活動量スコア・明示的な日付変更・CLI入力が本Taskへ混入していない
+  - id: ACC-008
+    statement: backend/frontend testsとfrontend buildが成功し、実画面でOverviewの占有面積増加がないことを確認できる
+  phases:
+  - title: Daily追記の保存契約とAPIを実装する
+    acceptance: []
+    steps:
+    - description: ローカル日時による対象日、時刻見出し、既存Dailyへの追記、新規Dailyの最小frontmatterを仕様化する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 空白だけの本文を拒否し、複数行本文を無加工で当日ファイルへ安全に追記するserviceを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Daily追記用POST APIを追加してserverへ登録し、OpenAPI由来のfrontend型を再生成する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 新規作成・既存追記・同日複数投稿・日付境界・空本文・vault未配置をbackend testで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Inbox/Daily切替を単一WidgetFrameへ統合する
+    acceptance: []
+    steps:
+    - description: 既存Inbox入力の状態と送信処理を、Dailyと共用できる入力Widgetへ整理する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: WidgetFrameのaction領域へInbox/Daily切替を配置し、Overview上のWidget数と占有面積を増やさない
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Inboxではtitleと本文、Dailyでは本文だけを表示し、モード別draft・validation・送信結果を独立して保持する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Inboxの既存投函動作とDaily追記動作をcomponent test、typecheck、buildで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 運用境界を記録して総合検証する
+    acceptance: []
+    steps:
+    - description: 任意入力であり未記入を状態良好と解釈しないこと、生ログを後からAgent分析する構想をKnowledgeまたは運用文書へ記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 実画面で切替・複数行投稿・連続投稿・成功失敗表示・Overviewレイアウトを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv run pytest、appのnpm testとnpm run buildを実行し、回帰がないことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

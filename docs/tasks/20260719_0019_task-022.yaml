@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-022
-  state: draft
+  state: in_progress
   title: literature・inbox・backlogの振り分け運用再編案の検討
   objective: vaultに蓄積した外部知識・思いつきを漏らさず活用できるよう、振り分け運用の前提を整理し、改修案をブラッシュアップして固める
   approach:
@@ -29,7 +29,8 @@ plan:
       deleted: false
     log: []
     deleted: false
-approvals: []
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null

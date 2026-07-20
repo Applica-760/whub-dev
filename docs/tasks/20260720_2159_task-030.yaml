@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-030
-  state: draft
+  state: in_progress
   title: remote GUI sessionをwhubで予約・観測する
   objective: Mac側whubでProjectのremote GUI sessionを予約し、Linux GUIで固定launcherからtmuxを開始して、Agentがwhubだけでlive出力・履歴・終了状態を取得できるようにする
   approach:
@@ -14,8 +14,101 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: session protocolとCLI契約の確定
+    acceptance: []
+    steps:
+    - description: session descriptorのPydantic schema、run ID、lifecycle、run単位cleanup境界を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: reserve・ls・show・logs --follow・cleanのCLIと、複数pending時に明示選択を求めるlauncher契約を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: remote launcherはpython3・PyYAML・tmux 3.4を前提とし、protocol version不一致時の更新と依存不足時のエラーを定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 予約とruntime配置serviceの実装
+    acceptance: []
+    steps:
+    - description: RemoteResourceを解決し、mountを使わずSSH経由でlauncherとpending descriptorを生成するsession
+        serviceを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Projectの.gitignoreへmanaged blockで.whub/を追加し、runtime directory 0700・file
+        0600と一時ファイルからのrenameを保証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: launcherの必要時生成・protocol更新、run ID衝突、SSH失敗、既存runtime保護をservice・modelテストで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Linux GUI launcherとtmux記録の実装
+    acceptance: []
+    steps:
+    - description: 固定launcherが通常のblock YAML descriptorをPyYAMLで読み、pendingが1件なら自動選択し複数ならrun
+        ID指定を要求する処理を実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: GUI環境を継承した専用tmux sessionを開始し、window・paneの動的IDと表示名、raw transcript、runtime
+        metadataを記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: pane終了code・signalからcompleted・failed・interruptedを永続化し、hook・権限・異常終了をlauncherテストで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: whub session CLIと観測処理の実装
+    acceptance: []
+    steps:
+    - description: whub session reserve・ls・show・logs・cleanを追加し、Projectとrun IDだけでsessionを操作できるようにする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: live tmux出力と永続transcriptを統合し、logs --followの表示時だけANSIを除去して観測切断がremote処理へ影響しないようにする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: pendingと終了済みrunのcleanはdescriptor・metadata・transcriptだけを削除し、running
+        runのcleanを拒否するCLIテストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 回帰テストと実機検証
+    acceptance: []
+    steps:
+    - description: session関連のmodel・service・core・command・launcherテストとuv run pytest全体を成功させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: la-imitation-learningをunmount状態でreserveし、Linux GUI launcherからRerunを起動してlive観測・切断後の継続・終了状態を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: run単位cleanと再予約を確認し、TASK-025の受け入れ条件に対応する証拠をPhase logへ記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null

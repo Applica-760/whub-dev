@@ -1,0 +1,86 @@
+schema_version: 1
+task:
+  id: TASK-031
+  state: in_progress
+  title: Whub Overview内タスク詳細表示
+  objective: OverviewのBacklog列先頭に選択中Taskのフローと詳細を表示し、Task依存グラフのノード選択でページ遷移せず表示内容を切り替えられるようにする
+  approach:
+  - TaskDetailPage内のTask詳細WidgetFrameと取得処理を再利用可能なTaskDetailWidgetへ抽出する
+  - TaskFlowGraphWidgetとTaskDetailWidgetをOverviewのBacklog列先頭へ配置する
+  - TaskDependencyGraphWidgetを選択コールバック対応にし、OverviewPageで選択Task状態を管理する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: OverviewのTask依存グラフでノードを選択するとURL遷移せず、同じOverview内のTaskフローと詳細が選択Taskへ切り替わる
+  - id: ACC-002
+    statement: OverviewでProjectを切り替えるとTask選択が解除され、別ProjectのTaskを誤表示・誤取得しない
+  - id: ACC-003
+    statement: TasksPageのTask依存グラフでノードを選択すると、従来どおり選択Taskの個別詳細ページへ遷移する
+  - id: ACC-004
+    statement: TaskDetailPageの既存URL・Taskフロー・Task情報・手順・依存関係・一覧導線が維持される
+  phases:
+  - title: 共有Task詳細Widgetの抽出
+    acceptance: []
+    steps:
+    - description: TaskDetailPage内のTask取得・依存元算出・手順表示を、project・taskId・任意actionを受け取るTaskDetailWidgetへ抽出する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Task未選択時はAPIを呼ばず選択案内を表示できるようにし、Overviewでも同じWidgetを利用可能にする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: TaskDetailPageをTaskFlowGraphWidgetとTaskDetailWidgetの構成へ置換し、既存URL・一覧へ戻るリンク・表示内容を維持する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 共有WidgetとTaskDetailPageの取得・表示回帰テストを追加・更新する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Overview内選択と専用Taskビュー遷移の分離
+    acceptance: []
+    steps:
+    - description: TaskDependencyGraphWidgetに任意のonSelectTaskを追加し、指定時はコールバック、未指定時は従来どおりtaskDetailPathへ遷移させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: OverviewPageで選択TaskをProjectに紐づけて管理し、Project切替時に選択を解除する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Backlog列の先頭へ選択TaskのTaskFlowGraphWidgetとTaskDetailWidgetを配置し、未選択時はグラフからの選択案内を表示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Overviewではノード選択がURL遷移せず表示Taskを切り替え、TasksPageでは従来どおり個別詳細へ遷移することをテストする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 統合検証
+    acceptance: []
+    steps:
+    - description: appのテストとビルドを実行し、Overview・TasksPage・TaskDetailPageの回帰がないことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 必要に応じてuv run pytestを実行し、Python側を含む既存機能への回帰がないことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
