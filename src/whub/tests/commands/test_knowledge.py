@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -20,7 +19,7 @@ def test_check_defaults_to_workspace_hub() -> None:
     with (
         patch("whub.commands.knowledge.get_manifest", return_value=loaded_manifest),
         patch(
-            "whub.commands.knowledge.load_project_knowledge",
+            "whub.commands.knowledge.check_project_knowledge",
             return_value=knowledge(),
         ) as mock_load,
     ):
@@ -32,8 +31,8 @@ def test_check_defaults_to_workspace_hub() -> None:
 
     assert result.exit_code == 0
     assert result.output.strip() == (
-        "valid workspace-hub: 2 definitions, 1 relation types, 1 relations, "
-        "1 policies, 1 constraints, 1 exceptions"
+        "valid workspace-hub: 2 definitions, 1 relations, 1 policies, "
+        "1 constraints, 1 exceptions"
     )
     mock_load.assert_called_once_with(loaded_manifest, "workspace-hub")
 
@@ -55,10 +54,9 @@ def test_query_accepts_project_option_and_outputs_yaml() -> None:
 
     assert result.exit_code == 0
     output = yaml.safe_load(result.output)
-    assert [entry["id"] for entry in output["definitions"]] == ["DEF-002"]
-    assert [item["name"] for item in output["relation_types"]] == ["manages"]
-    assert [entry["id"] for entry in output["relations"]] == ["REL-001"]
-    assert set(output) == {"definitions", "relation_types", "relations"}
+    assert list(output["definitions"]) == ["project"]
+    assert [entry["predicate"] for entry in output["relations"]] == ["manages"]
+    assert set(output) == {"definitions", "relations"}
     mock_load.assert_called_once_with(loaded_manifest, "local")
 
 
@@ -93,9 +91,11 @@ def test_init_and_ls_use_one_project_and_category() -> None:
 
     assert listed.exit_code == 0
     assert yaml.safe_load(listed.output) == {
-        "constraints": [
-            {"id": "CON-001", "statement": "未知フィールドを拒否する"},
-        ],
+        "constraints": {
+            "reject_unknown_fields": {
+                "statement": "未知フィールドを拒否する"
+            },
+        },
     }
     missing_category = CliRunner().invoke(knowledge_command, ["ls"])
     assert missing_category.exit_code != 0
@@ -103,59 +103,68 @@ def test_init_and_ls_use_one_project_and_category() -> None:
 
 
 @pytest.mark.parametrize(
-    ("arguments", "function_name", "expected_call", "identifier"),
+    ("arguments", "function_name", "expected_call"),
     [
         (
-            ["def", "resource", "接続先", "--ref", "docs/ref.md"],
+            [
+                "def",
+                "resource",
+                "resource",
+                "接続先",
+                "--ref",
+                "docs/ref.md",
+            ],
             "add_definition",
-            ("resource", "接続先", "docs/ref.md"),
-            "DEF-002",
-        ),
-        (
-            ["relation-type", "uses", "subjectがobjectを使う"],
-            "add_relation_type",
-            ("uses", "subjectがobjectを使う"),
-            None,
+            ("resource", "resource", "接続先", "docs/ref.md"),
         ),
         (
             [
                 "rel",
-                "DEF-001",
+                "def:whub",
                 "uses",
-                "DEF-002",
+                "def:project",
                 "--cardinality",
                 "0..*",
                 "--ref",
                 "docs/ref.md",
             ],
             "add_relation",
-            ("DEF-001", "uses", "DEF-002", "0..*", "docs/ref.md"),
-            "REL-002",
+            ("def:whub", "uses", "def:project", "0..*", "docs/ref.md"),
         ),
         (
-            ["pol", "CLIを使う", "--ref", "docs/ref.md"],
+            ["pol", "use_cli", "CLIを使う", "--ref", "docs/ref.md"],
             "add_policy",
-            ("CLIを使う", "docs/ref.md"),
-            "POL-002",
+            ("use_cli", "CLIを使う", "docs/ref.md"),
         ),
         (
-            ["con", "参照を保つ", "--ref", "docs/ref.md"],
+            [
+                "con",
+                "preserve_references",
+                "参照を保つ",
+                "--ref",
+                "docs/ref.md",
+            ],
             "add_constraint",
-            ("参照を保つ", "docs/ref.md"),
-            "CON-002",
+            ("preserve_references", "参照を保つ", "docs/ref.md"),
         ),
         (
             [
                 "exc",
-                "CON-001",
+                "migration",
+                "con:reject_unknown_fields",
                 "移行中",
                 "旧形式を許可する",
                 "--ref",
                 "docs/ref.md",
             ],
             "add_exception",
-            ("CON-001", "移行中", "旧形式を許可する", "docs/ref.md"),
-            "EXC-002",
+            (
+                "migration",
+                "con:reject_unknown_fields",
+                "移行中",
+                "旧形式を許可する",
+                "docs/ref.md",
+            ),
         ),
     ],
 )
@@ -163,19 +172,12 @@ def test_add_dispatches_category_specific_arguments(
     arguments: list[str],
     function_name: str,
     expected_call: tuple[str, ...],
-    identifier: str | None,
 ) -> None:
     loaded_manifest = manifest()
-    returned = (
-        SimpleNamespace(name="uses")
-        if identifier is None
-        else SimpleNamespace(id=identifier)
-    )
     with (
         patch("whub.commands.knowledge.get_manifest", return_value=loaded_manifest),
         patch(
             f"whub.commands.knowledge.{function_name}",
-            return_value=returned,
         ) as operation,
     ):
         result = CliRunner().invoke(
@@ -188,37 +190,48 @@ def test_add_dispatches_category_specific_arguments(
     operation.assert_called_once_with(loaded_manifest, "local", *expected_call)
 
 
-@pytest.mark.parametrize(
-    ("arguments", "target"),
-    [
-        (["con", "40"], "CON-040"),
-        (["relation-type", "has_resource"], "has_resource"),
-    ],
-)
-def test_rm_normalizes_category_target(
-    arguments: list[str],
-    target: str,
-) -> None:
+def test_rm_uses_slug_and_relation_composite_key() -> None:
     loaded_manifest = manifest()
     with (
         patch("whub.commands.knowledge.get_manifest", return_value=loaded_manifest),
-        patch("whub.commands.knowledge.remove_knowledge") as operation,
+        patch("whub.commands.knowledge.remove_knowledge") as remove_entry,
+        patch("whub.commands.knowledge.remove_relation") as remove_edge,
     ):
-        result = CliRunner().invoke(
+        entry_result = CliRunner().invoke(
             knowledge_command,
-            ["rm", *arguments],
+            ["rm", "con", "preserve_references"],
+            catch_exceptions=False,
+        )
+        relation_result = CliRunner().invoke(
+            knowledge_command,
+            ["rm", "rel", "def:whub", "uses", "def:project"],
             catch_exceptions=False,
         )
 
-    assert result.exit_code == 0
-    assert result.output.strip() == f"removed {target}"
-    operation.assert_called_once_with(loaded_manifest, "workspace-hub", target)
+    assert entry_result.exit_code == 0
+    assert entry_result.output.strip() == "removed con:preserve_references"
+    remove_entry.assert_called_once_with(
+        loaded_manifest,
+        "workspace-hub",
+        "con:preserve_references",
+    )
+    assert relation_result.exit_code == 0
+    remove_edge.assert_called_once_with(
+        loaded_manifest,
+        "workspace-hub",
+        "def:whub",
+        "uses",
+        "def:project",
+    )
 
 
 def test_reports_invalid_target_no_match_and_service_error() -> None:
-    invalid_target = CliRunner().invoke(knowledge_command, ["rm", "con", "invalid"])
+    invalid_target = CliRunner().invoke(
+        knowledge_command,
+        ["rm", "rel", "def:whub"],
+    )
     assert invalid_target.exit_code != 0
-    assert "expected a positive integer" in invalid_target.output
+    assert "requires SUBJECT PREDICATE OBJECT" in invalid_target.output
 
     with (
         patch("whub.commands.knowledge.get_manifest", return_value=manifest()),
@@ -234,13 +247,32 @@ def test_reports_invalid_target_no_match_and_service_error() -> None:
     with (
         patch("whub.commands.knowledge.get_manifest", return_value=manifest()),
         patch(
-            "whub.commands.knowledge.load_project_knowledge",
+            "whub.commands.knowledge.check_project_knowledge",
             side_effect=ServiceError("knowledge unavailable"),
         ),
     ):
         service_error = CliRunner().invoke(knowledge_command, ["check"])
     assert service_error.exit_code != 0
     assert "knowledge unavailable" in service_error.output
+
+
+def test_relation_type_category_is_not_available() -> None:
+    runner = CliRunner()
+
+    added = runner.invoke(
+        knowledge_command,
+        ["add", "relation-type", "uses", "definition"],
+    )
+    listed = runner.invoke(knowledge_command, ["ls", "relation-type"])
+    removed = runner.invoke(
+        knowledge_command,
+        ["rm", "relation-type", "uses"],
+    )
+
+    assert added.exit_code != 0
+    assert "No such command 'relation-type'" in added.output
+    assert listed.exit_code != 0
+    assert removed.exit_code != 0
 
 
 def test_crud_roundtrip_in_temporary_project(tmp_path: Path) -> None:
@@ -257,22 +289,30 @@ def test_crud_roundtrip_in_temporary_project(tmp_path: Path) -> None:
     ):
         for arguments in (
             ["init", "--project", "local"],
-            ["add", "def", "alpha", "最初の定義", "--project", "local"],
-            ["add", "def", "beta", "次の定義", "--project", "local"],
             [
                 "add",
-                "relation-type",
-                "uses",
-                "subjectがobjectを使う",
+                "def",
+                "alpha",
+                "alpha",
+                "最初の定義",
+                "--project",
+                "local",
+            ],
+            [
+                "add",
+                "def",
+                "beta",
+                "beta",
+                "次の定義",
                 "--project",
                 "local",
             ],
             [
                 "add",
                 "rel",
-                "DEF-001",
+                "def:alpha",
                 "uses",
-                "DEF-002",
+                "def:beta",
                 "--project",
                 "local",
             ],
@@ -300,20 +340,27 @@ def test_crud_roundtrip_in_temporary_project(tmp_path: Path) -> None:
             catch_exceptions=False,
         )
 
-        assert [item["id"] for item in yaml.safe_load(listed.output)["definitions"]] == [
-            "DEF-001",
-            "DEF-002",
+        assert list(yaml.safe_load(listed.output)["definitions"]) == [
+            "alpha",
+            "beta",
         ]
         query_output = yaml.safe_load(queried.output)
-        assert query_output["definitions"][0]["id"] == "DEF-001"
-        assert query_output["relations"][0]["id"] == "REL-001"
+        assert list(query_output["definitions"]) == ["alpha"]
+        assert query_output["relations"][0]["predicate"] == "uses"
         assert checked.output.startswith("valid local:")
 
         for arguments in (
-            ["rm", "rel", "1", "--project", "local"],
-            ["rm", "relation-type", "uses", "--project", "local"],
-            ["rm", "def", "1", "--project", "local"],
-            ["rm", "def", "2", "--project", "local"],
+            [
+                "rm",
+                "rel",
+                "def:alpha",
+                "uses",
+                "def:beta",
+                "--project",
+                "local",
+            ],
+            ["rm", "def", "alpha", "--project", "local"],
+            ["rm", "def", "beta", "--project", "local"],
         ):
             result = runner.invoke(
                 knowledge_command,
@@ -324,12 +371,11 @@ def test_crud_roundtrip_in_temporary_project(tmp_path: Path) -> None:
 
     knowledge_path = source / "docs" / "knowledge.yaml"
     assert yaml.safe_load(knowledge_path.read_text()) == {
-        "schema_version": 3,
-        "definitions": [],
-        "relation_types": [],
+        "schema_version": 4,
+        "definitions": {},
         "relations": [],
-        "policies": [],
-        "constraints": [],
-        "exceptions": [],
+        "policies": {},
+        "constraints": {},
+        "exceptions": {},
     }
     assert not list(source.rglob("*.tmp"))

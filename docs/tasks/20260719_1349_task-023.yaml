@@ -18,8 +18,8 @@ plan:
   - title: 移行対象を着手時に確定する
     acceptance: []
     steps:
-    - description: remoteを含むmanifest全Projectへアクセスできる状態を確認し、着手時点のdocs/tasks配下にあるMarkdown
-        Taskを再走査する
+    - description: manifest Projectのうち現在アクセス可能なProjectを対象に、着手時点のdocs/tasks配下にあるMarkdown
+        Taskを再走査し、Taskがないesn-lab-runはユーザー確認に基づく対象外としてPhase logへ記録する
       state: pending
       skip_reason: null
       deleted: false
@@ -61,10 +61,10 @@ plan:
       deleted: false
     log: []
     deleted: false
-  - title: 全Projectの移行結果を検証する
+  - title: 対象Projectの移行結果を検証する
     acceptance: []
     steps:
-    - description: manifest全Projectを再走査し、未移行の活動中Markdown Taskが残っていないことと完了済みMarkdownが変更されていないことを確認する
+    - description: 対象Projectを再走査し、未移行の活動中Markdown Taskが残っていないことと完了済みMarkdownが変更されていないことを確認する
       state: pending
       skip_reason: null
       deleted: false
@@ -76,7 +76,9 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: ユーザー判断によりTaskのないesn-lab-runを除外し、現在アクセス可能なProjectだけを移行対象とするため
 cancellation: null
 result: null

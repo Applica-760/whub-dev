@@ -13,7 +13,6 @@ from whub.models import (
     KnowledgeException,
     KnowledgePolicy,
     KnowledgeRelation,
-    KnowledgeRelationType,
     Manifest,
 )
 from whub.services.errors import NotFoundError, ServiceError
@@ -28,18 +27,17 @@ T = TypeVar("T")
 
 
 def init_project_knowledge(manifest: Manifest, project: str) -> Knowledge:
-    """Create an empty schema v3 Knowledge YAML without overwriting one."""
+    """Create an empty schema v4 Knowledge YAML without overwriting one."""
     path = resolve_project_knowledge_path(manifest, project)
     if path.exists():
         raise ServiceError(f"knowledge file already exists: {path}")
     knowledge = Knowledge(
-        schema_version=3,
-        definitions=[],
-        relation_types=[],
+        schema_version=4,
+        definitions={},
         relations=[],
-        policies=[],
-        constraints=[],
-        exceptions=[],
+        policies={},
+        constraints={},
+        exceptions={},
     )
     save_project_knowledge(path, knowledge)
     return knowledge
@@ -60,44 +58,23 @@ def _operate(
     return result
 
 
-def _next_id(entries: list[object], prefix: str) -> str:
-    numbers = [
-        int(entry.id.removeprefix(f"{prefix}-"))
-        for entry in entries
-        if hasattr(entry, "id")
-    ]
-    return f"{prefix}-{max(numbers, default=0) + 1:03d}"
-
-
 def add_definition(
     manifest: Manifest,
     project: str,
+    slug: str,
     name: str,
     definition: str,
     ref: str | None = None,
 ) -> KnowledgeDefinition:
     def operation(knowledge: Knowledge) -> KnowledgeDefinition:
+        if slug in knowledge.definitions:
+            raise ServiceError(f"knowledge slug already exists: def:{slug}")
         entry = KnowledgeDefinition(
-            id=_next_id(knowledge.definitions, "DEF"),
             name=name,
             definition=definition,
             ref=ref,
         )
-        knowledge.definitions.append(entry)
-        return entry
-
-    return _operate(manifest, project, operation)
-
-
-def add_relation_type(
-    manifest: Manifest,
-    project: str,
-    name: str,
-    definition: str,
-) -> KnowledgeRelationType:
-    def operation(knowledge: Knowledge) -> KnowledgeRelationType:
-        entry = KnowledgeRelationType(name=name, definition=definition)
-        knowledge.relation_types.append(entry)
+        knowledge.definitions[slug] = entry
         return entry
 
     return _operate(manifest, project, operation)
@@ -113,8 +90,16 @@ def add_relation(
     ref: str | None = None,
 ) -> KnowledgeRelation:
     def operation(knowledge: Knowledge) -> KnowledgeRelation:
+        key = (subject, predicate, object_)
+        if any(
+            (item.subject, item.predicate, item.object) == key
+            for item in knowledge.relations
+        ):
+            raise ServiceError(
+                "knowledge relation already exists: "
+                f"{subject} {predicate} {object_}"
+            )
         entry = KnowledgeRelation(
-            id=_next_id(knowledge.relations, "REL"),
             subject=subject,
             predicate=predicate,
             object=object_,
@@ -130,16 +115,15 @@ def add_relation(
 def add_policy(
     manifest: Manifest,
     project: str,
+    slug: str,
     statement: str,
     ref: str | None = None,
 ) -> KnowledgePolicy:
     def operation(knowledge: Knowledge) -> KnowledgePolicy:
-        entry = KnowledgePolicy(
-            id=_next_id(knowledge.policies, "POL"),
-            statement=statement,
-            ref=ref,
-        )
-        knowledge.policies.append(entry)
+        if slug in knowledge.policies:
+            raise ServiceError(f"knowledge slug already exists: pol:{slug}")
+        entry = KnowledgePolicy(statement=statement, ref=ref)
+        knowledge.policies[slug] = entry
         return entry
 
     return _operate(manifest, project, operation)
@@ -148,16 +132,15 @@ def add_policy(
 def add_constraint(
     manifest: Manifest,
     project: str,
+    slug: str,
     statement: str,
     ref: str | None = None,
 ) -> KnowledgeConstraint:
     def operation(knowledge: Knowledge) -> KnowledgeConstraint:
-        entry = KnowledgeConstraint(
-            id=_next_id(knowledge.constraints, "CON"),
-            statement=statement,
-            ref=ref,
-        )
-        knowledge.constraints.append(entry)
+        if slug in knowledge.constraints:
+            raise ServiceError(f"knowledge slug already exists: con:{slug}")
+        entry = KnowledgeConstraint(statement=statement, ref=ref)
+        knowledge.constraints[slug] = entry
         return entry
 
     return _operate(manifest, project, operation)
@@ -166,51 +149,38 @@ def add_constraint(
 def add_exception(
     manifest: Manifest,
     project: str,
+    slug: str,
     exception_to: str,
     condition: str,
     statement: str,
     ref: str | None = None,
 ) -> KnowledgeException:
     def operation(knowledge: Knowledge) -> KnowledgeException:
+        if slug in knowledge.exceptions:
+            raise ServiceError(f"knowledge slug already exists: exc:{slug}")
         entry = KnowledgeException(
-            id=_next_id(knowledge.exceptions, "EXC"),
             exception_to=exception_to,
             condition=condition,
             statement=statement,
             ref=ref,
         )
-        knowledge.exceptions.append(entry)
+        knowledge.exceptions[slug] = entry
         return entry
 
     return _operate(manifest, project, operation)
 
 
 def remove_knowledge(manifest: Manifest, project: str, target: str) -> None:
-    """Remove one ID or relation type name unless another entry references it."""
+    """Remove one category-qualified entry unless another entry references it."""
     def operation(knowledge: Knowledge) -> None:
-        if any(item.name == target for item in knowledge.relation_types):
-            references = [
-                relation.id
-                for relation in knowledge.relations
-                if relation.predicate == target
-            ]
-            if references:
-                raise ServiceError(
-                    f"knowledge target is referenced by: {', '.join(references)}"
-                )
-            knowledge.relation_types = [
-                item for item in knowledge.relation_types if item.name != target
-            ]
-            return
-
         references = [
-            relation.id
+            f"{relation.subject} {relation.predicate} {relation.object}"
             for relation in knowledge.relations
             if target in (relation.subject, relation.object)
         ]
         references.extend(
-            exception.id
-            for exception in knowledge.exceptions
+            f"exc:{slug}"
+            for slug, exception in knowledge.exceptions.items()
             if exception.exception_to == target
         )
         if references:
@@ -218,18 +188,41 @@ def remove_knowledge(manifest: Manifest, project: str, target: str) -> None:
                 f"knowledge target is referenced by: {', '.join(references)}"
             )
 
-        groups = (
-            knowledge.definitions,
-            knowledge.relations,
-            knowledge.policies,
-            knowledge.constraints,
-            knowledge.exceptions,
+        prefix, separator, slug = target.partition(":")
+        groups = {
+            "def": knowledge.definitions,
+            "pol": knowledge.policies,
+            "con": knowledge.constraints,
+            "exc": knowledge.exceptions,
+        }
+        entries = groups.get(prefix) if separator else None
+        if entries is None or slug not in entries:
+            raise NotFoundError(f"knowledge target not found: {target}")
+        entries.pop(slug)
+
+    _operate(manifest, project, operation)
+
+
+def remove_relation(
+    manifest: Manifest,
+    project: str,
+    subject: str,
+    predicate: str,
+    object_: str,
+) -> None:
+    """Remove one Relation identified by its composite key."""
+    def operation(knowledge: Knowledge) -> None:
+        for index, relation in enumerate(knowledge.relations):
+            if (
+                relation.subject,
+                relation.predicate,
+                relation.object,
+            ) == (subject, predicate, object_):
+                knowledge.relations.pop(index)
+                return
+        raise NotFoundError(
+            "knowledge relation not found: "
+            f"{subject} {predicate} {object_}"
         )
-        for entries in groups:
-            for index, entry in enumerate(entries):
-                if entry.id == target:
-                    entries.pop(index)
-                    return
-        raise NotFoundError(f"knowledge target not found: {target}")
 
     _operate(manifest, project, operation)

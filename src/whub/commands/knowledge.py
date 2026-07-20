@@ -12,6 +12,7 @@ from whub.models import Knowledge, project_names
 from whub.services.errors import ServiceError
 from whub.services.knowledge import (
     KnowledgeQueryResult,
+    check_project_knowledge,
     load_project_knowledge,
     query_knowledge,
 )
@@ -21,27 +22,19 @@ from whub.services.knowledge_operation import (
     add_exception,
     add_policy,
     add_relation,
-    add_relation_type,
     init_project_knowledge,
     remove_knowledge,
+    remove_relation,
 )
 
 
 DEFAULT_PROJECT = "workspace-hub"
 CATEGORIES = {
     "def": "definitions",
-    "relation-type": "relation_types",
     "rel": "relations",
     "pol": "policies",
     "con": "constraints",
     "exc": "exceptions",
-}
-ID_PREFIXES = {
-    "def": "DEF",
-    "rel": "REL",
-    "pol": "POL",
-    "con": "CON",
-    "exc": "EXC",
 }
 
 
@@ -67,20 +60,30 @@ def _load(ctx: click.Context, project: str) -> Knowledge:
         raise click.ClickException(str(error)) from error
 
 
-def _dump_groups(groups: tuple[tuple[str, list[object]], ...]) -> str:
-    data = {
-        name: [entry.model_dump(exclude_none=True) for entry in entries]
-        for name, entries in groups
-    }
+def _dump_groups(
+    groups: tuple[tuple[str, dict[str, object] | list[object]], ...],
+) -> str:
+    data = {}
+    for name, entries in groups:
+        if isinstance(entries, dict):
+            data[name] = {
+                slug: entry.model_dump(exclude_none=True)
+                for slug, entry in entries.items()
+            }
+        else:
+            data[name] = [
+                entry.model_dump(exclude_none=True) for entry in entries
+            ]
     return yaml.safe_dump(data, allow_unicode=True, sort_keys=False).rstrip()
 
 
-def _result_groups(result: KnowledgeQueryResult) -> tuple[tuple[str, list[object]], ...]:
+def _result_groups(
+    result: KnowledgeQueryResult,
+) -> tuple[tuple[str, dict[str, object] | list[object]], ...]:
     return tuple(
         (name, entries)
         for name, entries in (
             ("definitions", result.definitions),
-            ("relation_types", result.relation_types),
             ("relations", result.relations),
             ("policies", result.policies),
             ("constraints", result.constraints),
@@ -102,11 +105,12 @@ def _invoke(operation: Callable[[], Any]) -> Any:
 @click.pass_context
 def check(ctx: click.Context, project: str) -> None:
     """Validate a project's docs/knowledge.yaml."""
-    loaded = _load(ctx, project)
+    loaded = _invoke(
+        lambda: check_project_knowledge(get_manifest(ctx), project)
+    )
     click.echo(
         f"valid {project}: "
         f"{len(loaded.definitions)} definitions, "
-        f"{len(loaded.relation_types)} relation types, "
         f"{len(loaded.relations)} relations, "
         f"{len(loaded.policies)} policies, "
         f"{len(loaded.constraints)} constraints, "
@@ -119,7 +123,7 @@ def check(ctx: click.Context, project: str) -> None:
 @_project_option
 @click.pass_context
 def query(ctx: click.Context, term: str, project: str) -> None:
-    """Query a project's knowledge by ID or text."""
+    """Query a project's knowledge by slug, reference, or text."""
     loaded = _load(ctx, project)
     result = _invoke(lambda: query_knowledge(loaded, term))
     if result.is_empty():
@@ -131,7 +135,7 @@ def query(ctx: click.Context, term: str, project: str) -> None:
 @_project_option
 @click.pass_context
 def initialize(ctx: click.Context, project: str) -> None:
-    """Create an empty schema v3 Knowledge YAML."""
+    """Create an empty schema v4 Knowledge YAML."""
     _invoke(lambda: init_project_knowledge(get_manifest(ctx), project))
     click.echo(f"initialized {project}")
 
@@ -153,6 +157,7 @@ def add() -> None:
 
 
 @add.command("def")
+@click.argument("slug")
 @click.argument("name")
 @click.argument("definition")
 @click.option("--ref")
@@ -160,34 +165,19 @@ def add() -> None:
 @click.pass_context
 def add_def(
     ctx: click.Context,
+    slug: str,
     name: str,
     definition: str,
     ref: str | None,
     project: str,
 ) -> None:
     """Add a Definition."""
-    entry = _invoke(
-        lambda: add_definition(get_manifest(ctx), project, name, definition, ref)
+    _invoke(
+        lambda: add_definition(
+            get_manifest(ctx), project, slug, name, definition, ref
+        )
     )
-    click.echo(f"added {entry.id}")
-
-
-@add.command("relation-type")
-@click.argument("name")
-@click.argument("definition")
-@_project_option
-@click.pass_context
-def add_relation_type_command(
-    ctx: click.Context,
-    name: str,
-    definition: str,
-    project: str,
-) -> None:
-    """Add a Relation type."""
-    entry = _invoke(
-        lambda: add_relation_type(get_manifest(ctx), project, name, definition)
-    )
-    click.echo(f"added relation type {entry.name}")
+    click.echo(f"added def:{slug}")
 
 
 @add.command("rel")
@@ -208,7 +198,7 @@ def add_rel(
     project: str,
 ) -> None:
     """Add a Relation."""
-    entry = _invoke(
+    _invoke(
         lambda: add_relation(
             get_manifest(ctx),
             project,
@@ -219,44 +209,53 @@ def add_rel(
             ref,
         )
     )
-    click.echo(f"added {entry.id}")
+    click.echo(f"added {subject} {predicate} {object_id}")
 
 
 @add.command("pol")
+@click.argument("slug")
 @click.argument("statement")
 @click.option("--ref")
 @_project_option
 @click.pass_context
 def add_pol(
     ctx: click.Context,
+    slug: str,
     statement: str,
     ref: str | None,
     project: str,
 ) -> None:
     """Add a Policy."""
-    entry = _invoke(lambda: add_policy(get_manifest(ctx), project, statement, ref))
-    click.echo(f"added {entry.id}")
+    _invoke(
+        lambda: add_policy(get_manifest(ctx), project, slug, statement, ref)
+    )
+    click.echo(f"added pol:{slug}")
 
 
 @add.command("con")
+@click.argument("slug")
 @click.argument("statement")
 @click.option("--ref")
 @_project_option
 @click.pass_context
 def add_con(
     ctx: click.Context,
+    slug: str,
     statement: str,
     ref: str | None,
     project: str,
 ) -> None:
     """Add a Constraint."""
-    entry = _invoke(
-        lambda: add_constraint(get_manifest(ctx), project, statement, ref)
+    _invoke(
+        lambda: add_constraint(
+            get_manifest(ctx), project, slug, statement, ref
+        )
     )
-    click.echo(f"added {entry.id}")
+    click.echo(f"added con:{slug}")
 
 
 @add.command("exc")
+@click.argument("slug")
 @click.argument("exception_to")
 @click.argument("condition")
 @click.argument("statement")
@@ -265,6 +264,7 @@ def add_con(
 @click.pass_context
 def add_exc(
     ctx: click.Context,
+    slug: str,
     exception_to: str,
     condition: str,
     statement: str,
@@ -272,46 +272,51 @@ def add_exc(
     project: str,
 ) -> None:
     """Add an Exception."""
-    entry = _invoke(
+    _invoke(
         lambda: add_exception(
             get_manifest(ctx),
             project,
+            slug,
             exception_to,
             condition,
             statement,
             ref,
         )
     )
-    click.echo(f"added {entry.id}")
+    click.echo(f"added exc:{slug}")
 
 
 @knowledge.command("rm")
 @click.argument("category", type=click.Choice(tuple(CATEGORIES)))
-@click.argument("target")
+@click.argument("targets", nargs=-1, required=True)
 @_project_option
 @click.pass_context
 def remove(
     ctx: click.Context,
     category: str,
-    target: str,
+    targets: tuple[str, ...],
     project: str,
 ) -> None:
-    """Remove one Knowledge entry by category and number or name."""
-    if category == "relation-type":
-        normalized = target
-    else:
-        try:
-            number = int(target)
-        except ValueError as error:
-            raise click.BadParameter(
-                "expected a positive integer",
-                param_hint="target",
-            ) from error
-        if number < 1:
-            raise click.BadParameter(
-                "expected a positive integer",
-                param_hint="target",
+    """Remove one Knowledge entry by slug or Relation composite key."""
+    manifest = get_manifest(ctx)
+    if category == "rel":
+        if len(targets) != 3:
+            raise click.UsageError("rm rel requires SUBJECT PREDICATE OBJECT")
+        subject, predicate, object_id = targets
+        _invoke(
+            lambda: remove_relation(
+                manifest,
+                project,
+                subject,
+                predicate,
+                object_id,
             )
-        normalized = f"{ID_PREFIXES[category]}-{number:03d}"
-    _invoke(lambda: remove_knowledge(get_manifest(ctx), project, normalized))
-    click.echo(f"removed {normalized}")
+        )
+        click.echo(f"removed {subject} {predicate} {object_id}")
+        return
+
+    if len(targets) != 1:
+        raise click.UsageError(f"rm {category} requires SLUG")
+    target = f"{category}:{targets[0]}"
+    _invoke(lambda: remove_knowledge(manifest, project, target))
+    click.echo(f"removed {target}")

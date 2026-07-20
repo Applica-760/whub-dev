@@ -52,49 +52,39 @@ def manifest() -> Manifest:
 
 def knowledge_data() -> dict:
     return {
-        "schema_version": 3,
-        "definitions": [
-            {
-                "id": "DEF-001",
+        "schema_version": 4,
+        "definitions": {
+            "whub": {
                 "name": "whub",
                 "definition": "localとremoteを統合管理するCLI",
             },
-            {
-                "id": "DEF-002",
+            "project": {
                 "name": "project",
                 "definition": "管理対象のプロジェクト",
                 "ref": "docs/knowledge.yaml",
             },
-        ],
-        "relation_types": [
-            {
-                "name": "manages",
-                "definition": "subjectがobjectを管理する",
-            },
-        ],
+        },
         "relations": [
             {
-                "id": "REL-001",
-                "subject": "DEF-001",
+                "subject": "def:whub",
                 "predicate": "manages",
-                "object": "DEF-002",
+                "object": "def:project",
                 "cardinality": "1..*",
             },
         ],
-        "policies": [
-            {"id": "POL-001", "statement": "Knowledge YAMLをSSOTとする"},
-        ],
-        "constraints": [
-            {"id": "CON-001", "statement": "未知フィールドを拒否する"},
-        ],
-        "exceptions": [
-            {
-                "id": "EXC-001",
-                "exception_to": "CON-001",
+        "policies": {
+            "knowledge_is_ssot": {"statement": "Knowledge YAMLをSSOTとする"},
+        },
+        "constraints": {
+            "reject_unknown_fields": {"statement": "未知フィールドを拒否する"},
+        },
+        "exceptions": {
+            "legacy_document_transition": {
+                "exception_to": "con:reject_unknown_fields",
                 "condition": "移行期間中",
                 "statement": "旧文書への導線を残せる",
             },
-        ],
+        },
     }
 
 

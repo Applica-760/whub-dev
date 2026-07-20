@@ -85,26 +85,30 @@ plan:
       statement: 既存Knowledgeの移行後もエントリの意味・ref・Relation・Exception参照が失われない
     steps:
     - description: schema v3からv4への移行対象と、既存ID・参照・API出力の変換規則を確定する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: schema v3の既存Knowledgeと外部参照を調査し、schema v4への移行範囲と互換性方針を確定する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: DEF・POL・CON・EXCをslug keyのmappingとして表現し、カテゴリ修飾参照を解決するKnowledgeモデルへ変更する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: raw YAMLの重複key、カテゴリ内slug重複、参照切れ、Relation複合キー重複をload・checkで拒否する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 既存Knowledgeをschema v4へ移行し、意味・ref・Relation・Exception参照が保存されることを検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 'Phase 4完了: schema v4のみを受理しv3読込互換は残さない。Knowledgeモデルをslug mapping・カテゴリ修飾参照・Relation複合キーへ変更し、重複raw
+      YAML keyも拒否。workspace-hub Knowledgeを43 definitions・13 relations・16 policies・53
+      constraintsの意味とrefを保持してv4へ移行し、relation_typesを除去。モデル・Service・CLIのKnowledge 27
+      tests passed、実CLI check/query成功。'
     deleted: false
   - title: Service・CLI更新
     acceptance:
@@ -116,26 +120,29 @@ plan:
       statement: query・ls・rmがslugとカテゴリ修飾参照を一貫して扱う
     steps:
     - description: Knowledge追加・削除・検索をslugとカテゴリ修飾参照に対応させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: addで安定slugを受け取り、同一カテゴリへの重複追加を副作用なく拒否する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Relationの追加・削除をsubject・predicate・objectの複合キー操作へ変更する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: relation typeのモデル・追加削除Service・CLI subcommandを削除し、predicateをRelation自身の値として扱う
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: query・ls・rmの入出力をslugとdef:project等のカテゴリ修飾参照へ統一する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 'Phase 5完了: add def/pol/con/excは明示slugを受け、重複を保存前に拒否。Relation add/rmはsubject・predicate・objectの複合キーへ変更。KnowledgeRelationType、add_relation_type、relation-type
+      CLI/categoryを削除。query・lsはslug mapping、rmはカテゴリslugまたはRelation三要素を扱う。Knowledge
+      backend 28 tests passed、実Project check/query成功。'
     deleted: false
   - title: ref参照検証
     acceptance:
@@ -145,18 +152,21 @@ plan:
       statement: 有効なrefと仕様上の検証対象外refはcheckを通過する
     steps:
     - description: 相対パス・URL等のref形式を分類し、存在検証の対象と非対象を定義する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: project rootを基準に検証対象refの存在をcheckし、欠損時はカテゴリ修飾キーとパスを報告する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 有効なref・欠損ref・URL等の検証対象外refをCLIテストで固定する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 'Phase 6完了: ref列挙を_knowledge_refs generatorへ集約。scheme/netlocを持つURL、絶対パス、pathなし参照は検証対象外。project相対refはURL
+      fragmentを除いたpathをproject root基準でexists検証し、..によるroot脱出を拒否。欠損時はdef:project等のカテゴリ修飾keyとrefを報告。Knowledge
+      29 tests passed、実Project check成功。'
     deleted: false
   - title: 統合検証
     acceptance:
@@ -197,6 +207,38 @@ acceptance_results:
   status: passed
   evidence:
   - schema v4仕様でentry id fieldと数値IDを廃止
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - モデルテストと実Project check/queryでschema v4のload・save・slug参照を確認
+- acceptance: ACC-006
+  status: passed
+  evidence:
+  - モデルテストで重複YAML key・Relation複合キー・参照切れを拒否し、mapping key型でslugを制約
+- acceptance: ACC-007
+  status: passed
+  evidence:
+  - workspace-hubを43 DEF・13 Relation・16 POL・53 CONの件数と意味・refを保持して移行
+- acceptance: ACC-008
+  status: passed
+  evidence:
+  - Serviceテストでdef:resource重複追加を拒否しファイル不変を確認
+- acceptance: ACC-009
+  status: passed
+  evidence:
+  - CLI CRUD roundtripでRelation複合キー追加削除を確認し、relation-type command/category非存在をテスト
+- acceptance: ACC-010
+  status: passed
+  evidence:
+  - Service・CLIテストと実Project queryでslug・カテゴリ修飾参照の入出力を確認
+- acceptance: ACC-011
+  status: passed
+  evidence:
+  - Serviceテストで欠損refがdef:projectとdocs/missing.mdを伴うServiceErrorになることを確認
+- acceptance: ACC-012
+  status: passed
+  evidence:
+  - 有効な相対ref・fragment付きref・HTTPS URLと実Project checkの成功を確認
 change_requests: []
 cancellation: null
 result: null

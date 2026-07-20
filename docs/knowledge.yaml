@@ -1,347 +1,320 @@
-schema_version: 3
+schema_version: 4
 definitions:
-- id: DEF-001
-  name: project
-  definition: 私が抱えているプロジェクト
-- id: DEF-002
-  name: resource
-  definition: projectが持つ任意の接続先データリソース
-- id: DEF-003
-  name: remote
-  definition: リモートコンピュータに格納されたprojectデータを表すresource属性
-- id: DEF-004
-  name: local
-  definition: このコンピュータにあるprojectデータを表すresource属性
-- id: DEF-005
-  name: workspace-hub
-  definition: whubのsourceを持つproject兼repositoryであり、mount・link対象のresourceではない
-- id: DEF-006
-  name: vault
-  definition: 固有記述とwhub運用データを集約するprivateな貯蔵庫repoで、知識・派生文書・機械データの各プレーンを持ちwhubの自己データをdata_dirとして保持する
-  ref: docs/ADR/0008-tool-data-plane-separation.md
-- id: DEF-007
-  name: manifest
-  definition: project・resource・接続情報を定義する設定ファイル
-- id: DEF-008
-  name: target
-  definition: resourceと処理データを受け取り、local・remoteごとの関数を呼び分ける実行境界
-- id: DEF-009
-  name: backlog
-  definition: projectごとの未整理入力・構想・作業候補を置くドキュメント
-- id: DEF-010
-  name: todo
-  definition: project紐付けを任意とする実行可能な単発アクション
-- id: DEF-011
-  name: whub status
-  definition: 接続状態とヘルスチェックを確認するコマンド
-- id: DEF-012
-  name: whub cd
-  definition: projectまたはresourceへ移動し、localではパス移動、remoteではSSH接続するコマンド
-- id: DEF-013
-  name: whub link
-  definition: symlink resourceをworkspace-hub配下へ接続するコマンド
-- id: DEF-014
-  name: whub todo
-  definition: project横断のtodoを管理するコマンド
-- id: DEF-016
-  name: whub backlog
-  definition: projectごとのbacklogへ未整理メモを追記するコマンド
-- id: DEF-017
-  name: whub app
-  definition: ローカルWeb appサーバーを常駐起動・停止するコマンド
-- id: DEF-018
-  name: whub mount
-  definition: remote resourceをsshfsでwhubツリーへ接続するコマンド
-- id: DEF-019
-  name: whub unmount
-  definition: remote resourceのsshfs接続を解除するコマンド
-- id: DEF-020
-  name: whub run
-  definition: remoteでワンショット実行するコマンド
-- id: DEF-021
-  name: whub fetch
-  definition: remoteのファイルをdata_dirのdownloadsへ取得するコマンド
-- id: DEF-022
-  name: whub vscode
-  definition: symlinkとmount対象をVS Codeの走査対象から除外する設定を生成するコマンド
-- id: DEF-023
-  name: inbox
-  definition: project非依存の思いつき・思想・外部情報・一般ナレッジの疑問を置く場所
-- id: DEF-024
-  name: task-planning
-  definition: YAML Taskを作成・承認・実行・完了する個別作業の対話的運用
-- id: DEF-025
-  name: FOCUS.md
-  definition: whubから全projectの現在地を得て次の注力先を相談するための集約ビュー
-- id: DEF-026
-  name: discourse
-  definition: 外部ソースを取得・解説しliteratureへ記録するSkill
-- id: DEF-027
-  name: refile
-  definition: inbox内のノートを配置提案・分割・移動するSkill
-- id: DEF-028
-  name: execution-spec
-  definition: 実装前に仕様を固める文書を作成するSkill
-- id: DEF-029
-  name: whub
-  definition: MacBook上でlocal・remoteのprojectを統合管理するCLI
-- id: DEF-030
-  name: wflow
-  definition: Workflow定義とその実行記録を可搬に検査・操作するCLI
-- id: DEF-031
-  name: task
-  definition: Task Workflowに基づき、個別作業の計画・状態・実行事実を保持するYAML実行記録
-- id: DEF-032
-  name: knowledge
-  definition: projectの確定済み用語・関係・運用規約・実装制約を構造化して保持するKnowledge YAML
-- id: DEF-033
-  name: workflow
-  definition: StateをTriggerによるTransitionで更新する、個別ドメインに依存しない実行状態管理のプリミティブ
-- id: DEF-034
-  name: state
-  definition: Workflowが管理する対象の現在の状態
-- id: DEF-035
-  name: trigger
-  definition: Transitionを要求する、Workflowに定義された操作または事象
-- id: DEF-036
-  name: transition
-  definition: TriggerによりStateを更新する規則で、条件と記録を伴える
-- id: DEF-037
-  name: task dependency
-  definition: Taskが着手または完了する前に満たす必要がある、他Taskへの明示的な前提関係
-- id: DEF-038
-  name: task workflow
-  definition: task-planningの後継として、個別作業の計画・承認・実行・完了を管理する具体的なWorkflow
-- id: DEF-041
-  name: task interruption
-  definition: 親Taskの凍結、割り込みTaskの開始、子Task終端後の親Task再開を整合した操作として実行する責務
-  ref: src/whub/wflow/services/task/relation.py
-- id: DEF-042
-  name: task relation
-  definition: Task依存とTask割り込みをTask間の有向関係として操作・参照する責務
-  ref: src/whub/wflow/services/task/relation.py
-- id: DEF-043
-  name: task integrity
-  definition: 保存済みTask YAMLとTask間関係の構造・不変条件を検証する責務
-  ref: src/whub/wflow/services/task/integrity.py
-- id: DEF-044
-  name: task eligibility
-  definition: 現在のTask状態・依存・関係に対して操作を実行できるか判定する責務
-  ref: src/whub/wflow/services/task/eligibility.py
-- id: DEF-045
-  name: whub knowledge
-  definition: projectのKnowledge YAMLを検証・照会・初期化・カテゴリ単位で一覧・追加・削除するコマンド
-- id: DEF-046
-  name: whub boot
-  definition: Agent設定・Skill・CodeGraph初期化を各resourceへ配布するコマンド
-  ref: src/whub/commands/boot.py
-relation_types:
-- name: has_resource
-  definition: subjectのprojectがobjectのresourceを持つ
-- name: is_a
-  definition: subjectがobjectの下位概念または具体種である
-- name: defines
-  definition: subjectの定義データがobjectを定義する
-- name: operates
-  definition: subjectがobjectを操作対象とする
-- name: promotes_to
-  definition: subjectに置かれた入力がobjectへ昇格する
+  project:
+    name: project
+    definition: 私が抱えているプロジェクト
+  resource:
+    name: resource
+    definition: projectが持つ任意の接続先データリソース
+  remote:
+    name: remote
+    definition: リモートコンピュータに格納されたprojectデータを表すresource属性
+  local:
+    name: local
+    definition: このコンピュータにあるprojectデータを表すresource属性
+  workspace_hub:
+    name: workspace-hub
+    definition: whubのsourceを持つproject兼repositoryであり、mount・link対象のresourceではない
+  vault:
+    name: vault
+    definition: 固有記述とwhub運用データを集約するprivateな貯蔵庫repoで、知識・派生文書・機械データの各プレーンを持ちwhubの自己データをdata_dirとして保持する
+    ref: docs/ADR/0008-tool-data-plane-separation.md
+  manifest:
+    name: manifest
+    definition: project・resource・接続情報を定義する設定ファイル
+  target:
+    name: target
+    definition: resourceと処理データを受け取り、local・remoteごとの関数を呼び分ける実行境界
+  backlog:
+    name: backlog
+    definition: projectごとの未整理入力・構想・作業候補を置くドキュメント
+  todo:
+    name: todo
+    definition: project紐付けを任意とする実行可能な単発アクション
+  whub_status:
+    name: whub status
+    definition: 接続状態とヘルスチェックを確認するコマンド
+  whub_cd:
+    name: whub cd
+    definition: projectまたはresourceへ移動し、localではパス移動、remoteではSSH接続するコマンド
+  whub_link:
+    name: whub link
+    definition: symlink resourceをworkspace-hub配下へ接続するコマンド
+  whub_todo:
+    name: whub todo
+    definition: project横断のtodoを管理するコマンド
+  whub_backlog:
+    name: whub backlog
+    definition: projectごとのbacklogへ未整理メモを追記するコマンド
+  whub_app:
+    name: whub app
+    definition: ローカルWeb appサーバーを常駐起動・停止するコマンド
+  whub_mount:
+    name: whub mount
+    definition: remote resourceをsshfsでwhubツリーへ接続するコマンド
+  whub_unmount:
+    name: whub unmount
+    definition: remote resourceのsshfs接続を解除するコマンド
+  whub_run:
+    name: whub run
+    definition: remoteでワンショット実行するコマンド
+  whub_fetch:
+    name: whub fetch
+    definition: remoteのファイルをdata_dirのdownloadsへ取得するコマンド
+  whub_vscode:
+    name: whub vscode
+    definition: symlinkとmount対象をVS Codeの走査対象から除外する設定を生成するコマンド
+  inbox:
+    name: inbox
+    definition: project非依存の思いつき・思想・外部情報・一般ナレッジの疑問を置く場所
+  task_planning:
+    name: task-planning
+    definition: YAML Taskを作成・承認・実行・完了する個別作業の対話的運用
+  focus:
+    name: FOCUS.md
+    definition: whubから全projectの現在地を得て次の注力先を相談するための集約ビュー
+  discourse:
+    name: discourse
+    definition: 外部ソースを取得・解説しliteratureへ記録するSkill
+  refile:
+    name: refile
+    definition: inbox内のノートを配置提案・分割・移動するSkill
+  execution_spec:
+    name: execution-spec
+    definition: 実装前に仕様を固める文書を作成するSkill
+  whub:
+    name: whub
+    definition: MacBook上でlocal・remoteのprojectを統合管理するCLI
+  wflow:
+    name: wflow
+    definition: Workflow定義とその実行記録を可搬に検査・操作するCLI
+  task:
+    name: task
+    definition: Task Workflowに基づき、個別作業の計画・状態・実行事実を保持するYAML実行記録
+  knowledge:
+    name: knowledge
+    definition: projectの確定済み用語・関係・運用規約・実装制約を構造化して保持するKnowledge YAML
+  workflow:
+    name: workflow
+    definition: StateをTriggerによるTransitionで更新する、個別ドメインに依存しない実行状態管理のプリミティブ
+  state:
+    name: state
+    definition: Workflowが管理する対象の現在の状態
+  trigger:
+    name: trigger
+    definition: Transitionを要求する、Workflowに定義された操作または事象
+  transition:
+    name: transition
+    definition: TriggerによりStateを更新する規則で、条件と記録を伴える
+  task_dependency:
+    name: task dependency
+    definition: Taskが着手または完了する前に満たす必要がある、他Taskへの明示的な前提関係
+  task_workflow:
+    name: task workflow
+    definition: task-planningの後継として、個別作業の計画・承認・実行・完了を管理する具体的なWorkflow
+  task_interruption:
+    name: task interruption
+    definition: 親Taskの凍結、割り込みTaskの開始、子Task終端後の親Task再開を整合した操作として実行する責務
+    ref: src/whub/wflow/services/task/relation.py
+  task_relation:
+    name: task relation
+    definition: Task依存とTask割り込みをTask間の有向関係として操作・参照する責務
+    ref: src/whub/wflow/services/task/relation.py
+  task_integrity:
+    name: task integrity
+    definition: 保存済みTask YAMLとTask間関係の構造・不変条件を検証する責務
+    ref: src/whub/wflow/services/task/integrity.py
+  task_eligibility:
+    name: task eligibility
+    definition: 現在のTask状態・依存・関係に対して操作を実行できるか判定する責務
+    ref: src/whub/wflow/services/task/eligibility.py
+  whub_knowledge:
+    name: whub knowledge
+    definition: projectのKnowledge YAMLを検証・照会・初期化・カテゴリ単位で一覧・追加・削除するコマンド
+  whub_boot:
+    name: whub boot
+    definition: Agent設定・Skill・CodeGraph初期化を各resourceへ配布するコマンド
+    ref: src/whub/commands/boot.py
 relations:
-- id: REL-001
-  subject: DEF-001
-  predicate: has_resource
-  object: DEF-002
-  cardinality: 0..1
-- id: REL-002
-  subject: DEF-003
-  predicate: is_a
-  object: DEF-002
-- id: REL-003
-  subject: DEF-004
-  predicate: is_a
-  object: DEF-002
-- id: REL-004
-  subject: DEF-005
-  predicate: is_a
-  object: DEF-001
-- id: REL-005
-  subject: DEF-007
-  predicate: defines
-  object: DEF-001
-- id: REL-006
-  subject: DEF-007
-  predicate: defines
-  object: DEF-002
-- id: REL-007
-  subject: DEF-008
-  predicate: operates
-  object: DEF-002
-- id: REL-008
-  subject: DEF-023
-  predicate: promotes_to
-  object: DEF-010
-- id: REL-009
-  subject: DEF-009
-  predicate: promotes_to
-  object: DEF-031
-- id: REL-010
-  subject: DEF-009
-  predicate: promotes_to
-  object: DEF-028
-- id: REL-011
-  subject: DEF-037
-  predicate: is_a
-  object: DEF-042
-- id: REL-012
-  subject: DEF-041
-  predicate: is_a
-  object: DEF-042
-- id: REL-013
-  subject: DEF-045
-  predicate: operates
-  object: DEF-032
+  - subject: def:project
+    predicate: has_resource
+    object: def:resource
+    cardinality: 0..1
+  - subject: def:remote
+    predicate: is_a
+    object: def:resource
+  - subject: def:local
+    predicate: is_a
+    object: def:resource
+  - subject: def:workspace_hub
+    predicate: is_a
+    object: def:project
+  - subject: def:manifest
+    predicate: defines
+    object: def:project
+  - subject: def:manifest
+    predicate: defines
+    object: def:resource
+  - subject: def:target
+    predicate: operates
+    object: def:resource
+  - subject: def:inbox
+    predicate: promotes_to
+    object: def:todo
+  - subject: def:backlog
+    predicate: promotes_to
+    object: def:task
+  - subject: def:backlog
+    predicate: promotes_to
+    object: def:execution_spec
+  - subject: def:task_dependency
+    predicate: is_a
+    object: def:task_relation
+  - subject: def:task_interruption
+    predicate: is_a
+    object: def:task_relation
+  - subject: def:whub_knowledge
+    predicate: operates
+    object: def:knowledge
 policies:
-- id: POL-001
-  statement: remote resourceの編集・コード確認・project横断のコンテキスト参照はmountで行う
-- id: POL-002
-  statement: remote resourceの走査系・長時間処理はremote側で実行し、ワンショットはrun、作業セッションはcdのtmuxを使う
-- id: POL-003
-  statement: remote resourceの大容量ファイルをMacBookで確認する場合はfetchで逐次取得する
-- id: POL-004
-  statement: remote resourceでは参照をmount、実行をrunまたはcdに分離し、SSHFSのレイテンシ弱点と双方向同期の競合を避ける
-- id: POL-005
-  statement: 未整理入力・作業候補はtodoではなくbacklogに置く
-- id: POL-006
-  statement: MacBook上のwhubをlocal・自宅Linux・supercomputerへ接続する唯一のインターフェースとして使う
-- id: POL-007
-  statement: inboxの入力はtodoまたはvault知識プレーンへ昇格する
-- id: POL-008
-  statement: backlogの入力はTask YAML・execution-spec・ADRへ昇格する
-- id: POL-009
-  statement: 外部ソースはdiscourseを経由してliterature/log.jsonlとliterature/sourcesへ記録する
-- id: POL-010
-  statement: backlogとTask YAMLの開始・完了はFOCUS.mdの更新材料にする
-- id: POL-011
-  statement: 詳細な進捗や構想はbacklogとTask YAMLに置きFOCUS.mdは要約に留める
-- id: POL-012
-  statement: FOCUS.mdを材料にAI Agentへ次に着手すべきことを相談する
-- id: POL-014
-  statement: vaultの構造と配置判断はvault/readme.mdをSSOTとする
-- id: POL-015
-  statement: Knowledge YAMLには確定済みの現在の事実・規約だけを記録し、検討中の案はbacklogに置く
-- id: POL-016
-  statement: 長期構想はTask YAMLのTask依存で表現し、Markdownはbacklogの未整理入力・検討記録と凍結済みTask履歴に限り、Web
-    appはTask YAMLを更新しない読み取り専用の派生ビューとする
-- id: POL-017
-  statement: whubの用語・責務・CLI設計・運用フロー・Skill判断基準はKnowledge YAMLをSSOTとし、Agentによる参照・検証・追加・削除はwhub
-    knowledge query・ls・check・add・rmを使う
+  remote_edit_via_mount:
+    statement: remote resourceの編集・コード確認・project横断のコンテキスト参照はmountで行う
+  remote_execution_by_workload:
+    statement: remote resourceの走査系・長時間処理はremote側で実行し、ワンショットはrun、作業セッションはcdのtmuxを使う
+  fetch_large_remote_files:
+    statement: remote resourceの大容量ファイルをMacBookで確認する場合はfetchで逐次取得する
+  separate_remote_reference_and_execution:
+    statement: remote resourceでは参照をmount、実行をrunまたはcdに分離し、SSHFSのレイテンシ弱点と双方向同期の競合を避ける
+  unstructured_work_in_backlog:
+    statement: 未整理入力・作業候補はtodoではなくbacklogに置く
+  whub_as_single_interface:
+    statement: MacBook上のwhubをlocal・自宅Linux・supercomputerへ接続する唯一のインターフェースとして使う
+  inbox_promotion:
+    statement: inboxの入力はtodoまたはvault知識プレーンへ昇格する
+  backlog_promotion:
+    statement: backlogの入力はTask YAML・execution-spec・ADRへ昇格する
+  external_sources_via_discourse:
+    statement: 外部ソースはdiscourseを経由してliterature/log.jsonlとliterature/sourcesへ記録する
+  task_changes_feed_focus:
+    statement: backlogとTask YAMLの開始・完了はFOCUS.mdの更新材料にする
+  keep_focus_concise:
+    statement: 詳細な進捗や構想はbacklogとTask YAMLに置きFOCUS.mdは要約に留める
+  consult_agent_with_focus:
+    statement: FOCUS.mdを材料にAI Agentへ次に着手すべきことを相談する
+  vault_readme_is_ssot:
+    statement: vaultの構造と配置判断はvault/readme.mdをSSOTとする
+  knowledge_contains_confirmed_facts:
+    statement: Knowledge YAMLには確定済みの現在の事実・規約だけを記録し、検討中の案はbacklogに置く
+  task_yaml_is_active_work_ssot:
+    statement: 長期構想はTask YAMLのTask依存で表現し、Markdownはbacklogの未整理入力・検討記録と凍結済みTask履歴に限り、Web appはTask YAMLを更新しない読み取り専用の派生ビューとする
+  knowledge_operations_via_cli:
+    statement: whubの用語・責務・CLI設計・運用フロー・Skill判断基準はKnowledge YAMLをSSOTとし、Agentによる参照・検証・追加・削除はwhub knowledge query・ls・check・add・rmを使う
 constraints:
-- id: CON-001
-  statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する
-- id: CON-002
-  statement: manifestのprojectで必須とするフィールドはnameだけとする
-- id: CON-043
-  statement: Task Workflowでは保存済みYAMLの整合性をtask_integrity、操作可否をtask_eligibility、Task間関係の更新をservices/task/relation.pyへ分離し、その内部で単一Taskの依存編集と複数Taskの割り込み操作を別関数として分離する
-- id: CON-044
-  statement: Task間関係グラフはstateがcompletedまたはcancelledのTask nodeを表示せず、表示対象外Taskをsourceまたはtargetとする依存・割り込みedgeも表示しない
-- id: CON-045
-  statement: Task固有MermaidビューのPhaseは、deletedを削除済み、削除されていないStepがすべてdoneまたはskippedなら完了、それ以外を未完了として色分けする
-- id: CON-047
-  statement: Web appでProject別Taskを扱う識別子はProject名とrepository内のTASK-IDの組とし、Task依存・割り込み関係は同じProjectのdocs/tasks内で解決する
-- id: CON-048
-  statement: Web appのProject選択はmanifestに定義されたProjectから1つを選び、workspace-hubを初期選択する
-- id: CON-049
-  statement: OverviewのProject選択はTask一覧・Task間関係グラフ・Backlogだけに適用し、Todo・Inbox・Statusには適用しない
-- id: CON-050
-  statement: Project別Task閲覧ではresourceを閲覧できない状態とTaskが存在しない状態を区別して表示する
-- id: CON-003
-  statement: manifestではresourceを独立したtop-level一覧にせず、対応するprojectのresourceフィールド直下に定義する
-- id: CON-004
-  statement: manifestのresource位置はwhubツリー上をworkspace_path、local実体をsource、remote実体をpathとして用途別に表す
-- id: CON-005
-  statement: manifestの全resourceはwhubツリー上の位置を表すworkspace_pathを必須で持つ
-- id: CON-006
-  statement: targetはresourceと処理データの列を受け取りlocal・remoteごとの関数を呼び分ける
-- id: CON-007
-  statement: Webでも使うwhubのドメイン処理はservicesに置きCLIとWeb adapterから呼ぶ
-- id: CON-008
-  statement: whubのCLIとWebに依存しない下位層はcoreに置く
-- id: CON-009
-  statement: core/target.pyはtargetの入力インターフェースへ整形する汎用ヘルパーを提供する
-- id: CON-010
-  statement: core/target.pyはClickに依存せずtarget解決・型不一致をTargetErrorで通知する
-- id: CON-011
-  statement: targetを使うserviceはTargetErrorをServiceErrorへ変換し、CLI・Web adapterは各プロトコル固有例外へ変換する
-- id: CON-012
-  statement: core/remote.pyはSSH・rsync・sshfsの低レイヤーを担いprojectやbacklogの意味を持たない
-- id: CON-013
-  statement: core/health.pyはsymlink・mountの健全性検査を集約し、remoteの健全性はstatusのhost単位probeが担う
-- id: CON-014
-  statement: core/tmux.pyはセッション命名規約とremote shell snippetの組み立てを担う
-- id: CON-015
-  statement: core/paths.pyはwhub root・data_dir・manifest・todo・downloadsのパス解決を一元化する
-- id: CON-016
-  statement: utilsには複数commandで共有する薄い補助処理だけを置きproject・resourceのドメイン判断を持たせない
-- id: CON-017
-  statement: whub rootはWHUB_ROOTを優先し、通常はインストール済みpackage位置から導出する
-- id: CON-018
-  statement: data_dirはWHUB_DATA_DIRを優先し、通常は.whub/config.tomlのdata_dirをSSOTとする
-- id: CON-019
-  statement: whub cdでresourceのないprojectを指定した場合は移動先なしを通知する
-- id: CON-020
-  statement: whub statusは接続状態・ヘルスチェック・git差分確認に責務を絞る
-- id: CON-021
-  statement: whub statusはstatusが有効な全resourceを対象にする
-- id: CON-022
-  statement: whub mountは無引数でmountが有効なresourceだけを対象にし、名指し・全件指定ではmount設定を無視する
-- id: CON-023
-  statement: whub backlogは各projectのdocs/backlog.mdへ未整理メモを追記する
-- id: CON-024
-  statement: whub appは.whub/app.pidで常駐serverを管理し、無引数で起動、app downで停止する
-- id: CON-025
-  statement: whub fetchはworkspace-hub相対パスからresourceを解決し、downloads直下へ単一ファイルを同名上書きで保存する
-- id: CON-026
-  statement: whubはMacBook上だけで動作するCLIとする
-- id: CON-027
-  statement: Mac側のwhubで足り配布コストに見合わないため、whubはremote先へインストール・配布しない
-- id: CON-028
-  statement: remote resourceへのwhub cd接続先ではwhub commandを利用可能にしない
-- id: CON-029
-  statement: Mac内ではlocal resourceへ移動した先を含むどのdirectoryからでもwhubを実行可能にする
-- id: CON-030
-  statement: FOCUS.mdはprojectごとに1つの現在状態サマリーを持つ
-- id: CON-031
-  statement: backlogの読み書きなどWebでも使う処理はservicesに置く
-- id: CON-032
-  statement: statusの表示やbootの配布手順などCLI固有処理は各commandに置く
-- id: CON-033
-  statement: workspace-hubはmount・link・cd対象のresourceを持たない
-- id: CON-034
-  statement: project内容を参照・編集する操作ではworkspace-hubのrepository rootを合成local targetとして解決できる
-- id: CON-035
-  statement: Knowledge YAMLの分類・必須フィールド・検証規則はsrc/whub/models/knowledge.pyをSSOTとする
-- id: CON-036
-  statement: 'wflowのWorkflow解釈・検証・Transition適用は個別ドメインに依存しない汎用engineへ置き、具体的なWorkflow（例:
-    Task）のドメイン固有不変条件は各ドメインへ置く'
-- id: CON-037
-  statement: Task依存はTask間だけに表し、PhaseやStepには持たせない
-- id: CON-038
-  statement: Task Workflowの状態・遷移・条件・遷移時の記録はsrc/whub/wflow/definitions/task.yamlをSSOTとし、コードは汎用engineとTask固有の不変条件に限定する
-- id: CON-039
-  statement: Task YAMLの標準配置はrepository root相対のdocs/tasksとし、wflow task lsは無引数で同ディレクトリを再帰走査し、任意のTASK_DIR指定で対象を上書きする
-- id: CON-040
-  statement: 単一Taskを対象にするwflow task commandはTASK-ID・その数字部分・Task YAML pathを受け、ID参照はdocs/tasksから一意に解決する
-- id: CON-041
-  statement: Task Workflowの宣言済みTransitionを適用するCLI commandはwflow task transitionとする
-- id: CON-042
-  statement: PhaseとStepはTask YAMLの記載順で識別し、安定IDを持たない。wflow task doneとskipはPPP-SSS形式の位置指定を受け、指定がなければ次の未完了Stepを対象にする
-- id: CON-051
-  statement: whub knowledgeはproject未指定時にworkspace-hubを対象とし、他projectは--projectで単数指定する
-- id: CON-052
-  statement: whub knowledge lsは対象projectのdef・relation-type・rel・pol・con・excのうち、必須引数で指定した1カテゴリだけを表示する
-- id: CON-053
-  statement: whub knowledge addとrmはdef・relation-type・rel・pol・con・excのカテゴリ略記を先頭に取り、後続引数はカテゴリごとに定義する
-- id: CON-054
-  statement: whub bootは実行ファイルをremote hostへ頒布せず、Agent設定・Skill・CodeGraph初期化だけを対象resourceへ適用する
-  ref: src/whub/commands/boot.py
-exceptions: []
+  common_cli_delegates_resource_dispatch:
+    statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する
+  project_requires_only_name:
+    statement: manifestのprojectで必須とするフィールドはnameだけとする
+  task_service_responsibility_separation:
+    statement: Task Workflowでは保存済みYAMLの整合性をtask_integrity、操作可否をtask_eligibility、Task間関係の更新をservices/task/relation.pyへ分離し、その内部で単一Taskの依存編集と複数Taskの割り込み操作を別関数として分離する
+  task_relation_graph_excludes_terminal_tasks:
+    statement: Task間関係グラフはstateがcompletedまたはcancelledのTask nodeを表示せず、表示対象外Taskをsourceまたはtargetとする依存・割り込みedgeも表示しない
+  task_phase_status_uses_steps:
+    statement: Task固有MermaidビューのPhaseは、deletedを削除済み、削除されていないStepがすべてdoneまたはskippedなら完了、それ以外を未完了として色分けする
+  web_task_identity_is_project_and_task:
+    statement: Web appでProject別Taskを扱う識別子はProject名とrepository内のTASK-IDの組とし、Task依存・割り込み関係は同じProjectのdocs/tasks内で解決する
+  web_project_selection_from_manifest:
+    statement: Web appのProject選択はmanifestに定義されたProjectから1つを選び、workspace-hubを初期選択する
+  overview_project_scope:
+    statement: OverviewのProject選択はTask一覧・Task間関係グラフ・Backlogだけに適用し、Todo・Inbox・Statusには適用しない
+  distinguish_unavailable_and_empty_tasks:
+    statement: Project別Task閲覧ではresourceを閲覧できない状態とTaskが存在しない状態を区別して表示する
+  resource_nested_under_project:
+    statement: manifestではresourceを独立したtop-level一覧にせず、対応するprojectのresourceフィールド直下に定義する
+  resource_paths_by_purpose:
+    statement: manifestのresource位置はwhubツリー上をworkspace_path、local実体をsource、remote実体をpathとして用途別に表す
+  resource_requires_workspace_path:
+    statement: manifestの全resourceはwhubツリー上の位置を表すworkspace_pathを必須で持つ
+  target_dispatches_by_resource_type:
+    statement: targetはresourceと処理データの列を受け取りlocal・remoteごとの関数を呼び分ける
+  shared_domain_logic_in_services:
+    statement: Webでも使うwhubのドメイン処理はservicesに置きCLIとWeb adapterから呼ぶ
+  cli_web_independent_logic_in_core:
+    statement: whubのCLIとWebに依存しない下位層はcoreに置く
+  target_helpers_in_core_target:
+    statement: core/target.pyはtargetの入力インターフェースへ整形する汎用ヘルパーを提供する
+  core_target_has_no_click_dependency:
+    statement: core/target.pyはClickに依存せずtarget解決・型不一致をTargetErrorで通知する
+  translate_target_errors_at_boundaries:
+    statement: targetを使うserviceはTargetErrorをServiceErrorへ変換し、CLI・Web adapterは各プロトコル固有例外へ変換する
+  core_remote_is_low_level:
+    statement: core/remote.pyはSSH・rsync・sshfsの低レイヤーを担いprojectやbacklogの意味を持たない
+  remote_health_via_status_probe:
+    statement: core/health.pyはsymlink・mountの健全性検査を集約し、remoteの健全性はstatusのhost単位probeが担う
+  core_tmux_owns_session_and_shell:
+    statement: core/tmux.pyはセッション命名規約とremote shell snippetの組み立てを担う
+  core_paths_centralizes_paths:
+    statement: core/paths.pyはwhub root・data_dir・manifest・todo・downloadsのパス解決を一元化する
+  utils_remain_thin:
+    statement: utilsには複数commandで共有する薄い補助処理だけを置きproject・resourceのドメイン判断を持たせない
+  whub_root_resolution:
+    statement: whub rootはWHUB_ROOTを優先し、通常はインストール済みpackage位置から導出する
+  data_dir_resolution:
+    statement: data_dirはWHUB_DATA_DIRを優先し、通常は.whub/config.tomlのdata_dirをSSOTとする
+  cd_reports_project_without_resource:
+    statement: whub cdでresourceのないprojectを指定した場合は移動先なしを通知する
+  status_scope:
+    statement: whub statusは接続状態・ヘルスチェック・git差分確認に責務を絞る
+  status_targets_enabled_resources:
+    statement: whub statusはstatusが有効な全resourceを対象にする
+  mount_selection_rules:
+    statement: whub mountは無引数でmountが有効なresourceだけを対象にし、名指し・全件指定ではmount設定を無視する
+  backlog_path:
+    statement: whub backlogは各projectのdocs/backlog.mdへ未整理メモを追記する
+  app_pid_management:
+    statement: whub appは.whub/app.pidで常駐serverを管理し、無引数で起動、app downで停止する
+  fetch_destination:
+    statement: whub fetchはworkspace-hub相対パスからresourceを解決し、downloads直下へ単一ファイルを同名上書きで保存する
+  whub_runs_only_on_macbook:
+    statement: whubはMacBook上だけで動作するCLIとする
+  do_not_distribute_whub:
+    statement: Mac側のwhubで足り配布コストに見合わないため、whubはremote先へインストール・配布しない
+  whub_unavailable_in_remote_cd:
+    statement: remote resourceへのwhub cd接続先ではwhub commandを利用可能にしない
+  whub_available_in_local_directories:
+    statement: Mac内ではlocal resourceへ移動した先を含むどのdirectoryからでもwhubを実行可能にする
+  focus_has_project_summaries:
+    statement: FOCUS.mdはprojectごとに1つの現在状態サマリーを持つ
+  shared_backlog_logic_in_services:
+    statement: backlogの読み書きなどWebでも使う処理はservicesに置く
+  cli_specific_logic_in_commands:
+    statement: statusの表示やbootの配布手順などCLI固有処理は各commandに置く
+  workspace_hub_has_no_resource:
+    statement: workspace-hubはmount・link・cd対象のresourceを持たない
+  workspace_hub_resolves_as_local_target:
+    statement: project内容を参照・編集する操作ではworkspace-hubのrepository rootを合成local targetとして解決できる
+  knowledge_schema_in_model:
+    statement: Knowledge YAMLの分類・必須フィールド・検証規則はsrc/whub/models/knowledge.pyをSSOTとする
+  workflow_engine_is_domain_independent:
+    statement: "wflowのWorkflow解釈・検証・Transition適用は個別ドメインに依存しない汎用engineへ置き、具体的なWorkflow（例: Task）のドメイン固有不変条件は各ドメインへ置く"
+  task_dependency_between_tasks_only:
+    statement: Task依存はTask間だけに表し、PhaseやStepには持たせない
+  task_workflow_definition_is_ssot:
+    statement: Task Workflowの状態・遷移・条件・遷移時の記録はsrc/whub/wflow/definitions/task.yamlをSSOTとし、コードは汎用engineとTask固有の不変条件に限定する
+  task_yaml_location:
+    statement: Task YAMLの標準配置はrepository root相対のdocs/tasksとし、wflow task lsは無引数で同ディレクトリを再帰走査し、任意のTASK_DIR指定で対象を上書きする
+  task_reference_resolution:
+    statement: 単一Taskを対象にするwflow task commandはTASK-ID・その数字部分・Task YAML pathを受け、ID参照はdocs/tasksから一意に解決する
+  workflow_transition_cli:
+    statement: Task Workflowの宣言済みTransitionを適用するCLI commandはwflow task transitionとする
+  task_steps_use_positional_references:
+    statement: PhaseとStepはTask YAMLの記載順で識別し、安定IDを持たない。wflow task doneとskipはPPP-SSS形式の位置指定を受け、指定がなければ次の未完了Stepを対象にする
+  knowledge_project_option:
+    statement: whub knowledgeはproject未指定時にworkspace-hubを対象とし、他projectは--projectで単数指定する
+  knowledge_ls_requires_category:
+    statement: whub knowledge lsは対象projectのdef・rel・pol・con・excのうち、必須引数で指定した1カテゴリだけを表示する
+  knowledge_cli_category_arguments:
+    statement: whub knowledge addとrmはdef・rel・pol・con・excのカテゴリ略記を先頭に取り、entryカテゴリはslug、Relationはsubject・predicate・objectを後続引数に取る
+  boot_applies_agent_assets_only:
+    statement: whub bootは実行ファイルをremote hostへ頒布せず、Agent設定・Skill・CodeGraph初期化だけを対象resourceへ適用する
+    ref: src/whub/commands/boot.py
+exceptions: {}

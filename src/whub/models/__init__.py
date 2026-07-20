@@ -8,7 +8,6 @@ from whub.models.knowledge import (
     KnowledgeException,
     KnowledgePolicy,
     KnowledgeRelation,
-    KnowledgeRelationType,
     load_knowledge,
 )
 from whub.models.manifest import (
@@ -38,7 +37,6 @@ __all__ = [
     "KnowledgeException",
     "KnowledgePolicy",
     "KnowledgeRelation",
-    "KnowledgeRelationType",
     "Manifest",
     "ManifestError",
     "PRIORITY_EMOJI",

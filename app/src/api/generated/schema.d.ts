@@ -311,27 +311,31 @@ export interface components {
              * Schema Version
              * @constant
              */
-            schema_version: 3;
+            schema_version: 4;
             /** Definitions */
-            definitions: components["schemas"]["KnowledgeDefinition"][];
-            /** Relation Types */
-            relation_types: components["schemas"]["KnowledgeRelationType"][];
+            definitions: {
+                [key: string]: components["schemas"]["KnowledgeDefinition"];
+            };
             /** Relations */
             relations: components["schemas"]["KnowledgeRelation"][];
             /** Policies */
-            policies: components["schemas"]["KnowledgePolicy"][];
+            policies: {
+                [key: string]: components["schemas"]["KnowledgePolicy"];
+            };
             /** Constraints */
-            constraints: components["schemas"]["KnowledgeConstraint"][];
+            constraints: {
+                [key: string]: components["schemas"]["KnowledgeConstraint"];
+            };
             /** Exceptions */
-            exceptions: components["schemas"]["KnowledgeException"][];
+            exceptions: {
+                [key: string]: components["schemas"]["KnowledgeException"];
+            };
         };
         /**
          * KnowledgeConstraint
          * @description データ・実装・CLIが必ず満たす性質を表すCONエントリ。
          */
         KnowledgeConstraint: {
-            /** Id */
-            id: string;
             /** Statement */
             statement: string;
             /** Ref */
@@ -342,8 +346,6 @@ export interface components {
          * @description 用語が何であるかを表すDEFエントリ。
          */
         KnowledgeDefinition: {
-            /** Id */
-            id: string;
             /** Name */
             name: string;
             /** Definition */
@@ -356,8 +358,6 @@ export interface components {
          * @description PolicyまたはConstraintの例外を表すEXCエントリ。
          */
         KnowledgeException: {
-            /** Id */
-            id: string;
             /** Exception To */
             exception_to: string;
             /** Condition */
@@ -372,8 +372,6 @@ export interface components {
          * @description 人間・Agentがどう運用するかを表すPOLエントリ。
          */
         KnowledgePolicy: {
-            /** Id */
-            id: string;
             /** Statement */
             statement: string;
             /** Ref */
@@ -384,8 +382,6 @@ export interface components {
          * @description 用語同士の関係を表すRELエントリ。
          */
         KnowledgeRelation: {
-            /** Id */
-            id: string;
             /** Subject */
             subject: string;
             /** Predicate */
@@ -396,16 +392,6 @@ export interface components {
             cardinality?: string | null;
             /** Ref */
             ref?: string | null;
-        };
-        /**
-         * KnowledgeRelationType
-         * @description Project固有のRelation predicate。
-         */
-        KnowledgeRelationType: {
-            /** Name */
-            name: string;
-            /** Definition */
-            definition: string;
         };
         /** PlanApproval */
         PlanApproval: {

@@ -16,9 +16,9 @@ from whub.services.knowledge_operation import (
     add_exception,
     add_policy,
     add_relation,
-    add_relation_type,
     init_project_knowledge,
     remove_knowledge,
+    remove_relation,
 )
 from whub.tests.helpers import knowledge_data, manifest_data
 
@@ -49,11 +49,10 @@ def test_initializes_local_remote_and_workspace_hub(
 
     for project in ("local", "remote", "workspace-hub"):
         initialized = init_project_knowledge(manifest, project)
-        assert initialized.schema_version == 3
+        assert initialized.schema_version == 4
         assert not any(
             (
                 initialized.definitions,
-                initialized.relation_types,
                 initialized.relations,
                 initialized.policies,
                 initialized.constraints,
@@ -66,50 +65,65 @@ def test_initializes_local_remote_and_workspace_hub(
         init_project_knowledge(manifest, "local")
 
 
-def test_adds_all_categories_with_max_id_plus_one(
+def test_adds_all_categories_with_stable_slugs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     manifest = _manifest(tmp_path, monkeypatch)
-    data = knowledge_data()
-    data["definitions"][1]["id"] = "DEF-010"
-    data["relations"][0]["object"] = "DEF-010"
-    _write_knowledge(tmp_path / "local-source", data)
+    path = _write_knowledge(tmp_path / "local-source")
 
-    definition = add_definition(manifest, "local", "resource", "接続先", "docs/ref.md")
-    relation_type = add_relation_type(manifest, "local", "uses", "subjectがobjectを使う")
+    definition = add_definition(
+        manifest,
+        "local",
+        "resource",
+        "resource",
+        "接続先",
+        "docs/ref.md",
+    )
     relation = add_relation(
         manifest,
         "local",
-        definition.id,
-        relation_type.name,
-        "DEF-001",
+        "def:resource",
+        "uses",
+        "def:whub",
         "0..*",
         "docs/ref.md",
     )
-    policy = add_policy(manifest, "local", "CLIを使う", "docs/ref.md")
-    constraint = add_constraint(manifest, "local", "参照を保つ", "docs/ref.md")
+    policy = add_policy(
+        manifest,
+        "local",
+        "use_cli",
+        "CLIを使う",
+        "docs/ref.md",
+    )
+    constraint = add_constraint(
+        manifest,
+        "local",
+        "preserve_references",
+        "参照を保つ",
+        "docs/ref.md",
+    )
     exception = add_exception(
         manifest,
         "local",
-        constraint.id,
+        "migration",
+        "con:preserve_references",
         "移行中",
         "旧形式を許可する",
         "docs/ref.md",
     )
 
-    assert definition.id == "DEF-011"
-    assert relation.id == "REL-002"
-    assert policy.id == "POL-002"
-    assert constraint.id == "CON-002"
-    assert exception.id == "EXC-002"
     loaded = load_project_knowledge(manifest, "local")
-    assert loaded.definitions[-1] == definition
-    assert loaded.relation_types[-1] == relation_type
+    assert loaded.definitions["resource"] == definition
     assert loaded.relations[-1] == relation
-    assert loaded.policies[-1] == policy
-    assert loaded.constraints[-1] == constraint
-    assert loaded.exceptions[-1] == exception
+    assert loaded.policies["use_cli"] == policy
+    assert loaded.constraints["preserve_references"] == constraint
+    assert loaded.exceptions["migration"] == exception
+
+    original = path.read_bytes()
+    with pytest.raises(ServiceError, match="already exists: def:resource"):
+        add_definition(manifest, "local", "resource", "other", "重複")
+    assert path.read_bytes() == original
 
 
 def test_rejects_referenced_removal_and_removes_unreferenced_target(
@@ -120,16 +134,25 @@ def test_rejects_referenced_removal_and_removes_unreferenced_target(
     _write_knowledge(tmp_path / "local-source")
 
     for target, reference in (
-        ("DEF-001", "REL-001"),
-        ("manages", "REL-001"),
-        ("CON-001", "EXC-001"),
+        ("def:whub", "def:whub manages def:project"),
+        ("con:reject_unknown_fields", "exc:legacy_document_transition"),
     ):
         with pytest.raises(ServiceError, match=reference):
             remove_knowledge(manifest, "local", target)
 
-    remove_knowledge(manifest, "local", "EXC-001")
-    remove_knowledge(manifest, "local", "CON-001")
+    remove_relation(
+        manifest,
+        "local",
+        "def:whub",
+        "manages",
+        "def:project",
+    )
+    remove_knowledge(manifest, "local", "def:whub")
+    remove_knowledge(manifest, "local", "exc:legacy_document_transition")
+    remove_knowledge(manifest, "local", "con:reject_unknown_fields")
     loaded = load_project_knowledge(manifest, "local")
+    assert not loaded.relations
+    assert "whub" not in loaded.definitions
     assert not loaded.exceptions
     assert not loaded.constraints
 
@@ -143,11 +166,17 @@ def test_invalid_update_leaves_existing_file_unchanged(
     original = path.read_bytes()
 
     with pytest.raises(ServiceError, match="invalid Knowledge update"):
-        add_relation(manifest, "local", "DEF-001", "unknown", "DEF-002")
+        add_relation(
+            manifest,
+            "local",
+            "def:whub",
+            "uses",
+            "def:missing",
+        )
     assert path.read_bytes() == original
 
-    with pytest.raises(ServiceError, match="invalid Knowledge input"):
-        add_definition(manifest, "local", " ", "definition")
+    with pytest.raises(ServiceError, match="invalid Knowledge update"):
+        add_definition(manifest, "local", "invalid-slug", "name", "definition")
     assert path.read_bytes() == original
 
 
@@ -163,7 +192,7 @@ def test_replace_failure_leaves_existing_file_and_removes_temporary_file(
         patch("whub.services.knowledge.os.replace", side_effect=OSError("replace failed")),
         pytest.raises(OSError, match="replace failed"),
     ):
-        add_policy(manifest, "local", "保存されない")
+        add_policy(manifest, "local", "not_saved", "保存されない")
 
     assert path.read_bytes() == original
     assert not list(path.parent.glob(f".{path.name}.*.tmp"))

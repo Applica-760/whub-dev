@@ -351,9 +351,12 @@ def test_get_knowledge_uses_service_and_maps_missing_to_404(
         response = client.get("/api/knowledge/local")
 
     assert response.status_code == 200
-    assert response.json()["definitions"][0]["id"] == "DEF-001"
-    assert response.json()["relation_types"][0]["name"] == "manages"
-    assert response.json()["constraints"][0]["id"] == "CON-001"
+    assert response.json()["definitions"]["whub"]["name"] == "whub"
+    assert response.json()["relations"][0]["predicate"] == "manages"
+    assert (
+        response.json()["constraints"]["reject_unknown_fields"]["statement"]
+        == "未知フィールドを拒否する"
+    )
     mock_load.assert_called_once_with(m, "local")
 
     with patch(
