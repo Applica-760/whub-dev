@@ -226,8 +226,21 @@ def check(task_ref: str) -> None:
                 for item in validate_task(load_task(task_path), load_task_workflow())
             ]
         else:
-            summary = next(item for item in list_tasks(task_root) if item.path == relative_path)
-            diagnostics = summary.diagnostics
+            summary = next(
+                (
+                    item
+                    for item in list_tasks(task_root)
+                    if item.path == relative_path
+                ),
+                None,
+            )
+            if summary is None:
+                diagnostics = [
+                    f"{item.code}: {item.message}"
+                    for item in validate_task(load_task(task_path), load_task_workflow())
+                ]
+            else:
+                diagnostics = summary.diagnostics
     except WflowError as error:
         raise click.ClickException(str(error)) from error
 

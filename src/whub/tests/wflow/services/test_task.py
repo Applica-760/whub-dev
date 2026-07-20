@@ -23,6 +23,7 @@ from whub.wflow.services import (
     interrupt_task,
     list_tasks,
     load_task,
+    load_task_records,
     load_task_workflow,
     render_task_flow,
     record_acceptance,
@@ -384,6 +385,19 @@ def test_lists_tasks_with_dependency_status_and_invalid_records(tmp_path: Path) 
     assert tasks["broken.yaml"].state is None
     assert tasks["broken.yaml"].diagnostics
     assert "\n" not in tasks["broken.yaml"].diagnostics[0]
+
+
+def test_ignores_apple_double_in_task_discovery(tmp_path: Path) -> None:
+    task_path = tmp_path / "task.yaml"
+    _write_task(tmp_path, task_path.name, _task_data())
+    sidecar = tmp_path / "._task.yaml"
+    sidecar.write_bytes(b"\x00\x05\x16\x07AppleDouble")
+
+    assert [item.path for item in list_tasks(tmp_path)] == ["task.yaml"]
+    assert set(load_task_records(tmp_path)) == {"TASK-001"}
+    assert resolve_task_reference("TASK-001", tmp_path) == task_path
+    with pytest.raises(WflowError, match="AppleDouble metadata"):
+        load_task(sidecar)
 
 
 def test_lists_interruption_relationships_and_resumability(tmp_path: Path) -> None:

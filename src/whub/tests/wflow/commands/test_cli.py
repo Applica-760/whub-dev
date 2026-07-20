@@ -49,6 +49,19 @@ def test_task_check_accepts_a_task_path() -> None:
     assert f"valid {_TASK_PATH}" in result.output
 
 
+def test_task_check_reports_apple_double_path(tmp_path: Path, monkeypatch) -> None:
+    sidecar = tmp_path / "docs/tasks/._task.yaml"
+    sidecar.parent.mkdir(parents=True)
+    sidecar.write_bytes(b"\x00\x05\x16\x07AppleDouble")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["task", "check", str(sidecar)])
+
+    assert result.exit_code == 1
+    assert "AppleDouble metadata is not a Task YAML" in result.output
+    assert "Traceback" not in result.output
+
+
 def test_task_project_option_uses_project_root_and_restores_cwd(
     tmp_path: Path,
     monkeypatch,

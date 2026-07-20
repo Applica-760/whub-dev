@@ -1,0 +1,126 @@
+schema_version: 1
+task:
+  id: TASK-029
+  state: completed
+  title: AppleDouble再発防止とProjectファイル探索境界の統一
+  objective: macOSからlocal・SSHFS Projectを扱う際、AppleDoubleメタデータを業務ファイルとして解釈せず、生成抑止と全Projectファイル探索の防御を一貫した契約にする
+  approach:
+  - '過去対応: docs/tasks/done/20260622_1148_remote-mount-appledouble.md および docs/tasks/done/20260702_1159_remote-env.md
+    を前提に、再発原因を実mountで再検証する'
+  - Task YAMLだけでなく、workspace-hubがProject配下を列挙・glob・再帰走査して内容を解釈する全consumerを対象にする
+  - mount側の生成抑止とconsumer側の除外を併用し、remote全体を走査して削除するcleanupは復活させない
+  - AppleDouble判定を共通境界へ集約し、個別機能ごとの場当たり的な例外処理を避ける
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: TASK-023
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: workspace-hubがProject配下から業務ファイルを探索する全経路でAppleDoubleの._*を解析対象から除外する
+  - id: ACC-002
+    statement: remote mountの生成抑止契約を実環境で検証し、抑止不能な場合もconsumerが既存または新規AppleDoubleに影響されない
+  - id: ACC-003
+    statement: AppleDoubleが存在するmount済みremote Projectでwflow taskのinit・ls・ID/path参照・checkが成功する
+  phases:
+  - title: 再発原因と探索面を確定する
+    acceptance: []
+    steps:
+    - description: 現在のfuse-t/sshfs実mountで._*生成を最小再現し、実行argv・mount状態・対応optionを照合して過去対策が効かない原因を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 過去Taskとcommitの意思決定を確認し、生成抑止・再帰cleanup廃止・remote走査回避の維持条件を整理する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Project配下をiterdir・glob・rglob等で列挙してファイル内容を解釈する全経路を棚卸しし、AppleDouble除外が必要なconsumer一覧をPhase
+        logへ記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '2026-07-20 再発一次診断: 稼働中la-imitation-learningのsshfs argvにnoappledouble・noapplexattr・defer_permissionsが実際に含まれることを確認。実体はsshfs-fuse-t
+      2026.05.12-cebbdd3 / SSHFS 3.7.5 / FUSE 3.19.0-rc0で、mount table上はfuse-tのNFS
+      mount。生成済みdocs/tasks/._20260720_1417_task-001.yamlはAppleDouble形式で、格納属性はcom.apple.provenance、元YAMLにも同xattrが見える。fuse-t
+      upstream issue #81にもnoappledouble指定下でquarantine/provenance由来の._*が生成される同型事象が未解決で報告済み。したがって過去optionの脱落ではなく、fuse-tがmacFUSE由来optionを受理してもprovenanceのAppleDouble化を抑止できないことが第一原因候補。wflowのNamedTemporaryFile→link/replaceは新規inode作成の発火経路候補だが、根本原因確定には最小再現で通常createとの比較が必要。'
+    - '2026-07-20 実mount原因確定: macOS 26.5.2 / sshfs-fuse-t 2026.05.12-cebbdd3で隔離実験。mount経由のtouch・Path.write_text・NamedTemporaryFileはいずれも新規inode作成時にcom.apple.provenanceを付与し、同属性だけを格納した4KiB
+      AppleDoubleを生成した。Linux側で同じPython write・NamedTemporaryFile→os.replaceを直接実行した場合はxattrも._*も生成されず、macOS/fuse-t経由が必要条件。wflow初回createのtemp→hard
+      link→temp削除ではsidecarもtempと共に消えるが、更新時のtemp→os.replaceではsidecarが最終名へ移り、plan insert中の再発と一致した。別mountでoptionなし・noappledouble単独・noapplexattr単独・nonamedattr併用を比較したが全条件で同じprovenance
+      AppleDoubleを生成し、現行fuse-tでは抑止optionが無効と確定。mount側xattr -dは成功終了してもsidecar実体を削除せず、SSH先でsidecarを削除するとxattrは消えた。sidecar名はsshfs既定dir_cache_timeout=20秒の間だけ残って見え、探索への一時混入も確認。'
+    - 2026-07-20 過去対応を再確認。mount optionによる生成抑止は現行fuse-tでは成立しない一方、remote再帰cleanupはI/O・race・cache問題を再導入するため復活させない。remote参照と重い走査の分離も維持する。
+    - 2026-07-20 consumer棚卸し完了。Project配下を再帰探索して業務ファイルとして解釈する現行本番経路はwflow Task探索（ID解決・採番・一覧・横断record読込）が対象。Knowledge・Backlog・Todoは固定path、bootのrglobはpackage
+      assetsで対象外。ユーザー決定により共通AppleDouble判定をwflowのみに適用し、削除処理は導入しない。
+    deleted: false
+  - title: 共通ファイル探索契約を実装する
+    acceptance: []
+    steps:
+    - description: AppleDoubleパスを一貫して判定・除外する最小の共通境界を設計し、対象外となる明示path操作との契約も確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 実証結果に基づきsshfs mount optionを修正または現行維持し、remote全体の再帰cleanupを導入しない
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 共通側はwhub.utils.apple_double.is_apple_doubleによるbasename判定だけとし、wflow側でTask探索境界iter_task_pathsへ集約した。実証に基づき現行mount
+      optionは変更せず、AppleDouble削除・再帰cleanupも導入しない。
+    deleted: false
+  - title: 全consumerへ適用する
+    acceptance: []
+    steps:
+    - description: wflowのTask探索・ID採番・一覧・参照・横断検証へ共通AppleDouble除外を適用する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 棚卸しで特定したTask以外のProjectファイル探索consumerへ同じ除外契約を適用する
+      state: skipped
+      skip_reason: consumer棚卸しとユーザー決定により適用範囲をwflowのみに限定したため
+      deleted: false
+    - description: 明示pathでAppleDoubleまたは非テキストを渡した場合の診断を、UnicodeDecodeErrorを漏らさないドメインエラーへ統一する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - wflowのID解決・採番・一覧・横断record読込へ共通除外を適用。明示AppleDouble pathは専用WflowError、その他decode不能ファイルもWflowErrorへ変換し、CLI
+      tracebackを防止した。
+    deleted: false
+  - title: 実mountと回帰を検証する
+    acceptance: []
+    steps:
+    - description: 各consumerに._*が混在する正常系・境界系testを追加し、通常ファイルの既存動作が変わらないことを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: mount済みremote ProjectでAppleDouble混在下のwflow task init・ls・ID/path参照・checkを実証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 対象testとuv run pytest全件、git diff --checkを実行し、必要なREADME・Knowledgeへファイル探索契約を反映する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 回帰testを追加し対象46件・全312件がpass、git diff --checkもpass。実mountの隔離rootでinit→plan insert→ls→ID
+      checkを実行し、AppleDouble生成下でも成功。明示sidecarは専用エラーを確認。実験物は全削除済み。README・Knowledge更新は内部探索契約をコードとtestで完結できるため不要と判断。
+    deleted: false
+approvals:
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - wflowの全Task探索経路がiter_task_pathsを共有し、._*を除外するtestがpass
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - 現行fuse-tでmount option無効を実証し、consumer側防御が実mountで成功
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - 隔離remote Projectでinit・plan insert・ls・ID checkがAppleDouble生成下で成功
+change_requests: []
+cancellation: null
+result:
+  summary: AppleDouble判定を共通化し、wflowのTask探索全経路で除外。明示path診断も統一し、全312 testと実mountで検証した。

@@ -1,6 +1,7 @@
 """Task creation, reference resolution, and YAML persistence."""
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import datetime
 import os
 from pathlib import Path
@@ -9,15 +10,27 @@ import tempfile
 import yaml
 from pydantic import ValidationError
 
+from whub.utils.apple_double import is_apple_double
 from whub.wflow.models.task import TASK_ID_PATTERN, TaskDocument, TaskHeader
 from whub.wflow.services.errors import WflowError
 
 
 def load_task(path: Path) -> TaskDocument:
+    if is_apple_double(path):
+        raise WflowError(f"AppleDouble metadata is not a Task YAML: {path}")
     try:
         return TaskDocument.model_validate(yaml.safe_load(path.read_text()))
-    except (OSError, yaml.YAMLError, ValidationError) as error:
+    except (OSError, UnicodeError, yaml.YAMLError, ValidationError) as error:
         raise WflowError(f"failed to load task YAML: {path}: {error}") from error
+
+
+def iter_task_paths(root: Path) -> Iterator[Path]:
+    """Yield Task YAML paths while excluding AppleDouble sidecars."""
+    return (
+        path
+        for path in root.rglob("*.yaml")
+        if not is_apple_double(path)
+    )
 
 
 def resolve_task_reference(reference: str, root: Path = Path("docs/tasks")) -> Path:
@@ -27,7 +40,7 @@ def resolve_task_reference(reference: str, root: Path = Path("docs/tasks")) -> P
         return Path(reference)
     if not root.is_dir():
         raise WflowError(f"task directory does not exist: {root}")
-    matches = [path for path in sorted(root.rglob("*.yaml")) if _task_id(path) == task_id]
+    matches = [path for path in sorted(iter_task_paths(root)) if _task_id(path) == task_id]
     if not matches:
         raise WflowError(f"task ID not found: {task_id}")
     if len(matches) > 1:
@@ -46,7 +59,7 @@ def create_task(root: Path, title: str, objective: str, approaches: tuple[str, .
     if root.exists() and not root.is_dir():
         raise WflowError(f"task path is not a directory: {root}")
     root.mkdir(parents=True, exist_ok=True)
-    numbers = [int(task_id.removeprefix("TASK-")) for path in root.rglob("*.yaml") if (task_id := _task_id(path)) is not None]
+    numbers = [int(task_id.removeprefix("TASK-")) for path in iter_task_paths(root) if (task_id := _task_id(path)) is not None]
     number = max(numbers, default=0) + 1
     try:
         task = TaskDocument(schema_version=1, task=TaskHeader(id=f"TASK-{number:03}", state="draft", title=title, objective=objective, approach=list(approaches)))

@@ -9,8 +9,8 @@ task:
   - 各Markdown Taskはwflow task initで同一Project内にYAMLを新設し、計画・完了Step・実行ログ・残作業を移して検証する
   - 移行元Markdownは削除せずYAMLへの参照を付けた凍結履歴とし、以後の更新先をYAMLだけにする
   depends_on: []
-  interruption_task_id: null
-  interruption_reason: null
+  interruption_task_id: TASK-029
+  interruption_reason: mount済みremoteでAppleDoubleがProjectファイル探索を破壊し、Markdown Task移行を継続できないため
   interruption_source_task_id: null
 plan:
   acceptance: []
@@ -20,15 +20,17 @@ plan:
     steps:
     - description: manifest Projectのうち現在アクセス可能なProjectを対象に、着手時点のdocs/tasks配下にあるMarkdown
         Taskを再走査し、Taskがないesn-lab-runはユーザー確認に基づく対象外としてPhase logへ記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 各Markdownを内容と配置に基づいて未完了の移行対象または完了済みの凍結履歴へ分類し、Project別の対象一覧をPhase
         logへ記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - '2026-07-20 棚卸し: 現在アクセス可能な12 Projectを走査。esn-lab-runはTaskなしというユーザー確認により対象外。活動中Markdownはsns-lab
+      1件（20260526_0056_chat-ui-polish.md）、la-imitation-learning 3件（20260708_1230_hilserl_sq_only_termination.md、20260618_1030_dsrl_implementation.md、20260711_1157_hilserl_action_scale_fix.md）を移行対象とした。esn-labの2件（20260511_1500_judge_strategy.md、20260604_1904_pred_analysis_tool.md）は計画済み項目が全完了し後続を別Taskとして明記しているため完了済み凍結履歴に分類。その他Projectに活動中Markdownなし。'
     deleted: false
   - title: ProjectごとにYAML Taskへ移行する
     acceptance: []
@@ -46,7 +48,10 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - '2026-07-20 移行中断: sns-lab TASK-001 draftは再構成済み。la-imitation-learning TASK-001（DSRL）を作成して計画挿入中、remote
+      mountがAppleDouble sidecar docs/tasks/._20260720_1417_task-001.yamlを生成。wflowのTask探索が全*.yamlをUTF-8として読むためUnicodeDecodeErrorで停止した。DSRL
+      draftはPhase 1途中まで有効。根本修正の判断待ち。'
     deleted: false
   - title: 移行元Markdownを凍結する
     acceptance: []

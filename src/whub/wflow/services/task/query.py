@@ -7,7 +7,11 @@ from pathlib import Path
 from whub.wflow.models.task import TaskDocument, TaskSummary
 from whub.wflow.models.workflow import WorkflowDefinition
 from whub.wflow.services.errors import WflowError
-from whub.wflow.services.task.common import load_task, resolve_task_reference
+from whub.wflow.services.task.common import (
+    iter_task_paths,
+    load_task,
+    resolve_task_reference,
+)
 from whub.wflow.services.task.integrity import validate_task, validate_task_interruption
 from whub.wflow.services.workflow import load_workflow
 
@@ -25,7 +29,7 @@ def load_task_records(root: Path) -> dict[str, tuple[Path, TaskDocument]]:
         raise WflowError(f"task directory does not exist: {root}")
 
     records: dict[str, tuple[Path, TaskDocument]] = {}
-    for path in sorted(root.rglob("*.yaml")):
+    for path in sorted(iter_task_paths(root)):
         record = load_task(path)
         task_id = record.task.id
         if task_id in records:
@@ -42,7 +46,7 @@ def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
     workflow = load_task_workflow()
     summaries: list[TaskSummary] = []
     records_by_path: dict[str, TaskDocument] = {}
-    for path in sorted(root.rglob("*.yaml")):
+    for path in sorted(iter_task_paths(root)):
         relative_path = path.relative_to(root).as_posix()
         try:
             record = load_task(path)

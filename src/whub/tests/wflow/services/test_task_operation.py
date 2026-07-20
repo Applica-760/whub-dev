@@ -40,6 +40,7 @@ def _draft_task() -> TaskDocument:
 def test_creates_draft_task_with_next_id_and_standard_path(tmp_path: Path) -> None:
     existing = _task_data(); existing["task"]["id"] = "TASK-014"
     (tmp_path / "existing.yaml").write_text(yaml.safe_dump(existing, allow_unicode=True))
+    (tmp_path / "._existing.yaml").write_bytes(b"\x00\x05\x16\x07AppleDouble")
     path, task = create_task(tmp_path, "新しいTask", "目的", ("方針1", "方針2"), now=datetime(2026, 7, 17, 15, 30))
     assert path == tmp_path / "20260717_1530_task-015.yaml"
     assert task.task.id == "TASK-015" and task.task.approach == ["方針1", "方針2"] and task.plan is None

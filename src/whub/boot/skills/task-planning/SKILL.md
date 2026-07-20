@@ -9,7 +9,12 @@ description: 下記に従いタスクの計画・記録ドキュメントを作�
 - Taskの構造・状態・実行事実はYAMLをSSOTとする
 - 実行ログは各Phaseの`log`に記録する
 - 新規Taskは手書きの雛形を使わず、`wflow task init`で生成する
-- 原則 1 Task = 1 commit
+- 原則 1 Task = 1 logical change。Task内に独立した論理的変更単位が複数ある場合は、検証済みPhase成果ごとにcommitしてよい
+- Phase完了時、その成果が独立して検証・説明・revert可能な論理的変更単位であり、検証が成功している場合はcommitする
+- commitメッセージは`<type>: <summary> (<TASK-TTT:PPP>)`とし、
+  - `type`は`feat`、`fix`、`refactor`、`chore`など、一般に使われるものから選ぶ
+  - `summary`は変更概要
+  - `TTT`はタスクID、`PPP`はPhaseID
 
 ## 手順
 1. Skill呼び出し時に数字が付く場合は、`wflow task check <番号>`と`wflow task show <番号>`で対応する既存Taskを読む
