@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-025
-  state: in_progress
+  state: completed
   title: Linux Desktop実行ログをwhubから取得する方式を検証する
   objective: 画面出力が必要なLinux Desktop上の処理について、手作業の転記なしにMac側Agentがwhub経由で診断情報を取得できる方式を確定する
   approach:
@@ -129,26 +129,62 @@ plan:
     acceptance: []
     steps:
     - description: GUI session起動とtranscript保存をProject側、remote接続と観測をworkspace-hub側の責務候補として、実証結果から最終境界を確定する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 既存whub runと規約だけで十分か、session探索・表示・追尾をwhubへ抽象化すべきかを、反復手順と誤操作可能性に基づいて判断する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: remote launcherまたは設定の配布が必要かを判断し、必要な場合はbootが実行ファイルを頒布しない既存制約との整合方法を確定する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 確定した運用契約をKnowledgeへ記録し、具体的なCLIやremote資産の実装が必要な場合は本Taskの検証結果を受け入れ条件とする後続Taskを作成する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - '責務境界確定: Mac側whubはProject選択、規定位置へのsession descriptor作成・一覧・状態参照、SSH経由のlive tmux探索とtranscript/metadata取得を担う。Linux
+      GUI側の汎用remote helperはpending descriptorを読み、GUI環境を保持したtmux session起動、window/pane
+      hook、raw transcript、runtime metadata、exit_code/signalの永続化を担う。利用者はtmux内のwindow/pane構成・名前・commandを自由に決める。wflow
+      Taskは目的・計画・確定結果、Knowledgeは安定運用契約、descriptorは一時runtime stateを担う。whub本体はMac限定の既存制約を維持する。'
+    - '専用抽象化が必要と判断: 既存whub runでもtmux list/capture/tail/fetchは個別実行できるが、descriptor lifecycle、tmux
+      metadata filter、ANSI除去、終了後参照、cleanupを毎回手作業で組み立てる必要があり、whubを唯一の入口として機械的に診断情報を取得する要件を満たさない。whub
+      runは低レベルone-shotとして維持し、その上にsession作成・一覧・表示・追尾・状態取得を担う専用whub domain/commandを後続Taskで設計する。具体的なCLI名・引数は本Taskでは確定しない。'
+    - '2026-07-20 user-approved launcher delivery: Mac上でProjectを指定したwhub session系操作を実行すると、対象Projectのruntime領域
+      .whub/ に固定名のshell launcherとpending session descriptorを生成する。Linux GUI側では対象Project
+      rootから固定launcherをbashで実行し、pending descriptorを選択してGUI環境を保持したtmux sessionへ変換する。launcher
+      sourceはworkspace-hubをSSOTとし、session予約時に対象Projectへ必要時生成・protocol version不一致時更新するため、Project
+      sourceへcommitせず実行権限も要求しない。Bootは引き続きremoteへ実行ファイルを頒布せず、whub/wflowもremoteへ配布しない。具体的なwhub
+      CLI名・引数、launcher filename、descriptor schemaは後続実装Taskで決定する。'
+    - Knowledgeは運用上の差分だけに限定し、def:remote_gui_sessionとpol:remote_gui_session_operationの2件を追加してknowledge
+      checkを通過した。権限・終了metadata・mount非依存などの実装詳細は本Taskの検証ログへ保持する。後続実装TaskとしてTASK-030をdraft作成し、TASK-025への依存を設定した。
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - Linux GUI terminal起動のtmux内でLeRobot init_rerunを実行し、表示環境を継承したRerun viewerの起動をユーザーが確認した。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Mac側whub runからsession optionとdescriptor契約により、内部tmux IDの手動転記なしでTask/run/session/paneを特定する方式を実証・確定した。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - stdout・stderr・traceback・tickをcapture-paneで観測し、SSH観測を中断して再接続後もremote処理が継続していた。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - pipe-pane transcriptと別metadataによる終了状態保存を実測し、実unmount中もwhub runの観測とwhub fetchのsnapshot取得が成功した。
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - Project runtime、Linux GUI launcher、Mac whub観測の責務境界と専用session抽象化の必要性を確定し、実装をTASK-030へ切り出した。
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: Linux GUI起動tmuxをMac側whubから観測する方式を実機検証し、Project-local launcher/descriptor、Task単位transcript、SSH観測、終了metadataの運用契約を確定した。安定運用Knowledgeを2件へ限定して記録し、専用session実装をTASK-030へ分離した。

@@ -135,47 +135,51 @@ definitions:
     name: whub boot
     definition: Agent設定・Skill・CodeGraph初期化を各resourceへ配布するコマンド
     ref: src/whub/commands/boot.py
+  remote_gui_session:
+    name: remote GUI session
+    definition: Mac側whubがProjectの.gitignore対象.whubへ固定launcherとpending descriptorを生成し、Linux
+      GUI側でlauncherを実行して表示環境を継承したtmuxを開始し、Mac側whubからSSH経由で観測するTask/run単位の作業session
 relations:
-  - subject: def:project
-    predicate: has_resource
-    object: def:resource
-    cardinality: 0..1
-  - subject: def:remote
-    predicate: is_a
-    object: def:resource
-  - subject: def:local
-    predicate: is_a
-    object: def:resource
-  - subject: def:workspace_hub
-    predicate: is_a
-    object: def:project
-  - subject: def:manifest
-    predicate: defines
-    object: def:project
-  - subject: def:manifest
-    predicate: defines
-    object: def:resource
-  - subject: def:target
-    predicate: operates
-    object: def:resource
-  - subject: def:inbox
-    predicate: promotes_to
-    object: def:todo
-  - subject: def:backlog
-    predicate: promotes_to
-    object: def:task
-  - subject: def:backlog
-    predicate: promotes_to
-    object: def:execution_spec
-  - subject: def:task_dependency
-    predicate: is_a
-    object: def:task_relation
-  - subject: def:task_interruption
-    predicate: is_a
-    object: def:task_relation
-  - subject: def:whub_knowledge
-    predicate: operates
-    object: def:knowledge
+- subject: def:project
+  predicate: has_resource
+  object: def:resource
+  cardinality: 0..1
+- subject: def:remote
+  predicate: is_a
+  object: def:resource
+- subject: def:local
+  predicate: is_a
+  object: def:resource
+- subject: def:workspace_hub
+  predicate: is_a
+  object: def:project
+- subject: def:manifest
+  predicate: defines
+  object: def:project
+- subject: def:manifest
+  predicate: defines
+  object: def:resource
+- subject: def:target
+  predicate: operates
+  object: def:resource
+- subject: def:inbox
+  predicate: promotes_to
+  object: def:todo
+- subject: def:backlog
+  predicate: promotes_to
+  object: def:task
+- subject: def:backlog
+  predicate: promotes_to
+  object: def:execution_spec
+- subject: def:task_dependency
+  predicate: is_a
+  object: def:task_relation
+- subject: def:task_interruption
+  predicate: is_a
+  object: def:task_relation
+- subject: def:whub_knowledge
+  predicate: operates
+  object: def:knowledge
 policies:
   remote_edit_via_mount:
     statement: remote resourceの編集・コード確認・project横断のコンテキスト参照はmountで行う
@@ -206,9 +210,14 @@ policies:
   knowledge_contains_confirmed_facts:
     statement: Knowledge YAMLには確定済みの現在の事実・規約だけを記録し、検討中の案はbacklogに置く
   task_yaml_is_active_work_ssot:
-    statement: 長期構想はTask YAMLのTask依存で表現し、Markdownはbacklogの未整理入力・検討記録と凍結済みTask履歴に限り、Web appはTask YAMLを更新しない読み取り専用の派生ビューとする
+    statement: 長期構想はTask YAMLのTask依存で表現し、Markdownはbacklogの未整理入力・検討記録と凍結済みTask履歴に限り、Web
+      appはTask YAMLを更新しない読み取り専用の派生ビューとする
   knowledge_operations_via_cli:
-    statement: whubの用語・責務・CLI設計・運用フロー・Skill判断基準はKnowledge YAMLをSSOTとし、Agentによる参照・検証・追加・削除はwhub knowledge query・ls・check・add・rmを使う
+    statement: whubの用語・責務・CLI設計・運用フロー・Skill判断基準はKnowledge YAMLをSSOTとし、Agentによる参照・検証・追加・削除はwhub
+      knowledge query・ls・check・add・rmを使う
+  remote_gui_session_operation:
+    statement: remote GUI sessionではtmux内部IDを手動転記せず、Mac側whubで予約し、Linux GUI側で固定launcherをbash実行し、Mac側whubで観測する。tmux内のwindow・pane・command構成は利用者に委ね、必要な診断結果だけをTask
+      logへ残す
 constraints:
   common_cli_delegates_resource_dispatch:
     statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する
@@ -295,7 +304,8 @@ constraints:
   knowledge_schema_in_model:
     statement: Knowledge YAMLの分類・必須フィールド・検証規則はsrc/whub/models/knowledge.pyをSSOTとする
   workflow_engine_is_domain_independent:
-    statement: "wflowのWorkflow解釈・検証・Transition適用は個別ドメインに依存しない汎用engineへ置き、具体的なWorkflow（例: Task）のドメイン固有不変条件は各ドメインへ置く"
+    statement: 'wflowのWorkflow解釈・検証・Transition適用は個別ドメインに依存しない汎用engineへ置き、具体的なWorkflow（例:
+      Task）のドメイン固有不変条件は各ドメインへ置く'
   task_dependency_between_tasks_only:
     statement: Task依存はTask間だけに表し、PhaseやStepには持たせない
   task_workflow_definition_is_ssot:

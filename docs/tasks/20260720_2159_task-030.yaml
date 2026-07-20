@@ -1,0 +1,22 @@
+schema_version: 1
+task:
+  id: TASK-030
+  state: draft
+  title: remote GUI sessionをwhubで予約・観測する
+  objective: Mac側whubでProjectのremote GUI sessionを予約し、Linux GUIで固定launcherからtmuxを開始して、Agentがwhubだけでlive出力・履歴・終了状態を取得できるようにする
+  approach:
+  - Projectの.whubへsession descriptorと固定launcherを安全かつ原子的に生成するruntime serviceを実装する
+  - Linux GUI側launcherで表示環境を継承したtmux、pane transcript、終了metadataを生成し、session lifecycleを更新する
+  - core/remoteとcore/tmuxを利用する専用whub session操作を実装し、mount状態に依存せず予約・発見・観測・取得できるようにする
+  - TASK-025の検証条件を自動テストとLAplust/ILでの実地確認へ落とし込み、Bootやremote側へのwhub配布は追加しない
+  depends_on:
+  - TASK-025
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
