@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-027
-  state: draft
+  state: in_progress
   title: Knowledge refの実在検証
   objective: whub knowledge checkでproject相対パス形式のref切れを検出できるようにする
   approach:
@@ -22,7 +22,7 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: 実装と検証
     acceptance:
     - id: ACC-001
@@ -39,9 +39,164 @@ plan:
       skip_reason: null
       deleted: false
     log: []
+    deleted: true
+  - title: Knowledge schema v4仕様
+    acceptance:
+    - id: ACC-003
+      statement: schema v4ではDEF・POL・CON・EXCがカテゴリ別mappingの安定slugで識別され、参照がdef:project等のカテゴリ修飾形式になる
+    - id: ACC-004
+      statement: Relationはsubject・predicate・objectの複合キーで管理され、REL番号とrelation_typesカテゴリを持たない
+    - id: ACC-014
+      statement: 永続化されたKnowledge YAMLにDEF-001等の数値IDと各エントリのid fieldが存在しない
+    steps:
+    - description: カテゴリ別mapping keyとして安定slugを定義し、def:project・con:knowledge_updates_via_cli形式のカテゴリ修飾参照を仕様化する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 'definitions: {project: {...}}、constraints: {knowledge_updates_via_cli:
+        {...}}、relations: [{subject: def:project, predicate: has_resource, object:
+        def:resource}]を基準例としてschema v4を確定する'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: slugの文法、カテゴリ内一意性、表示名・本文変更時の同一性維持、slug変更・削除後再利用の扱いを定義する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Relationをslug形式のpredicateを含むsubject・predicate・objectの複合キーで一意化し、REL番号とrelation_typesカテゴリを廃止する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '2026-07-20調査: 現行schema v3は全entryの数値ID、relation_types、REL IDをモデル・Service・CLI・API・Widget・テストで前提とする。Knowledge外の現役参照は主に実装・テスト・backlogで、完了済みTask
+      Markdownは履歴として移行対象外。現行CON-052/053はrelation-typeカテゴリを前提とするためschema v4移行時にCLI経由で置換する。Relation
+      endpointは固有keyを持つdef/pol/con/excだけを対象とし、Relation自身は参照対象にしない方針。'
+    - 'Phase 3仕様確定: schema_versionは4。definitions・policies・constraints・exceptionsはカテゴリ別mappingとし、keyは明示指定する^[a-z][a-z0-9_]*。カテゴリ内で一意、カテゴリ間の同名は許容し、参照はdef:project・con:knowledge_updates_via_cli等の修飾形式とする。entryにid
+      fieldを持たない。表示名・本文変更でslugは変えずrename CLIは今回設けない。rmは参照中を拒否して物理削除し、retired_keys/tombstoneを持たず削除後のslug再利用を許容する。relationsはlistのまま、subject・predicate・objectのtupleを複合キーとして重複禁止。predicateもslug文法としrelation_typesとREL
+      IDを廃止。Relation endpointはdef/pol/con/exc、exception_toはpol/conだけを許可。cardinalityとrefは複合キーに含めず既存の任意属性として維持する。'
     deleted: false
-approvals: []
-acceptance_results: []
+  - title: モデルと移行
+    acceptance:
+    - id: ACC-005
+      statement: schema v4のload・saveでslugとカテゴリ修飾参照が保持される
+    - id: ACC-006
+      statement: 重複YAML key・カテゴリ内slug重複・参照切れ・Relation複合キー重複が検証エラーになる
+    - id: ACC-007
+      statement: 既存Knowledgeの移行後もエントリの意味・ref・Relation・Exception参照が失われない
+    steps:
+    - description: schema v3からv4への移行対象と、既存ID・参照・API出力の変換規則を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: schema v3の既存Knowledgeと外部参照を調査し、schema v4への移行範囲と互換性方針を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: DEF・POL・CON・EXCをslug keyのmappingとして表現し、カテゴリ修飾参照を解決するKnowledgeモデルへ変更する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: raw YAMLの重複key、カテゴリ内slug重複、参照切れ、Relation複合キー重複をload・checkで拒否する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 既存Knowledgeをschema v4へ移行し、意味・ref・Relation・Exception参照が保存されることを検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Service・CLI更新
+    acceptance:
+    - id: ACC-008
+      statement: 同一カテゴリへのslug重複追加は既存Knowledgeを変更せず拒否される
+    - id: ACC-009
+      statement: Relationをsubject・predicate・objectで追加・削除でき、relation type追加削除CLIとServiceが存在しない
+    - id: ACC-010
+      statement: query・ls・rmがslugとカテゴリ修飾参照を一貫して扱う
+    steps:
+    - description: Knowledge追加・削除・検索をslugとカテゴリ修飾参照に対応させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: addで安定slugを受け取り、同一カテゴリへの重複追加を副作用なく拒否する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Relationの追加・削除をsubject・predicate・objectの複合キー操作へ変更する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: relation typeのモデル・追加削除Service・CLI subcommandを削除し、predicateをRelation自身の値として扱う
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: query・ls・rmの入出力をslugとdef:project等のカテゴリ修飾参照へ統一する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: ref参照検証
+    acceptance:
+    - id: ACC-011
+      statement: 欠損したproject相対refがカテゴリ修飾キーとパスを伴うエラーになる
+    - id: ACC-012
+      statement: 有効なrefと仕様上の検証対象外refはcheckを通過する
+    steps:
+    - description: 相対パス・URL等のref形式を分類し、存在検証の対象と非対象を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: project rootを基準に検証対象refの存在をcheckし、欠損時はカテゴリ修飾キーとパスを報告する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 有効なref・欠損ref・URL等の検証対象外refをCLIテストで固定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 統合検証
+    acceptance:
+    - id: ACC-013
+      statement: backend・frontendの全検証と実Projectのknowledge check・queryが成功する
+    steps:
+    - description: Knowledge API・Widget・CLIテストをschema v4へ更新する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: API schemaとKnowledge Widgetをslug key・カテゴリ修飾参照・IDなしRelationへ対応させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: schema移行、slug重複拒否、参照整合性、複合Relation、relation type廃止をモデル・Service・CLIテストで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv run pytest、frontend test・typecheck、実Projectのknowledge check・query、git
+        diff --checkを実行する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results:
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - Phase 3 logにカテゴリ別mapping・slug文法・カテゴリ修飾参照を確定
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - Phase 3 logにRelation複合キー、REL ID・relation_types廃止を確定
+- acceptance: ACC-014
+  status: passed
+  evidence:
+  - schema v4仕様でentry id fieldと数値IDを廃止
 change_requests: []
 cancellation: null
 result: null

@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-024
-  state: draft
+  state: in_progress
   title: wflowにProject指定を追加する
   objective: Mac上のworkspace-hubからmanifestで対象Projectを選択し、各ProjectのTask YAMLを一元操作できるようにする
   approach:
@@ -15,19 +15,104 @@ task:
   interruption_reason: null
   interruption_source_task_id: null
 plan:
-  acceptance: []
+  acceptance:
+  - id: ACC-001
+    statement: 全Task subcommandが選択したProjectのdocs/tasksを一貫して操作する
+  - id: ACC-002
+    statement: task lsが共通render_tableを使用し、既存表示とstandalone wflow動作を維持する
+  - id: ACC-003
+    statement: --projectでlocal・mount済みremote・workspace-hubのTaskを選択でき、未指定時はcwd動作を維持する
   phases:
   - title: Project指定CLI契約
     acceptance: []
     steps:
     - description: wflow CLIのProject名は位置引数ではなく--project PROJECTで指定し、未指定時は既存のカレントディレクトリ動作を維持する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Project指定時の相対Task pathと相対TASK_DIRはProject root基準、絶対pathは既存どおり許可する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: whub CLIへのTask統合とremote wflow頒布廃止は本Taskの対象外とする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: --projectはtask group optionとしてwflow task --project PROJECT COMMANDの位置で受け、全Task
+        subcommandへ適用する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '2026-07-20 user decision: 独立したwflowを拡張し、wflow task --project PROJECT COMMANDでProjectを指定する。未指定時はcwd動作を維持し、相対pathはProject
+      root基準、絶対pathは許可する。whub CLI統合とremote頒布廃止は対象外。'
+    deleted: false
+  - title: Project Task rootの共通化
+    acceptance: []
+    steps:
+    - description: src/whub/services/project_content.pyのresolve_project_content_resourceを再利用し、local
+        source・mount済みremote・workspace-hubのProject rootを解決する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: src/whub/services/task.pyの既存Project Task root解決をCLIから再利用できる責務へ昇格し、Project解決を重複実装しない
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 未知Project・resourceなし・利用不能なProject root・Task path不正を一貫したCLI errorへ変換する
       state: pending
       skip_reason: null
       deleted: false
     log: []
     deleted: false
-approvals: []
+  - title: wflow commandへの適用
+    acceptance: []
+    steps:
+    - description: Project未指定時は既存cwd基準、指定時は共通Project Task rootを全Task subcommandへ渡す
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: init・ID/path参照・ls・横断Task検証・interrupt/resume・completeを同じTask rootへ統一する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: src/whub/wflow/commands/task.pyのprivate _render_tableを削除し、src/whub/utils/render.pyのrender_tableを再利用する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 共通renderer参照後も既存remote wflowが起動できるようstandalone payloadの最小依存境界を調整し、Project未指定動作を維持する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 検証と運用資料
+    acceptance: []
+    steps:
+    - description: Project未指定cwd互換とlocal・mount済みremote・workspace-hubのProject指定をCLI
+        testで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 相対・絶対path、TASK_DIR override、未知Project、resourceなし、未mount remoteの境界を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 共通rendererによるtask ls出力互換とstandalone remote wflowの起動・既存操作を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: README・KnowledgeへProject指定契約を反映し、対象testとuv run pytest全件を実行する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: 先頭が--projectのStepと受け入れ条件がClick optionとして解釈され未登録だったため
 cancellation: null
 result: null
