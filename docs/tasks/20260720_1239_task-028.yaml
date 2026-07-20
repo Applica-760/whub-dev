@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-028
-  state: draft
+  state: cancelled
   title: whub appがぼやけて見える原因を調査する
   objective: 以前は鮮明だったwhub appが大きめのディスプレイで全体的にぼやけて見えるようになった原因を、実装変更と実行環境の両面から特定し、再現条件と解決方針を明らかにする
   approach:
@@ -20,5 +20,7 @@ plan: null
 approvals: []
 acceptance_results: []
 change_requests: []
-cancellation: null
+cancellation:
+  reason: 一時的な問題であり、解決済みのため取消
+  actor: user
 result: null
