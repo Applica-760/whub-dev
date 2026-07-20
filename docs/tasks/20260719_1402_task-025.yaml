@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-025
-  state: draft
+  state: in_progress
   title: Linux Desktop実行ログをwhubから取得する方式を検証する
   objective: 画面出力が必要なLinux Desktop上の処理について、手作業の転記なしにMac側Agentがwhub経由で診断情報を取得できる方式を確定する
   approach:
@@ -13,8 +13,141 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: Linux DesktopのGUI環境から起動したディスプレイ必須処理が、その表示環境を維持したままTask単位のremote sessionで実行できる
+  - id: ACC-002
+    statement: Mac側AgentがSSHやtmuxの個別手順を都度推測せず、whubを入口として対象Taskのsessionを機械的に特定できる
+  - id: ACC-003
+    statement: 実行中のprint・stdout・stderr・tracebackをMac側Agentが観測でき、観測の開始・中断がremote処理を停止させない
+  - id: ACC-004
+    statement: session終了後も診断に必要なterminal transcriptと終了状態を再確認でき、mount接続を必須としない
+  - id: ACC-005
+    statement: 実証結果に基づきProject側記録・whub側観測・remote資産配布の責務境界と、後続実装の要否が確定している
+  phases:
+  - title: 前提と診断要件の確定
+    acceptance: []
+    steps:
+    - description: ディスプレイ必須処理はLinux DesktopのGUI環境から起動し、SSHは処理起動ではなくsession探索・診断情報取得に用いる境界を確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 通常のshell historyではなくstdout・stderr・tracebackを含むTask単位のterminal transcriptを記録対象とし、全shell常時記録は機密情報混入のため対象外とする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ライブ観測、終了後の再確認、終了状態、Taskとsessionの対応、観測切断時のremote処理継続を必須要件として整理する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 実証時にla-imitation-learningへSSH接続でき、GUI terminalとSSHが同一Linuxユーザーから同じtmux資産を参照できることを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - ユーザー確認により、ディスプレイを要求するのは特定パッケージのみでSSH接続と非GUIコマンドは正常と確定。GUI必須処理はLinux Desktopで直接起動し、SSHはsession探索と診断情報取得に限定する。
+    - 診断対象を通常のshell historyではなくstdout・stderr・tracebackを含むTask単位terminal transcriptと確定。全shell常時記録は機密情報混入を避けるため採用しない。
+    - 必須要件をライブ観測、終了後の再確認、終了状態、Task・run・roleとsession/windowの対応、観測切断時のremote処理継続と確定。複数独立コマンドは1
+      run session内のrole別windowを基本とする。
+    - '2026-07-20 SSH事前確認: whub run la-imitation-learning経由でremote user=takumi、tmux
+      3.4を確認。default socketにtmux serverは未起動。GUI環境継承を証明するsessionはLinux DesktopのGUI
+      terminalから起動して続行する。'
+    - '実機検証: Linux Desktop GUI terminalでuser=takumiが専用socket whub-gui上にTASK-025-r001/probeを起動。SSH側もuser=takumiで、whub
+      runからsession $0・pane %0を列挙し同じtmux資産を参照できた。Phase 1完了。'
+    deleted: false
+  - title: GUI起動sessionの実証
+    acceptance: []
+    steps:
+    - description: Linux DesktopのGUI terminalから専用のtmux環境とTask sessionを起動し、ディスプレイ関連環境を保持したまま対象処理が動作することを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: workspace-hubからwhub run経由でsessionとpaneを列挙し、GUI側からsession IDを手作業で転記せず対象を発見できることを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 対象paneへprint・stdout・stderr・tracebackを出力し、実行中に取得できることと観測中断後もremote処理が継続することを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - whub run経由のtmux list-sessions/list-panesにより、GUI側からIDを転記せずTASK-025-r001、window
+      probe、pane %0を発見した。
+    - capture-paneでWHUB_PROBE_STDOUT、WHUB_PROBE_STDERR、DISPLAY=available、RuntimeError
+      tracebackを取得。別SSH接続でtick 1〜2を観測後に切断し、再接続時にtick 3〜5まで進行・shell復帰を確認したため、観測中断がremote処理を停止させないことを実証した。
+    - Linux Desktop GUI terminalから起動したTASK-025-r001/probe内でLeRobotのinit_rerunを実行。WHUB_RERUN_READY、gRPC
+      listen、wgpu adapter初期化をcapture-paneで確認し、ユーザーがLinux GUI上のRerun window表示を確認した。ロボット・カメラ・モーターには接続していない。libEGL/ZINK警告とllvmpipe
+      software rasterizer警告は出たがviewer起動は成功。Phase 2完了。
+    deleted: false
+  - title: session識別とログ保存契約の確定
+    acceptance: []
+    steps:
+    - description: capture-pane・pipe-pane・Project側ログ保存を比較し、現在状態の観測と全履歴の永続化に必要な組合せを実測する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Task ID・tmux socket・session・pane・永続ログを対応付ける規約を検討し、tmux実体からの自動発見と規定ファイルまたはフィールドによる登録の必要性を判断する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: scrollback上限、session終了、ANSI制御文字、強制終了、ログ保持、機密情報混入を検証し、診断情報を欠落させない保存契約を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: mount・fetchは補助経路として評価し、通常のsession探索とログ観測がmount未接続でもSSH経由で成立することを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '実測比較: 新規pane作成前にhistory-limit=20を設定して500行を出力するとcapture-paneは468〜500のみ保持し001〜467を欠落。pipe-paneログは501行で001〜500を保持した。capture-paneはANSIを描画後の文字として返し、pipe-paneはprompt・入力コマンド・ANSI
+      escapeを含むraw PTY streamを保存。remain-on-exit paneではstatus=7を取得できたが、session自体をexit
+      9で終了するとtmuxからstatusは失われ、pipe-paneログだけが残った。現在状態はcapture-pane、全履歴はpipe-pane、終了状態は別metadataが必要と判定。'
+    - '識別実証: session options @whub_task=TASK-025・@whub_run=r001、window option @whub_roleを設定し、list-panesのformatから名前解析なしでtask/run/role・session/window/pane・dead
+      statusを列挙できた。live sessionはtmux実体から発見可能。session終了後の対応関係にはProject側metadataが必要。'
+    - '境界実証: raw pipe-paneログはANSI escapeに加えて入力コマンドとSECRET_PLACEHOLDERも保存したため、Task単位記録・機密入力禁止・非公開/非追跡配置・権限制限・保持期間が必要。scrollback上限はpane作成時に決まるため後変更では既存paneへ反映されない。'
+    - '補助経路実証: whub fetchでbounded.logをdownloadsへ取得し、remote/localともcksum=4024793345、size=9109、501行で一致。通常観測はwhub
+      runで成立し、fetchは完了ログのsnapshot取得に適する。実unmount中の観測は未検証。'
+    - '2026-07-20 user-approved contract: workspace側whubはProject内の規定位置 .whub/sessions/<run-id>.yaml
+      にgit非追跡のsession descriptorを生成し、project・任意task・run・state・tmux socket/session等の識別とpending→running→completed/failed/interruptedのlifecycleを管理する。Linux
+      GUI側の汎用remote helperは規定位置のpending descriptorを選択してGUI環境を保持したtmux sessionを起動し、新規window/paneへhookでtranscript・runtime
+      metadata・終了状態の記録を適用する。tmux内のwindow/pane数・名前・分割・role・実行commandは共通基盤で規定せず利用者へ委ね、動的なwindow/pane
+      IDと表示名の対応だけをruntime metadataへ保存する。workspace側はdescriptorとtmux metadataから自動発見し、内部session/pane
+      IDの手動転記や事前予約を要求しない。wflow Taskは目的・計画・確定結果、descriptorは一時実行状態を担い、Task完了時に必要な診断結果だけPhase
+      logへ昇格する。具体的なCLI名・引数は本契約に含めずPhase 4または後続Taskで決定する。'
+    - '保存契約確定: raw transcriptはProject内.gitignore対象runtime領域にTask/run/pane単位で置き、directory
+      700・file 600で作成する。rawはANSI escape・prompt・入力commandを保持し、Agent表示時だけANSIを除去する。全shell常時記録とsecret入力を禁止し、Task完了時に必要な診断結果をPhase
+      logへ昇格後、descriptorとrawを削除する。通常終了はpane_dead_status、signal終了はpane_dead_signalとして別fieldでmetadataへ永続化する。実測ではSIGTERMをinteractive
+      bashが無視した一方、SIGKILL後にdead=1・signal=9を取得し、pane-died/pane-exited hookが利用可能、事前作成したraw
+      logがmode 600を維持した。現la-imitation-learningでは.whub/が未ignoreのため、helper導入時にgitignore適用を必須とする。'
+    - 'mount非依存実証: 通常unmountはResource busyで失敗したためforce unmountを実施し、statusでla-imitation-learning
+      mount=unmountedを確認。その状態でwhub runによるTASK-025-r001自動発見、bounded paneのcapture、Project側永続ログtailが成功。whub
+      fetchでexitmeta.logを取得しremote/local cksum=2188677750・size=138で一致した。続けてwhub mountを実行しmount=okへ復旧。通常観測はSSH、mountは参照、fetchはsnapshot取得という補助経路を実機で確定し、Phase
+      3完了。'
+    deleted: false
+  - title: 自動化範囲と後続方針の決定
+    acceptance: []
+    steps:
+    - description: GUI session起動とtranscript保存をProject側、remote接続と観測をworkspace-hub側の責務候補として、実証結果から最終境界を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 既存whub runと規約だけで十分か、session探索・表示・追尾をwhubへ抽象化すべきかを、反復手順と誤操作可能性に基づいて判断する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: remote launcherまたは設定の配布が必要かを判断し、必要な場合はbootが実行ファイルを頒布しない既存制約との整合方法を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 確定した運用契約をKnowledgeへ記録し、具体的なCLIやremote資産の実装が必要な場合は本Taskの検証結果を受け入れ条件とする後続Taskを作成する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
