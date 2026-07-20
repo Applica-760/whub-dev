@@ -8,10 +8,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from click.testing import CliRunner
 import yaml
 
+from whub.models import Manifest
+from whub.tests.helpers import manifest_data
 from whub.wflow.cli import main
 
 
@@ -33,6 +36,7 @@ def test_task_command_group_is_available() -> None:
 
     assert result.exit_code == 0
     assert "Operate task execution records." in result.output
+    assert "--project" in result.output
     assert "transition" in result.output
     assert "apply" not in result.output
 
@@ -43,6 +47,159 @@ def test_task_check_accepts_a_task_path() -> None:
 
     assert result.exit_code == 0
     assert f"valid {_TASK_PATH}" in result.output
+
+
+def test_task_project_option_uses_project_root_and_restores_cwd(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    project_root = tmp_path / "project"
+    task_path = project_root / "docs/tasks/example.yaml"
+    task_path.parent.mkdir(parents=True)
+    task_path.write_text(_TASK_PATH.read_text())
+    data = manifest_data()
+    data["projects"][0]["resource"]["source"] = str(project_root)
+    loaded_manifest = Manifest.model_validate(data)
+    invocation_root = tmp_path / "workspace-hub"
+    invocation_root.mkdir()
+    monkeypatch.chdir(invocation_root)
+
+    with patch(
+        "whub.wflow.commands.task.load_manifest",
+        return_value=loaded_manifest,
+    ):
+        by_id = CliRunner().invoke(
+            main,
+            ["task", "--project", "local", "check", "001"],
+            catch_exceptions=False,
+        )
+        by_path = CliRunner().invoke(
+            main,
+            [
+                "task",
+                "--project",
+                "local",
+                "check",
+                "docs/tasks/example.yaml",
+            ],
+            catch_exceptions=False,
+        )
+        absolute_path = CliRunner().invoke(
+            main,
+            ["task", "--project", "local", "check", str(task_path)],
+            catch_exceptions=False,
+        )
+
+    assert by_id.exit_code == 0
+    assert by_path.exit_code == 0
+    assert absolute_path.exit_code == 0
+    assert Path.cwd() == invocation_root
+
+
+def test_task_project_option_applies_to_init(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    data = manifest_data()
+    data["projects"][0]["resource"]["source"] = str(project_root)
+    loaded_manifest = Manifest.model_validate(data)
+    monkeypatch.chdir(tmp_path)
+
+    with patch(
+        "whub.wflow.commands.task.load_manifest",
+        return_value=loaded_manifest,
+    ):
+        result = CliRunner().invoke(
+            main,
+            ["task", "--project", "local", "init", "Project Task", "目的"],
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code == 0
+    assert len(list((project_root / "docs/tasks").glob("*.yaml"))) == 1
+    assert not (tmp_path / "docs/tasks").exists()
+
+
+def test_task_project_option_reports_project_resolution_errors(
+    tmp_path: Path,
+) -> None:
+    loaded_manifest = Manifest.model_validate(manifest_data())
+
+    with patch(
+        "whub.wflow.commands.task.load_manifest",
+        return_value=loaded_manifest,
+    ):
+        unknown = CliRunner().invoke(
+            main,
+            ["task", "--project", "missing", "ls"],
+        )
+        unavailable = CliRunner().invoke(
+            main,
+            ["task", "--project", "remote", "ls"],
+        )
+        no_resource = CliRunner().invoke(
+            main,
+            ["task", "--project", "no-resource", "ls"],
+        )
+
+    assert unknown.exit_code == 1
+    assert "unknown project: missing" in unknown.output
+    assert unavailable.exit_code == 1
+    assert "project resource is not available: remote" in unavailable.output
+    assert no_resource.exit_code == 1
+    assert "project has no resource: no-resource" in no_resource.output
+
+
+def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    hub_root = tmp_path / "workspace-hub"
+    local_root = tmp_path / "local"
+    remote_root = hub_root / "projects/remote"
+    for root in (hub_root, local_root, remote_root):
+        root.mkdir(parents=True)
+    monkeypatch.setenv("WHUB_ROOT", str(hub_root))
+    data = manifest_data()
+    data["projects"][0]["resource"]["source"] = str(local_root)
+    data["projects"].append({"name": "workspace-hub"})
+    loaded_manifest = Manifest.model_validate(data)
+    monkeypatch.chdir(hub_root)
+
+    for root in (hub_root, remote_root):
+        task_path = root / "docs/tasks/example.yaml"
+        task_path.parent.mkdir(parents=True)
+        task_path.write_text(_TASK_PATH.read_text())
+    custom_task = local_root / "custom/tasks/example.yaml"
+    custom_task.parent.mkdir(parents=True)
+    custom_task.write_text(_TASK_PATH.read_text())
+
+    with patch(
+        "whub.wflow.commands.task.load_manifest",
+        return_value=loaded_manifest,
+    ):
+        remote = CliRunner().invoke(
+            main,
+            ["task", "--project", "remote", "check", "001"],
+            catch_exceptions=False,
+        )
+        workspace_hub = CliRunner().invoke(
+            main,
+            ["task", "--project", "workspace-hub", "check", "001"],
+            catch_exceptions=False,
+        )
+        task_dir = CliRunner().invoke(
+            main,
+            ["task", "--project", "local", "ls", "custom/tasks"],
+            catch_exceptions=False,
+        )
+
+    assert remote.exit_code == 0
+    assert workspace_hub.exit_code == 0
+    assert task_dir.exit_code == 0
+    assert "TASK-001" in task_dir.output
 
 
 def test_task_init_creates_a_draft_with_repeated_approaches(tmp_path: Path, monkeypatch) -> None:

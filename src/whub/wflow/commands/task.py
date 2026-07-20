@@ -1,12 +1,16 @@
 """Commands for task execution records."""
 from __future__ import annotations
 
-import unicodedata
-from collections.abc import Sequence
+from contextlib import chdir
 from pathlib import Path
 
 import click
 
+from whub.core.paths import PathError
+from whub.models import ManifestError, load_manifest, project_names
+from whub.services.errors import ServiceError
+from whub.services.project_content import resolve_project_content_root
+from whub.utils.render import render_table
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.services import (
     WflowError,
@@ -35,50 +39,22 @@ from whub.wflow.services import (
 )
 
 
-def _render_table(
-    rows: Sequence[Sequence[object]],
-    *,
-    headers: Sequence[object],
-) -> None:
-    table_rows = [headers, *rows]
-
-    def display_width(value: object) -> int:
-        return sum(
-            0
-            if unicodedata.combining(char)
-            else 2
-            if unicodedata.east_asian_width(char) in ("F", "W")
-            else 1
-            for char in str(value)
-        )
-
-    column_count = max(len(row) for row in table_rows)
-    widths = [
-        max(
-            display_width(row[index]) if index < len(row) else 0
-            for row in table_rows
-        )
-        for index in range(column_count)
-    ]
-
-    click.echo()
-    for row_index, row in enumerate(table_rows):
-        is_header = row_index == 0
-        columns = []
-        for index, width in enumerate(widths):
-            value = row[index] if index < len(row) else ""
-            text = str(value) + " " * max(width - display_width(value), 0)
-            columns.append(click.style(text, bold=True) if is_header else text)
-        click.echo(f"  {'  '.join(columns).rstrip()}")
-        if is_header:
-            separator_width = sum(widths) + 2 * (len(widths) - 1)
-            click.echo(f"  {'-' * separator_width}")
-    click.echo()
-
-
 @click.group()
-def task() -> None:
+@click.option(
+    "--project",
+    shell_complete=project_names,
+    help="Target Project.",
+)
+@click.pass_context
+def task(ctx: click.Context, project: str | None) -> None:
     """Operate task execution records."""
+    if project is None:
+        return
+    try:
+        root = resolve_project_content_root(load_manifest(), project)
+    except (ManifestError, PathError, ServiceError) as error:
+        raise click.ClickException(str(error)) from error
+    ctx.with_resource(chdir(root))
 
 
 @task.command("init")
@@ -277,7 +253,7 @@ def ls(task_dir: Path) -> None:
     except WflowError as error:
         raise click.ClickException(str(error)) from error
 
-    _render_table(
+    render_table(
         [
             (
                 item.path,

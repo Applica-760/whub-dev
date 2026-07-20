@@ -7,16 +7,13 @@ boot/ layout (directory = operation):
 
 from __future__ import annotations
 
-import hashlib
 import json
-import secrets
 import shlex
 import shutil
 import subprocess
-import tempfile
 from importlib.resources import as_file, files
 from importlib.resources.abc import Traversable
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Callable, Iterator
 
 import click
@@ -42,13 +39,6 @@ _MARKERS = {
 }
 _RENAME = {".gitignore-template": ".gitignore"}
 _SKILLS_DESTS = (".claude/skills", ".agents/skills")
-_WFLOW_LAYOUT_VERSION = "1"
-_WFLOW_LAUNCHER = """#!/bin/sh
-set -eu
-data_home=${XDG_DATA_HOME:-"$HOME/.local/share"}
-export PYTHONPATH="$data_home/wflow/current/src"
-exec "$data_home/wflow/current/venv/bin/python" -m whub.wflow "$@"
-"""
 
 
 # ── Merge ─────────────────────────────────────────────────────────
@@ -89,138 +79,6 @@ ReadFn = Callable[[str], str | None]
 
 def _boot_assets() -> Traversable:
     return files("whub").joinpath("boot")
-
-
-def _wflow_assets() -> Traversable:
-    return files("whub").joinpath("wflow")
-
-
-def _wflow_payload_files(source: Path) -> Iterator[Path]:
-    for path in sorted(source.rglob("*")):
-        if not path.is_file():
-            continue
-        relative = path.relative_to(source)
-        if (
-            "__pycache__" in relative.parts
-            or path.suffix == ".pyc"
-            or path.name == ".DS_Store"
-        ):
-            continue
-        yield path
-
-
-def _wflow_content_hash(source: Path) -> str:
-    digest = hashlib.sha256()
-    digest.update(f"layout:{_WFLOW_LAYOUT_VERSION}\0".encode())
-    digest.update(_WFLOW_LAUNCHER.encode())
-    for path in _wflow_payload_files(source):
-        relative = path.relative_to(source).as_posix()
-        digest.update(relative.encode())
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest()
-
-
-def _copy_wflow_payload(source: Path, destination: Path) -> None:
-    for path in _wflow_payload_files(source):
-        target = destination / path.relative_to(source)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, target)
-
-
-def _remote_wflow_state(host: Host) -> tuple[str, str, str | None]:
-    result = run_ssh_command(
-        host,
-        """set -eu
-data_home=${XDG_DATA_HOME:-"$HOME/.local/share"}
-case "$data_home" in
-  /*) ;;
-  *) exit 2 ;;
-esac
-base="$data_home/wflow"
-bin_dir="$HOME/.local/bin"
-printf '%s\\n%s\\n' "$base" "$bin_dir"
-if test -f "$base/current/.content-hash" \\
-  && test -x "$bin_dir/wflow" \\
-  && "$bin_dir/wflow" --help >/dev/null 2>&1; then
-  cat "$base/current/.content-hash"
-fi
-""",
-        timeout=30,
-        check=True,
-    )
-    lines = result.stdout.splitlines()
-    if len(lines) not in (2, 3):
-        raise ValueError("invalid remote wflow state")
-    base, bin_dir = lines[:2]
-    if not PurePosixPath(base).is_absolute() or not PurePosixPath(bin_dir).is_absolute():
-        raise ValueError("remote wflow paths must be absolute")
-    return base, bin_dir, lines[2] if len(lines) == 3 else None
-
-
-def _install_remote_wflow(name: str, host: Host) -> None:
-    try:
-        with as_file(_wflow_assets()) as source:
-            content_hash = _wflow_content_hash(source)
-            base, bin_dir, installed_hash = _remote_wflow_state(host)
-            if installed_hash == content_hash:
-                click.echo(f"  {'skip':6s}  {name} (wflow unchanged)")
-                return
-
-            staging = f"{base}/.staging-{content_hash}"
-            run_ssh_command(
-                host,
-                f"rm -rf {shlex.quote(staging)}"
-                f" && mkdir -p {shlex.quote(f'{staging}/src/whub')}"
-                f" && : > {shlex.quote(f'{staging}/src/whub/__init__.py')}",
-                timeout=30,
-                check=True,
-            )
-            with tempfile.TemporaryDirectory() as temporary:
-                payload = Path(temporary) / "wflow"
-                _copy_wflow_payload(source, payload)
-                run_rsync_command(
-                    host,
-                    str(payload),
-                    f"{staging}/src/whub/wflow",
-                    timeout=30,
-                    check=True,
-                )
-
-            version = f"{base}/versions/{content_hash}-{secrets.token_hex(4)}"
-            current_link = f"{base}/.current-{content_hash}"
-            launcher = f"{bin_dir}/wflow"
-            launcher_tmp = f"{launcher}.{content_hash}.tmp"
-            requirements = f"{staging}/src/whub/wflow/requirements.txt"
-            run_ssh_command(
-                host,
-                f"""set -eu
-python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 12))'
-python3 -m venv {shlex.quote(f"{staging}/venv")}
-{shlex.quote(f"{staging}/venv/bin/python")} -m pip install \\
-  --disable-pip-version-check --no-input -r {shlex.quote(requirements)}
-printf '%s\\n' {shlex.quote(content_hash)} > {shlex.quote(f"{staging}/.content-hash")}
-mkdir -p {shlex.quote(f"{base}/versions")} {shlex.quote(bin_dir)}
-cat > {shlex.quote(launcher_tmp)}
-chmod 755 {shlex.quote(launcher_tmp)}
-mv {shlex.quote(staging)} {shlex.quote(version)}
-rm -f {shlex.quote(current_link)}
-ln -s {shlex.quote(version)} {shlex.quote(current_link)}
-mv -Tf {shlex.quote(current_link)} {shlex.quote(f"{base}/current")}
-mv -f {shlex.quote(launcher_tmp)} {shlex.quote(launcher)}
-""",
-                input=_WFLOW_LAUNCHER,
-                timeout=180,
-                check=True,
-            )
-    except (OSError, ValueError, subprocess.SubprocessError) as error:
-        click.echo(
-            f"  {'WARN':6s}  {name}: wflow install failed:"
-            f" {format_process_error(error)}",
-        )
-        return
-    click.echo(f"  {'done':6s}  {name} (wflow)")
 
 
 def _merged_files(
@@ -385,17 +243,6 @@ def _collect_boot_targets(manifest: Manifest) -> list[TargetItem[Project]]:
     return targets
 
 
-def _collect_wflow_hosts(
-    targets: list[TargetItem[Project]],
-) -> list[tuple[str, Host]]:
-    hosts: dict[str, Host] = {}
-    for target in targets:
-        resource = target.resource
-        if isinstance(resource, RemoteResource):
-            hosts.setdefault(resource.host, resource._resolved_host)
-    return list(hosts.items())
-
-
 # ── CLI ───────────────────────────────────────────────────────────
 @click.command()
 @click.pass_context
@@ -404,6 +251,4 @@ def boot(ctx: click.Context) -> None:
     manifest = get_manifest(ctx)
     targets = _collect_boot_targets(manifest)
     _apply_workspace_boot()
-    for name, host in _collect_wflow_hosts(targets):
-        _install_remote_wflow(name, host)
     on_targets(targets, local=_apply_local_boot, remote=_apply_remote_boot)

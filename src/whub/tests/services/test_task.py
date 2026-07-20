@@ -12,6 +12,7 @@ from whub.services.task import (
     list_project_tasks,
     load_project_task,
     render_project_task_flow,
+    resolve_project_task_root,
 )
 from whub.tests.helpers import manifest_data
 
@@ -75,6 +76,29 @@ def test_distinguishes_missing_tasks_from_unavailable_resource(
         list_project_tasks(loaded_manifest, "remote")
     with pytest.raises(ServiceError, match="project has no resource: no-resource"):
         list_project_tasks(loaded_manifest, "no-resource")
+
+
+def test_resolves_task_root_and_rejects_non_directory(
+    tmp_path: Path,
+) -> None:
+    data = manifest_data()
+    local_root = tmp_path / "local-source"
+    local_root.mkdir()
+    data["projects"][0]["resource"]["source"] = str(local_root)
+    loaded_manifest = Manifest.model_validate(data)
+
+    assert resolve_project_task_root(loaded_manifest, "local") == (
+        local_root / "docs/tasks"
+    )
+
+    task_path = local_root / "docs/tasks"
+    task_path.parent.mkdir()
+    task_path.write_text("not a directory")
+    with pytest.raises(
+        ServiceError,
+        match="project task path is not a directory: local",
+    ):
+        resolve_project_task_root(loaded_manifest, "local")
 
 
 def test_loads_and_renders_one_project_task(tmp_path: Path) -> None:

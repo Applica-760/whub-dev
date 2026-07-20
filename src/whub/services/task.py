@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from whub.models import Manifest, SymlinkResource
+from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
-from whub.services.project_content import resolve_project_content_resource
+from whub.services.project_content import resolve_project_content_root
 from whub.wflow.models.task import TaskDocument, TaskSummary
 from whub.wflow.services import (
     WflowError,
@@ -21,17 +21,9 @@ from whub.wflow.services import (
 TASKS_RELATIVE_PATH = Path("docs/tasks")
 
 
-def _task_root(manifest: Manifest, project: str) -> Path:
-    resource = resolve_project_content_resource(manifest, project)
-    root = (
-        Path(resource.source).expanduser()
-        if isinstance(resource, SymlinkResource)
-        else resource._resolved_workspace_path
-    )
-    if not root.is_dir():
-        raise ServiceError(f"project resource is not available: {project}")
-
-    task_root = root / TASKS_RELATIVE_PATH
+def resolve_project_task_root(manifest: Manifest, project: str) -> Path:
+    """Resolve a Project's standard Task directory."""
+    task_root = resolve_project_content_root(manifest, project) / TASKS_RELATIVE_PATH
     if task_root.exists() and not task_root.is_dir():
         raise ServiceError(f"project task path is not a directory: {project}")
     return task_root
@@ -42,7 +34,7 @@ def list_project_tasks(
     project: str,
 ) -> tuple[TaskSummary, ...]:
     """Return Task summaries from one Project, or an empty result when absent."""
-    task_root = _task_root(manifest, project)
+    task_root = resolve_project_task_root(manifest, project)
     if not task_root.exists():
         return ()
     try:
@@ -57,7 +49,7 @@ def load_project_task(
     task_id: str,
 ) -> TaskDocument:
     """Load and validate one Task within one Project."""
-    task_root = _task_root(manifest, project)
+    task_root = resolve_project_task_root(manifest, project)
     if not task_root.exists():
         raise NotFoundError(f"task not found: {project}/{task_id}")
     try:

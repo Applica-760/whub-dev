@@ -9,7 +9,7 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 - `.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
 - `.whub/` は `whub init <data-dir>` で外部のprivate data-dirへ接続できる
 - ローカル`resource`はsymlink、リモート`resource`はsshfs mount（参照・編集）とSSH（実行）で操作する
-- `whub boot`で共通Agent設定を対象`resource`へ配布し、remote hostへ`wflow` CLIを頒布
+- `whub boot`で共通Agent設定を対象`resource`へ配布
 
 ## セットアップ
 
@@ -34,13 +34,14 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
 | `whub todo` | `project`横断の単発アクションを管理 |
 | `whub backlog <PROJECT> <TEXT...>` | projectのbacklog末尾の未整理メモへ追記 |
-| `whub boot` | Agent設定を`boot: true`な`resource`へ配布し、対象remote hostへ`wflow`を1回頒布 |
+| `whub boot` | Agent設定を`boot: true`な`resource`へ配布 |
 | `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
 
 ## Task Workflow
 
 新規・未完了の個別作業はTask YAMLをSSOTとし、完了済みMarkdown Taskは履歴として扱う。対話・承認の詳細は`task-planning` Skillに従う。
 表内で`wflow task`を省略したコマンドは、すべてそのサブコマンドを表す。
+workspace-hubから別Projectを操作する場合は`wflow task --project PROJECT COMMAND`を使う。`--project`省略時は従来どおりカレントディレクトリの`docs/tasks`を対象とする。
 
 | 区分 | コマンド |
 |---|---|
@@ -53,8 +54,6 @@ source <(whub shell-init)   # .zshrc に追記
 | 受入・完了 | `accept` / `complete TASK --result "…"` |
 
 `wflow task complete`はTaskの完了記録と`docs/tasks/done`へのアーカイブを一操作で行う。
-
-remote hostの`wflow`は`${XDG_DATA_HOME:-$HOME/.local/share}/wflow`へ配置し、`$HOME/.local/bin/wflow`から実行する。`whub boot`再実行時はcontent hashが一致すれば頒布をskipし、install失敗時は警告を表示して後続処理を継続する。`whub`本体はremote hostへ頒布しない。
 
 ## `.whub/manifest.yaml` の構造
 
