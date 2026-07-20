@@ -20,9 +20,15 @@ import {
 import { errorMessage } from '../../api/errorMessage';
 import { WidgetFrame } from '../../components/WidgetFrame';
 
-type Category = 'definitions' | 'relations' | 'policies' | 'constraints' | 'exceptions';
+type MappingCategory = 'definitions' | 'policies' | 'constraints' | 'exceptions';
+type Category = MappingCategory | 'relations';
 type SelectedCategory = 'all' | Category;
-type KnowledgeEntry = KnowledgeResponse[Category][number];
+type MappingEntry = KnowledgeResponse[MappingCategory][string];
+type KnowledgeEntry = MappingEntry | KnowledgeResponse['relations'][number];
+type KnowledgeItem = {
+  key: string;
+  entry: KnowledgeEntry;
+};
 
 const CATEGORY_LABELS: Record<Category, string> = {
   definitions: 'DEF',
@@ -30,6 +36,13 @@ const CATEGORY_LABELS: Record<Category, string> = {
   policies: 'POL',
   constraints: 'CON',
   exceptions: 'EXC',
+};
+
+const CATEGORY_PREFIXES: Record<MappingCategory, string> = {
+  definitions: 'def',
+  policies: 'pol',
+  constraints: 'con',
+  exceptions: 'exc',
 };
 
 type KnowledgeWidgetProps = {
@@ -118,8 +131,8 @@ export function KnowledgeWidget({ project }: KnowledgeWidgetProps) {
                 <Text c="dimmed" fw={600} size="sm">
                   {CATEGORY_LABELS[group.category]} ({group.entries.length})
                 </Text>
-                {group.entries.map((entry) => (
-                  <KnowledgeEntryCard entry={entry} key={entry.id} />
+                {group.entries.map((item) => (
+                  <KnowledgeEntryCard item={item} key={item.key} />
                 ))}
               </Stack>
             ))
@@ -134,7 +147,7 @@ function knowledgeGroups(
   knowledge: KnowledgeResponse | null,
   selected: SelectedCategory,
   query: string,
-): Array<{ category: Category; entries: KnowledgeEntry[] }> {
+): Array<{ category: Category; entries: KnowledgeItem[] }> {
   if (!knowledge) {
     return [];
   }
@@ -143,23 +156,37 @@ function knowledgeGroups(
   const categories = Object.keys(CATEGORY_LABELS) as Category[];
   return categories
     .filter((category) => selected === 'all' || category === selected)
-    .map((category) => ({
-      category,
-      entries: knowledge[category].filter((entry) => (
-        !normalizedQuery || Object.values(entry).some((value) => (
+    .map((category) => {
+      const entries: KnowledgeItem[] = category === 'relations'
+        ? knowledge.relations.map((entry) => ({
+            key: `${entry.subject} ${entry.predicate} ${entry.object}`,
+            entry,
+          }))
+        : Object.entries(
+            knowledge[category] as Record<string, MappingEntry>,
+          ).map(([slug, entry]) => ({
+            key: `${CATEGORY_PREFIXES[category]}:${slug}`,
+            entry,
+          }));
+      return {
+        category,
+        entries: entries.filter(({ key, entry }) => (
+          !normalizedQuery || [key, ...Object.values(entry)].some((value) => (
           typeof value === 'string' && value.toLocaleLowerCase().includes(normalizedQuery)
-        ))
-      )),
-    }))
+          ))
+        )),
+      };
+    })
     .filter((group) => group.entries.length > 0);
 }
 
-function KnowledgeEntryCard({ entry }: { entry: KnowledgeEntry }) {
+function KnowledgeEntryCard({ item }: { item: KnowledgeItem }) {
+  const { key, entry } = item;
   return (
     <Paper className="whub-box" p="md" radius="md" withBorder>
       <Stack gap="sm">
         <Group justify="space-between" wrap="nowrap">
-          <Badge variant="light">{entry.id}</Badge>
+          <Badge variant="light">{key}</Badge>
           {entry.ref && <Code>{entry.ref}</Code>}
         </Group>
         <KnowledgeEntryContent entry={entry} />

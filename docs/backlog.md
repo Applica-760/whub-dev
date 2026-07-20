@@ -21,7 +21,6 @@
     - task mdビューを追加し、BacklogやTodoと合わせて「プロジェクトの情報を見る」WidgetFrameを作る（ロードマップビューはTASK-003 `docs/tasks/20260715_1554`で進行中）
     - backlogを追加した時にweb appでエフェクトを出す
 - [ ] whub knowledge CLIの残り（`check`・`query`とWeb appのKnowledgeビューは実装済み）
-    - relation_typesのテンプレート文でRELをID付き散文（`POL-005: 未整理入力は…`）へ展開して返す（例: REL-009 → 「backlogに置かれた入力はtask-planningへ昇格する」）。現状のqueryは一致・直接参照エントリのYAMLをそのまま出力
     - 発見性: AgentにCLIを呼ばせる誘導はCLAUDE.md側のトリガー条件付き平文（「whub/データモデル変更前に`whub knowledge query <対象>`」）が必要
     - 作らない: 全件dumpする素通しの`ls`はReadと等価でCLI化の意味がない
 - [ ] boot skills配布の削除伝播

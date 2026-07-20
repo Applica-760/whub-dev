@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-027
-  state: in_progress
+  state: completed
   title: Knowledge refの実在検証
   objective: whub knowledge checkでproject相対パス形式のref切れを検出できるようにする
   approach:
@@ -174,23 +174,25 @@ plan:
       statement: backend・frontendの全検証と実Projectのknowledge check・queryが成功する
     steps:
     - description: Knowledge API・Widget・CLIテストをschema v4へ更新する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: API schemaとKnowledge Widgetをslug key・カテゴリ修飾参照・IDなしRelationへ対応させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: schema移行、slug重複拒否、参照整合性、複合Relation、relation type廃止をモデル・Service・CLIテストで検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: uv run pytest、frontend test・typecheck、実Projectのknowledge check・query、git
         diff --checkを実行する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 'Phase 7完了: OpenAPI schema/typesをschema v4へ再生成し、Knowledge API・Widgetをslug mappingとRelation複合キー表示へ更新。ADR-0012で新決定を記録しADR-0011をsupersede、backlogの旧relation_types案を削除。pytest
+      309件、Vitest 13件、typecheck、production build、実Project check/query、git diff --check成功。'
     deleted: false
 approvals:
 - actor: user
@@ -239,6 +241,20 @@ acceptance_results:
   status: passed
   evidence:
   - 有効な相対ref・fragment付きref・HTTPS URLと実Project checkの成功を確認
+- acceptance: ACC-013
+  status: passed
+  evidence:
+  - pytest 309、Vitest 13、typecheck、build、実Project check/query、git diff --checkが成功
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - Phase 6のServiceテストで欠損refがカテゴリ修飾キーとパスを伴うエラーになることを確認
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Phase 6のCLIテストと実Project checkで有効ref・検証対象外URLの通過を確認
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: Knowledgeをschema v4へ移行し、安定slug・カテゴリ修飾参照・Relation複合キー・ref実在検証を実装。relation_typesと数値IDを廃止し、API/Widgetを追随。pytest
+    309件、Vitest 13件、typecheck、build、実CLI検証成功。

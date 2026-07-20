@@ -7,23 +7,20 @@ import { KnowledgePage } from './KnowledgePage';
 import { KnowledgeWidget } from './KnowledgeWidget';
 
 const KNOWLEDGE = {
-  schema_version: 3,
-  definitions: [
-    { id: 'DEF-001', name: 'whub', definition: 'projectを統合管理するCLI' },
-  ],
-  relation_types: [
-    { name: 'manages', definition: 'subjectがobjectを管理する' },
-  ],
+  schema_version: 4,
+  definitions: {
+    whub: { name: 'whub', definition: 'projectを統合管理するCLI' },
+  },
   relations: [
-    { id: 'REL-001', subject: 'DEF-001', predicate: 'manages', object: 'DEF-001' },
+    { subject: 'def:whub', predicate: 'manages', object: 'def:whub' },
   ],
-  policies: [
-    { id: 'POL-001', statement: 'Knowledge YAMLをSSOTとする' },
-  ],
-  constraints: [
-    { id: 'CON-001', statement: '未知フィールドを拒否する' },
-  ],
-  exceptions: [],
+  policies: {
+    knowledge_is_ssot: { statement: 'Knowledge YAMLをSSOTとする' },
+  },
+  constraints: {
+    reject_unknown_fields: { statement: '未知フィールドを拒否する' },
+  },
+  exceptions: {},
 } satisfies KnowledgeResponse;
 
 beforeEach(() => {
@@ -57,17 +54,17 @@ describe('KnowledgeWidget', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(KNOWLEDGE)));
     renderInMantine(<KnowledgeWidget project="workspace-hub" />);
 
-    await screen.findAllByText('DEF-001');
+    await screen.findAllByText('def:whub');
     fireEvent.click(screen.getByRole('tab', { name: 'CON' }));
-    expect(screen.getByText('CON-001')).toBeTruthy();
-    expect(screen.queryByText('DEF-001')).toBeNull();
+    expect(screen.getByText('con:reject_unknown_fields')).toBeTruthy();
+    expect(screen.queryByText('def:whub')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'All' }));
     fireEvent.change(screen.getByLabelText('Knowledgeを検索'), {
-      target: { value: 'POL-001' },
+      target: { value: 'pol:knowledge_is_ssot' },
     });
-    expect(screen.getByText('POL-001')).toBeTruthy();
-    expect(screen.queryByText('CON-001')).toBeNull();
+    expect(screen.getByText('pol:knowledge_is_ssot')).toBeTruthy();
+    expect(screen.queryByText('con:reject_unknown_fields')).toBeNull();
 
     fireEvent.change(screen.getByLabelText('Knowledgeを検索'), {
       target: { value: 'not-found' },
