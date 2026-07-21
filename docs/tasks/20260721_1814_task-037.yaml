@@ -95,6 +95,9 @@ plan:
     - clone先は2026-07-21時点で未作成。親filesystem空き55GiB、Git
       object 118MiB、checkout対象は約1GiBで作成可能。
     - '分離直前: worktreeはのmain 1件、HEAD=5e816a6ea1d24f47ffb3a702701cebbf71ed288b、作業ツリーclean。TASK-022/031/032/037はin_progressのまま維持し、TASK-034取消とTASK-037開始はHEADへ収録済み。'
+    - 'owner分類補足: app/node_modulesはignored runtime/cache。一方slides/node_modules配下約5万fileは既にGit
+      trackedであるため、生成cacheではなく既存のWhub開発履歴としてcloneへ保持する。operation repositoryからのslides除去はrollback検証後のPhase
+      6で扱う。'
     deleted: false
   - title: whub Projectを接続してTask正本を早期に引き渡す
     acceptance:
