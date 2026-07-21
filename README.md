@@ -32,7 +32,7 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub unmount [PROJECT] [--force]` | アンマウント（staleマウントは`--force`で強制解除） |
 | `whub cd <PROJECT>` | localならパス移動、remoteならtmuxセッションへSSH接続（`--plain`で素シェル） |
 | `whub run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
-| `whub session <COMMAND>` | remote GUI sessionの予約・一覧・状態確認・ログ取得・削除 |
+| `whub session <COMMAND>` | remote GUI sessionの予約・command handoff・状態確認・ログ取得・削除 |
 | `whub todo` | `project`横断の単発アクションを管理 |
 | `whub backlog <PROJECT> <TEXT...>` | projectのbacklog末尾の未整理メモへ追記 |
 | `whub boot` | Agent設定を`boot: true`な`resource`へ配布 |
@@ -70,6 +70,17 @@ whub session reserve <PROJECT> [--task TASK-NNN]
 ```sh
 bash .whub/session-launcher.sh <RUN_ID>
 ```
+
+Mac側で用意した複雑なcommandは、既存runと単一行の目的を指定してstdinから渡す。quoted heredocを使うと、command内の変数やquoteをMac側shellで展開せずに送信できる。remote `resource`のmountは不要。
+
+```sh
+whub session handoff <PROJECT> <RUN_ID> --purpose "Rerun probe" <<'WHUB_COMMAND'
+PATH="$PWD/.venv/bin:$PATH" uv run python probe.py \
+  --name 'complex value'
+WHUB_COMMAND
+```
+
+Linux GUI側では対象Projectの`.whub/handoff/commands.md`を開き、先頭の最新entryにあるcode blockをcopyして明示実行する。whubはMarkdown内のcommandを解析・自動実行しない。fileはProjectごとに1つで履歴を保持し、`session clean`でも削除しない。
 
 Mac側から状態とtranscriptを確認する。
 

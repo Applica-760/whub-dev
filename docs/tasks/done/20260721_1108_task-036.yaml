@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-036
-  state: in_progress
+  state: completed
   title: remote GUI向けcommand handoff Markdownを追加する
   objective: Mac側whubからLinux GUI側へ複雑なcommandを崩さず渡し、利用者が単一Markdownを開いて最新commandをすぐコピー実行できるようにする
   approach:
@@ -73,26 +73,56 @@ plan:
     acceptance: []
     steps:
     - description: 複数行・quote・dollar・backslash・heredoc・backtickを保持するMarkdown形式を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 連続・並行更新で既存entry保持・最新先頭・空行・code fence・権限を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: session関連テスト、全pytest、git diff check、Task整合性検査を成功させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: unmount状態のremote Projectでhandoff fileの生成と人手copy実行を確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    - description: READMEのRemote GUI session節へstdin handoff、Linux GUIでのcopy実行、保持・clean境界を記載する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - remote scriptを一時Project上で直接実行し、quote・dollar・backslash・heredoc・日本語・3連backtickを含むcommand、末尾LF補完、最新先頭、既存CRLF
+      bytes保持、0700・0600を検証した。8 process同時更新でも全entryを保持した。session対象24テストと全339テスト、git
+      diff --checkが成功。la-ilを一時unmountし、TASK-036-r001をreserve後にhandoffをSSH経由で生成した。SSH読取でpending
+      descriptor、先頭entry、handoff 0700、commands.md・commands.lock 0600を確認し、la-ilはmount済みへ復帰した。人手copy確認のためrunはpendingのまま保持する。
+    - ユーザーがLinux GUI側でcommands.md先頭の検証commandをcopy実行し、WHUB_HANDOFF_036_OKを確認した。READMEのcommand一覧とRemote
+      GUI session節へ、stdin専用handoff、quoted heredoc、既存run・単一行purpose、mount非依存、Linux
+      GUIでのcopy明示実行、自動解析・実行をしない境界、Project単一fileの履歴保持、session clean非削除を記載した。検証run TASK-036-r001はpendingを確認してcleanし、run一覧が空でcommands.mdが保持されることをSSH経由で確認した。
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
-change_requests: []
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - 複雑commandのlocal script test、unmount中la-ilへの実handoff、ユーザーのLinux GUI copy実行で確認
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - 8 process並行testとla-il実測でentry保持、directory 0700、file・lock 0600を確認
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - 実装はMarkdown更新のみで、README手順とユーザー確認はいずれもcopyによる明示実行
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - session対象24テストとuv run pytest全339件が成功
+change_requests:
+- reason: ユーザー確認後、whub session handoffの運用方法をREADMEへ追加してからTaskを完了するため
 cancellation: null
-result: null
+result:
+  summary: whub session handoffを追加し、複雑commandをSSH stdinからProject単一Markdownの最新entryへlock付き原子的に記録できるようにした。並行更新・権限・mount非依存・人手copy実行・clean後の履歴保持を検証し、READMEへ運用方法を記載。全339テスト成功。

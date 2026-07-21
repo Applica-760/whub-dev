@@ -1,13 +1,17 @@
 from datetime import datetime, timezone
 from importlib.resources import as_file, files
 import json
+from pathlib import Path
+import stat
 import subprocess
+import sys
 from unittest.mock import patch
 
 import pytest
 
 from whub.services.errors import ServiceError
 from whub.services.session import (
+    _HANDOFF,
     clean_session,
     get_session,
     list_sessions,
@@ -15,6 +19,21 @@ from whub.services.session import (
     write_session_handoff,
 )
 from whub.tests.helpers import manifest
+
+
+def run_handoff_script(root: Path, payload: dict) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-c", _HANDOFF, str(root), payload["run_id"]],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+    )
+
+
+def prepare_handoff_run(root: Path, run_id: str = "TASK-036-r001") -> None:
+    sessions = root / ".whub" / "sessions"
+    sessions.mkdir(parents=True)
+    (sessions / f"{run_id}.yaml").write_text("state: pending\n")
 
 
 def descriptor() -> dict:
@@ -123,6 +142,88 @@ def test_handoff_reports_unknown_remote_run() -> None:
         write_session_handoff(
             manifest(), "remote", "TASK-999-r001", "probe", "echo ok"
         )
+
+
+def test_handoff_script_prepends_exact_markdown_and_preserves_existing_bytes(
+    tmp_path: Path,
+) -> None:
+    prepare_handoff_run(tmp_path)
+    handoff = tmp_path / ".whub" / "handoff"
+    handoff.mkdir()
+    commands = handoff / "commands.md"
+    commands.write_bytes(b"legacy\r\n")
+    command = (
+        "PATH=\"$PWD/.venv/bin:$PATH\" uv run python - <<'PY'\n"
+        "print('quote \\\\ and ``` and 日本語')\n"
+        "PY\n"
+    )
+    payload = {
+        "run_id": "TASK-036-r001",
+        "purpose": "Rerun probe",
+        "command": command,
+        "timestamp": "2026-07-21 12:34:56 JST",
+    }
+
+    result = run_handoff_script(tmp_path, payload)
+
+    assert result.returncode == 0, result.stderr
+    first_content = (
+        b"## 2026-07-21 12:34:56 JST | TASK-036-r001 | Rerun probe\n\n"
+        + b"````bash\n"
+        + command.encode()
+        + b"````\n\nlegacy\r\n"
+    )
+    assert commands.read_bytes() == first_content
+    assert stat.S_IMODE(handoff.stat().st_mode) == 0o700
+    assert stat.S_IMODE(commands.stat().st_mode) == 0o600
+    assert stat.S_IMODE((handoff / "commands.lock").stat().st_mode) == 0o600
+
+    newer = {
+        "run_id": "TASK-036-r001",
+        "purpose": "Latest probe",
+        "command": "echo latest",
+        "timestamp": "2026-07-21 12:35:00 JST",
+    }
+    result = run_handoff_script(tmp_path, newer)
+
+    assert result.returncode == 0, result.stderr
+    assert commands.read_bytes() == (
+        b"## 2026-07-21 12:35:00 JST | TASK-036-r001 | Latest probe\n\n"
+        b"```bash\necho latest\n```\n\n"
+        + first_content
+    )
+
+
+def test_handoff_script_serializes_concurrent_updates(tmp_path: Path) -> None:
+    prepare_handoff_run(tmp_path)
+    processes: list[subprocess.Popen[str]] = []
+    for number in range(8):
+        payload = {
+            "run_id": "TASK-036-r001",
+            "purpose": f"probe {number}",
+            "command": f"echo command-{number}",
+            "timestamp": f"2026-07-21 12:34:{number:02} JST",
+        }
+        process = subprocess.Popen(
+            [sys.executable, "-c", _HANDOFF, str(tmp_path), payload["run_id"]],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        assert process.stdin is not None
+        process.stdin.write(json.dumps(payload))
+        process.stdin.close()
+        processes.append(process)
+
+    for process in processes:
+        assert process.wait() == 0
+
+    content = (tmp_path / ".whub" / "handoff" / "commands.md").read_text()
+    assert content.count("\n## ") + content.startswith("## ") == 8
+    for number in range(8):
+        assert f"| probe {number}\n" in content
+        assert f"echo command-{number}\n" in content
 
 
 def test_session_rejects_local_resource() -> None:
