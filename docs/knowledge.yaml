@@ -218,6 +218,16 @@ policies:
   remote_gui_session_operation:
     statement: remote GUI sessionではtmux内部IDを手動転記せず、Mac側whubで予約し、Linux GUI側で固定launcherをbash実行し、Mac側whubで観測する。tmux内のwindow・pane・command構成は利用者に委ね、必要な診断結果だけをTask
       logへ残す
+  gui_session_environment_is_creation_context:
+    statement: GUI依存processはGUI terminalから作成したtmux pane内で起動し、DISPLAY・WAYLAND_DISPLAYとvirtualenv・PATHをworkload起動前に確認する。既存paneへのattachやobserverの再接続は、既に起動したprocessの環境を補わない。
+    ref: src/whub/session/launcher.py
+  parallel_session_roles_use_distinct_panes:
+    statement: Learner・Actorなど複数roleを同一runで並列実行する場合はroleごとにpaneとtranscriptを分け、pane
+      indexではなく動的pane IDで追跡する。workloadをexecして終了code・signalをpaneへ伝播させ、全pane終了後にrunを確定し、signalがあればinterrupted、signalがなく非zero終了があればfailedとする。
+    ref: src/whub/session/launcher.py
+  session_observation_is_not_cancellation:
+    statement: tmux attach・detachとlogs --followは観測操作としてworkload lifecycleから分離し、観測切断を停止操作に使わない。停止は対象processへ明示し、完了判定はdescriptorへ永続化されたpaneの終了code・signalで行う。
+    ref: src/whub/session/launcher.py
 constraints:
   common_cli_delegates_resource_dispatch:
     statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する
