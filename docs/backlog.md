@@ -80,4 +80,5 @@
 - InterruptしたタスクがCompleteしてもタスク間グラフビューに残り続ける
 - 結局YamlがAgentから見えるから、.agentsignoreとかできたらいいな
 - Knowledge YAMLとTask YAMLの配置を将来再検討する。docs/knowledge.yamlは確定済みのプロジェクト知識・仕様SSOTとしてdocs配置が妥当。一方、Task YAMLはstate・進捗・log・依存をCLIが更新する実行記録であり、docs/tasksより.wflow/tasks等のrepository-localなワークフローデータ領域へ分離する方が責務は明確になる。既存の凍結済みMarkdown履歴はdocs/tasks/doneに残す案を含め、可読性・Agentの発見性・移行コストと合わせて判断する。
+- バイトの稼働管理できるタイマーあればいいな
 <!-- hub:backlog:appended:end -->

@@ -1,0 +1,23 @@
+schema_version: 1
+task:
+  id: TASK-036
+  state: draft
+  title: remote GUI向けcommand handoff Markdownを追加する
+  objective: Mac側whubからLinux GUI側へ複雑なcommandを崩さず渡し、利用者が単一Markdownを開いて最新commandをすぐコピー実行できるようにする
+  approach:
+  - .whub/handoff/commands.mdをProjectごとの単一handoff fileとし、commandごとのfileは作らない
+  - 新規entryをfile先頭へ挿入し、entryとfenced code blockの上下を空行で区切って、最新commandがfileを開いた直後に見えるようにする
+  - timestampはZoneInfo("Asia/Tokyo")で生成し、YYYY-MM-DD HH:mm:ss JSTの可読形式でrun ID・目的とともに見出しへ記録する
+  - Markdownは人間がcopyして明示実行するhandoffに限定し、自動実行やMarkdownからのcommand解析は行わない
+  - mountに依存せずSSH経由で0600 fileへlock付き原子的更新を行い、先頭挿入順・空行・code fence・timezone・既存内容保持を検証する
+  depends_on:
+  - TASK-030
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

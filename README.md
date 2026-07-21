@@ -32,6 +32,7 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub unmount [PROJECT] [--force]` | アンマウント（staleマウントは`--force`で強制解除） |
 | `whub cd <PROJECT>` | localならパス移動、remoteならtmuxセッションへSSH接続（`--plain`で素シェル） |
 | `whub run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
+| `whub session <COMMAND>` | remote GUI sessionの予約・一覧・状態確認・ログ取得・削除 |
 | `whub todo` | `project`横断の単発アクションを管理 |
 | `whub backlog <PROJECT> <TEXT...>` | projectのbacklog末尾の未整理メモへ追記 |
 | `whub boot` | Agent設定を`boot: true`な`resource`へ配布 |
@@ -47,6 +48,7 @@ workspace-hubから別Projectを操作する場合は`wflow task --project PROJE
 |---|---|
 | 確認 | `wflow task ls` / `check TASK` / `show TASK` |
 | 新規作成 | `wflow task init "タイトル" "目的" --approach "方針"` |
+| 依存関係 | `depends add TASK DEPENDENCY` / `depends delete TASK DEPENDENCY`（draftのみ） |
 | 計画追加・承認 | `plan insert TASK "Step"` → `check` → `transition TASK approve_plan --actor user` |
 | 進行記録 | `done` / `skip --reason` / `log TASK PPP --log` |
 | 計画変更 | `transition TASK request_plan_change --actor agent --reason "…"` → `plan delete` / `plan insert` → 再承認 |
@@ -54,6 +56,35 @@ workspace-hubから別Projectを操作する場合は`wflow task --project PROJE
 | 受入・完了 | `accept` / `complete TASK --result "…"` |
 
 `wflow task complete`はTaskの完了記録と`docs/tasks/done`へのアーカイブを一操作で行う。
+
+## Remote GUI session
+
+Mac側でrunを予約する。remote `resource`のmountは不要。
+
+```sh
+whub session reserve <PROJECT> [--task TASK-NNN]
+```
+
+表示されたlauncher commandを、対象Project直下のLinux GUI terminalで実行する。launcherはGUI環境を継承した専用tmux sessionを開始し、再実行時は生存中のsessionへ再attachする。
+
+```sh
+bash .whub/session-launcher.sh <RUN_ID>
+```
+
+Mac側から状態とtranscriptを確認する。
+
+```sh
+whub session ls <PROJECT>
+whub session show <PROJECT> <RUN_ID>
+whub session logs <PROJECT> <RUN_ID> [--pane PANE_OR_WINDOW]
+whub session logs <PROJECT> <RUN_ID> --follow [--pane PANE_OR_WINDOW]
+```
+
+`--follow`の切断やtmuxのdetachはremote処理を停止しない。停止は対象processへ明示し、`show`で終了code・signalと`completed`・`failed`・`interrupted`を確認する。`pending`または終了済みrunのdescriptor・metadata・transcriptはrun単位で削除できるが、`running` runの削除は拒否される。
+
+```sh
+whub session clean <PROJECT> <RUN_ID>
+```
 
 ## `.whub/manifest.yaml` の構造
 
