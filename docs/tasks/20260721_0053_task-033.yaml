@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-033
-  state: draft
+  state: in_progress
   title: フロントエンド・Pythonのフォーマッタとpre-commit検査を導入する
   objective: フロントエンドとPythonのコードについて、commit前にフォーマット不整合を検出できる状態にする
   approach:
@@ -13,8 +13,81 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: Ruff formatterで対象Pythonコードを整形・検査でき、Ruff Linterが有効化されていない。
+  - id: ACC-002
+    statement: Prettierでapp/の対象コードを整形・検査でき、slides/とapp/src/api/generated/が対象外である。
+  - id: ACC-003
+    statement: pre-commitが対象のstagedファイルをcheck-onlyで検査し、未整形時に内容とindexを変更せず失敗し、整形済みなら成功する。
+  - id: ACC-004
+    statement: 一括整形後にuv run pytest、app/のtypecheck・test・buildがすべて成功する。
+  - id: ACC-005
+    statement: Linter・CI・AgentコードレビューおよびWorktree固有のWhub対応が本Taskへ追加されていない。
+  phases:
+  - title: フォーマッタ設定と対象範囲の確定
+    acceptance: []
+    steps:
+    - description: PythonのフォーマッタとしてRuff formatterを導入し、Ruff Linterは今回有効化しない。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: フロントエンドのフォーマッタとしてPrettierをapp/へ導入し、slides/とapp/src/api/generated/を対象外にする。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: RuffとPrettierは原則として既定設定を用い、対象と除外に必要な最小限の設定だけを追加する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Ruff 0.15.22とPrettier 3.9.5を導入した。Ruff Linterは設定せず、Prettierはapp/のみを対象としてdist/・openapi.json・src/api/generated/を除外した。check-only実行でRuffは110ファイル、Prettierは59ファイルをPhase
+      2の整形対象として検出し、生成物がignoredであることを確認した。npm installはhigh severity 2件を報告したが、本Task範囲外のためaudit
+      fixは適用していない。
+    - formatter実行で生成されるrepository local cacheとして.ruff_cache/を.gitignoreへ追加した。.pytest_cache・__pycache__・app/node_modules・app/distは既存設定でignore済み、pre-commit
+      cacheはrepository外のユーザーcacheを使用するため追加不要と確認した。
+    deleted: false
+  - title: 既存コードの一括整形と検証
+    acceptance: []
+    steps:
+    - description: 対象のPythonコードとapp/のフロントエンドコードを各フォーマッタで一括整形する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv run pytestとapp/のnpm run typecheck、npm test、npm run buildを実行し、整形後も既存の検証が成功することを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 検証成功後、既存コードのフォーマット変更だけを独立したcommitとして記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: pre-commitフォーマット検査の導入
+    acceptance: []
+    steps:
+    - description: repository rootへpre-commit frameworkを導入し、Pythonとapp/の対象ファイルにフォーマット検査を設定する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: pre-commitはcheck-onlyとし、未整形ファイルの自動編集や自動stageを行わない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 整形済みのstagedファイルでは検査が成功し、未整形のstagedファイルでは内容とindexを変更せず検査が失敗することを実証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Worktree固有のWhub対応は依存先TASK-034の検討範囲とし、本Taskへ含めない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
