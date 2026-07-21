@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-036
-  state: draft
+  state: in_progress
   title: remote GUI向けcommand handoff Markdownを追加する
   objective: Mac側whubからLinux GUI側へ複雑なcommandを崩さず渡し、利用者が単一Markdownを開いて最新commandをすぐコピー実行できるようにする
   approach:
@@ -15,8 +15,79 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: 複雑な複数行commandがremote側commands.mdの最新entryへ内容を崩さず記録される
+  - id: ACC-002
+    statement: 並行更新でも既存entryを失わず、handoff directoryは0700、fileとlockは0600になる
+  - id: ACC-003
+    statement: Markdownからcommandを解析・自動実行せず、利用者がcopyして明示実行できる
+  - id: ACC-004
+    statement: session関連テストとuv run pytest全体が成功する
+  phases:
+  - title: handoff契約とMarkdown形式を確定する
+    acceptance: []
+    steps:
+    - description: stdin入力、明示Project・run ID・単一行purpose、既存session検証を含むhandoff CLI契約を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: JST timestamp・run ID・purpose・可変長bash code fenceからなる先頭entry形式と改行規則を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: SSH stdin転送、flock、同一directory内の一時fileとos.replace、0700・0600権限の更新契約を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 'CLIは whub session handoff PROJECT RUN_ID --purpose TEXT とし、commandはstdin専用で受け取る。TTY・空白のみ入力、空または改行を含むpurpose、不正または未知runを拒否し、既存runのstateは制限しない。Markdownは
+      ## YYYY-MM-DD HH:mm:ss JST | RUN_ID | PURPOSE、空行、可変長bash fence、command、空行の順とし、本文はcode
+      fenceに必要な末尾LFがない場合だけ補完する。timestampはMac側でZoneInfo Asia/Tokyoから生成し、payloadをJSONでSSH
+      stdinへ送る。remoteでは.whub/handoffを0700、commands.mdと永続lockを0600とし、descriptor確認後にflock内で既存bytesを保持したまま先頭entryを同一directoryのtempfile・fsync・os.replaceで更新する。session
+      launcher asset頒布は変更しない。'
+    deleted: false
+  - title: handoff CLIとremote更新serviceを実装する
+    acceptance: []
+    steps:
+    - description: whub session handoff CLIと入力検証をcommands層へ実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: commandをJSON payloadでSSH stdinへ渡し、commands.mdをlock付き原子的に先頭更新するserviceを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 空入力・不正purpose・未知run・local resource・SSH失敗をservice・CLIテストで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 回帰テストとremote実地検証を行う
+    acceptance: []
+    steps:
+    - description: 複数行・quote・dollar・backslash・heredoc・backtickを保持するMarkdown形式を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 連続・並行更新で既存entry保持・最新先頭・空行・code fence・権限を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: session関連テスト、全pytest、git diff check、Task整合性検査を成功させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: unmount状態のremote Projectでhandoff fileの生成と人手copy実行を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
