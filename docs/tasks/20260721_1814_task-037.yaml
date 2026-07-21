@@ -1,0 +1,329 @@
+schema_version: 1
+task:
+  id: TASK-037
+  state: in_progress
+  title: Whubの開発ディレクトリと運用ディレクトリを分離する
+  objective: WhubのSSoT・Task管理・Agent sessionの入口を担う運用ディレクトリと、CLI・wflow・Web appを開発するcheckoutを分離し、Whub自身を安全に並列開発できる構成を実現する
+  approach:
+  - を運用上の単一入口とし、SSoT、Task操作、Agent session管理、Project接続を集約する。
+  - CLI・wflow・Web appとそのビルド・テスト構成は一体のWhub開発Projectとして運用ディレクトリから分離し、symlink resourceとして接続する。
+  - 運用側は開発checkoutのeditable installではなく、mainで検証済みのversionまたはcommitに固定したCLIと対応するWeb
+    app artifactを使用する。
+  - 開発Projectのworktreeを実装場所として利用し、運用データとユーザー接点を各worktreeへ分散させない。
+  depends_on:
+  - TASK-033
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-015
+    statement: 現在のoperation rootを移動せず、分離前のGit commit hash・日時・source・Task・slides履歴をWhub開発repositoryから参照できる。
+  - id: ACC-016
+    statement: TASK-037を含む既存Taskの正本はWhub開発Projectだけにあり、operation Projectに移行前Taskが残っていない。
+  - id: ACC-017
+    statement: operation KnowledgeとWhub開発KnowledgeがProject単位に分割され、両方がwhub knowledge
+      checkに成功する。
+  - id: ACC-018
+    statement: が通常のsymlink resourceとしてWhub開発repositoryへ接続される。
+  - id: ACC-019
+    statement: operation_projectは設定されたroleとしてoperation_rootへ解決され、workspace-hubという名前に依存する合成resourceと分岐が廃止される。
+  - id: ACC-020
+    statement: 運用中のwhub/wflow/Web appが外部releaseではなくローカル固定artifactから実行される。
+  - id: ACC-021
+    statement: Web app、Web API、CLI、wflow、Task Workflow/schemaのrelease整合性が検証されている。
+  - id: ACC-022
+    statement: 開発checkoutを移動または利用不能にしてもoperation rootから通常の運用操作を実行できる。
+  - id: ACC-023
+    statement: linked worktreeのbranchコードが運用CLI、Task、Knowledge、manifestを暗黙に変更しない。
+  - id: ACC-024
+    statement: release切替とrollbackがatomicに実行され、運用SSoTとruntime stateを失わない。
+  - id: ACC-025
+    statement: 全Phaseの関連test、build、smoke testが成功し、検証コマンドと結果がTASK-037に記録されている。
+  phases:
+  - title: 分離基準を確定してWhub開発repositoryを複製する
+    acceptance:
+    - id: ACC-001
+      statement: 承認済みpathに完全なGit履歴を持つ独立したWhub開発repositoryが作成され、分離基準commitがoperation
+        repositoryと一致する。
+    - id: ACC-002
+      statement: 現在のoperation rootと運用状態が維持され、runtime・秘密情報・symlink・mount状態が開発cloneへ複製されていない。
+    steps:
+    - description: 現在のtracked fileと生成物を、operation ProjectのSSoT、Whub release artifact、Whub開発Project、runtime/cache、今回の対象外に分類し、分離後のownerを一意に定義する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 現在のを移動せずoperation_rootとして維持し、root直下にwhub
+        symlinkを置く目標構成を確定する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Whub開発repositoryの物理source pathはユーザー承認済みのとする。2026-07-21のユーザー申告時点では同名directoryは未作成であり、clone実行直前にも未作成であることを再確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: worktree、未commit変更、active Task、現在のHEADを確認し、TASK-034/037を含む必要な変更を分離基準commitへ含めてcleanな状態にする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: へgit clone --no-hardlinks等で現在のrepositoryを複製し、git
+        filter-repo等の履歴書換えを行わず分離前のcommit hash・日時・source・Task・slides履歴を維持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 開発cloneへはGit管理対象と履歴だけを引き継ぎ、operation固有の.whub runtime、秘密情報、生成symlink、mount状態を複製しない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 両repositoryの分離基準commitが一致し、現在のoperation repositoryが変更前の運用を継続し、開発cloneがuv環境を構築できることを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: clone作成結果、両repositoryのpath/HEAD、rollback時に使用する分離基準commitをTASK-037へ記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - '2026-07-21: ユーザー指示により、既存のin_progress Taskは完了扱いにせず、TASK-037を特権的な最優先Taskとして運用・実装分離を優先する。'
+    deleted: false
+  - title: whub Projectを接続してTask正本を早期に引き渡す
+    acceptance:
+    - id: ACC-003
+      statement: が通常のsymlink resourceとして接続され、既存CLIからProject操作できる。
+    - id: ACC-004
+      statement: 既存Taskの有効な正本がWhub開発Projectに一つだけ存在し、TASK-037を--project whubで継続できる。
+    steps:
+    - description: 既存manifestへ通常のsymlink resourceとしてwhub Projectを追加し、workspace_pathをroot直下のwhub、sourceをにする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 現在のoperation rootからwhub linkを実行し、を開発repositoryへ接続する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 既存の安定CLIでwflow task --project whub、whub knowledge --project whub、Project
+        content解決が動作することを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Task更新を一時停止し、TASK-037を含む既存docs/tasksの正本をWhub開発Projectへ指定する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: operation repository側の既存Taskを更新禁止にしたうえでworking treeから除去し、以後のTask作成・計画・進捗・完了をoperation
+        rootから--project whub付きで実行する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Agentとユーザーの入口はoperation rootに維持し、コード編集・test・buildのcwdだけをwhub Projectへ切り替える暫定運用を明文化する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: wflow task --project whub check 037で正本を一意に解決してTask更新を再開し、Task handoffとoperation側の除去commitをTASK-037へ記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Whub開発Projectでoperation contextをpackageから分離する
+    acceptance:
+    - id: ACC-005
+      statement: installed packageの位置とoperation rootが独立して解決され、開発checkoutの場所から運用参照先が変化しない。
+    - id: ACC-006
+      statement: workspace-hubという名前に依存したProject/resource解決の例外が残っていない。
+    steps:
+    - description: Phase 2以降のCLI・wflow・Web app source変更はWhub開発Projectだけで行い、operation
+        repositoryに残る旧sourceをfallback用read-only copyとして扱う。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: operation_root、operation_project、default_project、data_dir、App port、boot
+        assets pathを表す設定項目と優先順位を設計する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: package/source位置、operation root、共有data、runtime、release artifact、package
+        resourceのpath責務を分離し、単一のwhub_rootへ集約しない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: operation_projectは設定されたProject roleとしてoperation_rootへ解決し、その他のProjectはmanifestのresourceを通じて内容を解決する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: workspace_hub_resourceによる合成symlink resource、project.name == workspace-hub、CLI/Web
+        appのworkspace-hub既定値等の名前ベース例外を廃止する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 既存.whub/config.tomlとWHUB_ROOT/WHUB_DATA_DIRの移行・互換範囲を定義し、main、installed
+        artifact、linked worktree、Git外実行を網羅するtestを追加する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 運用情報と開発情報をownerごとに段階整理する
+    acceptance:
+    - id: ACC-007
+      statement: boot内容・環境設定・運用Knowledgeがoperation Projectに、source・Workflow/schema・実装KnowledgeがWhub開発Projectに一意に所有されている。
+    - id: ACC-008
+      statement: 両ProjectのKnowledgeとoperation config/boot資産が検証され、開発repositoryにoperation固有情報が残っていない。
+    steps:
+    - description: Agent設定・Skill・AGENTS・MCP設定等のboot配布元を現在のoperation root内のconfig/bootへ配置し、配布内容をoperation
+        Project、merge/rename/local/remote配布処理を開発artifactのownerとする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: App port、operation/default Project等の環境依存値をoperation configへ集約し、開発repositoryからoperation固有値を除去する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Task Workflow定義とschemaはWhub開発Project、具体のTask YAMLは各Projectが保持する境界をtestと文書で固定する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 現在のKnowledgeをoperation Projectの運用KnowledgeとWhub開発Projectの実装Knowledgeへ分け、whub
+        knowledge add/rmだけで整理する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 開発repositoryからoperation config、config/boot、vault/data接続、release/runtime情報等を段階的に除去し、operation
+        repository側の旧開発sourceはcutoverまでread-onlyで保持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 設定・boot資産の欠損、型不正、operation root外参照を検出するtestを追加し、両Projectでknowledge
+        checkを成功させる。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Whub開発Projectから自己完結したローカルreleaseを構築する
+    acceptance:
+    - id: ACC-009
+      statement: whub、wflow、Web API、Web app、Task Workflow/schemaが一つの元commitとversionへ対応している。
+    - id: ACC-010
+      statement: clean環境で開発checkoutなしにCLIとWeb appが起動し、元commitとartifact hashを確認できる。
+    steps:
+    - description: Whub開発Projectの検証済みmain commitでWeb appをbuildし、Python CLI、wflow、Web
+        APIと対応する静的distを同じrelease入力として扱う。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whub/wflow実装、Pydantic schema、Task Workflow定義、Task固有検証、Web API、Web
+        app distを同一wheelまたは同一versionのartifactへ格納する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: artifactにversionと元commitを記録し、運用中のwhub/wflowから確認できるようにする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 外部release serviceを使用せず、operation root配下の.whub/releases/<version>へローカルartifactを配置する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: cleanな非editable環境へartifactをインストールし、Whub開発repositoryのsrc/whubをimportせずCLIとWeb
+        appが起動することを検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Web app distまたは必須package resourceが欠落したartifactを昇格できない検証を設ける。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Whub開発Projectでuv run pytest、pre-commit、Frontend format/build等の全検証を実行する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 検証済みartifactのversion、元commit、wheel hash、検証結果をrelease candidateとしてTASK-037へ記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: operation CLIを固定releaseへ切り替えて旧開発情報を除去する
+    acceptance:
+    - id: ACC-011
+      statement: 通常のwhub/wflow/Web appがローカル固定releaseから実行され、使用中version・commit・artifact
+        hashを特定できる。
+    - id: ACC-012
+      statement: rollback成功後にのみoperation repositoryの旧開発情報が除去され、運用SSoTとruntime stateが維持されている。
+    steps:
+    - description: 検証済みrelease candidateをoperation rootのreleasesへインストールし、current参照または同等の切替点をatomicに新releaseへ向ける。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 通常のwhub/wflow/Web appが固定releaseから動作し、開発repositoryやoperation repositoryの旧srcをimportしていないことを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: operation rootからwflow task --project whub、whub knowledge --project
+        whub、operation_project向けKnowledge、status、link、boot、Web appをsmoke testする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 一つ前のreleaseまたは旧editable環境へ戻すrollbackを実行し、config、data、Task、Knowledge、runtime
+        stateを失わず復旧できることを検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 固定releaseへの再切替とrollbackの検証成功後に限り、operation repositoryからsrc、app、pyproject.toml、uv.lock、開発設定、slides、開発Knowledgeを除去する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 旧workspace-hub/.venvのeditable source importと開発依存を終了し、operation
+        repositoryのtracked fileを運用ownerだけに整理する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Agent sessionの入口と管理情報をoperation rootに保ち、実装対象のcwdだけをwhub Projectまたは将来のworktreeへ切り替えられる境界を確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: worktreeを含む統合検証とKnowledge更新を完了する
+    acceptance:
+    - id: ACC-013
+      statement: 開発repositoryの利用不能時とlinked worktree利用時の双方でoperation control planeの独立性が検証されている。
+    - id: ACC-014
+      statement: コード、test、Knowledge、運用文書が分離後の実態と一致し、旧特殊扱いを前提とする記述が残っていない。
+    steps:
+    - description: Whub開発repositoryまたはroot直下のwhub symlinkを一時的に利用不能にしても、operation config/dataを使う通常のWhub操作が継続することを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Whub開発Projectにlinked worktreeを作成し、branchコードの編集・test・buildが運用CLI、Task正本、operation
+        Knowledge、manifestへ暗黙に影響しないことを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: operation rootからKnowledge、Backlog、Task、status、link、boot、Web appの代表操作を最終smoke
+        testする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Whub開発Projectでuv run pytest、pre-commit、Frontend format/build等の最終検証を再実行し、結果を記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: workspace-hubをsource repositoryとする旧Knowledgeをwhub knowledge add/rmで更新し、operation
+        Projectとwhub Projectの責務を確定事実として記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 分離構成、release昇格、rollback、Task/Knowledge操作、開発worktree利用の運用手順と全検証証跡を文書化する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
