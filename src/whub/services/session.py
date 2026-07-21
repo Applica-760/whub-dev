@@ -1,4 +1,5 @@
 """Remote GUI session reservation, inspection, and cleanup."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -13,7 +14,11 @@ import yaml
 from pydantic import ValidationError
 
 from whub.core.remote import build_ssh_command, run_ssh_command
-from whub.core.target import TargetError, require_resource_type, resolve_project_resource
+from whub.core.target import (
+    TargetError,
+    require_resource_type,
+    resolve_project_resource,
+)
 from whub.models import Manifest, RemoteResource, SessionDescriptor
 from whub.services.errors import ServiceError
 from whub.utils.process import format_process_error
@@ -190,12 +195,18 @@ def _validate_run_id(run_id: str) -> str:
     return run_id
 
 
-def _python(resource: RemoteResource, script: str, *args: str, input: str | None = None) -> str:
+def _python(
+    resource: RemoteResource, script: str, *args: str, input: str | None = None
+) -> str:
     command = shlex.join(("python3", "-c", script, resource.path, *args))
     try:
-        result = run_ssh_command(resource._resolved_host, command, input=input, check=True)
+        result = run_ssh_command(
+            resource._resolved_host, command, input=input, check=True
+        )
     except (OSError, subprocess.SubprocessError) as error:
-        raise ServiceError(f"remote session operation failed: {format_process_error(error)}") from error
+        raise ServiceError(
+            f"remote session operation failed: {format_process_error(error)}"
+        ) from error
     return result.stdout
 
 
@@ -206,8 +217,12 @@ def reserve_session(manifest: Manifest, project: str, task: str | None = None) -
     if task and re.fullmatch(r"TASK-[0-9]+", task) is None:
         raise ServiceError(f"invalid task ID: {task}")
     assets = {
-        "session-launcher.py": files("whub").joinpath("session/launcher.py").read_text(),
-        "session-launcher.sh": files("whub").joinpath("session/launcher.sh").read_text(),
+        "session-launcher.py": files("whub")
+        .joinpath("session/launcher.py")
+        .read_text(),
+        "session-launcher.sh": files("whub")
+        .joinpath("session/launcher.sh")
+        .read_text(),
     }
     payload = json.dumps({"project": project, "task": task, "assets": assets})
     return _python(resource, _RESERVE, input=payload).strip()
@@ -216,7 +231,10 @@ def reserve_session(manifest: Manifest, project: str, task: str | None = None) -
 def list_sessions(manifest: Manifest, project: str) -> list[SessionDescriptor]:
     resource = _resource(manifest, project)
     try:
-        return [SessionDescriptor.model_validate(item) for item in json.loads(_python(resource, _LIST))]
+        return [
+            SessionDescriptor.model_validate(item)
+            for item in json.loads(_python(resource, _LIST))
+        ]
     except (json.JSONDecodeError, ValidationError) as error:
         raise ServiceError(f"invalid remote session descriptor: {error}") from error
 
@@ -269,7 +287,8 @@ def read_session_logs(
     resource = _resource(manifest, project)
     descriptor = get_session(manifest, project, run_id)
     selected = [
-        item for item in descriptor.panes
+        item
+        for item in descriptor.panes
         if pane is None or pane in {item.pane_id, item.window_name}
     ]
     if pane is not None and not selected:
@@ -278,7 +297,9 @@ def read_session_logs(
         raise ServiceError(f"ambiguous pane name: {pane}")
     output = []
     for item in selected:
-        command = f"cd {shlex.quote(resource.path)} && cat {shlex.quote(item.transcript)}"
+        command = (
+            f"cd {shlex.quote(resource.path)} && cat {shlex.quote(item.transcript)}"
+        )
         result = run_ssh_command(resource._resolved_host, command)
         output.append(f"== {item.window_name} {item.pane_id} ==\n{result.stdout}")
     return "".join(output)
@@ -290,7 +311,8 @@ def build_follow_logs_command(
     resource = _resource(manifest, project)
     descriptor = get_session(manifest, project, run_id)
     candidates = [
-        item for item in descriptor.panes
+        item
+        for item in descriptor.panes
         if pane is None or pane in {item.pane_id, item.window_name}
     ]
     if len(candidates) != 1:

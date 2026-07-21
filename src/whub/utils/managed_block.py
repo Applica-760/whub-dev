@@ -1,4 +1,5 @@
 """Helpers for replacing and editing marker-delimited managed blocks."""
+
 from __future__ import annotations
 
 Markers = tuple[str, str]

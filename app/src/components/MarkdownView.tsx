@@ -1,5 +1,5 @@
-import ReactMarkdown from 'react-markdown';
-import remarkFrontmatter from 'remark-frontmatter';
+import ReactMarkdown from "react-markdown";
+import remarkFrontmatter from "remark-frontmatter";
 
 type MarkdownViewProps = {
   content: string;
@@ -8,7 +8,9 @@ type MarkdownViewProps = {
 export function MarkdownView({ content }: MarkdownViewProps) {
   return (
     <div className="md-view">
-      <ReactMarkdown remarkPlugins={[remarkFrontmatter]} skipHtml>{content}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkFrontmatter]} skipHtml>
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }

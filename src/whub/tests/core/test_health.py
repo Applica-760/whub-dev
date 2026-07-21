@@ -21,6 +21,7 @@
 3. mountpoint文字列に改行などが含まれる異常系。
 4. `Path.resolve()`自体の挙動。
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -59,7 +60,9 @@ class TestSymlinkHealthSpec:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース1
             root = Path(tmp)
-            health = inspect_symlink(_symlink_resource(root / "missing-source", root / "target"))
+            health = inspect_symlink(
+                _symlink_resource(root / "missing-source", root / "target")
+            )
 
         assert health.state == "source-missing"
 
@@ -141,9 +144,13 @@ class TestMountHealthSpec:
         )
         for case in cases:
             if isinstance(case, subprocess.CompletedProcess):
-                patcher = patch.object(health_module.subprocess, "run", return_value=case)
+                patcher = patch.object(
+                    health_module.subprocess, "run", return_value=case
+                )
             else:
-                patcher = patch.object(health_module.subprocess, "run", side_effect=case)
+                patcher = patch.object(
+                    health_module.subprocess, "run", side_effect=case
+                )
             with patcher:
                 assert _read_mount_table() is None
 
@@ -176,7 +183,9 @@ class TestMountHealthSpec:
             stat = subprocess.CompletedProcess(["stat"], 0, "", "")
             with (
                 patch.object(health_module, "_read_mount_table", return_value=table),
-                patch.object(health_module.subprocess, "run", side_effect=[process, stat]),
+                patch.object(
+                    health_module.subprocess, "run", side_effect=[process, stat]
+                ),
             ):
                 health = inspect_mount(resource, "remote")
 
@@ -191,7 +200,9 @@ class TestMountHealthSpec:
             missing = subprocess.CompletedProcess(["pgrep"], 1, "", "")
             with (
                 patch.object(health_module, "_read_mount_table", return_value=table),
-                patch.object(health_module.subprocess, "run", return_value=missing) as run,
+                patch.object(
+                    health_module.subprocess, "run", return_value=missing
+                ) as run,
             ):
                 health = inspect_mount(resource, "remote")
 
@@ -202,7 +213,9 @@ class TestMountHealthSpec:
             timeout=3,
         )
 
-    def test_mountpoint_in_table_and_sshfs_process_check_failure_reports_stale(self) -> None:
+    def test_mountpoint_in_table_and_sshfs_process_check_failure_reports_stale(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース12
             mountpoint = Path(tmp) / "remote"
@@ -211,7 +224,9 @@ class TestMountHealthSpec:
             cases = (OSError("pgrep failed"), subprocess.TimeoutExpired(["pgrep"], 3))
             for case in cases:
                 with (
-                    patch.object(health_module, "_read_mount_table", return_value=table),
+                    patch.object(
+                        health_module, "_read_mount_table", return_value=table
+                    ),
                     patch.object(health_module.subprocess, "run", side_effect=case),
                 ):
                     health = inspect_mount(resource, "remote")
@@ -230,11 +245,16 @@ class TestMountHealthSpec:
             )
             for case in cases:
                 with (
-                    patch.object(health_module, "_read_mount_table", return_value=table),
+                    patch.object(
+                        health_module, "_read_mount_table", return_value=table
+                    ),
                     patch.object(
                         health_module.subprocess,
                         "run",
-                        side_effect=[subprocess.CompletedProcess(["pgrep"], 0, "", ""), case],
+                        side_effect=[
+                            subprocess.CompletedProcess(["pgrep"], 0, "", ""),
+                            case,
+                        ],
                     ),
                 ):
                     health = inspect_mount(resource, "remote")

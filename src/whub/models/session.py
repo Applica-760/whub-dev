@@ -1,4 +1,5 @@
 """Models for Project-local remote GUI session descriptors."""
+
 from __future__ import annotations
 
 from datetime import datetime

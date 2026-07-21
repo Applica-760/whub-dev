@@ -1,4 +1,5 @@
 """AppleDouble path helper tests."""
+
 from pathlib import Path
 
 from whub.utils.apple_double import is_apple_double

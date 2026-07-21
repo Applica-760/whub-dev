@@ -1,4 +1,5 @@
 """Inbox note creation shared by web adapters."""
+
 from __future__ import annotations
 
 from datetime import datetime

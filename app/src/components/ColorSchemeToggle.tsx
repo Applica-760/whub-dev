@@ -1,11 +1,15 @@
-import { ActionIcon, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
-import { IconMoon, IconSun } from '@tabler/icons-react';
+import {
+  ActionIcon,
+  useComputedColorScheme,
+  useMantineColorScheme,
+} from "@mantine/core";
+import { IconMoon, IconSun } from "@tabler/icons-react";
 
 export function ColorSchemeToggle() {
-  const colorScheme = useComputedColorScheme('light');
+  const colorScheme = useComputedColorScheme("light");
   const { setColorScheme } = useMantineColorScheme();
-  const nextColorScheme = colorScheme === 'dark' ? 'light' : 'dark';
-  const label = `${nextColorScheme === 'dark' ? 'ダーク' : 'ライト'}テーマに切り替える`;
+  const nextColorScheme = colorScheme === "dark" ? "light" : "dark";
+  const label = `${nextColorScheme === "dark" ? "ダーク" : "ライト"}テーマに切り替える`;
 
   return (
     <ActionIcon
@@ -15,7 +19,7 @@ export function ColorSchemeToggle() {
       title={label}
       variant="subtle"
     >
-      {nextColorScheme === 'dark' ? (
+      {nextColorScheme === "dark" ? (
         <IconMoon aria-hidden size={18} stroke={1.5} />
       ) : (
         <IconSun aria-hidden size={18} stroke={1.5} />

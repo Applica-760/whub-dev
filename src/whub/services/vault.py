@@ -1,4 +1,5 @@
 """Vault read-only browsing shared by web adapters."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -54,23 +55,29 @@ def read_vault_note(manifest: Manifest, relative_path: str) -> str:
 
 def _scan_directory(directory: Path, root: Path) -> list[VaultNode]:
     nodes: list[VaultNode] = []
-    entries = sorted(directory.iterdir(), key=lambda entry: (entry.is_file(), entry.name))
+    entries = sorted(
+        directory.iterdir(), key=lambda entry: (entry.is_file(), entry.name)
+    )
     for entry in entries:
         if entry.name.startswith("."):
             continue
         if entry.is_dir():
             children = _scan_directory(entry, root)
             if children:
-                nodes.append(VaultNode(
+                nodes.append(
+                    VaultNode(
+                        name=entry.name,
+                        path=str(entry.relative_to(root)),
+                        type="directory",
+                        children=children,
+                    )
+                )
+        elif entry.suffix == ".md":
+            nodes.append(
+                VaultNode(
                     name=entry.name,
                     path=str(entry.relative_to(root)),
-                    type="directory",
-                    children=children,
-                ))
-        elif entry.suffix == ".md":
-            nodes.append(VaultNode(
-                name=entry.name,
-                path=str(entry.relative_to(root)),
-                type="file",
-            ))
+                    type="file",
+                )
+            )
     return nodes

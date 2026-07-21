@@ -1,5 +1,5 @@
-import { Group, Paper, Stack } from '@mantine/core';
-import type { ReactNode } from 'react';
+import { Group, Paper, Stack } from "@mantine/core";
+import type { ReactNode } from "react";
 
 type WidgetFrameProps = {
   title?: ReactNode;

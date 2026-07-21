@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-import './overview.css';
+import "./overview.css";
 
 type OverviewFrameProps = {
   children: ReactNode;

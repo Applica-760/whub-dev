@@ -11,6 +11,7 @@
 - 実ファイルシステム上のsymlink作成（inspect_symlinkのmockで境界を閉じる）
 - .gitignoreの既存マーカー置換の全パターン（_update_gitignoreは薄いglue）
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -31,7 +32,9 @@ def _invoke_link(m, health_side_effect, *, symlink_to_side_effect=None, cwd=None
         patch("whub.commands.link.inspect_symlink", side_effect=health_side_effect),
         patch.object(Path, "symlink_to", side_effect=symlink_to_side_effect),
         patch.object(Path, "cwd", return_value=cwd or Path("/tmp/test-cwd")),
-        patch("whub.commands.link.whub_root", return_value=cwd or Path("/tmp/test-cwd")),
+        patch(
+            "whub.commands.link.whub_root", return_value=cwd or Path("/tmp/test-cwd")
+        ),
     ):
         return CliRunner().invoke(link, catch_exceptions=False)
 
@@ -62,7 +65,9 @@ class TestLinkSpec:
         m = manifest()
         with (
             patch("whub.commands.link.get_manifest", return_value=m),
-            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
+            patch(
+                "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
+            ),
             patch.object(Path, "cwd", return_value=tmp_path),
             patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
@@ -77,7 +82,9 @@ class TestLinkSpec:
         m = manifest()
         with (
             patch("whub.commands.link.get_manifest", return_value=m),
-            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
+            patch(
+                "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
+            ),
             patch.object(Path, "cwd", return_value=tmp_path),
             patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
@@ -90,7 +97,10 @@ class TestLinkSpec:
         m = manifest()
         with (
             patch("whub.commands.link.get_manifest", return_value=m),
-            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("missing")),
+            patch(
+                "whub.commands.link.inspect_symlink",
+                return_value=ResourceHealth("missing"),
+            ),
             patch.object(Path, "symlink_to", side_effect=OSError("permission denied")),
             patch.object(Path, "cwd", return_value=tmp_path),
             patch("whub.commands.link.whub_root", return_value=tmp_path),
@@ -105,7 +115,9 @@ class TestLinkSpec:
         m = manifest()
         with (
             patch("whub.commands.link.get_manifest", return_value=m),
-            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
+            patch(
+                "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
+            ),
             patch.object(Path, "cwd", return_value=tmp_path),
             patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):
@@ -126,7 +138,9 @@ class TestLinkSpec:
         m = manifest()
         with (
             patch("whub.commands.link.get_manifest", return_value=m),
-            patch("whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")),
+            patch(
+                "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
+            ),
             patch.object(Path, "cwd", return_value=tmp_path),
             patch("whub.commands.link.whub_root", return_value=tmp_path),
         ):

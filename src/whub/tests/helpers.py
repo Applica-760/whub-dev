@@ -2,6 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from whub.models import Knowledge, Manifest
 
+
 def manifest_data() -> dict:
     return {
         "version": "2",

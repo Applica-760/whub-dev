@@ -7,6 +7,7 @@
 4. 同じ状態からのtrigger曖昧性を通知する。
 5. 終端状態からの遷移を通知する。
 """
+
 from __future__ import annotations
 
 from pathlib import Path

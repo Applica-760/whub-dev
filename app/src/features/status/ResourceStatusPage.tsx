@@ -1,5 +1,5 @@
-import { PageFrame } from '../../components/PageFrame';
-import { ResourceStatusWidget } from './ResourceStatusWidget';
+import { PageFrame } from "../../components/PageFrame";
+import { ResourceStatusWidget } from "./ResourceStatusWidget";
 
 export function ResourceStatusPage() {
   return (

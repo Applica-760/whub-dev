@@ -1,6 +1,6 @@
-import { Alert, Box, Tabs, Text } from '@mantine/core';
+import { Alert, Box, Tabs, Text } from "@mantine/core";
 
-import { WidgetFrame } from '../../components/WidgetFrame';
+import { WidgetFrame } from "../../components/WidgetFrame";
 
 type ProjectTabsWidgetProps = {
   projects: string[];
@@ -21,13 +21,15 @@ export function ProjectTabsWidget({
     <WidgetFrame>
       <Box px="md" py="xs">
         {error ? (
-          <Alert color="red" title="Projectを取得できませんでした">{error}</Alert>
+          <Alert color="red" title="Projectを取得できませんでした">
+            {error}
+          </Alert>
         ) : loading ? (
           <Text c="dimmed">Projectを読み込んでいます…</Text>
         ) : projects.length === 0 ? (
           <Text c="dimmed">Projectがありません</Text>
         ) : (
-          <Box style={{ overflowX: 'auto' }}>
+          <Box style={{ overflowX: "auto" }}>
             <Tabs
               onChange={(project) => {
                 if (project) {
@@ -38,10 +40,14 @@ export function ProjectTabsWidget({
             >
               <Tabs.List
                 aria-label="Projectを選択"
-                style={{ flexWrap: 'nowrap', minWidth: 'max-content' }}
+                style={{ flexWrap: "nowrap", minWidth: "max-content" }}
               >
                 {projects.map((project) => (
-                  <Tabs.Tab key={project} style={{ flexShrink: 0 }} value={project}>
+                  <Tabs.Tab
+                    key={project}
+                    style={{ flexShrink: 0 }}
+                    value={project}
+                  >
                     {project}
                   </Tabs.Tab>
                 ))}

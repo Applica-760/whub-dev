@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { errorMessage } from '../../api/errorMessage';
-import { listTasks } from './api';
-import type { TasksResponse } from '../../api/client';
+import { errorMessage } from "../../api/errorMessage";
+import { listTasks } from "./api";
+import type { TasksResponse } from "../../api/client";
 
-export type TaskSummary = TasksResponse['tasks'][number];
+export type TaskSummary = TasksResponse["tasks"][number];
 
 export function useTasks(project?: string | null) {
   const [tasks, setTasks] = useState<TaskSummary[]>([]);

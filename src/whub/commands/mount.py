@@ -1,4 +1,5 @@
 """whub mount / unmount — sshfs-based mounts for remote resources."""
+
 from __future__ import annotations
 import shutil
 import subprocess
@@ -46,7 +47,10 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
     created_mountpoint = not mountpoint.exists()
     mountpoint.mkdir(parents=True, exist_ok=True)
     cmd = build_sshfs_command(
-        host, resource.path, mountpoint, volname=f"whub-{project.name}",
+        host,
+        resource.path,
+        mountpoint,
+        volname=f"whub-{project.name}",
     )
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -123,7 +127,13 @@ def _unmount_targets(
 
 @click.command()
 @click.argument("project", required=False, shell_complete=project_names)
-@click.option("--all", "-a", "include_all", is_flag=True, help="Include resources with mount=false.")
+@click.option(
+    "--all",
+    "-a",
+    "include_all",
+    is_flag=True,
+    help="Include resources with mount=false.",
+)
 @click.pass_context
 def mount(ctx: click.Context, project: str | None, include_all: bool) -> None:
     """Mount remote resources via sshfs."""

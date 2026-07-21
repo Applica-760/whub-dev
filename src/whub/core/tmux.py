@@ -1,4 +1,5 @@
 """tmux session naming and remote shell snippet builders."""
+
 from __future__ import annotations
 import shlex
 

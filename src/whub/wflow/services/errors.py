@@ -1,4 +1,5 @@
 """Shared error and diagnostic types for wflow services."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

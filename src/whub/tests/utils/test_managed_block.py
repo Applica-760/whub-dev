@@ -1,4 +1,5 @@
 """`whub.utils.managed_block`の仕様テスト。"""
+
 from __future__ import annotations
 
 import pytest

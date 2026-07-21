@@ -48,7 +48,9 @@ def save(path: Path, data: dict) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def tmux(socket: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+def tmux(
+    socket: Path, *args: str, check: bool = True
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["tmux", "-S", str(socket), *args],
         capture_output=True,
@@ -70,7 +72,12 @@ def _sync(run_id: str) -> None:
     metadata = data.get("tmux") or {}
     socket_value = metadata.get("socket")
     session = metadata.get("session")
-    if not isinstance(socket_value, str) or not socket_value or not isinstance(session, str) or not session:
+    if (
+        not isinstance(socket_value, str)
+        or not socket_value
+        or not isinstance(session, str)
+        or not session
+    ):
         raise SystemExit(f"whub session: missing tmux metadata: {run_id}")
     socket = Path(socket_value)
     result = tmux(
@@ -172,13 +179,23 @@ def start(requested: str | None) -> None:
         metadata = data.get("tmux") or {}
         socket_value = metadata.get("socket")
         session = metadata.get("session")
-        if isinstance(socket_value, str) and socket_value and isinstance(session, str) and session:
+        if (
+            isinstance(socket_value, str)
+            and socket_value
+            and isinstance(session, str)
+            and session
+        ):
             socket = Path(socket_value)
-            if tmux(socket, "has-session", "-t", f"={session}", check=False).returncode == 0:
+            if (
+                tmux(socket, "has-session", "-t", f"={session}", check=False).returncode
+                == 0
+            ):
                 attach(socket, session)
         data["state"] = "interrupted"
         save(path, data)
-        raise SystemExit(f"whub session: running session is no longer available: {run_id}")
+        raise SystemExit(
+            f"whub session: running session is no longer available: {run_id}"
+        )
     socket = runtime / "tmux.sock"
     data["state"] = "running"
     data["tmux"] = {"socket": str(socket), "session": run_id}
@@ -214,11 +231,18 @@ def start(requested: str | None) -> None:
             ("@whub_run", run_id),
         ):
             tmux(socket, "set-option", "-t", run_id, option, value)
-        command = shlex.join(["cd", str(root)]) + " && " + shlex.join(
-            ["python3", str(helper), "__sync", run_id]
+        command = (
+            shlex.join(["cd", str(root)])
+            + " && "
+            + shlex.join(["python3", str(helper), "__sync", run_id])
         )
         hook = f"run-shell -b {shlex.quote(command)}"
-        for name in ("after-new-window", "after-split-window", "pane-exited", "pane-died"):
+        for name in (
+            "after-new-window",
+            "after-split-window",
+            "pane-exited",
+            "pane-died",
+        ):
             tmux(socket, "set-hook", "-t", run_id, name, hook)
         sync(run_id)
     except (OSError, subprocess.CalledProcessError) as error:

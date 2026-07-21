@@ -8,6 +8,7 @@
 5. Relationのpredicateと複合キーを検索する。
 6. 空検索を拒否し、一致なしを空結果で返す。
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -49,9 +50,7 @@ def test_loads_local_remote_and_workspace_hub_knowledge(
     loaded_manifest = Manifest.model_validate(data)
 
     assert (
-        load_project_knowledge(loaded_manifest, "local")
-        .definitions["whub"]
-        .name
+        load_project_knowledge(loaded_manifest, "local").definitions["whub"].name
         == "whub"
     )
     assert (
@@ -60,9 +59,7 @@ def test_loads_local_remote_and_workspace_hub_knowledge(
     )
     assert (
         "knowledge_is_ssot"
-        in load_project_knowledge(
-            loaded_manifest, "workspace-hub"
-        ).policies
+        in load_project_knowledge(loaded_manifest, "workspace-hub").policies
     )
 
 
@@ -109,9 +106,7 @@ def test_check_validates_project_relative_refs(
     manifest_input["projects"][0]["resource"]["source"] = str(local_source)
     data = knowledge_data()
     data["definitions"]["project"]["ref"] = "docs/reference.md#section"
-    data["policies"]["knowledge_is_ssot"]["ref"] = (
-        "https://example.com/knowledge"
-    )
+    data["policies"]["knowledge_is_ssot"]["ref"] = "https://example.com/knowledge"
     _write_knowledge(local_source, data)
     (local_source / "docs" / "reference.md").write_text("reference")
     loaded_manifest = Manifest.model_validate(manifest_input)

@@ -1,4 +1,5 @@
 """whub backlog — append a raw memo to a project's backlog."""
+
 from __future__ import annotations
 
 import click

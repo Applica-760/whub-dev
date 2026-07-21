@@ -1,4 +1,5 @@
 """whub fetch — fetch a remote file into the whub downloads directory."""
+
 from __future__ import annotations
 import subprocess
 from pathlib import PurePosixPath
@@ -7,7 +8,11 @@ from whub.commands import get_manifest
 from whub.models import RemoteResource
 from whub.core.paths import downloads_dir
 from whub.core.remote import build_scp_command
-from whub.core.target import TargetError, require_resource_type, resolve_resource_by_workspace_path
+from whub.core.target import (
+    TargetError,
+    require_resource_type,
+    resolve_resource_by_workspace_path,
+)
 
 
 @click.command()
@@ -22,7 +27,9 @@ def fetch(ctx: click.Context, path: str) -> None:
     except TargetError as error:
         raise click.ClickException(str(error)) from error
     if not rel:
-        raise click.ClickException(f"path must point to a file inside the resource: {path}")
+        raise click.ClickException(
+            f"path must point to a file inside the resource: {path}"
+        )
 
     downloads = downloads_dir()
     downloads.mkdir(parents=True, exist_ok=True)

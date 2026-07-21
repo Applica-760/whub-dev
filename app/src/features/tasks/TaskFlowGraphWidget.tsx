@@ -1,17 +1,20 @@
-import { Alert, Box, Text } from '@mantine/core';
-import { useCallback, useEffect, useState } from 'react';
+import { Alert, Box, Text } from "@mantine/core";
+import { useCallback, useEffect, useState } from "react";
 
-import { errorMessage } from '../../api/errorMessage';
-import { MermaidDiagram } from '../../components/MermaidDiagram';
-import { WidgetFrame } from '../../components/WidgetFrame';
-import { getTaskFlowGraph } from './api';
+import { errorMessage } from "../../api/errorMessage";
+import { MermaidDiagram } from "../../components/MermaidDiagram";
+import { WidgetFrame } from "../../components/WidgetFrame";
+import { getTaskFlowGraph } from "./api";
 
 type TaskFlowGraphWidgetProps = {
   taskId: string;
   project?: string;
 };
 
-export function TaskFlowGraphWidget({ taskId, project }: TaskFlowGraphWidgetProps) {
+export function TaskFlowGraphWidget({
+  taskId,
+  project,
+}: TaskFlowGraphWidgetProps) {
   const [chart, setChart] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,10 +33,18 @@ export function TaskFlowGraphWidget({ taskId, project }: TaskFlowGraphWidgetProp
   }, [loadGraph]);
 
   return (
-    <WidgetFrame title={<Text c="dimmed" fw={600} size="sm">Task flow</Text>}>
+    <WidgetFrame
+      title={
+        <Text c="dimmed" fw={600} size="sm">
+          Task flow
+        </Text>
+      }
+    >
       <Box p="md">
         {error ? (
-          <Alert color="red" title="Taskフローを取得できませんでした">{error}</Alert>
+          <Alert color="red" title="Taskフローを取得できませんでした">
+            {error}
+          </Alert>
         ) : chart ? (
           <MermaidDiagram chart={chart} />
         ) : (

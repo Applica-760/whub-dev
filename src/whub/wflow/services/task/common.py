@@ -1,4 +1,5 @@
 """Task creation, reference resolution, and YAML persistence."""
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -26,25 +27,32 @@ def load_task(path: Path) -> TaskDocument:
 
 def iter_task_paths(root: Path) -> Iterator[Path]:
     """Yield Task YAML paths while excluding AppleDouble sidecars."""
-    return (
-        path
-        for path in root.rglob("*.yaml")
-        if not is_apple_double(path)
-    )
+    return (path for path in root.rglob("*.yaml") if not is_apple_double(path))
 
 
 def resolve_task_reference(reference: str, root: Path = Path("docs/tasks")) -> Path:
     import re
-    task_id = reference if re.fullmatch(TASK_ID_PATTERN, reference) else f"TASK-{reference}" if re.fullmatch(r"[0-9]+", reference) else None
+
+    task_id = (
+        reference
+        if re.fullmatch(TASK_ID_PATTERN, reference)
+        else f"TASK-{reference}"
+        if re.fullmatch(r"[0-9]+", reference)
+        else None
+    )
     if task_id is None:
         return Path(reference)
     if not root.is_dir():
         raise WflowError(f"task directory does not exist: {root}")
-    matches = [path for path in sorted(iter_task_paths(root)) if _task_id(path) == task_id]
+    matches = [
+        path for path in sorted(iter_task_paths(root)) if _task_id(path) == task_id
+    ]
     if not matches:
         raise WflowError(f"task ID not found: {task_id}")
     if len(matches) > 1:
-        raise WflowError(f"task ID is ambiguous: {task_id}: {', '.join(map(str, matches))}")
+        raise WflowError(
+            f"task ID is ambiguous: {task_id}: {', '.join(map(str, matches))}"
+        )
     return matches[0]
 
 
@@ -55,14 +63,33 @@ def _task_id(path: Path) -> str | None:
         return None
 
 
-def create_task(root: Path, title: str, objective: str, approaches: tuple[str, ...] = (), now: datetime | None = None) -> tuple[Path, TaskDocument]:
+def create_task(
+    root: Path,
+    title: str,
+    objective: str,
+    approaches: tuple[str, ...] = (),
+    now: datetime | None = None,
+) -> tuple[Path, TaskDocument]:
     if root.exists() and not root.is_dir():
         raise WflowError(f"task path is not a directory: {root}")
     root.mkdir(parents=True, exist_ok=True)
-    numbers = [int(task_id.removeprefix("TASK-")) for path in iter_task_paths(root) if (task_id := _task_id(path)) is not None]
+    numbers = [
+        int(task_id.removeprefix("TASK-"))
+        for path in iter_task_paths(root)
+        if (task_id := _task_id(path)) is not None
+    ]
     number = max(numbers, default=0) + 1
     try:
-        task = TaskDocument(schema_version=1, task=TaskHeader(id=f"TASK-{number:03}", state="draft", title=title, objective=objective, approach=list(approaches)))
+        task = TaskDocument(
+            schema_version=1,
+            task=TaskHeader(
+                id=f"TASK-{number:03}",
+                state="draft",
+                title=title,
+                objective=objective,
+                approach=list(approaches),
+            ),
+        )
     except ValidationError as error:
         raise WflowError(f"invalid task input: {error}") from error
     path = root / f"{(now or datetime.now()):%Y%m%d_%H%M}_task-{number:03}.yaml"
@@ -82,8 +109,19 @@ def archive_task(path: Path, task: TaskDocument) -> Path:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=destination.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as temporary:
-            temporary.write(yaml.safe_dump(task.model_dump(mode="json"), allow_unicode=True, sort_keys=False))
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=destination.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary.write(
+                yaml.safe_dump(
+                    task.model_dump(mode="json"), allow_unicode=True, sort_keys=False
+                )
+            )
             temporary_path = Path(temporary.name)
         os.link(temporary_path, destination)
         path.unlink()
@@ -100,8 +138,19 @@ def archive_task(path: Path, task: TaskDocument) -> Path:
 def _write(path: Path, task: TaskDocument, create: bool) -> None:
     temporary_path: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as temporary:
-            temporary.write(yaml.safe_dump(task.model_dump(mode="json"), allow_unicode=True, sort_keys=False))
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary.write(
+                yaml.safe_dump(
+                    task.model_dump(mode="json"), allow_unicode=True, sort_keys=False
+                )
+            )
             temporary_path = Path(temporary.name)
         if create:
             os.link(temporary_path, path)

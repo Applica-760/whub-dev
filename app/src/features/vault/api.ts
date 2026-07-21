@@ -1,8 +1,12 @@
-import { requestJson } from '../../api/client';
-import type { VaultNode, VaultNoteResponse, VaultTreeResponse } from '../../api/client';
+import { requestJson } from "../../api/client";
+import type {
+  VaultNode,
+  VaultNoteResponse,
+  VaultTreeResponse,
+} from "../../api/client";
 
 export async function fetchVaultTree(): Promise<VaultNode[]> {
-  const response = await requestJson<VaultTreeResponse>('/api/vault/tree');
+  const response = await requestJson<VaultTreeResponse>("/api/vault/tree");
   return response.nodes;
 }
 

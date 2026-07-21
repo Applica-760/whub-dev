@@ -1,4 +1,5 @@
 """Path resolution for whub root, config, and data files."""
+
 from __future__ import annotations
 
 import os

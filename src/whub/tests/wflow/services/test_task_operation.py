@@ -1,4 +1,5 @@
 """Task creation and content-operation service tests."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -9,9 +10,21 @@ import yaml
 
 from whub.wflow.models import TaskDocument
 from whub.wflow.services import (
-    WflowError, append_phase_log, apply_transition, complete_step, create_task, delete_plan_item,
-    insert_plan_step, load_task, load_task_workflow, record_acceptance, update_plan_item,
-    skip_step, update_acceptance, update_dependency, write_task,
+    WflowError,
+    append_phase_log,
+    apply_transition,
+    complete_step,
+    create_task,
+    delete_plan_item,
+    insert_plan_step,
+    load_task,
+    load_task_workflow,
+    record_acceptance,
+    update_plan_item,
+    skip_step,
+    update_acceptance,
+    update_dependency,
+    write_task,
 )
 
 
@@ -38,17 +51,33 @@ def _draft_task() -> TaskDocument:
 
 
 def test_creates_draft_task_with_next_id_and_standard_path(tmp_path: Path) -> None:
-    existing = _task_data(); existing["task"]["id"] = "TASK-014"
-    (tmp_path / "existing.yaml").write_text(yaml.safe_dump(existing, allow_unicode=True))
+    existing = _task_data()
+    existing["task"]["id"] = "TASK-014"
+    (tmp_path / "existing.yaml").write_text(
+        yaml.safe_dump(existing, allow_unicode=True)
+    )
     (tmp_path / "._existing.yaml").write_bytes(b"\x00\x05\x16\x07AppleDouble")
-    path, task = create_task(tmp_path, "新しいTask", "目的", ("方針1", "方針2"), now=datetime(2026, 7, 17, 15, 30))
+    path, task = create_task(
+        tmp_path,
+        "新しいTask",
+        "目的",
+        ("方針1", "方針2"),
+        now=datetime(2026, 7, 17, 15, 30),
+    )
     assert path == tmp_path / "20260717_1530_task-015.yaml"
-    assert task.task.id == "TASK-015" and task.task.approach == ["方針1", "方針2"] and task.plan is None
+    assert (
+        task.task.id == "TASK-015"
+        and task.task.approach == ["方針1", "方針2"]
+        and task.plan is None
+    )
     assert load_task(path) == task
 
 
-def test_create_task_rejects_existing_target_without_overwriting(tmp_path: Path) -> None:
-    target = tmp_path / "20260717_1530_task-001.yaml"; target.write_text("original")
+def test_create_task_rejects_existing_target_without_overwriting(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "20260717_1530_task-001.yaml"
+    target.write_text("original")
     with pytest.raises(WflowError, match="already exists"):
         create_task(tmp_path, "title", "objective", now=datetime(2026, 7, 17, 15, 30))
     assert target.read_text() == "original"
@@ -93,18 +122,23 @@ def test_updates_draft_dependencies_and_task_or_phase_acceptance() -> None:
 
     task_acceptance = update_acceptance(dependency_removed, "Taskを検証する", True)
     assert task_acceptance.plan.acceptance[-1].id == "ACC-002"
-    phase_acceptance = update_acceptance(task_acceptance, "Phaseを検証する", True, "001")
+    phase_acceptance = update_acceptance(
+        task_acceptance, "Phaseを検証する", True, "001"
+    )
     assert phase_acceptance.plan.phases[0].acceptance[-1].id == "ACC-003"
     removed = update_acceptance(phase_acceptance, "ACC-002", False)
     assert [item.id for item in removed.plan.acceptance] == ["ACC-001"]
 
 
 def test_plan_operations_reject_non_draft_and_execution_history() -> None:
-    task = _draft_task(); active = apply_transition(task, load_task_workflow(), "approve_plan", "user")
+    task = _draft_task()
+    active = apply_transition(task, load_task_workflow(), "approve_plan", "user")
     with pytest.raises(WflowError, match="draft"):
         insert_plan_step(active, "追加する")
 
-    completed_step = complete_step(active, load_task_workflow(), "002-001", logs=("done",))
+    completed_step = complete_step(
+        active, load_task_workflow(), "002-001", logs=("done",)
+    )
     changed = apply_transition(
         completed_step,
         load_task_workflow(),
@@ -117,7 +151,8 @@ def test_plan_operations_reject_non_draft_and_execution_history() -> None:
 
 
 def test_step_log_skip_and_acceptance_operations(tmp_path: Path) -> None:
-    workflow = load_task_workflow(); active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
+    workflow = load_task_workflow()
+    active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
     updated = complete_step(active, workflow, "002-001", logs=("first",))
     assert updated.plan.phases[1].steps[0].state == "done"
     logged = append_phase_log(updated, "001", ("second",))
@@ -125,7 +160,9 @@ def test_step_log_skip_and_acceptance_operations(tmp_path: Path) -> None:
         skip_step(logged, workflow, "001-001", "")
     skipped = skip_step(logged, workflow, "001-001", "not needed", ("skipped",))
     assert skipped.plan.phases[0].steps[0].skip_reason == "not needed"
-    path = tmp_path / "task.yaml"; write_task(path, skipped); assert load_task(path) == skipped
+    path = tmp_path / "task.yaml"
+    write_task(path, skipped)
+    assert load_task(path) == skipped
     accepted = record_acceptance(active, "ACC-001", "passed")
     with pytest.raises(WflowError, match="already recorded"):
         record_acceptance(accepted, "ACC-001", "passed")

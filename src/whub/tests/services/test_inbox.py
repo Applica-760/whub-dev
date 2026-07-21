@@ -6,6 +6,7 @@
 3. 同名ファイルの上書きを拒否する。
 4. vault projectの未定義・未linkを拒否する。
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -30,14 +31,16 @@ def _vault_manifest(tmp_path: Path) -> tuple[Manifest, Path]:
     source.mkdir()
     (source / "inbox").mkdir()
     data = manifest_data()
-    data["projects"].append({
-        "name": "vault",
-        "resource": {
-            "type": "symlink",
-            "workspace_path": "vault",
-            "source": str(source),
-        },
-    })
+    data["projects"].append(
+        {
+            "name": "vault",
+            "resource": {
+                "type": "symlink",
+                "workspace_path": "vault",
+                "source": str(source),
+            },
+        }
+    )
     result = Manifest.model_validate(data)
     project = result.resolve_project("vault")
     assert project is not None

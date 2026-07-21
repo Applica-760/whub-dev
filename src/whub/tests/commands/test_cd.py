@@ -11,6 +11,7 @@
 検証しないケース:
 - 実際のSSH接続
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -84,7 +85,10 @@ class TestCdSpec:
         output = TtyOutput()
 
         with (
-            patch("whub.commands.cd.subprocess.run", side_effect=OSError("ssh unavailable")),
+            patch(
+                "whub.commands.cd.subprocess.run",
+                side_effect=OSError("ssh unavailable"),
+            ),
             patch("whub.commands.cd.sys.stdout", output),
             pytest.raises(OSError, match="ssh unavailable"),
         ):

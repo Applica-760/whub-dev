@@ -1,4 +1,5 @@
 """Project-scoped Task service tests."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -53,10 +54,7 @@ def test_lists_tasks_from_local_remote_and_workspace_hub(
 
     assert list_project_tasks(loaded_manifest, "local")[0].title == "Local"
     assert list_project_tasks(loaded_manifest, "remote")[0].title == "Remote"
-    assert (
-        list_project_tasks(loaded_manifest, "workspace-hub")[0].title
-        == "Workspace"
-    )
+    assert list_project_tasks(loaded_manifest, "workspace-hub")[0].title == "Workspace"
 
 
 def test_distinguishes_missing_tasks_from_unavailable_resource(

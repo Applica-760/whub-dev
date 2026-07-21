@@ -53,7 +53,9 @@ def descriptor() -> dict:
 
 
 def test_reserve_uses_ssh_and_normalizes_task_id() -> None:
-    completed = subprocess.CompletedProcess(["ssh"], 0, stdout="TASK-030-r001\n", stderr="")
+    completed = subprocess.CompletedProcess(
+        ["ssh"], 0, stdout="TASK-030-r001\n", stderr=""
+    )
     with patch("whub.services.session.run_ssh_command", return_value=completed) as run:
         run_id = reserve_session(manifest(), "remote", "30")
     assert run_id == "TASK-030-r001"
@@ -80,7 +82,9 @@ def test_clean_delegates_to_remote_operation() -> None:
 
 
 def test_handoff_sends_command_as_json_over_ssh() -> None:
-    command = "PATH=\"$PWD/.venv/bin:$PATH\" uv run python - <<'PY'\nprint(`value`)\nPY\n"
+    command = (
+        "PATH=\"$PWD/.venv/bin:$PATH\" uv run python - <<'PY'\nprint(`value`)\nPY\n"
+    )
     completed = subprocess.CompletedProcess(["ssh"], 0, stdout="", stderr="")
     with patch("whub.services.session.run_ssh_command", return_value=completed) as run:
         write_session_handoff(
@@ -104,9 +108,7 @@ def test_handoff_rejects_invalid_purpose_before_ssh(purpose: str) -> None:
         patch("whub.services.session.run_ssh_command") as run,
         pytest.raises(ServiceError, match="purpose"),
     ):
-        write_session_handoff(
-            manifest(), "remote", "TASK-030-r001", purpose, "echo ok"
-        )
+        write_session_handoff(manifest(), "remote", "TASK-030-r001", purpose, "echo ok")
     run.assert_not_called()
 
 
@@ -115,17 +117,13 @@ def test_handoff_rejects_empty_command_before_ssh() -> None:
         patch("whub.services.session.run_ssh_command") as run,
         pytest.raises(ServiceError, match="command"),
     ):
-        write_session_handoff(
-            manifest(), "remote", "TASK-030-r001", "probe", " \n\t"
-        )
+        write_session_handoff(manifest(), "remote", "TASK-030-r001", "probe", " \n\t")
     run.assert_not_called()
 
 
 def test_handoff_rejects_local_resource() -> None:
     with pytest.raises(ServiceError, match="not a remote resource"):
-        write_session_handoff(
-            manifest(), "local", "TASK-030-r001", "probe", "echo ok"
-        )
+        write_session_handoff(manifest(), "local", "TASK-030-r001", "probe", "echo ok")
 
 
 def test_handoff_reports_unknown_remote_run() -> None:
@@ -139,9 +137,7 @@ def test_handoff_reports_unknown_remote_run() -> None:
         patch("whub.services.session.run_ssh_command", side_effect=error),
         pytest.raises(ServiceError, match="unknown run: TASK-999-r001"),
     ):
-        write_session_handoff(
-            manifest(), "remote", "TASK-999-r001", "probe", "echo ok"
-        )
+        write_session_handoff(manifest(), "remote", "TASK-999-r001", "probe", "echo ok")
 
 
 def test_handoff_script_prepends_exact_markdown_and_preserves_existing_bytes(
@@ -189,8 +185,7 @@ def test_handoff_script_prepends_exact_markdown_and_preserves_existing_bytes(
     assert result.returncode == 0, result.stderr
     assert commands.read_bytes() == (
         b"## 2026-07-21 12:35:00 JST | TASK-036-r001 | Latest probe\n\n"
-        b"```bash\necho latest\n```\n\n"
-        + first_content
+        b"```bash\necho latest\n```\n\n" + first_content
     )
 
 

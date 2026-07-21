@@ -18,6 +18,7 @@
 - 実際のファイルI/O（serviceでカバー）
 - render_tableの描画詳細（test_renderでカバー）
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -45,8 +46,11 @@ def _pending_todo(id: int = 1, **kwargs) -> Todo:
 
 def _done_todo(id: int = 10, **kwargs) -> Todo:
     defaults = dict(
-        title=f"done-{id}", priority="none", created_at=date(2026, 1, 1),
-        done=True, done_at=date(2026, 1, 15),
+        title=f"done-{id}",
+        priority="none",
+        created_at=date(2026, 1, 1),
+        done=True,
+        done_at=date(2026, 1, 15),
     )
     defaults.update(kwargs)
     return Todo(id=id, **defaults)
@@ -130,9 +134,13 @@ class TestTodoCmdSpec:
     def test_done_marks_complete(self):
         # ケース6
         item = _done_todo(1, title="finish it")
-        with patch("whub.commands.todo.complete_todo", return_value=item) as mock_complete:
+        with patch(
+            "whub.commands.todo.complete_todo", return_value=item
+        ) as mock_complete:
             result = CliRunner().invoke(
-                todo, ["done", "1"], catch_exceptions=False,
+                todo,
+                ["done", "1"],
+                catch_exceptions=False,
             )
 
         assert result.exit_code == 0
@@ -166,7 +174,9 @@ class TestTodoCmdSpec:
         item = _pending_todo(1, title="remove me")
         with patch("whub.commands.todo.remove_todo", return_value=item) as mock_remove:
             result = CliRunner().invoke(
-                todo, ["rm", "1"], catch_exceptions=False,
+                todo,
+                ["rm", "1"],
+                catch_exceptions=False,
             )
 
         assert result.exit_code == 0

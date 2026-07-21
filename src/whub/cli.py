@@ -1,4 +1,5 @@
 """whub CLI entry point."""
+
 from __future__ import annotations
 from typing import Any
 
@@ -32,6 +33,7 @@ class WhubGroup(click.Group):
 @click.group(cls=WhubGroup)
 def main() -> None:
     """workspace-hub: manage workspaces from a single manifest."""
+
 
 main.add_command(link)
 main.add_command(mount)

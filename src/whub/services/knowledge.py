@@ -1,4 +1,5 @@
 """Knowledge operations shared by CLI and web adapters."""
+
 from __future__ import annotations
 
 import os

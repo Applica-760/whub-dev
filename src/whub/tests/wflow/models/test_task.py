@@ -14,6 +14,7 @@
 1. WorkflowとTaskをまたぐ状態の整合性。
 2. 状態の到達可能性、条件式評価、状態遷移操作。
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -102,7 +103,9 @@ def test_validates_interruption_fields() -> None:
             "must be provided together",
         ),
         (
-            lambda data: data["task"].update(interruption_task_id="TASK-001", interruption_reason="self"),
+            lambda data: data["task"].update(
+                interruption_task_id="TASK-001", interruption_reason="self"
+            ),
             "cannot interrupt itself",
         ),
     ):
@@ -141,7 +144,9 @@ def test_rejects_missing_operator_fields() -> None:
         for requirement in complete["requires"]
         if requirement["operator"] == "active_steps_all_in"
     ).pop("value")
-    with pytest.raises(ValidationError, match="active_steps_all_in requires a list value"):
+    with pytest.raises(
+        ValidationError, match="active_steps_all_in requires a list value"
+    ):
         WorkflowDefinition.model_validate(active_steps)
 
     satisfied = _workflow_data()
@@ -155,7 +160,9 @@ def test_rejects_missing_operator_fields() -> None:
         for requirement in complete["requires"]
         if requirement["operator"] == "satisfied_if_defined"
     ).pop("result_field")
-    with pytest.raises(ValidationError, match="satisfied_if_defined requires result_field"):
+    with pytest.raises(
+        ValidationError, match="satisfied_if_defined requires result_field"
+    ):
         WorkflowDefinition.model_validate(satisfied)
 
 

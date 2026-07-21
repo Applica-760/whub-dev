@@ -1,4 +1,5 @@
 """Detached process entry point for the whub web application."""
+
 from __future__ import annotations
 
 import argparse
@@ -36,9 +37,17 @@ def read_pid_record(pid_path: Path) -> AppProcessRecord | None:
             pid=int(value["pid"]),
             port=int(value["port"]),
             mode=str(value.get("mode", "normal")),
-            processes={name: int(pid) for name, pid in value.get("processes", {}).items()},
+            processes={
+                name: int(pid) for name, pid in value.get("processes", {}).items()
+            },
         )
-    except (AttributeError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+    except (
+        AttributeError,
+        KeyError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as error:
         raise ValueError(f"invalid app pid file: {pid_path}") from error
 
 

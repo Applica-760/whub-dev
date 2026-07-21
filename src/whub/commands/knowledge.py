@@ -1,4 +1,5 @@
 """whub knowledge — validate, query, and update project Knowledge YAML."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -71,9 +72,7 @@ def _dump_groups(
                 for slug, entry in entries.items()
             }
         else:
-            data[name] = [
-                entry.model_dump(exclude_none=True) for entry in entries
-            ]
+            data[name] = [entry.model_dump(exclude_none=True) for entry in entries]
     return yaml.safe_dump(data, allow_unicode=True, sort_keys=False).rstrip()
 
 
@@ -105,9 +104,7 @@ def _invoke(operation: Callable[[], Any]) -> Any:
 @click.pass_context
 def check(ctx: click.Context, project: str) -> None:
     """Validate a project's docs/knowledge.yaml."""
-    loaded = _invoke(
-        lambda: check_project_knowledge(get_manifest(ctx), project)
-    )
+    loaded = _invoke(lambda: check_project_knowledge(get_manifest(ctx), project))
     click.echo(
         f"valid {project}: "
         f"{len(loaded.definitions)} definitions, "
@@ -173,9 +170,7 @@ def add_def(
 ) -> None:
     """Add a Definition."""
     _invoke(
-        lambda: add_definition(
-            get_manifest(ctx), project, slug, name, definition, ref
-        )
+        lambda: add_definition(get_manifest(ctx), project, slug, name, definition, ref)
     )
     click.echo(f"added def:{slug}")
 
@@ -226,9 +221,7 @@ def add_pol(
     project: str,
 ) -> None:
     """Add a Policy."""
-    _invoke(
-        lambda: add_policy(get_manifest(ctx), project, slug, statement, ref)
-    )
+    _invoke(lambda: add_policy(get_manifest(ctx), project, slug, statement, ref))
     click.echo(f"added pol:{slug}")
 
 
@@ -246,11 +239,7 @@ def add_con(
     project: str,
 ) -> None:
     """Add a Constraint."""
-    _invoke(
-        lambda: add_constraint(
-            get_manifest(ctx), project, slug, statement, ref
-        )
-    )
+    _invoke(lambda: add_constraint(get_manifest(ctx), project, slug, statement, ref))
     click.echo(f"added con:{slug}")
 
 

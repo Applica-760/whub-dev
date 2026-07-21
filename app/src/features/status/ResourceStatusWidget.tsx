@@ -1,27 +1,20 @@
-import {
-  Alert,
-  Badge,
-  Button,
-  Stack,
-  Table,
-  Text,
-} from '@mantine/core';
+import { Alert, Badge, Button, Stack, Table, Text } from "@mantine/core";
 
-import { WidgetFrame } from '../../components/WidgetFrame';
-import { useResourceStatus } from './useResourceStatus';
+import { WidgetFrame } from "../../components/WidgetFrame";
+import { useResourceStatus } from "./useResourceStatus";
 
 function statusColor(status: string): string {
-  if (status === 'ok') {
-    return 'green';
+  if (status === "ok") {
+    return "green";
   }
-  if (status === 'stale' || status === 'unmounted') {
-    return 'yellow';
+  if (status === "stale" || status === "unmounted") {
+    return "yellow";
   }
-  return 'red';
+  return "red";
 }
 
 function StatusValue({ value }: { value: string }) {
-  if (value === '-') {
+  if (value === "-") {
     return value;
   }
   return (
@@ -36,26 +29,39 @@ export function ResourceStatusWidget() {
 
   return (
     <WidgetFrame
-      action={(
-        <Button loading={loading} onClick={() => void refresh()} size="xs" variant="light">
+      action={
+        <Button
+          loading={loading}
+          onClick={() => void refresh()}
+          size="xs"
+          variant="light"
+        >
           更新
         </Button>
-      )}
-      title={(
+      }
+      title={
         <Stack gap={0}>
-          <Text c="dimmed" fw={600} size="sm">Status</Text>
+          <Text c="dimmed" fw={600} size="sm">
+            Status
+          </Text>
           <Text c="dimmed" size="xs">
-            最終更新: {updatedAt ? updatedAt.toLocaleString('ja-JP') : '未取得'}
+            最終更新: {updatedAt ? updatedAt.toLocaleString("ja-JP") : "未取得"}
           </Text>
         </Stack>
-      )}
+      }
     >
-      {error && <Alert color="red" title="Statusを取得できませんでした">{error}</Alert>}
+      {error && (
+        <Alert color="red" title="Statusを取得できませんでした">
+          {error}
+        </Alert>
+      )}
 
       {loading && resources.length === 0 ? (
-        <Text c="dimmed" p="md">Statusを読み込んでいます…</Text>
+        <Text c="dimmed" p="md">
+          Statusを読み込んでいます…
+        </Text>
       ) : (
-        <Table highlightOnHover style={{ tableLayout: 'fixed' }}>
+        <Table highlightOnHover style={{ tableLayout: "fixed" }}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Project</Table.Th>
@@ -69,7 +75,9 @@ export function ResourceStatusWidget() {
           <Table.Tbody>
             {resources.map((resource) => (
               <Table.Tr key={resource.project}>
-                <Table.Td style={{ overflowWrap: 'anywhere' }}>{resource.project}</Table.Td>
+                <Table.Td style={{ overflowWrap: "anywhere" }}>
+                  {resource.project}
+                </Table.Td>
                 <Table.Td>
                   <StatusValue value={resource.state} />
                 </Table.Td>
@@ -88,7 +96,9 @@ export function ResourceStatusWidget() {
       )}
 
       {!loading && resources.length === 0 && !error && (
-        <Text c="dimmed" p="md">表示対象のresourceはありません。</Text>
+        <Text c="dimmed" p="md">
+          表示対象のresourceはありません。
+        </Text>
       )}
     </WidgetFrame>
   );

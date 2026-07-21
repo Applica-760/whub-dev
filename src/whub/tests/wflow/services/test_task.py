@@ -5,6 +5,7 @@
 2. 状態・plan承認の不整合を通知する。
 3. 完了Taskの不足と中止Taskの記録不足を通知する。
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -126,7 +127,9 @@ def test_applies_lifecycle_transitions_and_records() -> None:
     task = record_acceptance(task, "ACC-001", "passed", ("verified",))
     assert "complete_task" not in available_transitions(task, workflow)
     assert "complete_task" in available_transitions(task, workflow, {"result": "done"})
-    task = apply_transition(task, workflow, "complete_task", "agent", {"result": "done"})
+    task = apply_transition(
+        task, workflow, "complete_task", "agent", {"result": "done"}
+    )
     assert task.task.state == "completed"
     assert task.result.summary == "done"
 
@@ -151,23 +154,27 @@ def test_interrupts_and_resumes_with_paused_operation_limits() -> None:
     paused = apply_transition(active, workflow, "interrupt_task", "agent")
     assert paused.task.state == "paused"
     assert available_transitions(paused, workflow) == ("resume_task",)
-    assert append_phase_log(paused, "001", ("interruption noted",)).plan.phases[0].log == [
-        "interruption noted"
-    ]
+    assert append_phase_log(paused, "001", ("interruption noted",)).plan.phases[
+        0
+    ].log == ["interruption noted"]
 
     with pytest.raises(WflowError, match="paused"):
         complete_step(paused, workflow, "001-001")
     with pytest.raises(WflowError, match="paused"):
         record_acceptance(paused, "ACC-001", "passed")
     with pytest.raises(WflowError, match="not allowed from state 'paused'"):
-        apply_transition(paused, workflow, "request_plan_change", "agent", {"reason": "later"})
+        apply_transition(
+            paused, workflow, "request_plan_change", "agent", {"reason": "later"}
+        )
     with pytest.raises(WflowError, match="not allowed from state 'paused'"):
         apply_transition(paused, workflow, "complete_task", "agent", {"result": "done"})
 
     resumed = apply_transition(paused, workflow, "resume_task", "agent")
     assert resumed.task.state == "in_progress"
     paused_again = apply_transition(resumed, workflow, "interrupt_task", "agent")
-    cancelled = apply_transition(paused_again, workflow, "cancel_task", "user", {"reason": "stop"})
+    cancelled = apply_transition(
+        paused_again, workflow, "cancel_task", "user", {"reason": "stop"}
+    )
     assert cancelled.task.state == "cancelled"
 
 
@@ -191,7 +198,9 @@ def test_interrupt_operation_requires_terminal_child_before_resume() -> None:
     with pytest.raises(WflowError, match="not terminal"):
         resume_task(paused, updated_tasks, workflow)
 
-    cancelled_child = apply_transition(started, workflow, "cancel_task", "user", {"reason": "done"})
+    cancelled_child = apply_transition(
+        started, workflow, "cancel_task", "user", {"reason": "done"}
+    )
     resumed = resume_task(
         paused,
         {paused.task.id: paused, cancelled_child.task.id: cancelled_child},
@@ -285,12 +294,16 @@ def test_validates_interruption_relationships() -> None:
         interruption_source_task_id="TASK-001",
     )
     second_child = TaskDocument.model_validate(second_child_data)
-    diagnostics = validate_task_interruption(parent, {**tasks, second_child.task.id: second_child})
+    diagnostics = validate_task_interruption(
+        parent, {**tasks, second_child.task.id: second_child}
+    )
     assert {item.code for item in diagnostics} == {"multiple_active_interruptions"}
 
     child_data["task"]["interruption_source_task_id"] = "TASK-999"
     mismatched_child = TaskDocument.model_validate(child_data)
-    diagnostics = validate_task_interruption(parent, {parent.task.id: parent, mismatched_child.task.id: mismatched_child})
+    diagnostics = validate_task_interruption(
+        parent, {parent.task.id: parent, mismatched_child.task.id: mismatched_child}
+    )
     assert {item.code for item in diagnostics} == {"interruption_link_mismatch"}
 
 

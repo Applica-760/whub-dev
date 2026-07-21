@@ -1,4 +1,5 @@
 """Project JSON API."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter
@@ -16,4 +17,6 @@ class ProjectsResponse(BaseModel):
 
 @router.get("", response_model=ProjectsResponse)
 def get_projects() -> ProjectsResponse:
-    return ProjectsResponse(projects=[project.name for project in load_manifest().projects])
+    return ProjectsResponse(
+        projects=[project.name for project in load_manifest().projects]
+    )

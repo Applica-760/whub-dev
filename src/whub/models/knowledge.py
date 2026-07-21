@@ -1,4 +1,5 @@
 """Pydantic models and loader for Knowledge YAML."""
+
 from __future__ import annotations
 
 from collections import Counter
@@ -81,15 +82,11 @@ class Knowledge(KnowledgeModel):
             for relation in self.relations
         )
         duplicate_relations = sorted(
-            relation
-            for relation, count in relation_counts.items()
-            if count > 1
+            relation for relation, count in relation_counts.items() if count > 1
         )
         if duplicate_relations:
             rendered = ", ".join(" ".join(relation) for relation in duplicate_relations)
-            raise ValueError(
-                f"duplicate knowledge relations: {rendered}"
-            )
+            raise ValueError(f"duplicate knowledge relations: {rendered}")
 
         known_references = {
             *(f"def:{slug}" for slug in self.definitions),
@@ -98,9 +95,7 @@ class Knowledge(KnowledgeModel):
             *(f"exc:{slug}" for slug in self.exceptions),
         }
         for relation in self.relations:
-            unknown = sorted(
-                {relation.subject, relation.object} - known_references
-            )
+            unknown = sorted({relation.subject, relation.object} - known_references)
             if unknown:
                 raise ValueError(
                     "relation "

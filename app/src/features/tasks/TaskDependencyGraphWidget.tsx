@@ -1,31 +1,45 @@
-import { Alert, Box, Text } from '@mantine/core';
-import { useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { Alert, Box, Text } from "@mantine/core";
+import { useCallback } from "react";
+import { useNavigate } from "react-router";
 
-import { TaskDependencyGraph } from '../../components/TaskDependencyGraph';
-import { WidgetFrame } from '../../components/WidgetFrame';
-import { taskDetailPath } from './routes';
-import { useTasks } from './useTasks';
+import { TaskDependencyGraph } from "../../components/TaskDependencyGraph";
+import { WidgetFrame } from "../../components/WidgetFrame";
+import { taskDetailPath } from "./routes";
+import { useTasks } from "./useTasks";
 
 type TaskDependencyGraphWidgetProps = {
   project: string | null;
   height?: number;
 };
 
-export function TaskDependencyGraphWidget({ project, height }: TaskDependencyGraphWidgetProps) {
+export function TaskDependencyGraphWidget({
+  project,
+  height,
+}: TaskDependencyGraphWidgetProps) {
   const { tasks, loading, error } = useTasks(project);
   const navigate = useNavigate();
-  const handleSelectTask = useCallback((taskId: string) => {
-    if (project) {
-      void navigate(taskDetailPath(project, taskId));
-    }
-  }, [navigate, project]);
+  const handleSelectTask = useCallback(
+    (taskId: string) => {
+      if (project) {
+        void navigate(taskDetailPath(project, taskId));
+      }
+    },
+    [navigate, project],
+  );
 
   return (
-    <WidgetFrame title={<Text c="dimmed" fw={600} size="sm">Task dependencies</Text>}>
+    <WidgetFrame
+      title={
+        <Text c="dimmed" fw={600} size="sm">
+          Task dependencies
+        </Text>
+      }
+    >
       <Box p="md">
         {error ? (
-          <Alert color="red" title="Taskグラフを取得できませんでした">{error}</Alert>
+          <Alert color="red" title="Taskグラフを取得できませんでした">
+            {error}
+          </Alert>
         ) : loading ? (
           <Text c="dimmed">Taskグラフを読み込んでいます…</Text>
         ) : !project ? (

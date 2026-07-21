@@ -9,6 +9,7 @@
 検証しないケース:
 - 実際のSSH実行
 """
+
 from __future__ import annotations
 
 from subprocess import CompletedProcess
@@ -29,7 +30,9 @@ class TestRunSpec:
             patch("whub.commands.run.get_manifest", return_value=m),
             patch("whub.commands.run.subprocess.run", mock_run),
         ):
-            result = CliRunner().invoke(run, ["remote", "ls", "-la"], catch_exceptions=False)
+            result = CliRunner().invoke(
+                run, ["remote", "ls", "-la"], catch_exceptions=False
+            )
 
         assert result.exit_code == 0
         cmd = mock_run.call_args[0][0]

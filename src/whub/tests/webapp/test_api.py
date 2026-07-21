@@ -13,6 +13,7 @@
 10. vaultのツリー取得・ノート取得がserviceを呼ぶ。
 11. Knowledge取得がserviceを呼び、未配置を404へ変換する。
 """
+
 from __future__ import annotations
 
 from datetime import date

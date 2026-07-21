@@ -8,6 +8,7 @@
 5. Exceptionの参照切れを拒否する。
 6. loaderはファイル・YAML・重複key・schema不正をKnowledgeErrorにする。
 """
+
 from __future__ import annotations
 
 import copy

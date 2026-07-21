@@ -12,6 +12,7 @@
 検証しないケース:
 - .whubがシンボリックリンクの場合（実環境固有）
 """
+
 from __future__ import annotations
 
 import json
@@ -93,7 +94,7 @@ class TestInitSpec:
         # ケース6
         config_dir, config_path = config_env
         config_dir.mkdir(parents=True, exist_ok=True)
-        config_path.write_text("data_dir = \"/old\"\n")
+        config_path.write_text('data_dir = "/old"\n')
 
         result = CliRunner().invoke(init, [str(data_dir)])
 
@@ -104,7 +105,7 @@ class TestInitSpec:
         # ケース7
         config_dir, config_path = config_env
         config_dir.mkdir(parents=True, exist_ok=True)
-        config_path.write_text("data_dir = \"/old\"\n")
+        config_path.write_text('data_dir = "/old"\n')
 
         result = CliRunner().invoke(init, [str(data_dir), "--force"])
 

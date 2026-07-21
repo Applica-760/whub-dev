@@ -9,6 +9,7 @@
 検証しないケース:
 - 実際のscp実行
 """
+
 from __future__ import annotations
 
 from subprocess import CompletedProcess
@@ -32,7 +33,9 @@ class TestFetchSpec:
             patch("whub.commands.fetch.subprocess.run", mock_run),
         ):
             result = CliRunner().invoke(
-                fetch, ["projects/remote/data/file.csv"], catch_exceptions=False,
+                fetch,
+                ["projects/remote/data/file.csv"],
+                catch_exceptions=False,
             )
 
         assert result.exit_code == 0

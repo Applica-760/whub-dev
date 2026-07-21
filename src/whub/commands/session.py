@@ -1,4 +1,5 @@
 """whub session — reserve and observe remote GUI sessions."""
+
 from __future__ import annotations
 
 import re
@@ -55,7 +56,16 @@ def list_command(ctx: click.Context, project: str) -> None:
     """List runs for PROJECT."""
     items = _invoke(lambda: list_sessions(get_manifest(ctx), project))
     render_table(
-        [(item.run_id, item.task or "-", item.state, len(item.panes), item.updated_at) for item in items],
+        [
+            (
+                item.run_id,
+                item.task or "-",
+                item.state,
+                len(item.panes),
+                item.updated_at,
+            )
+            for item in items
+        ],
         headers=("run", "task", "state", "panes", "updated"),
         right_align={3},
     )
@@ -69,7 +79,9 @@ def show(ctx: click.Context, project: str, run_id: str) -> None:
     """Show one run descriptor."""
     item = _invoke(lambda: get_session(get_manifest(ctx), project, run_id))
     click.echo(
-        yaml.safe_dump(item.model_dump(mode="json"), allow_unicode=True, sort_keys=False).rstrip()
+        yaml.safe_dump(
+            item.model_dump(mode="json"), allow_unicode=True, sort_keys=False
+        ).rstrip()
     )
 
 
@@ -86,11 +98,15 @@ def logs(
     manifest = get_manifest(ctx)
     if not follow:
         click.echo(
-            _ANSI.sub("", _invoke(lambda: read_session_logs(manifest, project, run_id, pane))),
+            _ANSI.sub(
+                "", _invoke(lambda: read_session_logs(manifest, project, run_id, pane))
+            ),
             nl=False,
         )
         return
-    command = _invoke(lambda: build_follow_logs_command(manifest, project, run_id, pane))
+    command = _invoke(
+        lambda: build_follow_logs_command(manifest, project, run_id, pane)
+    )
     process = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
     try:
         assert process.stdout is not None

@@ -1,4 +1,5 @@
 """Export the whub web API schema without starting a server."""
+
 from __future__ import annotations
 
 import json

@@ -1,4 +1,5 @@
 """whub init — register a whub data directory."""
+
 from __future__ import annotations
 
 import json
@@ -21,7 +22,9 @@ def init(data_dir: Path, force: bool) -> None:
     if not source.is_dir():
         raise click.ClickException(f"data path is not a directory: {source}")
     if not (source / "manifest.yaml").exists():
-        raise click.ClickException(f"manifest.yaml not found in data directory: {source}")
+        raise click.ClickException(
+            f"manifest.yaml not found in data directory: {source}"
+        )
 
     config_dir = whub_config_dir()
     config_path = whub_config_path()
@@ -41,7 +44,9 @@ def init(data_dir: Path, force: bool) -> None:
         click.echo(f"  skip  {config_path} -> {source}")
         return
     if config_path.exists() and not force:
-        raise click.ClickException(f"{config_path} already exists; use --force to replace it")
+        raise click.ClickException(
+            f"{config_path} already exists; use --force to replace it"
+        )
 
     config_path.write_text(content)
     click.echo(f"  init  {config_path} -> {source}")

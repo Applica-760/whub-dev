@@ -13,6 +13,7 @@
 2. リモートshell上での実行結果。
 3. tmux各optionの意味そのもの。
 """
+
 from __future__ import annotations
 
 from whub.core.tmux import build_shell_command, session_name

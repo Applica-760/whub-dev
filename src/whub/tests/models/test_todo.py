@@ -13,11 +13,13 @@
 2. `todo` CLIの追加・完了・削除操作。
 3. due dateのCLI入力パース。
 """
+
 from __future__ import annotations
 from datetime import date
 import pytest
 from pydantic import ValidationError
 from whub.models import Todo, Todos
+
 
 def _todo(**overrides) -> Todo:
     data = {

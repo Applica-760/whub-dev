@@ -1,5 +1,5 @@
-import { PageFrame } from '../../components/PageFrame';
-import { InboxWidget } from './InboxWidget';
+import { PageFrame } from "../../components/PageFrame";
+import { InboxWidget } from "./InboxWidget";
 
 export function InboxPage() {
   return (

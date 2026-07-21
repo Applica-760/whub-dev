@@ -1,4 +1,5 @@
 """Resource health inspection shared by commands."""
+
 from __future__ import annotations
 import subprocess
 from dataclasses import dataclass
@@ -18,10 +19,12 @@ HealthState = Literal[
     "stale",
 ]
 
+
 @dataclass(frozen=True)
 class ResourceHealth:
     state: HealthState
     detail: str | None = None
+
 
 def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
     target = resource._resolved_workspace_path
@@ -41,6 +44,7 @@ def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
         return ResourceHealth("unexpected", str(target))
     return ResourceHealth("missing", str(target))
 
+
 def _read_mount_table() -> str | None:
     """`mount(1)`の出力。ハングや失敗で読めないときはNone。"""
     try:
@@ -58,9 +62,7 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
     # テーブルを読めない＝状態不明。unmountがskipしないようstale扱い（fail-safe）
     if table is None:
         return ResourceHealth("stale", "mount table unreadable")
-    in_mount_table = any(
-        f" on {mountpoint} (" in line for line in table.splitlines()
-    )
+    in_mount_table = any(f" on {mountpoint} (" in line for line in table.splitlines())
     if not in_mount_table:
         return ResourceHealth("unmounted", str(mountpoint))
     try:

@@ -58,9 +58,17 @@ def _merge_json(overlay_text: str, existing: str | None) -> str:
     def merge(base: dict, over: dict) -> dict:
         result = {**base}
         for key, value in over.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
                 result[key] = merge(result[key], value)
-            elif key in result and isinstance(result[key], list) and isinstance(value, list):
+            elif (
+                key in result
+                and isinstance(result[key], list)
+                and isinstance(value, list)
+            ):
                 result[key] = unique(result[key] + value)
             else:
                 result[key] = value
@@ -161,6 +169,7 @@ def _apply_local_boot(
 
     try:
         with as_file(_boot_assets()) as boot_assets:
+
             def read(rel: str) -> str | None:
                 path = target / rel
                 return path.read_text() if path.exists() else None
@@ -195,6 +204,7 @@ def _apply_remote_boot(
     host = resource._resolved_host
     try:
         with as_file(_boot_assets()) as boot_assets:
+
             def read(rel: str) -> str | None:
                 full = shlex.quote(f"{resource.path}/{rel}")
                 result = run_ssh_command(
@@ -225,8 +235,7 @@ def _apply_remote_boot(
                 )
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         click.echo(
-            f"  {'WARN':6s}  {name}: deploy failed:"
-            f" {format_process_error(error)}",
+            f"  {'WARN':6s}  {name}: deploy failed: {format_process_error(error)}",
         )
         return
     click.echo(f"  {'done':6s}  {name}")

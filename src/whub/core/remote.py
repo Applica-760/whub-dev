@@ -1,4 +1,5 @@
 """Command builders for remote operations."""
+
 from __future__ import annotations
 import re
 import shlex
@@ -6,19 +7,19 @@ import subprocess
 from pathlib import Path
 from whub.models import Host
 
+
 def build_remote_exec_command(
     working_directory: str,
     arguments: tuple[str, ...],
 ) -> str:
-    return (
-        f"cd {shlex.quote(working_directory)}"
-        f" && exec {shlex.join(arguments)}"
-    )
+    return f"cd {shlex.quote(working_directory)} && exec {shlex.join(arguments)}"
+
 
 def ssh_target(host: Host) -> tuple[str, str, int]:
     target = f"{host.user}@{host.hostname}"
     identity = str(Path(host.identity_file).expanduser())
     return target, identity, host.port
+
 
 def build_ssh_command(
     host: Host,
@@ -38,8 +39,10 @@ def build_ssh_command(
             if connect_timeout is not None
             else []
         ),
-        "-i", identity,
-        "-p", str(port),
+        "-i",
+        identity,
+        "-p",
+        str(port),
         target,
         remote_command,
     ]
@@ -112,10 +115,14 @@ def build_scp_command(
     target, identity, port = ssh_target(host)
     return [
         "scp",
-        "-o", "BatchMode=yes",
-        "-o", "ConnectTimeout=5",
-        "-i", identity,
-        "-P", str(port),  # scpのポート指定はsshと違い大文字
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "ConnectTimeout=5",
+        "-i",
+        identity,
+        "-P",
+        str(port),  # scpのポート指定はsshと違い大文字
         f"{target}:{_escape_scp_glob(remote_path)}",
         str(local_dest),
     ]
@@ -128,8 +135,10 @@ def build_rsync_command(
 ) -> list[str]:
     target, identity, port = ssh_target(host)
     return [
-        "rsync", "-a",
-        "-e", f"ssh -i {shlex.quote(identity)} -p {port}",
+        "rsync",
+        "-a",
+        "-e",
+        f"ssh -i {shlex.quote(identity)} -p {port}",
         f"{local_src}/",
         f"{target}:{remote_dest}/",
     ]

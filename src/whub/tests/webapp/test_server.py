@@ -16,6 +16,7 @@
 検証しないケース:
 - 実際の常駐プロセス起動・停止（統合確認で検証）
 """
+
 from __future__ import annotations
 
 import signal
@@ -181,7 +182,10 @@ class TestAppCommand:
         (app_dir / "package.json").write_text("{}")
         with (
             patch("whub.commands.app.app_dist_path", return_value=app_dir / "dist"),
-            patch("whub.commands.app.app_dev_pid_path", return_value=tmp_path / "app-dev.pid"),
+            patch(
+                "whub.commands.app.app_dev_pid_path",
+                return_value=tmp_path / "app-dev.pid",
+            ),
             patch("whub.commands.app._read_running_process", return_value=None),
             patch("whub.commands.app.subprocess.Popen") as mock_popen,
         ):
@@ -202,7 +206,10 @@ class TestAppCommand:
 
     def test_dev_reuses_running_development_mode(self, tmp_path):
         with (
-            patch("whub.commands.app.app_dev_pid_path", return_value=tmp_path / "app-dev.pid"),
+            patch(
+                "whub.commands.app.app_dev_pid_path",
+                return_value=tmp_path / "app-dev.pid",
+            ),
             patch(
                 "whub.commands.app._read_running_process",
                 return_value=AppProcessRecord(pid=42, port=8712, mode="dev"),
@@ -217,7 +224,10 @@ class TestAppCommand:
 
     def test_down_dev_stops_only_development_server(self, tmp_path):
         with (
-            patch("whub.commands.app.app_dev_pid_path", return_value=tmp_path / "app-dev.pid"),
+            patch(
+                "whub.commands.app.app_dev_pid_path",
+                return_value=tmp_path / "app-dev.pid",
+            ),
             patch(
                 "whub.commands.app._read_running_process",
                 return_value=AppProcessRecord(pid=42, port=8712, mode="dev"),

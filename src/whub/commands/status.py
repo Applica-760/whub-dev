@@ -1,4 +1,5 @@
 """whub status — show health of all resources."""
+
 from __future__ import annotations
 
 import click

@@ -1,4 +1,5 @@
 """`whub knowledge` CLIの読取り・更新境界テスト。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -92,9 +93,7 @@ def test_init_and_ls_use_one_project_and_category() -> None:
     assert listed.exit_code == 0
     assert yaml.safe_load(listed.output) == {
         "constraints": {
-            "reject_unknown_fields": {
-                "statement": "未知フィールドを拒否する"
-            },
+            "reject_unknown_fields": {"statement": "未知フィールドを拒否する"},
         },
     }
     missing_category = CliRunner().invoke(knowledge_command, ["ls"])

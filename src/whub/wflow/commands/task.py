@@ -1,4 +1,5 @@
 """Commands for task execution records."""
+
 from __future__ import annotations
 
 from contextlib import chdir
@@ -60,7 +61,9 @@ def task(ctx: click.Context, project: str | None) -> None:
 @task.command("init")
 @click.argument("title")
 @click.argument("objective")
-@click.option("--approach", "approaches", multiple=True, help="Add one implementation approach.")
+@click.option(
+    "--approach", "approaches", multiple=True, help="Add one implementation approach."
+)
 def init(title: str, objective: str, approaches: tuple[str, ...]) -> None:
     """Create a draft Task execution record."""
     try:
@@ -92,7 +95,9 @@ def delete(task_ref: str, reference: str) -> None:
 @click.argument("task_ref")
 @click.argument("description")
 @click.option("--after", help="Insert after Phase PPP or Step PPP-SSS.")
-@click.option("--phase-title", help="Create a named Phase with DESCRIPTION as its first Step.")
+@click.option(
+    "--phase-title", help="Create a named Phase with DESCRIPTION as its first Step."
+)
 @click.option("--phase", "phase_ref", help="Add DESCRIPTION to Phase PPP.")
 def insert(
     task_ref: str,
@@ -178,17 +183,26 @@ def add_acceptance(task_ref: str, statement: str, phase_ref: str | None) -> None
     try:
         path = resolve_task_reference(task_ref)
         record = load_task(path)
-        known_ids = {
-            criterion.id
-            for phase in record.plan.phases
-            for criterion in phase.acceptance
-        } | {criterion.id for criterion in record.plan.acceptance} if record.plan else set()
+        known_ids = (
+            {
+                criterion.id
+                for phase in record.plan.phases
+                for criterion in phase.acceptance
+            }
+            | {criterion.id for criterion in record.plan.acceptance}
+            if record.plan
+            else set()
+        )
         updated = update_acceptance(record, statement, True, phase_ref)
         added_id = next(
             criterion.id
             for criterion in [
                 *updated.plan.acceptance,
-                *(criterion for phase in updated.plan.phases for criterion in phase.acceptance),
+                *(
+                    criterion
+                    for phase in updated.plan.phases
+                    for criterion in phase.acceptance
+                ),
             ]
             if criterion.id not in known_ids
         )
@@ -219,7 +233,9 @@ def check(task_ref: str) -> None:
         task_path = resolve_task_reference(task_ref)
         task_root = Path("docs/tasks")
         try:
-            relative_path = task_path.resolve().relative_to(task_root.resolve()).as_posix()
+            relative_path = (
+                task_path.resolve().relative_to(task_root.resolve()).as_posix()
+            )
         except ValueError:
             diagnostics = [
                 f"{item.code}: {item.message}"
@@ -227,17 +243,15 @@ def check(task_ref: str) -> None:
             ]
         else:
             summary = next(
-                (
-                    item
-                    for item in list_tasks(task_root)
-                    if item.path == relative_path
-                ),
+                (item for item in list_tasks(task_root) if item.path == relative_path),
                 None,
             )
             if summary is None:
                 diagnostics = [
                     f"{item.code}: {item.message}"
-                    for item in validate_task(load_task(task_path), load_task_workflow())
+                    for item in validate_task(
+                        load_task(task_path), load_task_workflow()
+                    )
                 ]
             else:
                 diagnostics = summary.diagnostics
@@ -307,14 +321,23 @@ def show(task_ref: str) -> None:
         workflow = load_task_workflow()
         diagnostics = validate_task(record, workflow)
         if diagnostics:
-            raise WflowError("task is invalid: " + "; ".join(item.message for item in diagnostics))
+            raise WflowError(
+                "task is invalid: " + "; ".join(item.message for item in diagnostics)
+            )
         click.echo(f"state: {record.task.state}")
         summary = next(
-            (item for item in list_tasks(Path("docs/tasks")) if item.id == record.task.id), None
+            (
+                item
+                for item in list_tasks(Path("docs/tasks"))
+                if item.id == record.task.id
+            ),
+            None,
         )
         if summary is not None:
             if summary.interruption_source_task_id is not None:
-                click.echo(f"interruption source: {summary.interruption_source_task_id}")
+                click.echo(
+                    f"interruption source: {summary.interruption_source_task_id}"
+                )
             if summary.interruption_task_id is not None:
                 click.echo(f"interruption task: {summary.interruption_task_id}")
                 click.echo(f"interruption reason: {summary.interruption_reason}")
@@ -329,7 +352,9 @@ def show(task_ref: str) -> None:
             click.echo(f"Phase {phase_number}: {phase.title}")
             for step_number, step in enumerate(phase.steps, start=1):
                 marker = {"done": "x", "skipped": "-"}.get(step.state, " ")
-                click.echo(f" [{phase_number:03}-{step_number:03}] [{marker}] {step.description}")
+                click.echo(
+                    f" [{phase_number:03}-{step_number:03}] [{marker}] {step.description}"
+                )
                 if step.skip_reason is not None:
                     click.echo(f"    - skipped: {step.skip_reason}")
             for log in phase.log:
@@ -344,10 +369,14 @@ def show(task_ref: str) -> None:
 @click.option("--actor", required=True, help="Workflow role performing the trigger.")
 @click.option("--reason", help="Reason for a plan change or cancellation.")
 @click.option("--result", help="Summary recorded when completing a task.")
-def transition(task_ref: str, trigger: str, actor: str, reason: str | None, result: str | None) -> None:
+def transition(
+    task_ref: str, trigger: str, actor: str, reason: str | None, result: str | None
+) -> None:
     """Apply one declared Workflow trigger."""
     if trigger in {"interrupt_task", "resume_task", "complete_task"}:
-        raise click.ClickException(f"trigger '{trigger}' requires the dedicated interruption command")
+        raise click.ClickException(
+            f"trigger '{trigger}' requires the dedicated interruption command"
+        )
     input_data = {
         key: value
         for key, value in {"reason": reason, "result": result}.items()
@@ -386,8 +415,16 @@ def complete(task_ref: str, result: str | None) -> None:
             updated = record
         else:
             if result is None:
-                raise WflowError("--result is required unless task is already completed")
-            updated = apply_transition(record, load_task_workflow(), "complete_task", "agent", {"result": result})
+                raise WflowError(
+                    "--result is required unless task is already completed"
+                )
+            updated = apply_transition(
+                record,
+                load_task_workflow(),
+                "complete_task",
+                "agent",
+                {"result": result},
+            )
         destination = archive_task(path, updated)
     except WflowError as error:
         raise click.ClickException(str(error)) from error
@@ -449,7 +486,9 @@ def resume(parent_ref: str, task_dir: Path) -> None:
 @click.argument("task_ref")
 @click.argument("acceptance")
 @click.option("--status", type=click.Choice(["passed", "failed"]), required=True)
-@click.option("--evidence", multiple=True, help="Optional evidence for the acceptance result.")
+@click.option(
+    "--evidence", multiple=True, help="Optional evidence for the acceptance result."
+)
 def accept(
     task_ref: str,
     acceptance: str,
@@ -469,7 +508,13 @@ def accept(
 @task.command("log")
 @click.argument("task_ref")
 @click.argument("phase_ref")
-@click.option("--log", "logs", multiple=True, required=True, help="Line appended to the Phase log.")
+@click.option(
+    "--log",
+    "logs",
+    multiple=True,
+    required=True,
+    help="Line appended to the Phase log.",
+)
 def log(task_ref: str, phase_ref: str, logs: tuple[str, ...]) -> None:
     """Append lines to one Phase log without changing Task progress."""
     try:
@@ -484,7 +529,12 @@ def log(task_ref: str, phase_ref: str, logs: tuple[str, ...]) -> None:
 @task.command()
 @click.argument("task_ref")
 @click.argument("step_ref", required=False)
-@click.option("--log", "logs", multiple=True, help="Record a Phase log; required when this completes a Phase.")
+@click.option(
+    "--log",
+    "logs",
+    multiple=True,
+    help="Record a Phase log; required when this completes a Phase.",
+)
 def done(
     task_ref: str,
     step_ref: str | None,
@@ -509,7 +559,12 @@ def done(
 @click.argument("task_ref")
 @click.argument("step_ref", required=False)
 @click.option("--reason", required=True, help="Reason for skipping the Step.")
-@click.option("--log", "logs", multiple=True, help="Record a Phase log; required when this completes a Phase.")
+@click.option(
+    "--log",
+    "logs",
+    multiple=True,
+    help="Record a Phase log; required when this completes a Phase.",
+)
 def skip(
     task_ref: str,
     step_ref: str | None,

@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-import { errorMessage } from '../../api/errorMessage';
-import { useProjects } from '../projects/useProjects';
-import { completeTodo, createTodo, deleteTodo } from './api';
-import { useTodos } from './useTodos';
-import type { TodoCreateInput } from './api';
+import { errorMessage } from "../../api/errorMessage";
+import { useProjects } from "../projects/useProjects";
+import { completeTodo, createTodo, deleteTodo } from "./api";
+import { useTodos } from "./useTodos";
+import type { TodoCreateInput } from "./api";
 
-type Mutation = 'create' | number | null;
+type Mutation = "create" | number | null;
 
 type UseTodoWidgetsOptions = {
   withForm?: boolean;
 };
 
-export function useTodoWidgets({ withForm = true }: UseTodoWidgetsOptions = {}) {
+export function useTodoWidgets({
+  withForm = true,
+}: UseTodoWidgetsOptions = {}) {
   const { projects, error: projectsError } = useProjects(withForm);
   const { todos, loading, error: todosError, refresh } = useTodos();
   const [mutation, setMutation] = useState<Mutation>(null);
@@ -20,7 +22,7 @@ export function useTodoWidgets({ withForm = true }: UseTodoWidgetsOptions = {}) 
   const [listError, setListError] = useState<string | null>(null);
 
   async function handleCreate(input: TodoCreateInput): Promise<boolean> {
-    setMutation('create');
+    setMutation("create");
     setFormError(null);
     try {
       await createTodo(input);
@@ -35,7 +37,7 @@ export function useTodoWidgets({ withForm = true }: UseTodoWidgetsOptions = {}) 
   }
 
   async function handleComplete(todoId: number) {
-    if (!window.confirm('このTodoを完了にしますか？')) {
+    if (!window.confirm("このTodoを完了にしますか？")) {
       return;
     }
     setMutation(todoId);
@@ -51,7 +53,7 @@ export function useTodoWidgets({ withForm = true }: UseTodoWidgetsOptions = {}) 
   }
 
   async function handleDelete(todoId: number) {
-    if (!window.confirm('このTodoを削除しますか？')) {
+    if (!window.confirm("このTodoを削除しますか？")) {
       return;
     }
     setMutation(todoId);

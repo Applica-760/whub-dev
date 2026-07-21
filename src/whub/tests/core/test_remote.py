@@ -16,6 +16,7 @@
 1. 実SSH接続・実scp・実rsync・実sshfsの成功失敗。
 2. OpenSSHやrsync自体のquote解釈。
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -54,14 +55,19 @@ class TestRemoteSpec:
         assert identity == str(Path("~/.ssh/id_home").expanduser())
         assert port == 2222
 
-    def test_build_remote_exec_command_changes_directory_and_execs_quoted_arguments(self) -> None:
+    def test_build_remote_exec_command_changes_directory_and_execs_quoted_arguments(
+        self,
+    ) -> None:
         # ケース2
         command = build_remote_exec_command(
             "/srv/project path",
             ("python", "-c", "print('hello world')"),
         )
 
-        assert command == "cd '/srv/project path' && exec python -c 'print('\"'\"'hello world'\"'\"')'"
+        assert (
+            command
+            == "cd '/srv/project path' && exec python -c 'print('\"'\"'hello world'\"'\"')'"
+        )
 
     def test_build_ssh_command_builds_basic_argv(self) -> None:
         # ケース3
@@ -69,8 +75,10 @@ class TestRemoteSpec:
 
         assert command == [
             "ssh",
-            "-i", str(Path("~/.ssh/id_home").expanduser()),
-            "-p", "2222",
+            "-i",
+            str(Path("~/.ssh/id_home").expanduser()),
+            "-p",
+            "2222",
             "takumi@home.example.com",
             "echo ok",
         ]
@@ -134,7 +142,12 @@ class TestRemoteSpec:
             "whub-remote",
         )
 
-        assert command[:4] == ["sshfs", "takumi@home.example.com:/srv/remote", "/tmp/mount", "-s"]
+        assert command[:4] == [
+            "sshfs",
+            "takumi@home.example.com:/srv/remote",
+            "/tmp/mount",
+            "-s",
+        ]
         assert f"IdentityFile={Path('~/.ssh/id_home').expanduser()}" in command
         assert "port=2222" in command
         assert "reconnect" in command
@@ -146,10 +159,14 @@ class TestRemoteSpec:
 
         assert command == [
             "scp",
-            "-o", "BatchMode=yes",
-            "-o", "ConnectTimeout=5",
-            "-i", str(Path("~/.ssh/id_home").expanduser()),
-            "-P", "2222",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=5",
+            "-i",
+            str(Path("~/.ssh/id_home").expanduser()),
+            "-P",
+            "2222",
             "takumi@home.example.com:/srv/remote/out.nc",
             "/tmp/out.nc",
         ]
@@ -162,11 +179,15 @@ class TestRemoteSpec:
 
     def test_build_rsync_command_builds_copy_argv(self) -> None:
         # ケース9
-        command = build_rsync_command(_host(), "/tmp/skills", "/srv/project/.agents/skills")
+        command = build_rsync_command(
+            _host(), "/tmp/skills", "/srv/project/.agents/skills"
+        )
 
         assert command == [
-            "rsync", "-a",
-            "-e", f"ssh -i {Path('~/.ssh/id_home').expanduser()} -p 2222",
+            "rsync",
+            "-a",
+            "-e",
+            f"ssh -i {Path('~/.ssh/id_home').expanduser()} -p 2222",
             "/tmp/skills/",
             "takumi@home.example.com:/srv/project/.agents/skills/",
         ]

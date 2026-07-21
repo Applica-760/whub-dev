@@ -1,34 +1,43 @@
-import { MantineProvider } from '@mantine/core';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MantineProvider } from "@mantine/core";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { KnowledgeResponse } from '../../api/client';
-import { KnowledgePage } from './KnowledgePage';
-import { KnowledgeWidget } from './KnowledgeWidget';
+import type { KnowledgeResponse } from "../../api/client";
+import { KnowledgePage } from "./KnowledgePage";
+import { KnowledgeWidget } from "./KnowledgeWidget";
 
 const KNOWLEDGE = {
   schema_version: 4,
   definitions: {
-    whub: { name: 'whub', definition: 'projectを統合管理するCLI' },
+    whub: { name: "whub", definition: "projectを統合管理するCLI" },
   },
   relations: [
-    { subject: 'def:whub', predicate: 'manages', object: 'def:whub' },
+    { subject: "def:whub", predicate: "manages", object: "def:whub" },
   ],
   policies: {
-    knowledge_is_ssot: { statement: 'Knowledge YAMLをSSOTとする' },
+    knowledge_is_ssot: { statement: "Knowledge YAMLをSSOTとする" },
   },
   constraints: {
-    reject_unknown_fields: { statement: '未知フィールドを拒否する' },
+    reject_unknown_fields: { statement: "未知フィールドを拒否する" },
   },
   exceptions: {},
 } satisfies KnowledgeResponse;
 
 beforeEach(() => {
-  vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
-    matches: false,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }),
+  );
 });
 
 afterEach(() => {
@@ -40,7 +49,7 @@ function response(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
-    statusText: status === 404 ? 'Not Found' : 'Server Error',
+    statusText: status === 404 ? "Not Found" : "Server Error",
     json: async () => body,
   } as Response;
 }
@@ -49,36 +58,36 @@ function renderInMantine(component: React.ReactNode) {
   return render(<MantineProvider env="test">{component}</MantineProvider>);
 }
 
-describe('KnowledgeWidget', () => {
-  it('分類タブと検索で表示を絞り込む', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(KNOWLEDGE)));
+describe("KnowledgeWidget", () => {
+  it("分類タブと検索で表示を絞り込む", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(KNOWLEDGE)));
     renderInMantine(<KnowledgeWidget project="workspace-hub" />);
 
-    await screen.findAllByText('def:whub');
-    fireEvent.click(screen.getByRole('tab', { name: 'CON' }));
-    expect(screen.getByText('con:reject_unknown_fields')).toBeTruthy();
-    expect(screen.queryByText('def:whub')).toBeNull();
+    await screen.findAllByText("def:whub");
+    fireEvent.click(screen.getByRole("tab", { name: "CON" }));
+    expect(screen.getByText("con:reject_unknown_fields")).toBeTruthy();
+    expect(screen.queryByText("def:whub")).toBeNull();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
-    fireEvent.change(screen.getByLabelText('Knowledgeを検索'), {
-      target: { value: 'pol:knowledge_is_ssot' },
+    fireEvent.click(screen.getByRole("tab", { name: "All" }));
+    fireEvent.change(screen.getByLabelText("Knowledgeを検索"), {
+      target: { value: "pol:knowledge_is_ssot" },
     });
-    expect(screen.getByText('pol:knowledge_is_ssot')).toBeTruthy();
-    expect(screen.queryByText('con:reject_unknown_fields')).toBeNull();
+    expect(screen.getByText("pol:knowledge_is_ssot")).toBeTruthy();
+    expect(screen.queryByText("con:reject_unknown_fields")).toBeNull();
 
-    fireEvent.change(screen.getByLabelText('Knowledgeを検索'), {
-      target: { value: 'not-found' },
+    fireEvent.change(screen.getByLabelText("Knowledgeを検索"), {
+      target: { value: "not-found" },
     });
-    expect(screen.getByText('該当するKnowledgeはありません')).toBeTruthy();
+    expect(screen.getByText("該当するKnowledgeはありません")).toBeTruthy();
   });
 
   it.each([
-    [404, 'Knowledgeはありません'],
-    [500, 'Knowledgeを取得できませんでした'],
-  ])('取得失敗status %sを区別して表示する', async (status, expected) => {
+    [404, "Knowledgeはありません"],
+    [500, "Knowledgeを取得できませんでした"],
+  ])("取得失敗status %sを区別して表示する", async (status, expected) => {
     vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(response({ detail: 'request failed' }, status)),
+      "fetch",
+      vi.fn().mockResolvedValue(response({ detail: "request failed" }, status)),
     );
     renderInMantine(<KnowledgeWidget project="workspace-hub" />);
 
@@ -86,24 +95,29 @@ describe('KnowledgeWidget', () => {
   });
 });
 
-describe('KnowledgePage', () => {
-  it('workspace-hubを初期選択し、project切替で再取得する', async () => {
+describe("KnowledgePage", () => {
+  it("workspace-hubを初期選択し、project切替で再取得する", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const path = String(input);
-      if (path === '/api/projects') {
-        return Promise.resolve(response({ projects: ['local', 'workspace-hub'] }));
+      if (path === "/api/projects") {
+        return Promise.resolve(
+          response({ projects: ["local", "workspace-hub"] }),
+        );
       }
       return Promise.resolve(response(KNOWLEDGE));
     });
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal("fetch", fetchMock);
     renderInMantine(<KnowledgePage />);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/knowledge/workspace-hub', undefined);
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/knowledge/workspace-hub",
+        undefined,
+      );
     });
-    fireEvent.click(screen.getByText('local'));
+    fireEvent.click(screen.getByText("local"));
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/knowledge/local', undefined);
+      expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/local", undefined);
     });
   });
 });

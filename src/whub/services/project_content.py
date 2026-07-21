@@ -1,4 +1,5 @@
 """Project content resolution shared by whub services."""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -7,6 +7,7 @@
 4. vault外へ出るパス・md以外・不在ノートをNotFoundErrorで拒否する。
 5. vault projectの未定義・未linkを拒否する。
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,14 +24,16 @@ def _vault_manifest(tmp_path: Path) -> tuple[Manifest, Path]:
     source = tmp_path / "vault-source"
     source.mkdir()
     data = manifest_data()
-    data["projects"].append({
-        "name": "vault",
-        "resource": {
-            "type": "symlink",
-            "workspace_path": "vault",
-            "source": str(source),
-        },
-    })
+    data["projects"].append(
+        {
+            "name": "vault",
+            "resource": {
+                "type": "symlink",
+                "workspace_path": "vault",
+                "source": str(source),
+            },
+        }
+    )
     result = Manifest.model_validate(data)
     project = result.resolve_project("vault")
     assert project is not None

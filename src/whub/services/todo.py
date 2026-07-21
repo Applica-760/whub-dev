@@ -1,4 +1,5 @@
 """Todo operations shared by CLI and web adapters."""
+
 from __future__ import annotations
 
 from datetime import date

@@ -16,6 +16,7 @@
 3. `version: 2`の数値coerce許容。
 4. `project_names()`の補完挙動。
 """
+
 from __future__ import annotations
 import copy
 import os
@@ -24,7 +25,13 @@ from pathlib import Path
 from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
-from whub.models import Manifest, ManifestError, RemoteResource, SymlinkResource, load_manifest
+from whub.models import (
+    Manifest,
+    ManifestError,
+    RemoteResource,
+    SymlinkResource,
+    load_manifest,
+)
 from whub.tests.helpers import manifest_data
 
 
@@ -37,10 +44,14 @@ class TestManifestSpec:
         assert project is not None
         assert project.resource is None
 
-    def test_symlink_resource_requires_safe_workspace_path_and_absolute_source(self) -> None:
+    def test_symlink_resource_requires_safe_workspace_path_and_absolute_source(
+        self,
+    ) -> None:
         # ケース2
         data = manifest_data()
-        assert isinstance(Manifest.model_validate(data).projects[0].resource, SymlinkResource)
+        assert isinstance(
+            Manifest.model_validate(data).projects[0].resource, SymlinkResource
+        )
 
         for field, value in (
             ("workspace_path", "/absolute"),
@@ -53,10 +64,14 @@ class TestManifestSpec:
             with pytest.raises(ValidationError):
                 Manifest.model_validate(invalid)
 
-    def test_remote_resource_requires_safe_workspace_path_absolute_path_and_known_host(self) -> None:
+    def test_remote_resource_requires_safe_workspace_path_absolute_path_and_known_host(
+        self,
+    ) -> None:
         # ケース3
         data = manifest_data()
-        assert isinstance(Manifest.model_validate(data).projects[1].resource, RemoteResource)
+        assert isinstance(
+            Manifest.model_validate(data).projects[1].resource, RemoteResource
+        )
 
         for field, value in (
             ("workspace_path", "/absolute"),
@@ -117,7 +132,9 @@ class TestManifestSpec:
         local = manifest.resolve_project("local").resource
         remote = manifest.resolve_project("remote").resource
         assert local._resolved_workspace_path == Path(root).resolve() / "projects/local"
-        assert remote._resolved_workspace_path == Path(root).resolve() / "projects/remote"
+        assert (
+            remote._resolved_workspace_path == Path(root).resolve() / "projects/remote"
+        )
         assert remote._resolved_host.hostname == "home.example.com"
 
     def test_load_manifest_reports_user_facing_errors(self) -> None:

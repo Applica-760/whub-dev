@@ -1,4 +1,5 @@
 """Operations that mutate a project's Knowledge YAML."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -96,8 +97,7 @@ def add_relation(
             for item in knowledge.relations
         ):
             raise ServiceError(
-                "knowledge relation already exists: "
-                f"{subject} {predicate} {object_}"
+                f"knowledge relation already exists: {subject} {predicate} {object_}"
             )
         entry = KnowledgeRelation(
             subject=subject,
@@ -172,6 +172,7 @@ def add_exception(
 
 def remove_knowledge(manifest: Manifest, project: str, target: str) -> None:
     """Remove one category-qualified entry unless another entry references it."""
+
     def operation(knowledge: Knowledge) -> None:
         references = [
             f"{relation.subject} {relation.predicate} {relation.object}"
@@ -211,6 +212,7 @@ def remove_relation(
     object_: str,
 ) -> None:
     """Remove one Relation identified by its composite key."""
+
     def operation(knowledge: Knowledge) -> None:
         for index, relation in enumerate(knowledge.relations):
             if (
@@ -221,8 +223,7 @@ def remove_relation(
                 knowledge.relations.pop(index)
                 return
         raise NotFoundError(
-            "knowledge relation not found: "
-            f"{subject} {predicate} {object_}"
+            f"knowledge relation not found: {subject} {predicate} {object_}"
         )
 
     _operate(manifest, project, operation)

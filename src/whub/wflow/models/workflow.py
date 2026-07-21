@@ -1,4 +1,5 @@
 """Generic models for declarative Workflow definitions."""
+
 from __future__ import annotations
 
 from collections import Counter
@@ -35,7 +36,9 @@ class TransitionRequirement(WorkflowModel):
 
     @model_validator(mode="after")
     def _validate_operator_fields(self) -> TransitionRequirement:
-        if self.operator in {"all_in", "active_steps_all_in"} and not isinstance(self.value, list):
+        if self.operator in {"all_in", "active_steps_all_in"} and not isinstance(
+            self.value, list
+        ):
             raise ValueError(f"{self.operator} requires a list value")
         if self.operator == "satisfied_if_defined" and self.result_field is None:
             raise ValueError("satisfied_if_defined requires result_field")

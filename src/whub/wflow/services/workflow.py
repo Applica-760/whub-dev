@@ -1,4 +1,5 @@
 """Workflow definition loading and semantic checks."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -13,7 +14,9 @@ from whub.wflow.models.workflow import TransitionRequirement, WorkflowDefinition
 from whub.wflow.services.errors import Diagnostic, WflowError
 
 
-RequirementEvaluator = Callable[[TransitionRequirement, dict[str, Any], dict[str, Any]], str | None]
+RequirementEvaluator = Callable[
+    [TransitionRequirement, dict[str, Any], dict[str, Any]], str | None
+]
 
 
 def load_workflow(path: Path) -> WorkflowDefinition:
@@ -114,7 +117,9 @@ def values_at(data: Any, field: str, input_data: dict[str, Any]) -> list[Any]:
     return current
 
 
-def _resolve_value(value: Any, data: dict[str, Any], input_data: dict[str, Any], actor: str) -> Any:
+def _resolve_value(
+    value: Any, data: dict[str, Any], input_data: dict[str, Any], actor: str
+) -> Any:
     if value == "$actor":
         return actor
     if isinstance(value, str) and value.startswith("$"):
@@ -203,7 +208,12 @@ def apply_transition(
     errors = [
         error
         for requirement in transition.requires
-        if (error := _requirement_error(requirement, data, inputs, requirement_evaluators)) is not None
+        if (
+            error := _requirement_error(
+                requirement, data, inputs, requirement_evaluators
+            )
+        )
+        is not None
     ]
     if errors:
         raise WflowError("; ".join(errors))

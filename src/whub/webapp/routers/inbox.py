@@ -1,4 +1,5 @@
 """Inbox JSON API."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, status

@@ -1,5 +1,13 @@
-import { Box, Divider, Group, Paper, Stack, Text, UnstyledButton } from '@mantine/core';
-import type { ReactNode } from 'react';
+import {
+  Box,
+  Divider,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  UnstyledButton,
+} from "@mantine/core";
+import type { ReactNode } from "react";
 
 type GroupedListSectionProps = {
   title?: ReactNode;

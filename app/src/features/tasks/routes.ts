@@ -1,4 +1,4 @@
-export const TASKS_PATH = '/tasks';
+export const TASKS_PATH = "/tasks";
 export const TASK_DETAIL_PATH = `${TASKS_PATH}/:project/:taskId`;
 export const LEGACY_TASK_DETAIL_PATH = `${TASKS_PATH}/:taskId`;
 

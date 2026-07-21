@@ -1,4 +1,5 @@
 """Rendering helpers for CLI output."""
+
 from __future__ import annotations
 import unicodedata
 from collections.abc import Sequence

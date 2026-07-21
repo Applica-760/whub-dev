@@ -1,4 +1,5 @@
 """Resource status collection shared by CLI and web adapters."""
+
 from __future__ import annotations
 
 import shlex
@@ -57,7 +58,7 @@ def _probe_line(index: int, path: str, session: str) -> str:
     # git非リポジトリ・git未導入はカウント0と区別するため"?"を返す
     return (
         f'echo "R{index}'
-        f' $(test -d {quoted_path} && echo ok || echo missing)'
+        f" $(test -d {quoted_path} && echo ok || echo missing)"
         f" $(git -C {quoted_path} rev-parse --is-inside-work-tree >/dev/null 2>&1"
         f" && git -C {quoted_path} status --porcelain 2>/dev/null | wc -l || echo '?')"
         f' $(tmux has-session -t ={quoted_session} 2>/dev/null && echo on || echo -)"'

@@ -12,6 +12,7 @@
 2. Click styleの内部ANSI仕様詳細。
 3. 各コマンド固有の表内容。
 """
+
 from __future__ import annotations
 
 import io

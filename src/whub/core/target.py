@@ -1,4 +1,5 @@
 """Target routing for project resources."""
+
 from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -6,8 +7,10 @@ from pathlib import PurePosixPath
 from typing import Generic, TypeVar, assert_never
 from whub.models import Manifest, Project, RemoteResource, Resource, SymlinkResource
 
+
 class TargetError(Exception):
     pass
+
 
 def resolve_project_resource(manifest: Manifest, project_name: str) -> Resource:
     project = manifest.resolve_project(project_name)
@@ -46,6 +49,7 @@ def resolve_resource_by_workspace_path(
 
 ResourceT = TypeVar("ResourceT", bound=Resource)
 
+
 def require_resource_type(
     resource: Resource,
     expected: type[ResourceT],
@@ -54,8 +58,10 @@ def require_resource_type(
     if isinstance(resource, expected):
         return resource
     label = (
-        "remote" if expected is RemoteResource
-        else "symlink" if expected is SymlinkResource
+        "remote"
+        if expected is RemoteResource
+        else "symlink"
+        if expected is SymlinkResource
         else expected.__name__
     )
     raise TargetError(f"not a {label} resource: {name}")
@@ -64,10 +70,12 @@ def require_resource_type(
 D = TypeVar("D")
 R = TypeVar("R")
 
+
 @dataclass(frozen=True)
 class TargetItem(Generic[D]):
     resource: Resource
     data: D
+
 
 # resourceを持つprojectのTargetItemをreturn
 def collect_targets(manifest: Manifest) -> list[TargetItem[Project]]:
@@ -76,6 +84,7 @@ def collect_targets(manifest: Manifest) -> list[TargetItem[Project]]:
         for project in manifest.projects
         if project.resource is not None
     ]
+
 
 # Resource種別により異なる関数を実行
 def on_targets(

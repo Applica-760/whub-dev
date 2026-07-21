@@ -1,4 +1,5 @@
 """Task execution record semantic validation."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -58,18 +59,27 @@ def validate_task(
         if task.task.state == "completed":
             if any(step.state not in complete_states for step in steps):
                 diagnostics.append(
-                    Diagnostic("incomplete_steps", "completed task has incomplete steps")
+                    Diagnostic(
+                        "incomplete_steps", "completed task has incomplete steps"
+                    )
                 )
             criteria = [
                 *plan.acceptance,
-                *(criterion for phase in plan.phases if not phase.deleted for criterion in phase.acceptance),
+                *(
+                    criterion
+                    for phase in plan.phases
+                    if not phase.deleted
+                    for criterion in phase.acceptance
+                ),
             ]
             passed = {
                 result.acceptance
                 for result in task.acceptance_results
                 if result.status == "passed"
             }
-            missing = [criterion.id for criterion in criteria if criterion.id not in passed]
+            missing = [
+                criterion.id for criterion in criteria if criterion.id not in passed
+            ]
             if missing:
                 diagnostics.append(
                     Diagnostic(
@@ -116,7 +126,10 @@ def validate_task_interruption(
                     f"interruption task {child.task.id} does not reference source {header.id}",
                 )
             )
-        elif child.task.state in active_states and header.state not in {"paused", "cancelled"}:
+        elif child.task.state in active_states and header.state not in {
+            "paused",
+            "cancelled",
+        }:
             diagnostics.append(
                 Diagnostic(
                     "active_interruption_source_not_paused",
@@ -174,5 +187,8 @@ def validate_task_set(
     return tuple(
         (task_id, diagnostic)
         for task_id, task in tasks.items()
-        for diagnostic in (*validate_task(task, workflow), *validate_task_interruption(task, tasks))
+        for diagnostic in (
+            *validate_task(task, workflow),
+            *validate_task_interruption(task, tasks),
+        )
     )

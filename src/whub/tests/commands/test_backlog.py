@@ -10,6 +10,7 @@
 検証しないケース:
 - local/remoteの書込・マーカー検証（serviceでカバー）
 """
+
 from __future__ import annotations
 
 from unittest.mock import patch
@@ -31,7 +32,9 @@ class TestBacklogCmdSpec:
             patch("whub.commands.backlog.append_backlog") as mock_append,
         ):
             result = CliRunner().invoke(
-                backlog, ["add feature X"], catch_exceptions=False,
+                backlog,
+                ["add feature X"],
+                catch_exceptions=False,
             )
 
         assert result.exit_code == 0

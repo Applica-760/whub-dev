@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
-import { useProjects } from './useProjects';
+import { useProjects } from "./useProjects";
 
-export const DEFAULT_PROJECT = 'workspace-hub';
+export const DEFAULT_PROJECT = "workspace-hub";
 
 export function useProjectSelection() {
   const projectState = useProjects();

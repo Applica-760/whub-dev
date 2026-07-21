@@ -1,34 +1,35 @@
-import { Alert, Box, Group, Text, Tree } from '@mantine/core';
-import type { RenderTreeNodePayload, TreeNodeData } from '@mantine/core';
+import { Alert, Box, Group, Text, Tree } from "@mantine/core";
+import type { RenderTreeNodePayload, TreeNodeData } from "@mantine/core";
 import {
   IconChevronRight,
   IconFileText,
   IconFolder,
   IconFolderOpen,
-} from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+} from "@tabler/icons-react";
+import { useEffect, useState } from "react";
 
-import type { VaultNode } from '../../api/client';
-import { errorMessage } from '../../api/errorMessage';
-import { GroupedListSection } from '../../components/GroupedList';
-import { MarkdownView } from '../../components/MarkdownView';
-import { PageFrame } from '../../components/PageFrame';
-import { WidgetFrame } from '../../components/WidgetFrame';
-import { fetchVaultNote } from './api';
-import { useVaultTree } from './useVaultTree';
+import type { VaultNode } from "../../api/client";
+import { errorMessage } from "../../api/errorMessage";
+import { GroupedListSection } from "../../components/GroupedList";
+import { MarkdownView } from "../../components/MarkdownView";
+import { PageFrame } from "../../components/PageFrame";
+import { WidgetFrame } from "../../components/WidgetFrame";
+import { fetchVaultNote } from "./api";
+import { useVaultTree } from "./useVaultTree";
 
 function toTreeData(nodes: VaultNode[]): TreeNodeData[] {
   return nodes.map((node) => ({
     value: node.path,
     label: node.name,
-    children: node.type === 'directory' ? toTreeData(node.children ?? []) : undefined,
+    children:
+      node.type === "directory" ? toTreeData(node.children ?? []) : undefined,
   }));
 }
 
 export function VaultPage() {
   const { nodes, loading: treeLoading, error: treeError } = useVaultTree();
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [noteLoading, setNoteLoading] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
 
@@ -60,14 +61,20 @@ export function VaultPage() {
     };
   }, [selectedPath]);
 
-  const renderNode = ({ node, expanded, hasChildren, level, elementProps }: RenderTreeNodePayload) => (
+  const renderNode = ({
+    node,
+    expanded,
+    hasChildren,
+    level,
+    elementProps,
+  }: RenderTreeNodePayload) => (
     <Group
       gap={6}
       pr="xs"
       py={4}
       wrap="nowrap"
       {...elementProps}
-      className={`${elementProps.className ?? ''} vault-tree-node`}
+      className={`${elementProps.className ?? ""} vault-tree-node`}
       data-selected={node.value === selectedPath || undefined}
       onClick={(event) => {
         elementProps.onClick?.(event);
@@ -121,9 +128,13 @@ export function VaultPage() {
         <div className="page-aside-list">
           <GroupedListSection title="Vault">
             {treeLoading ? (
-              <Text c="dimmed" p="md">Vaultを読み込んでいます…</Text>
+              <Text c="dimmed" p="md">
+                Vaultを読み込んでいます…
+              </Text>
             ) : treeError ? (
-              <Alert color="red" m="sm" title="Vaultを取得できませんでした">{treeError}</Alert>
+              <Alert color="red" m="sm" title="Vaultを取得できませんでした">
+                {treeError}
+              </Alert>
             ) : (
               <Box p="xs">
                 <Tree data={toTreeData(nodes)} renderNode={renderNode} />
@@ -133,14 +144,24 @@ export function VaultPage() {
         </div>
       }
     >
-      <WidgetFrame title={<Text c="dimmed" fw={600} size="sm">{selectedPath ?? 'ノートを選択'}</Text>}>
+      <WidgetFrame
+        title={
+          <Text c="dimmed" fw={600} size="sm">
+            {selectedPath ?? "ノートを選択"}
+          </Text>
+        }
+      >
         <Box p="lg">
           {noteError ? (
-            <Alert color="red" title="ノートを取得できませんでした">{noteError}</Alert>
+            <Alert color="red" title="ノートを取得できませんでした">
+              {noteError}
+            </Alert>
           ) : noteLoading ? (
             <Text c="dimmed">ノートを読み込んでいます…</Text>
           ) : !selectedPath ? (
-            <Text c="dimmed" py="xl" ta="center">左のツリーからノートを選択してください</Text>
+            <Text c="dimmed" py="xl" ta="center">
+              左のツリーからノートを選択してください
+            </Text>
           ) : (
             <MarkdownView content={content} />
           )}

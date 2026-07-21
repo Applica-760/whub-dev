@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import { errorMessage } from '../../api/errorMessage';
-import { listResourceStatus } from './api';
-import type { ResourceStatusItem } from './api';
+import { errorMessage } from "../../api/errorMessage";
+import { listResourceStatus } from "./api";
+import type { ResourceStatusItem } from "./api";
 
 export function useResourceStatus() {
   const [resources, setResources] = useState<ResourceStatusItem[]>([]);

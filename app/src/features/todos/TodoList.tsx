@@ -1,7 +1,7 @@
-import { ActionIcon, Badge, Checkbox, Group, Stack, Text } from '@mantine/core';
+import { ActionIcon, Badge, Checkbox, Group, Stack, Text } from "@mantine/core";
 
-import { GroupedListRow } from '../../components/GroupedList';
-import type { TodoItem } from './api';
+import { GroupedListRow } from "../../components/GroupedList";
+import type { TodoItem } from "./api";
 
 type TodoListProps = {
   todos: TodoItem[];
@@ -13,10 +13,10 @@ type TodoListProps = {
 };
 
 const priorityColor = {
-  red: 'red',
-  yellow: 'yellow',
-  blue: 'blue',
-  none: 'gray',
+  red: "red",
+  yellow: "yellow",
+  blue: "blue",
+  none: "gray",
 } as const;
 
 export function TodoList({
@@ -28,7 +28,11 @@ export function TodoList({
   onDelete,
 }: TodoListProps) {
   if (todos.length === 0) {
-    return <Text c="dimmed" p="md" ta="center">{emptyMessage}</Text>;
+    return (
+      <Text c="dimmed" p="md" ta="center">
+        {emptyMessage}
+      </Text>
+    );
   }
 
   return todos.map((todo, index) => (
@@ -53,10 +57,20 @@ type TodoRowProps = {
   onDelete: (todoId: number) => void;
 };
 
-function TodoRow({ todo, busy, completed, withDivider, onComplete, onDelete }: TodoRowProps) {
-  const subtitle = [todo.project, !completed && todo.due_date && `締切 ${todo.due_date}`]
+function TodoRow({
+  todo,
+  busy,
+  completed,
+  withDivider,
+  onComplete,
+  onDelete,
+}: TodoRowProps) {
+  const subtitle = [
+    todo.project,
+    !completed && todo.due_date && `締切 ${todo.due_date}`,
+  ]
     .filter(Boolean)
-    .join(' · ');
+    .join(" · ");
 
   return (
     <GroupedListRow
@@ -73,10 +87,18 @@ function TodoRow({ todo, busy, completed, withDivider, onComplete, onDelete }: T
           {completed ? (
             <Stack align="flex-end" gap={0}>
               {todo.done_at && <Text size="sm">完了 {todo.done_at}</Text>}
-              {todo.due_date && <Text c="dimmed" size="sm">締切 {todo.due_date}</Text>}
+              {todo.due_date && (
+                <Text c="dimmed" size="sm">
+                  締切 {todo.due_date}
+                </Text>
+              )}
             </Stack>
           ) : (
-            <Badge color={priorityColor[todo.priority]} size="sm" variant="light">
+            <Badge
+              color={priorityColor[todo.priority]}
+              size="sm"
+              variant="light"
+            >
               {todo.priority}
             </Badge>
           )}

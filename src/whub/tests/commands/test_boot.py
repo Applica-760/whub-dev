@@ -15,6 +15,7 @@
 - boot assetsの具体的な内容（パッケージリソース依存）
 - remote版codegraph fail-safe（localと共通のon_targets構造で代表検証）
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -94,15 +95,19 @@ class TestBootSpec:
                 {
                     "name": "first",
                     "resource": {
-                        "type": "symlink", "workspace_path": "first",
-                        "source": str(tmp_path / "src1"), "boot": True,
+                        "type": "symlink",
+                        "workspace_path": "first",
+                        "source": str(tmp_path / "src1"),
+                        "boot": True,
                     },
                 },
                 {
                     "name": "second",
                     "resource": {
-                        "type": "symlink", "workspace_path": "second",
-                        "source": str(tmp_path / "src2"), "boot": True,
+                        "type": "symlink",
+                        "workspace_path": "second",
+                        "source": str(tmp_path / "src2"),
+                        "boot": True,
                     },
                 },
             ],
@@ -156,6 +161,7 @@ class TestMergeJsonSpec:
         result = _merge_json(overlay, existing)
 
         import json
+
         data = json.loads(result)
         assert data["a"] == {"x": 1, "y": 2}
         assert data["b"] == 2
@@ -168,5 +174,6 @@ class TestMergeJsonSpec:
         result = _merge_json(overlay, existing)
 
         import json
+
         data = json.loads(result)
         assert data["items"] == [2, 3, 4, 1]

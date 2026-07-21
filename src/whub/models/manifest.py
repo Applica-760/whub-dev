@@ -1,11 +1,20 @@
 """Manifest models and loader — Pydantic model is SSOT for the schema."""
+
 from __future__ import annotations
 from collections import Counter
 from typing import Annotated, Literal
 from pathlib import Path
 from pathlib import PurePosixPath
 import yaml
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    field_validator,
+    model_validator,
+)
 from pydantic import ValidationError
 
 from whub.core.paths import manifest_path, whub_root
@@ -18,20 +27,24 @@ class ManifestError(Exception):
 class SchemaModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+
 class Host(SchemaModel):
     hostname: str
     user: str
     port: int = 22
     identity_file: str
 
+
 class GitInfo(SchemaModel):
     url: str
     branch: str | None = None
+
 
 class BaseResource(SchemaModel):
     git: GitInfo | None = None
     boot: bool = False
     status: bool = True
+
 
 def _check_workspace_path(value: str) -> str:
     path = Path(value)
@@ -41,6 +54,7 @@ def _check_workspace_path(value: str) -> str:
     if ".." in path.parts:
         raise ValueError("workspace_path must not escape workspace root")
     return value
+
 
 WorkspacePath = Annotated[str, AfterValidator(_check_workspace_path)]
 
@@ -73,8 +87,8 @@ class RemoteResource(BaseResource):
     type: Literal["remote"]
     host: str
     path: str
-    workspace_path: WorkspacePath 
-    mount: bool = True 
+    workspace_path: WorkspacePath
+    mount: bool = True
     _resolved_host: Host = PrivateAttr()
     _resolved_workspace_path: Path = PrivateAttr()
 
@@ -85,8 +99,10 @@ class RemoteResource(BaseResource):
             raise ValueError("remote path must be an absolute path without '~'")
         return value
 
+
 # ── Project ─────────────────────────────────────────────────────────────────────────────────
 Resource = Annotated[SymlinkResource | RemoteResource, Field(discriminator="type")]
+
 
 class Project(SchemaModel):
     name: str
@@ -102,10 +118,7 @@ class Manifest(SchemaModel):
     @model_validator(mode="after")
     def _validate_projects(self) -> Manifest:
         name_counts = Counter(project.name for project in self.projects)
-        duplicates = sorted(
-            name for name, count in name_counts.items()
-            if count > 1
-        )
+        duplicates = sorted(name for name, count in name_counts.items() if count > 1)
         if duplicates:
             raise ValueError(f"duplicate project names: {', '.join(duplicates)}")
 
@@ -116,13 +129,10 @@ class Manifest(SchemaModel):
             if project.resource is not None
         )
         duplicate_paths = sorted(
-            path for path, count in path_counts.items()
-            if count > 1
+            path for path, count in path_counts.items() if count > 1
         )
         if duplicate_paths:
-            raise ValueError(
-                f"duplicate workspace_path: {', '.join(duplicate_paths)}"
-            )
+            raise ValueError(f"duplicate workspace_path: {', '.join(duplicate_paths)}")
 
         root = whub_root()
         for project in self.projects:
@@ -142,7 +152,9 @@ class Manifest(SchemaModel):
         return self
 
     def resolve_project(self, name: str) -> Project | None:
-        return next((project for project in self.projects if project.name == name), None)
+        return next(
+            (project for project in self.projects if project.name == name), None
+        )
 
 
 def load_manifest() -> Manifest:
@@ -160,14 +172,11 @@ def load_manifest() -> Manifest:
     except ValidationError as error:
         raise ManifestError(f"invalid manifest: {path}: {error}") from error
 
+
 def project_names(ctx, param, incomplete: str) -> list[str]:
     del ctx, param
     try:
         projects = load_manifest().projects
     except Exception:
         return []
-    return [
-        project.name
-        for project in projects
-        if project.name.startswith(incomplete)
-    ]
+    return [project.name for project in projects if project.name.startswith(incomplete)]

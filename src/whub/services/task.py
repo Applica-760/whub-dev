@@ -1,4 +1,5 @@
 """Task operations shared by whub web adapters."""
+
 from __future__ import annotations
 
 from pathlib import Path

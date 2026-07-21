@@ -1,4 +1,5 @@
 """Read and derive views from Task execution records."""
+
 from __future__ import annotations
 
 from importlib.resources import as_file, files
@@ -33,7 +34,9 @@ def load_task_records(root: Path) -> dict[str, tuple[Path, TaskDocument]]:
         record = load_task(path)
         task_id = record.task.id
         if task_id in records:
-            raise WflowError(f"duplicate task id: {task_id}: {records[task_id][0]}, {path}")
+            raise WflowError(
+                f"duplicate task id: {task_id}: {records[task_id][0]}, {path}"
+            )
         records[task_id] = (path, record)
     return records
 
@@ -96,7 +99,9 @@ def list_tasks(root: Path) -> tuple[TaskSummary, ...]:
         elif summary.id is not None and summary.id in records_by_id:
             diagnostics.extend(
                 f"{item.code}: {item.message}"
-                for item in validate_task_interruption(records_by_id[summary.id], records_by_id)
+                for item in validate_task_interruption(
+                    records_by_id[summary.id], records_by_id
+                )
             )
         if diagnostics:
             updated.append(summary.model_copy(update={"diagnostics": diagnostics}))

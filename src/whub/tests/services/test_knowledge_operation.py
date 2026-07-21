@@ -1,4 +1,5 @@
 """Knowledge更新Serviceの初期化・追加・削除・原子的保存テスト。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -189,7 +190,9 @@ def test_replace_failure_leaves_existing_file_and_removes_temporary_file(
     original = path.read_bytes()
 
     with (
-        patch("whub.services.knowledge.os.replace", side_effect=OSError("replace failed")),
+        patch(
+            "whub.services.knowledge.os.replace", side_effect=OSError("replace failed")
+        ),
         pytest.raises(OSError, match="replace failed"),
     ):
         add_policy(manifest, "local", "not_saved", "保存されない")

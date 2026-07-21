@@ -1,4 +1,5 @@
 """whub todo — manage personal todos."""
+
 from __future__ import annotations
 import re
 from datetime import date
@@ -76,15 +77,19 @@ def _render_list(
             rows.append(())
         project = item.project or "-"
         d = date_fn(item)
-        rows.append((
-            item.id,
-            PRIORITY_EMOJI[item.priority],
-            item.title,
-            project,
-            _format_date_cell(d, urgent=urgent_dates),
-        ))
+        rows.append(
+            (
+                item.id,
+                PRIORITY_EMOJI[item.priority],
+                item.title,
+                project,
+                _format_date_cell(d, urgent=urgent_dates),
+            )
+        )
         previous_priority = item.priority
-    render_table(rows, headers=("id", "pri", "title", "project", date_label), right_align={0})
+    render_table(
+        rows, headers=("id", "pri", "title", "project", date_label), right_align={0}
+    )
 
 
 # ── CLI ───────────────────────────────────────────────────────────

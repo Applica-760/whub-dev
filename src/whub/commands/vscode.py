@@ -1,4 +1,5 @@
 """whub vscode — generate VS Code exclusion settings."""
+
 from __future__ import annotations
 
 import json
@@ -41,7 +42,9 @@ def _load_settings(path: Path) -> dict[str, Any]:
     try:
         settings = json.loads(path.read_text())
     except json.JSONDecodeError as error:
-        raise click.ClickException(f"invalid VS Code settings JSON: {path}: {error}") from error
+        raise click.ClickException(
+            f"invalid VS Code settings JSON: {path}: {error}"
+        ) from error
     if not isinstance(settings, dict):
         raise click.ClickException(f"VS Code settings must be a JSON object: {path}")
     return settings

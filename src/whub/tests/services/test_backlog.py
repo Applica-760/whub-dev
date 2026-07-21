@@ -5,6 +5,7 @@
 2. remote backlogのSSH経由書込内容
 3. local/remote backlogの読取とmount未済エラー
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -55,7 +56,9 @@ def test_remote_backlog_writes_marker_content() -> None:
             return CompletedProcess([], 0)
         raise AssertionError(f"unexpected SSH command: {command}")
 
-    with patch("whub.services.backlog.run_ssh_command", side_effect=run_ssh) as mock_ssh:
+    with patch(
+        "whub.services.backlog.run_ssh_command", side_effect=run_ssh
+    ) as mock_ssh:
         append_backlog(manifest(), "remote", "new memo")
 
     write = mock_ssh.call_args_list[-1]

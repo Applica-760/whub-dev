@@ -1,8 +1,8 @@
-import { Button, Group, Radio, Select, Stack, TextInput } from '@mantine/core';
-import { useState } from 'react';
-import type { FormEvent } from 'react';
+import { Button, Group, Radio, Select, Stack, TextInput } from "@mantine/core";
+import { useState } from "react";
+import type { FormEvent } from "react";
 
-import type { TodoCreateInput } from './api';
+import type { TodoCreateInput } from "./api";
 
 type TodoFormProps = {
   projects: string[];
@@ -11,17 +11,17 @@ type TodoFormProps = {
 };
 
 const priorityOptions = [
-  { value: 'none', color: 'gray' },
-  { value: 'red', color: 'red' },
-  { value: 'yellow', color: 'yellow' },
-  { value: 'blue', color: 'blue' },
+  { value: "none", color: "gray" },
+  { value: "red", color: "red" },
+  { value: "yellow", color: "yellow" },
+  { value: "blue", color: "blue" },
 ] as const;
 
 export function TodoForm({ projects, submitting, onCreate }: TodoFormProps) {
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState("");
   const [project, setProject] = useState<string | null>(null);
-  const [priority, setPriority] = useState<TodoCreateInput['priority']>('none');
-  const [dueDate, setDueDate] = useState('');
+  const [priority, setPriority] = useState<TodoCreateInput["priority"]>("none");
+  const [dueDate, setDueDate] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,10 +37,10 @@ export function TodoForm({ projects, submitting, onCreate }: TodoFormProps) {
       due_date: dueDate || null,
     });
     if (created) {
-      setTitle('');
+      setTitle("");
       setProject(null);
-      setPriority('none');
-      setDueDate('');
+      setPriority("none");
+      setDueDate("");
     }
   }
 
@@ -57,7 +57,9 @@ export function TodoForm({ projects, submitting, onCreate }: TodoFormProps) {
             required
             value={title}
           />
-          <Button loading={submitting} type="submit">追加</Button>
+          <Button loading={submitting} type="submit">
+            追加
+          </Button>
         </Group>
         <Group align="end" grow>
           <Select
@@ -71,7 +73,9 @@ export function TodoForm({ projects, submitting, onCreate }: TodoFormProps) {
           />
           <Radio.Group
             label="優先度"
-            onChange={(value) => setPriority(value as TodoCreateInput['priority'])}
+            onChange={(value) =>
+              setPriority(value as TodoCreateInput["priority"])
+            }
             value={priority}
           >
             <Group gap="sm" mt="xs">

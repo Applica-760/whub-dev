@@ -1,4 +1,5 @@
 """`whub status` command rendering tests."""
+
 from __future__ import annotations
 
 from unittest.mock import patch

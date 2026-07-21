@@ -1,4 +1,5 @@
 """Current-state eligibility checks for Task operations."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -27,7 +28,9 @@ def dependency_start_diagnostics(
     for dependency in task.task.depends_on:
         target = tasks.get(dependency)
         if target is None:
-            diagnostics.append(Diagnostic("missing_dependency", f"missing dependency: {dependency}"))
+            diagnostics.append(
+                Diagnostic("missing_dependency", f"missing dependency: {dependency}")
+            )
         elif target.task.state != "completed":
             diagnostics.append(
                 Diagnostic(
@@ -49,33 +52,70 @@ def interruption_start_diagnostics(
     diagnostics = list(validate_task_set(tasks, workflow))
     if parent.task.id == child.task.id:
         diagnostics.append(
-            (parent.task.id, Diagnostic("same_interruption_task", "interruption parent and child must differ"))
+            (
+                parent.task.id,
+                Diagnostic(
+                    "same_interruption_task",
+                    "interruption parent and child must differ",
+                ),
+            )
         )
     if parent.task.state != "in_progress":
         diagnostics.append(
-            (parent.task.id, Diagnostic("interruption_parent_not_active", "interruption parent must be in_progress"))
+            (
+                parent.task.id,
+                Diagnostic(
+                    "interruption_parent_not_active",
+                    "interruption parent must be in_progress",
+                ),
+            )
         )
     if child.task.state != "draft":
         diagnostics.append(
-            (child.task.id, Diagnostic("interruption_child_not_draft", "interruption child must be draft"))
+            (
+                child.task.id,
+                Diagnostic(
+                    "interruption_child_not_draft", "interruption child must be draft"
+                ),
+            )
         )
     if child.plan is None:
         diagnostics.append(
-            (child.task.id, Diagnostic("missing_plan", "interruption child has no plan"))
+            (
+                child.task.id,
+                Diagnostic("missing_plan", "interruption child has no plan"),
+            )
         )
     if child.task.interruption_source_task_id is not None:
         diagnostics.append(
-            (child.task.id, Diagnostic("interruption_child_has_source", "interruption child already has a source"))
+            (
+                child.task.id,
+                Diagnostic(
+                    "interruption_child_has_source",
+                    "interruption child already has a source",
+                ),
+            )
         )
     if not reason:
         diagnostics.append(
-            (parent.task.id, Diagnostic("missing_interruption_reason", "interruption reason is required"))
+            (
+                parent.task.id,
+                Diagnostic(
+                    "missing_interruption_reason", "interruption reason is required"
+                ),
+            )
         )
     if parent.task.interruption_task_id is not None:
         previous = tasks.get(parent.task.interruption_task_id)
         if previous is not None and previous.task.state in {"in_progress", "paused"}:
             diagnostics.append(
-                (parent.task.id, Diagnostic("active_interruption_exists", "interruption parent already has an active child"))
+                (
+                    parent.task.id,
+                    Diagnostic(
+                        "active_interruption_exists",
+                        "interruption parent already has an active child",
+                    ),
+                )
             )
     diagnostics.extend(
         (child.task.id, diagnostic)
@@ -93,18 +133,35 @@ def interruption_resume_diagnostics(
     diagnostics = list(validate_task_set(tasks, workflow))
     if parent.task.state != "paused":
         diagnostics.append(
-            (parent.task.id, Diagnostic("interruption_parent_not_paused", "interruption parent must be paused"))
+            (
+                parent.task.id,
+                Diagnostic(
+                    "interruption_parent_not_paused",
+                    "interruption parent must be paused",
+                ),
+            )
         )
     child_id = parent.task.interruption_task_id
     if child_id is None:
         diagnostics.append(
-            (parent.task.id, Diagnostic("missing_interruption", "paused task has no interruption task"))
+            (
+                parent.task.id,
+                Diagnostic(
+                    "missing_interruption", "paused task has no interruption task"
+                ),
+            )
         )
         return tuple(diagnostics)
     child = tasks.get(child_id)
     if child is None:
         diagnostics.append(
-            (parent.task.id, Diagnostic("missing_interruption_task", f"interruption task not found: {child_id}"))
+            (
+                parent.task.id,
+                Diagnostic(
+                    "missing_interruption_task",
+                    f"interruption task not found: {child_id}",
+                ),
+            )
         )
         return tuple(diagnostics)
     if child.task.interruption_source_task_id != parent.task.id:

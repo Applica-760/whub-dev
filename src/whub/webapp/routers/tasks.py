@@ -1,4 +1,5 @@
 """Task read-only JSON API."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter

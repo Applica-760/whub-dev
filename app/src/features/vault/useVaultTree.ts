@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import type { VaultNode } from '../../api/client';
-import { errorMessage } from '../../api/errorMessage';
-import { fetchVaultTree } from './api';
+import type { VaultNode } from "../../api/client";
+import { errorMessage } from "../../api/errorMessage";
+import { fetchVaultTree } from "./api";
 
 export function useVaultTree() {
   const [nodes, setNodes] = useState<VaultNode[]>([]);

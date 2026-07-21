@@ -1,4 +1,5 @@
 """Task dependency and interruption relation operations."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -48,7 +49,9 @@ def update_dependency(
 
 def _require_no_diagnostics(diagnostics: tuple[tuple[str, Diagnostic], ...]) -> None:
     if diagnostics:
-        details = "; ".join(f"{task_id}: {item.message}" for task_id, item in diagnostics)
+        details = "; ".join(
+            f"{task_id}: {item.message}" for task_id, item in diagnostics
+        )
         raise WflowError(f"task interruption is invalid: {details}")
 
 
@@ -60,7 +63,9 @@ def interrupt_task(
     reason: str,
 ) -> tuple[TaskDocument, TaskDocument]:
     """Freeze PARENT and start CHILD as one validated interruption."""
-    _require_no_diagnostics(interruption_start_diagnostics(parent, child, tasks, workflow, reason))
+    _require_no_diagnostics(
+        interruption_start_diagnostics(parent, child, tasks, workflow, reason)
+    )
 
     parent_data = parent.model_dump(mode="python")
     parent_data["task"]["interruption_task_id"] = child.task.id
@@ -77,7 +82,11 @@ def interrupt_task(
 
     _require_no_diagnostics(
         validate_task_set(
-            {**tasks, paused_parent.task.id: paused_parent, started_child.task.id: started_child},
+            {
+                **tasks,
+                paused_parent.task.id: paused_parent,
+                started_child.task.id: started_child,
+            },
             workflow,
         )
     )
@@ -92,5 +101,7 @@ def resume_task(
     """Resume PARENT only after its interruption Task is terminal."""
     _require_no_diagnostics(interruption_resume_diagnostics(parent, tasks, workflow))
     resumed = apply_transition(parent, workflow, "resume_task", "agent")
-    _require_no_diagnostics(validate_task_set({**tasks, resumed.task.id: resumed}, workflow))
+    _require_no_diagnostics(
+        validate_task_set({**tasks, resumed.task.id: resumed}, workflow)
+    )
     return resumed

@@ -1,4 +1,5 @@
 """FastAPI application factory for the whub web app."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -92,7 +93,10 @@ def create_app(dist_dir: Path) -> FastAPI:
             raise HTTPException(status_code=404)
 
         requested_path = (resolved_dist_dir / path).resolve()
-        if requested_path.is_relative_to(resolved_dist_dir) and requested_path.is_file():
+        if (
+            requested_path.is_relative_to(resolved_dist_dir)
+            and requested_path.is_file()
+        ):
             return FileResponse(requested_path)
         return FileResponse(index_path)
 

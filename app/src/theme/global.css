@@ -60,7 +60,7 @@ textarea {
   text-decoration: none;
 }
 
-.whub-tab[data-active='true'] {
+.whub-tab[data-active="true"] {
   background: var(--whub-color-page-background);
   border-color: var(--whub-color-border);
   color: var(--whub-color-text);

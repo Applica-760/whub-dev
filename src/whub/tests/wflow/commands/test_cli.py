@@ -5,6 +5,7 @@
 2. taskサブコマンドグループが提供される。
 3. task checkが指定Taskを検査する。
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -215,7 +216,9 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
     assert "TASK-001" in task_dir.output
 
 
-def test_task_init_creates_a_draft_with_repeated_approaches(tmp_path: Path, monkeypatch) -> None:
+def test_task_init_creates_a_draft_with_repeated_approaches(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
 
     result = CliRunner().invoke(
@@ -252,17 +255,23 @@ def test_task_init_creates_a_draft_with_repeated_approaches(tmp_path: Path, monk
     assert created["plan"] is None
 
 
-def test_task_init_rejects_invalid_input_without_creating_yaml(tmp_path: Path, monkeypatch) -> None:
+def test_task_init_rejects_invalid_input_without_creating_yaml(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
 
-    result = CliRunner().invoke(main, ["task", "init", "", "目的"], catch_exceptions=False)
+    result = CliRunner().invoke(
+        main, ["task", "init", "", "目的"], catch_exceptions=False
+    )
 
     assert result.exit_code == 1
     assert "invalid task input" in result.output
     assert list((tmp_path / "docs/tasks").glob("*.yaml")) == []
 
 
-def test_task_plan_is_created_and_approved_only_through_cli(tmp_path: Path, monkeypatch) -> None:
+def test_task_plan_is_created_and_approved_only_through_cli(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
@@ -309,11 +318,17 @@ def test_task_plan_is_created_and_approved_only_through_cli(tmp_path: Path, monk
         "最初のStep",
         "次のStep",
     ]
-    assert [criterion["id"] for criterion in active["plan"]["acceptance"]] == ["ACC-001"]
-    assert [criterion["id"] for criterion in active["plan"]["phases"][0]["acceptance"]] == ["ACC-002"]
+    assert [criterion["id"] for criterion in active["plan"]["acceptance"]] == [
+        "ACC-001"
+    ]
+    assert [
+        criterion["id"] for criterion in active["plan"]["phases"][0]["acceptance"]
+    ] == ["ACC-002"]
 
 
-def test_task_plan_insert_and_delete_update_a_draft(tmp_path: Path, monkeypatch) -> None:
+def test_task_plan_insert_and_delete_update_a_draft(
+    tmp_path: Path, monkeypatch
+) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)
     data = yaml.safe_load(_TASK_PATH.read_text())
@@ -330,11 +345,25 @@ def test_task_plan_insert_and_delete_update_a_draft(tmp_path: Path, monkeypatch)
     path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
     monkeypatch.chdir(tmp_path)
 
-    inserted = CliRunner().invoke(main, ["task", "plan", "insert", "001", "追加", "--after", "002-001"], catch_exceptions=False)
-    deleted = CliRunner().invoke(main, ["task", "plan", "delete", "001", "001-001"], catch_exceptions=False)
+    inserted = CliRunner().invoke(
+        main,
+        ["task", "plan", "insert", "001", "追加", "--after", "002-001"],
+        catch_exceptions=False,
+    )
+    deleted = CliRunner().invoke(
+        main, ["task", "plan", "delete", "001", "001-001"], catch_exceptions=False
+    )
     named_phase = CliRunner().invoke(
         main,
-        ["task", "plan", "insert", "001", "最初のStep", "--phase-title", "名前付きPhase"],
+        [
+            "task",
+            "plan",
+            "insert",
+            "001",
+            "最初のStep",
+            "--phase-title",
+            "名前付きPhase",
+        ],
         catch_exceptions=False,
     )
     selected_phase = CliRunner().invoke(
@@ -395,13 +424,17 @@ def test_task_plan_insert_and_delete_update_a_draft(tmp_path: Path, monkeypatch)
     assert updated["plan"]["phases"][0]["acceptance"][0]["id"] == "ACC-003"
 
 
-def test_task_complete_archives_an_already_completed_task(tmp_path: Path, monkeypatch) -> None:
+def test_task_complete_archives_an_already_completed_task(
+    tmp_path: Path, monkeypatch
+) -> None:
     source = tmp_path / "docs/tasks/task.yaml"
     source.parent.mkdir(parents=True)
     source.write_text(_TASK_PATH.read_text())
     monkeypatch.chdir(tmp_path)
 
-    result = CliRunner().invoke(main, ["task", "complete", "001"], catch_exceptions=False)
+    result = CliRunner().invoke(
+        main, ["task", "complete", "001"], catch_exceptions=False
+    )
 
     assert result.exit_code == 0
     assert not source.exists()
@@ -420,7 +453,9 @@ def test_task_check_resolves_a_task_id(tmp_path: Path, monkeypatch) -> None:
     assert "valid docs/tasks/example.yaml" in result.output
 
 
-def test_task_check_reports_interruption_relationship_errors(tmp_path: Path, monkeypatch) -> None:
+def test_task_check_reports_interruption_relationship_errors(
+    tmp_path: Path, monkeypatch
+) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)
     parent = yaml.safe_load(_TASK_PATH.read_text())
@@ -445,7 +480,9 @@ def test_task_check_reports_interruption_relationship_errors(tmp_path: Path, mon
     assert "interruption_link_mismatch" in result.output
 
 
-def test_task_approve_plan_requires_completed_dependencies(tmp_path: Path, monkeypatch) -> None:
+def test_task_approve_plan_requires_completed_dependencies(
+    tmp_path: Path, monkeypatch
+) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)
     prerequisite = yaml.safe_load(_TASK_PATH.read_text())
@@ -479,7 +516,9 @@ def test_task_approve_plan_requires_completed_dependencies(tmp_path: Path, monke
     prerequisite_path.write_text(yaml.safe_dump(prerequisite, allow_unicode=True))
     dependent["task"]["depends_on"] = ["TASK-999"]
     dependent_path.write_text(yaml.safe_dump(dependent, allow_unicode=True))
-    missing = runner.invoke(main, ["task", "transition", "002", "approve_plan", "--actor", "user"])
+    missing = runner.invoke(
+        main, ["task", "transition", "002", "approve_plan", "--actor", "user"]
+    )
     assert missing.exit_code == 1
     assert "missing dependency: TASK-999" in missing.output
 
@@ -493,7 +532,9 @@ def test_task_approve_plan_requires_completed_dependencies(tmp_path: Path, monke
     assert approved.exit_code == 0
 
 
-def test_task_interrupt_and_resume_use_cross_task_validation(tmp_path: Path, monkeypatch) -> None:
+def test_task_interrupt_and_resume_use_cross_task_validation(
+    tmp_path: Path, monkeypatch
+) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)
     parent = yaml.safe_load(_TASK_PATH.read_text())
@@ -523,12 +564,23 @@ def test_task_interrupt_and_resume_use_cross_task_validation(tmp_path: Path, mon
     runner = CliRunner()
     interrupted = runner.invoke(
         main,
-        ["task", "interrupt", "001", "002", "--reason", "urgent", "--task-dir", str(task_dir)],
+        [
+            "task",
+            "interrupt",
+            "001",
+            "002",
+            "--reason",
+            "urgent",
+            "--task-dir",
+            str(task_dir),
+        ],
     )
     assert interrupted.exit_code == 0
     assert "interrupted TASK-001 with TASK-002" in interrupted.output
 
-    blocked_resume = runner.invoke(main, ["task", "resume", "001", "--task-dir", str(task_dir)])
+    blocked_resume = runner.invoke(
+        main, ["task", "resume", "001", "--task-dir", str(task_dir)]
+    )
     assert blocked_resume.exit_code == 1
     assert "not terminal" in blocked_resume.output
 
@@ -541,9 +593,13 @@ def test_task_interrupt_and_resume_use_cross_task_validation(tmp_path: Path, mon
     started_child = yaml.safe_load((task_dir / "child.yaml").read_text())
     started_child["task"]["state"] = "cancelled"
     started_child["cancellation"] = {"reason": "done", "actor": "user"}
-    (task_dir / "child.yaml").write_text(yaml.safe_dump(started_child, allow_unicode=True))
+    (task_dir / "child.yaml").write_text(
+        yaml.safe_dump(started_child, allow_unicode=True)
+    )
 
-    resumable_show = runner.invoke(main, ["task", "show", "001"], catch_exceptions=False)
+    resumable_show = runner.invoke(
+        main, ["task", "show", "001"], catch_exceptions=False
+    )
     assert resumable_show.exit_code == 0
     assert "resumable: yes" in resumable_show.output
     listing = runner.invoke(main, ["task", "ls"], catch_exceptions=False)
@@ -551,7 +607,9 @@ def test_task_interrupt_and_resume_use_cross_task_validation(tmp_path: Path, mon
     assert "interruption_source" in listing.output
     assert "TASK-002" in listing.output
 
-    resumed = runner.invoke(main, ["task", "resume", "001", "--task-dir", str(task_dir)])
+    resumed = runner.invoke(
+        main, ["task", "resume", "001", "--task-dir", str(task_dir)]
+    )
     assert resumed.exit_code == 0
     assert "resumed TASK-001" in resumed.output
 
@@ -593,7 +651,10 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
     assert show.exit_code == 0
     assert "state: draft" in show.output
     assert "Phase 1: 現行手順の確認" in show.output
-    assert "[001-001] [ ] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
+    assert (
+        "[001-001] [ ] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する"
+        in show.output
+    )
 
     approved = runner.invoke(
         main,
@@ -604,7 +665,16 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
 
     logged = runner.invoke(
         main,
-        ["task", "log", "001", "001", "--log", "discussion finding", "--log", "second discussion"],
+        [
+            "task",
+            "log",
+            "001",
+            "001",
+            "--log",
+            "discussion finding",
+            "--log",
+            "second discussion",
+        ],
         catch_exceptions=False,
     )
     assert logged.exit_code == 0
@@ -645,12 +715,17 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
         "second finding",
     ]
     assert updated["plan"]["phases"][1]["steps"][1]["skip_reason"] == "not needed"
-    assert updated["acceptance_results"] == [{"acceptance": "ACC-001", "status": "passed", "evidence": []}]
+    assert updated["acceptance_results"] == [
+        {"acceptance": "ACC-001", "status": "passed", "evidence": []}
+    ]
 
     show = runner.invoke(main, ["task", "show", "001"], catch_exceptions=False)
 
     assert show.exit_code == 0
-    assert "[001-001] [x] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する" in show.output
+    assert (
+        "[001-001] [x] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する"
+        in show.output
+    )
     assert "- current style located" in show.output
     assert "- second finding" in show.output
     assert "- discussion finding" in show.output

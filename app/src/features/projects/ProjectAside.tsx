@@ -1,6 +1,9 @@
-import { Text } from '@mantine/core';
+import { Text } from "@mantine/core";
 
-import { GroupedListRow, GroupedListSection } from '../../components/GroupedList';
+import {
+  GroupedListRow,
+  GroupedListSection,
+} from "../../components/GroupedList";
 
 type ProjectAsideProps = {
   projects: string[];
@@ -21,20 +24,28 @@ export function ProjectAside({
     <div className="page-aside-list">
       <GroupedListSection title="Project">
         {error ? (
-          <Text c="red" p="md">Projectを取得できませんでした: {error}</Text>
+          <Text c="red" p="md">
+            Projectを取得できませんでした: {error}
+          </Text>
         ) : loading ? (
-          <Text c="dimmed" p="md">Projectを読み込んでいます…</Text>
+          <Text c="dimmed" p="md">
+            Projectを読み込んでいます…
+          </Text>
         ) : projects.length === 0 ? (
-          <Text c="dimmed" p="md">Projectがありません</Text>
+          <Text c="dimmed" p="md">
+            Projectがありません
+          </Text>
         ) : (
           projects.map((project) => (
             <GroupedListRow
               key={project}
               onClick={() => selectProject(project)}
               rightSection={
-                project === selectedProject
-                  ? <Text c="blue" size="sm">選択中</Text>
-                  : undefined
+                project === selectedProject ? (
+                  <Text c="blue" size="sm">
+                    選択中
+                  </Text>
+                ) : undefined
               }
               selected={project === selectedProject}
               title={project}

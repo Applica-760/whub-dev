@@ -1,4 +1,5 @@
 """Resource status collection tests."""
+
 from __future__ import annotations
 
 from subprocess import CompletedProcess

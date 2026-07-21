@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import { errorMessage } from '../../api/errorMessage';
-import { listProjects } from './api';
+import { errorMessage } from "../../api/errorMessage";
+import { listProjects } from "./api";
 
 export function useProjects(enabled = true) {
   const [projects, setProjects] = useState<string[]>([]);

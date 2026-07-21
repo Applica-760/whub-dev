@@ -1,4 +1,5 @@
 """whub app — manage the local web application server."""
+
 from __future__ import annotations
 
 import os

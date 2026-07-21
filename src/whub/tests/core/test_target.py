@@ -16,6 +16,7 @@
 2. 各コマンド側のエラー表示。
 3. 実ファイルや実SSHへの副作用。
 """
+
 from __future__ import annotations
 
 import click
@@ -55,7 +56,9 @@ class TestTargetSpec:
         with pytest.raises(TargetError, match="project has no resource"):
             resolve_project_resource(manifest(), "no-resource")
 
-    def test_resolve_resource_by_workspace_path_returns_resource_and_relative_path(self) -> None:
+    def test_resolve_resource_by_workspace_path_returns_resource_and_relative_path(
+        self,
+    ) -> None:
         # ケース4
         project, resource, relative_path = resolve_resource_by_workspace_path(
             manifest(),
@@ -77,7 +80,9 @@ class TestTargetSpec:
         assert isinstance(resource, RemoteResource)
         assert relative_path == "log.txt"
 
-    def test_resolve_resource_by_workspace_path_rejects_invalid_or_uncontained_paths(self) -> None:
+    def test_resolve_resource_by_workspace_path_rejects_invalid_or_uncontained_paths(
+        self,
+    ) -> None:
         # ケース6
         for path in (
             "/projects/remote/file.txt",
@@ -88,7 +93,9 @@ class TestTargetSpec:
             with pytest.raises(TargetError):
                 resolve_resource_by_workspace_path(manifest(), path)
 
-    def test_require_resource_type_returns_expected_type_and_rejects_mismatch(self) -> None:
+    def test_require_resource_type_returns_expected_type_and_rejects_mismatch(
+        self,
+    ) -> None:
         # ケース7
         local = resolve_project_resource(manifest(), "local")
         remote = resolve_project_resource(manifest(), "remote")

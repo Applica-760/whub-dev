@@ -9,19 +9,29 @@
 検証しないケース:
 1. 環境変数なしでパッケージ位置からworkspace rootを推定する挙動。
 """
+
 from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 import pytest
-from whub.core.paths import PathError, downloads_dir, manifest_path, todo_path, whub_data_dir
+from whub.core.paths import (
+    PathError,
+    downloads_dir,
+    manifest_path,
+    todo_path,
+    whub_data_dir,
+)
 from whub.tests.helpers import write_config
 
 
 class TestPathsSpec:
     def test_environment_data_dir_overrides_config(self) -> None:
-        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as data:
+        with (
+            tempfile.TemporaryDirectory() as root,
+            tempfile.TemporaryDirectory() as data,
+        ):
             # ケース1,3
             with patch.dict(
                 os.environ,
@@ -35,7 +45,10 @@ class TestPathsSpec:
                 assert downloads_dir() == expected / "downloads"
 
     def test_config_data_dir_is_used_without_environment_override(self) -> None:
-        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as data:
+        with (
+            tempfile.TemporaryDirectory() as root,
+            tempfile.TemporaryDirectory() as data,
+        ):
             # ケース2
             write_config(Path(root), Path(data))
             with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):

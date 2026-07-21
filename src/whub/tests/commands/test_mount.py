@@ -16,6 +16,7 @@
 - 実際のsshfs/umount/diskutil実行
 - fuse-tのmount table遅延（sleep付きリトライ）
 """
+
 from __future__ import annotations
 
 from subprocess import CompletedProcess
@@ -40,7 +41,9 @@ class TestMountSpec:
             patch("whub.commands.mount.get_manifest", return_value=m),
             patch("whub.commands.mount.inspect_mount", side_effect=health_seq),
             patch("whub.commands.mount.subprocess.run", mock_run),
-            patch("whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"),
+            patch(
+                "whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"
+            ),
         ):
             result = CliRunner().invoke(mount, ["remote"], catch_exceptions=False)
 
@@ -52,8 +55,12 @@ class TestMountSpec:
         m = manifest()
         with (
             patch("whub.commands.mount.get_manifest", return_value=m),
-            patch("whub.commands.mount.inspect_mount", return_value=ResourceHealth("ok")),
-            patch("whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"),
+            patch(
+                "whub.commands.mount.inspect_mount", return_value=ResourceHealth("ok")
+            ),
+            patch(
+                "whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"
+            ),
         ):
             result = CliRunner().invoke(mount, ["remote"], catch_exceptions=False)
 
@@ -66,8 +73,13 @@ class TestMountSpec:
         mock_run = MagicMock()
         with (
             patch("whub.commands.mount.get_manifest", return_value=m),
-            patch("whub.commands.mount.inspect_mount", return_value=ResourceHealth("stale")),
-            patch("whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"),
+            patch(
+                "whub.commands.mount.inspect_mount",
+                return_value=ResourceHealth("stale"),
+            ),
+            patch(
+                "whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"
+            ),
             patch("whub.commands.mount.subprocess.run", mock_run),
         ):
             result = CliRunner().invoke(mount, ["remote"])
@@ -131,7 +143,9 @@ class TestMountSpec:
             patch("whub.commands.mount.inspect_mount", side_effect=health_seq),
             patch("whub.commands.mount.subprocess.run", mock_run),
         ):
-            result = CliRunner().invoke(unmount, ["remote", "--force"], catch_exceptions=False)
+            result = CliRunner().invoke(
+                unmount, ["remote", "--force"], catch_exceptions=False
+            )
 
         assert result.exit_code == 0
         assert "unmount" in result.output
@@ -149,7 +163,10 @@ class TestMountSpec:
         mountpoint = tmp_path / "mnt"
         resource._resolved_workspace_path = mountpoint
         with (
-            patch("whub.commands.mount.inspect_mount", return_value=ResourceHealth("unmounted")),
+            patch(
+                "whub.commands.mount.inspect_mount",
+                return_value=ResourceHealth("unmounted"),
+            ),
             patch("whub.commands.mount.build_sshfs_command", return_value=["sshfs"]),
             patch(
                 "whub.commands.mount.subprocess.run",
@@ -170,7 +187,10 @@ class TestMountSpec:
         mountpoint.mkdir()
         resource._resolved_workspace_path = mountpoint
         with (
-            patch("whub.commands.mount.inspect_mount", return_value=ResourceHealth("unmounted")),
+            patch(
+                "whub.commands.mount.inspect_mount",
+                return_value=ResourceHealth("unmounted"),
+            ),
             patch("whub.commands.mount.build_sshfs_command", return_value=["sshfs"]),
             patch(
                 "whub.commands.mount.subprocess.run",

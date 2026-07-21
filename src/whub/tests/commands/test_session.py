@@ -71,7 +71,7 @@ def test_clean_reports_running_run_rejection() -> None:
 
 
 def test_handoff_reads_command_from_stdin() -> None:
-    command = "PATH=\"$PWD/.venv/bin:$PATH\" uv run python probe.py\n"
+    command = 'PATH="$PWD/.venv/bin:$PATH" uv run python probe.py\n'
     with (
         patch("whub.commands.session.get_manifest", return_value=manifest()),
         patch("whub.commands.session.write_session_handoff") as handoff,

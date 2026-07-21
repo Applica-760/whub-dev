@@ -1,17 +1,17 @@
-import { createTheme } from '@mantine/core';
+import { createTheme } from "@mantine/core";
 
 export const theme = createTheme({
   fontFamily:
     '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", sans-serif',
-  defaultRadius: 'md',
+  defaultRadius: "md",
   radius: {
-    md: '12px',
+    md: "12px",
   },
   shadows: {
-    xs: 'none',
-    sm: 'none',
-    md: 'none',
-    lg: 'none',
-    xl: 'none',
+    xs: "none",
+    sm: "none",
+    md: "none",
+    lg: "none",
+    xl: "none",
   },
 });

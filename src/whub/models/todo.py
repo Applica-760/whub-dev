@@ -1,4 +1,5 @@
 """Personal todos stored in .whub/todos.yaml."""
+
 from __future__ import annotations
 from datetime import date
 from typing import Literal, get_args
@@ -16,6 +17,7 @@ PRIORITY_EMOJI: dict[str | None, str] = {
     "none": "─",
     None: "─",
 }
+
 
 class Todo(BaseModel):
     model_config = ConfigDict(extra="forbid")

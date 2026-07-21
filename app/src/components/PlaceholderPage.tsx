@@ -1,4 +1,4 @@
-import { Paper, Stack, Text, Title } from '@mantine/core';
+import { Paper, Stack, Text, Title } from "@mantine/core";
 
 type PlaceholderPageProps = {
   title: string;
