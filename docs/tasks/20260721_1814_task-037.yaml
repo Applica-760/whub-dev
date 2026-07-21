@@ -71,6 +71,16 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
+    - description: ユーザーが手動作成したGitHub private repository Applica-760/whubが空かつ非Forkであることを確認し、operation
+        repositoryのoriginはApplica-760/workspace-hubのまま維持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Whub開発cloneのoriginをApplica-760/whubへ設定して既存mainとtagsをpushし、元repositoryとのroot
+        commit hash、main commit数、HEAD、tree、過去のsource・Task・slides commitへの到達性が一致することを検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
     - description: 開発cloneへはGit管理対象と履歴だけを引き継ぎ、operation固有の.whub runtime、秘密情報、生成symlink、mount状態を複製しない。
       state: pending
       skip_reason: null
@@ -336,7 +346,9 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: operationと開発のpush先を分離し、既存Git履歴を独立private remoteへ継承する要件をPhase 1へ追加するため。
 cancellation: null
 result: null
