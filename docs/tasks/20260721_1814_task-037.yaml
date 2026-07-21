@@ -145,20 +145,20 @@ plan:
       skip_reason: null
       deleted: false
     - description: Task更新を一時停止し、TASK-037を含む既存docs/tasksの正本をWhub開発Projectへ指定する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: operation repository側の既存Taskを更新禁止にしたうえでworking treeから除去し、以後のTask作成・計画・進捗・完了をoperation
         rootから--project whub付きで実行する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Agentとユーザーの入口はoperation rootに維持し、コード編集・test・buildのcwdだけをwhub Projectへ切り替える暫定運用を明文化する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: wflow task --project whub check 037で正本を一意に解決してTask更新を再開し、Task handoffとoperation側の除去commitをTASK-037へ記録する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -168,6 +168,16 @@ plan:
       8件はskip、warningなし。
     - operation rootからwflow task --project whub check 037、whub knowledge check --project
       whub、Project content root解決、whub statusを検証。whubはok、content rootは開発repositoryへ一致。
+    - TASK-037を含むdocs/tasksの更新を一時停止して正本をWhub開発Projectへ指定。開発側commit 9ead5048以降、Whub
+      Task更新はoperation rootから--project whub付きで実行し、operation側copyは更新しない。
+    - operation repositoryからtracked docs/tasks 85件をworking treeから除去し、commit 43a20f2で履歴を保持。operation
+      rootの無指定wflow taskはtask directory不在となり、--project whubだけが正本を解決する。
+    - '暫定運用: Agent sessionとユーザー操作の入口は。WhubのTask/Knowledge操作はoperation
+      rootから--project whubを付け、コード編集・test・buildのcwdはまたは物理source
+      とする。operation側旧sourceはfallback用read-only
+      copyとし、repository間mergeは行わない。'
+    - 'Phase 2完了: wflow task --project whub check 037成功、operation docs/tasks不在、root直下whub
+      symlink解決成功。Task handoff基準=開発commit 9ead5048、operation除去commit=43a20f2。以後TASK-037更新はWhub開発Projectだけで行う。'
     deleted: false
   - title: Whub開発Projectでoperation contextをpackageから分離する
     acceptance:
@@ -381,6 +391,22 @@ acceptance_results:
   status: passed
   evidence:
   - 元root commit、日時、source、Task、slides履歴へ開発repositoryから到達可能。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - manifest登録、whub link、Project content/Knowledge/Task解決、status=okを確認。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - 開発側docs/tasks 85件、operation側0件、--project whub check成功を確認。
+- acceptance: ACC-016
+  status: passed
+  evidence:
+  - 移行前Task正本はWhub開発Projectだけに存在し、operation Projectから除去済み。
+- acceptance: ACC-018
+  status: passed
+  evidence:
+  - workspace-hub/whubが通常symlink resourceとして開発repositoryへ接続済み。
 change_requests:
 - reason: operationと開発のpush先を分離し、既存Git履歴を独立private remoteへ継承する要件をPhase 1へ追加するため。
 cancellation: null
