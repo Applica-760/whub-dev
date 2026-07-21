@@ -68,29 +68,29 @@ plan:
       deleted: false
     - description: へgit clone --no-hardlinks等で現在のrepositoryを複製し、git
         filter-repo等の履歴書換えを行わず分離前のcommit hash・日時・source・Task・slides履歴を維持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: ユーザーが手動作成したGitHub private repository Applica-760/whubが空かつ非Forkであることを確認し、operation
         repositoryのoriginはApplica-760/workspace-hubのまま維持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Whub開発cloneのoriginをApplica-760/whubへ設定して既存mainとtagsをpushし、元repositoryとのroot
         commit hash、main commit数、HEAD、tree、過去のsource・Task・slides commitへの到達性が一致することを検証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 開発cloneへはGit管理対象と履歴だけを引き継ぎ、operation固有の.whub runtime、秘密情報、生成symlink、mount状態を複製しない。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 両repositoryの分離基準commitが一致し、現在のoperation repositoryが変更前の運用を継続し、開発cloneがuv環境を構築できることを確認する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: clone作成結果、両repositoryのpath/HEAD、rollback時に使用する分離基準commitをTASK-037へ記録する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -108,6 +108,21 @@ plan:
     - 'owner分類補足: app/node_modulesはignored runtime/cache。一方slides/node_modules配下約5万fileは既にGit
       trackedであるため、生成cacheではなく既存のWhub開発履歴としてcloneへ保持する。operation repositoryからのslides除去はrollback検証後のPhase
       6で扱う。'
+    - git clone --no-hardlinksでを作成。filter-repo等の履歴書換えなし。object
+      packはlink count 1でoperation側から独立。
+    - GitHub Applica-760/whubはユーザーが手動作成したPRIVATE・非Fork・初期refなしの空repositoryであることを確認。operation
+      originはgit@github.com:Applica-760/workspace-hub.gitのまま維持。
+    - 開発cloneのoriginをgit@github.com:Applica-760/whub.gitへ設定し、既存mainを初回push。tagsは0件。remote
+      main=9a3010c66bc56c7f8aebae61629c97993d8a2563。両localでroot=85da4831dbfd079d5fc3e46cb34b4709e0e2f558、main=158
+      commits、tree=45e4cb688526fb65924926c45b04882927791c94が一致。source commit 493d1bba、Task
+      commit 9a3010c6、slides commit 89e62f3cへ双方から到達可能。
+    - clone直後に.whub、.venv、.agents、.claude、.codex、projects、vaultが存在せず、operation固有runtime・秘密情報・生成symlink・mountの非混入を確認。.venvはこの確認後に開発clone専用としてuv
+      syncで生成。operation側のローカルstash 1件は変更せずoperation repositoryだけに保持。
+    - 検証時点でoperation/development/remote main HEAD=9a3010c6が一致。開発cloneでuv sync --frozen成功、whub
+      import=、whub --help成功。operation側はknowledge
+      check、task check、statusが実行でき、local resourceはok。既存remote resourceはunreachable/staleだがclone操作によるoperation設定変更はない。
+    - 'Phase 1完了: operation=（origin Applica-760/workspace-hub）、development=（origin
+      Applica-760/whub）。rollback用分離基準commit=9a3010c66bc56c7f8aebae61629c97993d8a2563。'
     deleted: false
   - title: whub Projectを接続してTask正本を早期に引き渡す
     acceptance:
@@ -347,7 +362,19 @@ plan:
 approvals:
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - 独立cloneとprivate remoteを作成し、root/commit数/HEAD/treeを照合。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - operation rootを維持し、runtime・秘密情報・生成link・mountの非混入を確認。
+- acceptance: ACC-015
+  status: passed
+  evidence:
+  - 元root commit、日時、source、Task、slides履歴へ開発repositoryから到達可能。
 change_requests:
 - reason: operationと開発のpush先を分離し、既存Git履歴を独立private remoteへ継承する要件をPhase 1へ追加するため。
 cancellation: null
