@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-033
-  state: in_progress
+  state: completed
   title: フロントエンド・Pythonのフォーマッタとpre-commit検査を導入する
   objective: フロントエンドとPythonのコードについて、commit前にフォーマット不整合を検出できる状態にする
   approach:
@@ -52,43 +52,71 @@ plan:
     acceptance: []
     steps:
     - description: 対象のPythonコードとapp/のフロントエンドコードを各フォーマッタで一括整形する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: uv run pytestとapp/のnpm run typecheck、npm test、npm run buildを実行し、整形後も既存の検証が成功することを確認する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 検証成功後、既存コードのフォーマット変更だけを独立したcommitとして記録する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - RuffでPython 110ファイル、Prettierでapp 59ファイルを整形し、生成物・slidesに差分がないことを確認した。ruff format
+      --checkは137ファイル、prettier --checkは全対象で成功した。uv run pytestは339件成功、appはtypecheck、Vitest
+      4 files/13 tests、production buildが成功した。フォーマット差分169ファイルのみをcommit 67fa25e3として記録した。
     deleted: false
   - title: pre-commitフォーマット検査の導入
     acceptance: []
     steps:
     - description: repository rootへpre-commit frameworkを導入し、Pythonとapp/の対象ファイルにフォーマット検査を設定する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: pre-commitはcheck-onlyとし、未整形ファイルの自動編集や自動stageを行わない。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 整形済みのstagedファイルでは検査が成功し、未整形のstagedファイルでは内容とindexを変更せず検査が失敗することを実証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Worktree固有のWhub対応は依存先TASK-034の検討範囲とし、本Taskへ含めない。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - pre-commit 4.6.0をrootへ導入し、Ruff 0.15.22公式hookとappのPrettier 3.9.5 local hookをcheck-onlyで設定した。全ファイル検査は両hook成功。未整形staged
+      probeではPython hash a02516854499e3c87467c9e1abb7487f24f85cad、TypeScript hash
+      586a68cca25a6246a469a4ecc47a2b9ddc44ddcdがhook実行前後のworking fileとindexで一致し、自動編集・自動stageなしで失敗した。整形済みstaged
+      probeでは両hook成功。probeは除去済み。Worktree固有変更は行っていない。
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - Ruff 0.15.22を導入し、ruff-formatのみ設定。ruff-checkは未設定。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Prettier 3.9.5をapp/へ導入し、slides/・dist/・openapi.json・app/src/api/generated/を対象外として全対象check成功。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - pre-commit成功系と未整形staged probe失敗系を実行し、失敗前後でworking file・index hash一致を確認。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - Phase 2でpytest 339件、app typecheck、Vitest 4 files/13 tests、production buildが成功。
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - Linter・CI・Agentレビュー・Worktree固有対応を追加していない。
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: RuffとPrettierを導入して既存コードを整形し、check-onlyのpre-commit formatter hooksを検証付きで導入した。

@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.22
+    hooks:
+      - id: ruff-format
+        name: Ruff format check
+        args: [--check]
+        files: ^src/whub/
+        types_or: [python, pyi]
+
+  - repo: local
+    hooks:
+      - id: prettier-format
+        name: Prettier format check
+        entry: app/node_modules/.bin/prettier
+        args: [--check, --ignore-path, app/.prettierignore]
+        language: system
+        files: '^app/.*\.(cjs|css|js|jsx|json|md|ts|tsx)$'
+        exclude: '^app/(dist/|openapi\.json$|src/api/generated/)'
