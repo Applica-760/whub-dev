@@ -50,20 +50,20 @@ plan:
       statement: 現在のoperation rootと運用状態が維持され、runtime・秘密情報・symlink・mount状態が開発cloneへ複製されていない。
     steps:
     - description: 現在のtracked fileと生成物を、operation ProjectのSSoT、Whub release artifact、Whub開発Project、runtime/cache、今回の対象外に分類し、分離後のownerを一意に定義する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 現在のを移動せずoperation_rootとして維持し、root直下にwhub
         symlinkを置く目標構成を確定する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Whub開発repositoryの物理source pathはユーザー承認済みのとする。2026-07-21のユーザー申告時点では同名directoryは未作成であり、clone実行直前にも未作成であることを再確認する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: worktree、未commit変更、active Task、現在のHEADを確認し、TASK-034/037を含む必要な変更を分離基準commitへ含めてcleanな状態にする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: へgit clone --no-hardlinks等で現在のrepositoryを複製し、git
@@ -85,6 +85,16 @@ plan:
       deleted: false
     log:
     - '2026-07-21: ユーザー指示により、既存のin_progress Taskは完了扱いにせず、TASK-037を特権的な最優先Taskとして運用・実装分離を優先する。'
+    - 'owner分類: operation Project SSoT=.whub/config.toml、外部data_dir 、ignoredのAgent/boot設定。Whub開発Project=現行Git
+      tracked内容（src、app、docs/tasks・knowledge、slides、build/dev設定。KnowledgeはPhase 4で再分割）。release
+      artifact=現時点では未確立、app/distはignored生成物でありPhase 5のrelease対象。runtime/cache=.whub
+      PID、.venv、node_modules、app/dist、.codegraph、pytest/ruff cache。今回対象外=接続先Project実体。vault/projectsの生成symlinkと3件のsshfs
+      mountはoperation接続状態としてcloneしない。'
+    - '目標構成: をoperation_root兼Agent入口として移動せず維持し、後続Phaseでroot直下whub
+      symlinkをへ接続する。'
+    - clone先は2026-07-21時点で未作成。親filesystem空き55GiB、Git
+      object 118MiB、checkout対象は約1GiBで作成可能。
+    - '分離直前: worktreeはのmain 1件、HEAD=5e816a6ea1d24f47ffb3a702701cebbf71ed288b、作業ツリーclean。TASK-022/031/032/037はin_progressのまま維持し、TASK-034取消とTASK-037開始はHEADへ収録済み。'
     deleted: false
   - title: whub Projectを接続してTask正本を早期に引き渡す
     acceptance:
