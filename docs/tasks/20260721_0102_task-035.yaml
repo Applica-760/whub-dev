@@ -1,0 +1,21 @@
+schema_version: 1
+task:
+  id: TASK-035
+  state: draft
+  title: bootとsessionの頒布asset層を統合する
+  objective: bootとsessionが個別に持つpackage resourceの解決・更新・頒布処理を共通のasset distribution層へ整理し、各domainの責務と既存運用契約を保ったまま重複を解消する
+  approach:
+  - bootとsessionのasset構造・配布先・更新判定・local/remote差分を比較し、実際に共通する責務だけを抽出する
+  - package resourceの取得、version管理、原子的配置、権限設定を担う共通層を設計し、bootとsessionを移行する
+  - bootはremoteへ実行ファイルを頒布しない制約と、sessionはProject runtimeへlauncherを生成する契約を維持して回帰テストする
+  depends_on:
+  - TASK-030
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

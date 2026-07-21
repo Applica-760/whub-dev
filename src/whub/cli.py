@@ -14,6 +14,7 @@ from whub.commands.knowledge import knowledge
 from whub.commands.link import link
 from whub.commands.mount import mount, unmount
 from whub.commands.run import run
+from whub.commands.session import session
 from whub.commands.status import status
 from whub.commands.todo import todo
 from whub.commands.vscode import vscode
@@ -37,6 +38,7 @@ main.add_command(mount)
 main.add_command(unmount)
 main.add_command(cd)
 main.add_command(run)
+main.add_command(session)
 main.add_command(fetch)
 main.add_command(init)
 main.add_command(knowledge)

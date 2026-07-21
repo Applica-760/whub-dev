@@ -1,0 +1,156 @@
+schema_version: 1
+task:
+  id: TASK-030
+  state: completed
+  title: remote GUI sessionをwhubで予約・観測する
+  objective: Mac側whubでProjectのremote GUI sessionを予約し、Linux GUIで固定launcherからtmuxを開始して、Agentがwhubだけでlive出力・履歴・終了状態を取得できるようにする
+  approach:
+  - Projectの.whubへsession descriptorと固定launcherを安全かつ原子的に生成するruntime serviceを実装する
+  - Linux GUI側launcherで表示環境を継承したtmux、pane transcript、終了metadataを生成し、session lifecycleを更新する
+  - core/remoteとcore/tmuxを利用する専用whub session操作を実装し、mount状態に依存せず予約・発見・観測・取得できるようにする
+  - TASK-025の検証条件を自動テストとLAplust/ILでの実地確認へ落とし込み、Bootやremote側へのwhub配布は追加しない
+  depends_on:
+  - TASK-025
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: session protocolとCLI契約の確定
+    acceptance: []
+    steps:
+    - description: session descriptorのPydantic schema、run ID、lifecycle、run単位cleanup境界を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: reserve・ls・show・logs --follow・cleanのCLIと、複数pending時に明示選択を求めるlauncher契約を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: remote launcherはpython3・PyYAML・tmux 3.4を前提とし、protocol version不一致時の更新と依存不足時のエラーを定義する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - CLIをreserve・ls・show・logs --follow・clean、run IDをTASK-NNN-rNNN、cleanをrun単位削除、複数pendingは明示選択、launcher依存をpython3・PyYAML・tmux
+      3.4、protocol version 1と確定した。
+    deleted: false
+  - title: 予約とruntime配置serviceの実装
+    acceptance: []
+    steps:
+    - description: RemoteResourceを解決し、mountを使わずSSH経由でlauncherとpending descriptorを生成するsession
+        serviceを実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Projectの.gitignoreへmanaged blockで.whub/を追加し、runtime directory 0700・file
+        0600と一時ファイルからのrenameを保証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: launcherの必要時生成・protocol更新、run ID衝突、SSH失敗、既存runtime保護をservice・modelテストで検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - SSH stdin上のremote Pythonでlauncherとdescriptorを原子的配置するserviceを実装。la-ilで0700 directory・0600
+      file・.whub gitignoreを確認し、unmount状態でもreserve・ls・show・cleanが成功。TASK-030-r001を保持したままr002の作成・削除とlauncher更新を確認した。
+    deleted: false
+  - title: Linux GUI launcherとtmux記録の実装
+    acceptance: []
+    steps:
+    - description: 固定launcherが通常のblock YAML descriptorをPyYAMLで読み、pendingが1件なら自動選択し複数ならrun
+        ID指定を要求する処理を実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: GUI環境を継承した専用tmux sessionを開始し、window・paneの動的IDと表示名、raw transcript、runtime
+        metadataを記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: pane終了code・signalからcompleted・failed・interruptedを永続化し、hook・権限・異常終了をlauncherテストで検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 初回TASK-030-r001は専用socketでstart-server後、session作成を別tmux invocationにしたため空serverが終了し、no
+      server runningでfailed。stale socketを検出・削除し、start-server・history-limit設定・new-sessionを単一invocationへ統合。一時remote
+      socketでsession作成とhistory-limit=50000を実証し、全324テスト後に修正版launcherを配布してTASK-030-r002を予約した。
+    - r002でsession作成後のremain-on-exitへsession targetを渡してNo such windowとなる不具合を検出。window
+      target =run:、session option/hook target run のtmux 3.4実測結果へ修正した。続くadhoc検証でtmuxが制御文字separatorをliteral
+      \037として返すことを検出し、実tab delimiterへ修正。pane %0の自動登録、0600 transcript、出力取得、exit 7からfailed・dead_status=7へのhook更新、cleanupまで実証した。
+    - GUI側の再実行時にr002は既にrunning・pane生存だったためpending限定selectがno matching pending runを返した。running
+      descriptorでlive tmuxが存在する場合は同じlauncher commandから既存sessionへ再attachし、live sessionが失われていればinterruptedへ遷移する冪等動作へ修正。SSH非TTYではattachだけが期待どおり失敗し、running
+      stateとpaneが維持されることを確認した。
+    - 別Agentの独立診断とTTY実測が一致し、heredocでPython sourceをstdinへ渡す構造がGUI terminalのTTYを失わせる根本原因と確定。launcher.shを257-byte
+      thin wrapper、launcher.pyを独立package assetへ分離し、helper→wrapper順で原子的配布。attach共通化、非TTY事前拒否、hookからhelper直接実行、global
+      remain-on-exit、run単位flock、metadata検証へ整理した。PTY付きSSHからr002へ実attachし、tmux画面表示後にdetach成功。全325テスト成功。
+    - Linux GUI terminalからTASK-030-r002へattach成功後、pane %0でecho iketa!を実行。Mac側whub
+      session showでrunning・pane生存、whub session logsで入力commandと出力iketa!を取得し、GUI起動sessionの永続transcript経路を確認した。
+    - GUI paneのprobe履歴からDISPLAY=:0・WAYLAND_DISPLAY=wayland-0とWHUB_STDERR_PROBEを取得。初回は.venv/bin/python直接実行によりPATHへ.venv/binが入らず、rr.spawnがRerun
+      Viewer executable not foundで失敗したが、その完全なtracebackをwhub session logsで取得できた。.venv/bin/rerun
+      0.26.2の存在を確認し、probe commandへPATH=:。
+    - 修正版probeでDISPLAY=:0・WAYLAND_DISPLAY=wayland-0、WHUB_STDERR_PROBE、Rerun gRPC listen、WHUB_RERUN_READY、wgpu/llvmpipe初期化をtranscriptから取得し、ユーザーがLinux
+      GUI上のviewer表示を確認。8秒後のRuntimeError WHUB_INTENTIONAL_TRACEBACKは意図的で、完全なtracebackをwhub
+      session logsから取得した。
+    - '訂正: probe commandへ追加したliteral設定は PATH="$PWD/.venv/bin:$PATH"。直前logの絶対path表記はwflow記録時にlocal
+      shellが展開したもので、remoteで実行した内容ではない。'
+    - adhoc-r001でpane shellをexec sleepへ置換しSIGKILL。hookによりstate=interrupted・dead_signal=9・dead_status=nullをdescriptorへ永続化した。別実測のexit
+      7はfailed・dead_status=7、TASK-030-r002のexit 0はcompleted・dead_status=0。runtime権限0700/0600と異常終了traceback保存も確認済み。
+    deleted: false
+  - title: whub session CLIと観測処理の実装
+    acceptance: []
+    steps:
+    - description: whub session reserve・ls・show・logs・cleanを追加し、Projectとrun IDだけでsessionを操作できるようにする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: live tmux出力と永続transcriptを統合し、logs --followの表示時だけANSIを除去して観測切断がremote処理へ影響しないようにする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: pendingと終了済みrunのcleanはdescriptor・metadata・transcriptだけを削除し、running
+        runのcleanを拒否するCLIテストを追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - whub sessionの5 subcommandを登録し、Project・run IDで操作するCLIを実装。live followとrunning
+      cleanup拒否の実機検証はGUI session開始後に行う。
+    - whub session logs la-il TASK-030-r002だけでGUI paneのecho iketa!を取得。tmux内部IDの手動転記やmountを使用していない。
+    - logs --followはtail -n 20 -Fの新規行を行単位で受信し、表示時のみANSI除去。WHUB_FOLLOW_LIVE_030をlive取得後にobserverをCtrl-Cで切断してもr002はrunning・pane生存を維持した。running
+      cleanはstatus 1で拒否、pending・failed・interrupted・completed cleanはrun artifactsだけ削除。CLI回帰テストも追加した。
+    deleted: false
+  - title: 回帰テストと実機検証
+    acceptance: []
+    steps:
+    - description: session関連のmodel・service・core・command・launcherテストとuv run pytest全体を成功させる
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: la-imitation-learningをunmount状態でreserveし、Linux GUI launcherからRerunを起動してlive観測・切断後の継続・終了状態を確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: run単位cleanと再予約を確認し、TASK-025の受け入れ条件に対応する証拠をPhase logへ記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - session固有12件とuv run pytest全324件が成功し、git diff --checkも成功。la-il remoteはPyYAML
+      6.0.1・tmux 3.4。
+    - la-ilをunmount状態からSSH reserveし、Linux GUI launcherでDISPLAY=:0・WAYLAND_DISPLAY=wayland-0を継承したRerun
+      Viewer表示をユーザー確認。stderrと意図的RuntimeErrorの完全tracebackをMac側logsで取得。live follow切断後も継続し、exit
+      0をcompleted/dead_status=0へ永続化。全検証runをclean後、TASK-030-r001を再予約してpending cleanも再確認。最終uv
+      run pytestは327 passed、git diff --check成功。
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: whub session reserve/ls/show/logs --follow/cleanとLinux GUI launcherを実装。Rerun
+    GUI表示、live観測と切断継続、正常・非zero・signal終了永続化、run単位clean/re-reserveをla-il実機で確認し、全327テスト成功。後続の頒布asset層統合はTASK-035へ分離。

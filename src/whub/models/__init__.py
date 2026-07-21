@@ -24,6 +24,7 @@ from whub.models.manifest import (
     project_names,
     workspace_hub_resource,
 )
+from whub.models.session import SessionDescriptor, SessionPane, SessionTmux
 from whub.models.todo import PRIORITY_EMOJI, Todo, Todos, load_todos, save_todos
 
 __all__ = [
@@ -43,6 +44,9 @@ __all__ = [
     "Project",
     "Resource",
     "RemoteResource",
+    "SessionDescriptor",
+    "SessionPane",
+    "SessionTmux",
     "SymlinkResource",
     "Todo",
     "Todos",
