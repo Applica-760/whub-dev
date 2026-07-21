@@ -80,7 +80,7 @@ PATH="$PWD/.venv/bin:$PATH" uv run python probe.py \
 WHUB_COMMAND
 ```
 
-Linux GUI側では対象Projectの`.whub/handoff/commands.md`を開き、先頭の最新entryにあるcode blockをcopyして明示実行する。whubはMarkdown内のcommandを解析・自動実行しない。fileはProjectごとに1つで履歴を保持し、`session clean`でも削除しない。
+Linux GUI側では対象Projectの`.whub/handoff/commands.md`を開く。先頭の最新entryにはrun固有の2手順があり、Step 1のlauncher commandをGUI terminalでcopy実行して対象tmux sessionへ入り、Step 2のworkload commandをtmux内でcopy実行する。whubはMarkdown内のcommandを解析・自動実行しない。fileはProjectごとに1つで履歴を保持し、`session clean`でも削除しない。
 
 Mac側から状態とtranscriptを確認する。
 

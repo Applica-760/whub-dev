@@ -134,7 +134,7 @@ def clean(ctx: click.Context, project: str, run_id: str) -> None:
 @click.option("--purpose", required=True, help="Single-line purpose for this command.")
 @click.pass_context
 def handoff(ctx: click.Context, project: str, run_id: str, purpose: str) -> None:
-    """Prepend a stdin command to PROJECT's copy-only handoff Markdown."""
+    """Prepend a run launcher and stdin command to copy-only handoff Markdown."""
     purpose = purpose.strip()
     if not purpose or "\n" in purpose or "\r" in purpose:
         raise click.UsageError("purpose must be one non-empty line")

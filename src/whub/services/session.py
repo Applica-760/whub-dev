@@ -157,6 +157,11 @@ with os.fdopen(lock_fd, "r+") as lock:
         command += "\n"
     entry = (
         f"## {payload['timestamp']} | {run_id} | {payload['purpose']}\n\n"
+        f"### 1. Linux GUI terminal\n\n"
+        f"{fence}bash\n"
+        f"bash .whub/session-launcher.sh {run_id}\n"
+        f"{fence}\n\n"
+        f"### 2. tmux session\n\n"
         f"{fence}bash\n{command}{fence}\n\n"
     ).encode()
     fd, name = tempfile.mkstemp(dir=handoff, prefix=f".{path.name}.", suffix=".tmp")

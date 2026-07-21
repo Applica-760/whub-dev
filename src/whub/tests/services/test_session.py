@@ -165,6 +165,11 @@ def test_handoff_script_prepends_exact_markdown_and_preserves_existing_bytes(
     assert result.returncode == 0, result.stderr
     first_content = (
         b"## 2026-07-21 12:34:56 JST | TASK-036-r001 | Rerun probe\n\n"
+        + b"### 1. Linux GUI terminal\n\n"
+        + b"````bash\n"
+        + b"bash .whub/session-launcher.sh TASK-036-r001\n"
+        + b"````\n\n"
+        + b"### 2. tmux session\n\n"
         + b"````bash\n"
         + command.encode()
         + b"````\n\nlegacy\r\n"
@@ -185,6 +190,11 @@ def test_handoff_script_prepends_exact_markdown_and_preserves_existing_bytes(
     assert result.returncode == 0, result.stderr
     assert commands.read_bytes() == (
         b"## 2026-07-21 12:35:00 JST | TASK-036-r001 | Latest probe\n\n"
+        b"### 1. Linux GUI terminal\n\n"
+        b"```bash\n"
+        b"bash .whub/session-launcher.sh TASK-036-r001\n"
+        b"```\n\n"
+        b"### 2. tmux session\n\n"
         b"```bash\necho latest\n```\n\n" + first_content
     )
 
@@ -216,6 +226,7 @@ def test_handoff_script_serializes_concurrent_updates(tmp_path: Path) -> None:
 
     content = (tmp_path / ".whub" / "handoff" / "commands.md").read_text()
     assert content.count("\n## ") + content.startswith("## ") == 8
+    assert content.count("bash .whub/session-launcher.sh TASK-036-r001\n") == 8
     for number in range(8):
         assert f"| probe {number}\n" in content
         assert f"echo command-{number}\n" in content

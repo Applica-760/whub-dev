@@ -1,0 +1,90 @@
+schema_version: 1
+task:
+  id: TASK-038
+  state: completed
+  title: session handoffへlauncher手順を内包する
+  objective: 各handoff entryへrun固有のsession-launcher commandを含め、Linux GUIで入るtmux IDを常に自己完結して提示する
+  approach:
+  - launcherとworkloadを同一Markdown entryの順序付きcode blockとして生成し、既存のcopy-only境界・履歴・atomic更新を維持する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: 各handoff entryの先頭手順にbash .whub/session-launcher.sh <RUN_ID>が含まれる
+  - id: ACC-002
+    statement: 既存command内容・履歴prepend・並行更新・権限の回帰テストが成功する
+  - id: ACC-003
+    statement: READMEとKnowledgeが新しいhandoff規約を示し、TASK-003-r002で実地確認できる
+  phases:
+  - title: 生成形式の実装
+    acceptance: []
+    steps:
+    - description: handoff Markdown generatorへrun固有launcher blockとworkload blockを順序付きで出力する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: command bytes・backtick fence・atomic prepend・0700/0600権限を維持する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 各entryへrun固有launcherとworkloadの2 blockを追加し、command fence・atomic prepend・既存権限処理を維持。focused
+      test 24件成功。
+    deleted: false
+  - title: テスト・文書・規約
+    acceptance: []
+    steps:
+    - description: serviceとCLIの回帰テストを新形式へ更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: READMEのRemote GUI session手順を自己完結handoff形式へ更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: whub knowledge CLIでhandoff規約を永続化する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - service期待byte列・並行更新test、CLI help、READMEを更新。Knowledgeへpol:session_handoff_is_self_containedをCLI追加しknowledge
+      check成功。
+    deleted: false
+  - title: 検証・実地確認
+    acceptance: []
+    steps:
+    - description: focused testと全pytestを実行する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: TASK-003-r002へ新形式handoffを生成しlauncherとworkloadの順序・run IDを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 全pytest 339件とgit diff --checkが成功。la-il TASK-003-r002へ新形式entryを生成し、Step 1に正しいlauncher、Step
+      2にworkloadがあることをSSH読取で確認。
+    deleted: false
+approvals:
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - TASK-003-r002実地entryとservice testでrun固有launcherを確認
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - focused 24件・全339件・diff check成功、並行更新と0700/0600の既存検証も成功
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - README・Knowledge更新とla-il実地handoffを確認
+change_requests: []
+cancellation: null
+result:
+  summary: whub session handoffの各entryをrun固有launcherとworkloadの2手順で自己完結化し、README・Knowledge・回帰testを更新。la-il
+    TASK-003-r002で実地確認済み。

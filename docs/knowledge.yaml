@@ -228,6 +228,9 @@ policies:
   session_observation_is_not_cancellation:
     statement: tmux attach・detachとlogs --followは観測操作としてworkload lifecycleから分離し、観測切断を停止操作に使わない。停止は対象processへ明示し、完了判定はdescriptorへ永続化されたpaneの終了code・signalで行う。
     ref: src/whub/session/launcher.py
+  session_handoff_is_self_contained:
+    statement: whub session handoffは各entryにrun固有launcherとworkloadを実行順で含め、Linux GUI側はlauncherで対象tmuxへ入った後にworkloadを明示copy実行する
+    ref: src/whub/services/session.py
 constraints:
   common_cli_delegates_resource_dispatch:
     statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する
