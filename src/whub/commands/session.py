@@ -17,6 +17,7 @@ from whub.services.session import (
     list_sessions,
     read_session_logs,
     reserve_session,
+    write_session_handoff,
 )
 from whub.utils.render import render_table
 
@@ -109,3 +110,27 @@ def clean(ctx: click.Context, project: str, run_id: str) -> None:
     """Delete one pending or finished run and its logs."""
     _invoke(lambda: clean_session(get_manifest(ctx), project, run_id))
     click.echo(f"cleaned {project} {run_id}")
+
+
+@session.command()
+@click.argument("project", shell_complete=project_names)
+@click.argument("run_id")
+@click.option("--purpose", required=True, help="Single-line purpose for this command.")
+@click.pass_context
+def handoff(ctx: click.Context, project: str, run_id: str, purpose: str) -> None:
+    """Prepend a stdin command to PROJECT's copy-only handoff Markdown."""
+    purpose = purpose.strip()
+    if not purpose or "\n" in purpose or "\r" in purpose:
+        raise click.UsageError("purpose must be one non-empty line")
+    stream = click.get_text_stream("stdin")
+    if stream.isatty():
+        raise click.UsageError("command must be provided via stdin")
+    command = stream.read()
+    if not command.strip():
+        raise click.UsageError("command input is required")
+    _invoke(
+        lambda: write_session_handoff(
+            get_manifest(ctx), project, run_id, purpose, command
+        )
+    )
+    click.echo(f"updated {project} .whub/handoff/commands.md for {run_id}")

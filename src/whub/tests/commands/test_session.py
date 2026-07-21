@@ -70,6 +70,64 @@ def test_clean_reports_running_run_rejection() -> None:
     assert "run is still running" in result.output
 
 
+def test_handoff_reads_command_from_stdin() -> None:
+    command = "PATH=\"$PWD/.venv/bin:$PATH\" uv run python probe.py\n"
+    with (
+        patch("whub.commands.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.session.write_session_handoff") as handoff,
+    ):
+        result = CliRunner().invoke(
+            session,
+            [
+                "handoff",
+                "remote",
+                "TASK-030-r001",
+                "--purpose",
+                "Rerun probe",
+            ],
+            input=command,
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code == 0
+    handoff.assert_called_once_with(
+        manifest(), "remote", "TASK-030-r001", "Rerun probe", command
+    )
+    assert "updated remote .whub/handoff/commands.md" in result.output
+
+
+def test_handoff_rejects_empty_stdin() -> None:
+    with (
+        patch("whub.commands.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.session.write_session_handoff") as handoff,
+    ):
+        result = CliRunner().invoke(
+            session,
+            ["handoff", "remote", "TASK-030-r001", "--purpose", "probe"],
+            input=" \n\t",
+        )
+
+    assert result.exit_code != 0
+    assert "command input is required" in result.output
+    handoff.assert_not_called()
+
+
+def test_handoff_rejects_multiline_purpose() -> None:
+    with (
+        patch("whub.commands.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.session.write_session_handoff") as handoff,
+    ):
+        result = CliRunner().invoke(
+            session,
+            ["handoff", "remote", "TASK-030-r001", "--purpose", "one\ntwo"],
+            input="echo ok\n",
+        )
+
+    assert result.exit_code != 0
+    assert "purpose must be one non-empty line" in result.output
+    handoff.assert_not_called()
+
+
 def test_logs_follow_streams_lines_and_strips_ansi() -> None:
     process = MagicMock()
     process.stdout = iter(["\x1b[31mlive line\x1b[0m\n"])

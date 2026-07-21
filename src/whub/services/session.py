@@ -1,11 +1,13 @@
 """Remote GUI session reservation, inspection, and cleanup."""
 from __future__ import annotations
 
+from datetime import datetime
 from importlib.resources import files
 import json
 import re
 import shlex
 import subprocess
+from zoneinfo import ZoneInfo
 
 import yaml
 from pydantic import ValidationError
@@ -119,6 +121,59 @@ shutil.rmtree(root / ".whub" / "runs" / run_id, ignore_errors=True)
 path.unlink()
 """
 
+_HANDOFF = r"""
+import fcntl, json, os, re, sys, tempfile
+from pathlib import Path
+root, run_id = Path(sys.argv[1]), sys.argv[2]
+payload = json.load(sys.stdin)
+runtime = root / ".whub"
+descriptor = runtime / "sessions" / f"{run_id}.yaml"
+if not descriptor.is_file() or descriptor.is_symlink():
+    raise SystemExit(f"unknown run: {run_id}")
+handoff = runtime / "handoff"
+handoff.mkdir(parents=True, exist_ok=True, mode=0o700)
+handoff.chmod(0o700)
+path = handoff / "commands.md"
+lock_path = handoff / "commands.lock"
+lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+with os.fdopen(lock_fd, "r+") as lock:
+    os.fchmod(lock.fileno(), 0o600)
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    if path.exists() and (path.is_symlink() or not path.is_file()):
+        raise SystemExit(f"unexpected handoff path: {path}")
+    existing = path.read_bytes() if path.exists() else b""
+    command = payload["command"]
+    fence_length = max(
+        3,
+        max((len(match.group()) for match in re.finditer(r"`+", command)), default=0) + 1,
+    )
+    fence = "`" * fence_length
+    if not command.endswith("\n"):
+        command += "\n"
+    entry = (
+        f"## {payload['timestamp']} | {run_id} | {payload['purpose']}\n\n"
+        f"{fence}bash\n{command}{fence}\n\n"
+    ).encode()
+    fd, name = tempfile.mkstemp(dir=handoff, prefix=f".{path.name}.", suffix=".tmp")
+    tmp = Path(name)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(entry + existing)
+            stream.flush()
+            os.fsync(stream.fileno())
+        tmp.chmod(0o600)
+        os.replace(tmp, path)
+        directory_fd = os.open(handoff, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        tmp.unlink(missing_ok=True)
+"""
+
+_JST = ZoneInfo("Asia/Tokyo")
+
 
 def _resource(manifest: Manifest, project: str) -> RemoteResource:
     try:
@@ -180,6 +235,32 @@ def get_session(manifest: Manifest, project: str, run_id: str) -> SessionDescrip
 
 def clean_session(manifest: Manifest, project: str, run_id: str) -> None:
     _python(_resource(manifest, project), _CLEAN, _validate_run_id(run_id))
+
+
+def write_session_handoff(
+    manifest: Manifest,
+    project: str,
+    run_id: str,
+    purpose: str,
+    command: str,
+) -> None:
+    """Prepend one copy-only command entry to a remote session handoff file."""
+    resource = _resource(manifest, project)
+    run_id = _validate_run_id(run_id)
+    purpose = purpose.strip()
+    if not purpose or "\n" in purpose or "\r" in purpose:
+        raise ServiceError("handoff purpose must be one non-empty line")
+    if not command.strip():
+        raise ServiceError("handoff command must not be empty")
+    payload = json.dumps(
+        {
+            "run_id": run_id,
+            "purpose": purpose,
+            "command": command,
+            "timestamp": datetime.now(_JST).strftime("%Y-%m-%d %H:%M:%S JST"),
+        }
+    )
+    _python(resource, _HANDOFF, run_id, input=payload)
 
 
 def read_session_logs(

@@ -52,18 +52,22 @@ plan:
     acceptance: []
     steps:
     - description: whub session handoff CLIと入力検証をcommands層へ実装する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: commandをJSON payloadでSSH stdinへ渡し、commands.mdをlock付き原子的に先頭更新するserviceを実装する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 空入力・不正purpose・未知run・local resource・SSH失敗をservice・CLIテストで検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - whub session handoff PROJECT RUN_ID --purpose TEXTを追加し、stdinのTTY・空入力と単一行purposeをCLIで検証した。serviceはrun
+      ID・purpose・commandを検証し、JST timestampを含むJSON payloadを既存SSH経路へ渡す。remote Pythonはdescriptor存在確認後、.whub/handoffを0700、commands.lockとcommands.mdを0600に設定し、flock内で既存bytesを保持して可変長bash
+      fence entryをtempfile・fsync・os.replaceで先頭挿入する。local resource、未知remote run、空入力を含むservice・CLI
+      22テスト、CLI help、git diff --checkが成功した。
     deleted: false
   - title: 回帰テストとremote実地検証を行う
     acceptance: []

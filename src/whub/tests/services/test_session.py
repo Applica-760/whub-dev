@@ -7,7 +7,13 @@ from unittest.mock import patch
 import pytest
 
 from whub.services.errors import ServiceError
-from whub.services.session import clean_session, get_session, list_sessions, reserve_session
+from whub.services.session import (
+    clean_session,
+    get_session,
+    list_sessions,
+    reserve_session,
+    write_session_handoff,
+)
 from whub.tests.helpers import manifest
 
 
@@ -52,6 +58,71 @@ def test_clean_delegates_to_remote_operation() -> None:
     with patch("whub.services.session.run_ssh_command", return_value=completed) as run:
         clean_session(manifest(), "remote", "TASK-030-r001")
     assert "TASK-030-r001" in run.call_args.args[1]
+
+
+def test_handoff_sends_command_as_json_over_ssh() -> None:
+    command = "PATH=\"$PWD/.venv/bin:$PATH\" uv run python - <<'PY'\nprint(`value`)\nPY\n"
+    completed = subprocess.CompletedProcess(["ssh"], 0, stdout="", stderr="")
+    with patch("whub.services.session.run_ssh_command", return_value=completed) as run:
+        write_session_handoff(
+            manifest(),
+            "remote",
+            "TASK-030-r001",
+            "Rerun probe",
+            command,
+        )
+
+    payload = json.loads(run.call_args.kwargs["input"])
+    assert payload["run_id"] == "TASK-030-r001"
+    assert payload["purpose"] == "Rerun probe"
+    assert payload["command"] == command
+    assert payload["timestamp"].endswith(" JST")
+
+
+@pytest.mark.parametrize("purpose", ["", "   ", "line one\nline two"])
+def test_handoff_rejects_invalid_purpose_before_ssh(purpose: str) -> None:
+    with (
+        patch("whub.services.session.run_ssh_command") as run,
+        pytest.raises(ServiceError, match="purpose"),
+    ):
+        write_session_handoff(
+            manifest(), "remote", "TASK-030-r001", purpose, "echo ok"
+        )
+    run.assert_not_called()
+
+
+def test_handoff_rejects_empty_command_before_ssh() -> None:
+    with (
+        patch("whub.services.session.run_ssh_command") as run,
+        pytest.raises(ServiceError, match="command"),
+    ):
+        write_session_handoff(
+            manifest(), "remote", "TASK-030-r001", "probe", " \n\t"
+        )
+    run.assert_not_called()
+
+
+def test_handoff_rejects_local_resource() -> None:
+    with pytest.raises(ServiceError, match="not a remote resource"):
+        write_session_handoff(
+            manifest(), "local", "TASK-030-r001", "probe", "echo ok"
+        )
+
+
+def test_handoff_reports_unknown_remote_run() -> None:
+    error = subprocess.CalledProcessError(
+        1,
+        ["ssh"],
+        output="",
+        stderr="unknown run: TASK-999-r001\n",
+    )
+    with (
+        patch("whub.services.session.run_ssh_command", side_effect=error),
+        pytest.raises(ServiceError, match="unknown run: TASK-999-r001"),
+    ):
+        write_session_handoff(
+            manifest(), "remote", "TASK-999-r001", "probe", "echo ok"
+        )
 
 
 def test_session_rejects_local_resource() -> None:
