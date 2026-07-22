@@ -11,6 +11,18 @@ class PathError(Exception):
     """Raised when a whub path cannot be resolved."""
 
 
+def find_context_root(start: Path) -> Path:
+    """Find the nearest Whub context at or above START."""
+    resolved_start = start.expanduser().resolve()
+    for candidate in (resolved_start, *resolved_start.parents):
+        if (candidate / ".whub" / "config.toml").is_file():
+            return candidate
+    raise PathError(
+        f"whub context not found from {resolved_start}: "
+        "expected .whub/config.toml in the current directory or an ancestor"
+    )
+
+
 def whub_root() -> Path:
     env = os.environ.get("WHUB_ROOT")
     if env:

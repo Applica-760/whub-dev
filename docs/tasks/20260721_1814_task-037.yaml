@@ -226,6 +226,10 @@ plan:
       repositoryだけで合意済みのcontext root探索・自己完結.whub・data_dir廃止を実装し、検証完了後にwheel等の固定artifactを真のStable版としてoperation
       repositoryへ導入する。operation側は.whub内の宣言的private管理情報をGit追跡し、runtime、cache、downloads、release
       artifact等の生成・可変データはGit追跡しない。development側.whubは将来公開可能な履歴を維持するため全体をGit追跡しない。'
+    - '2026-07-22: development repositoryのcore/paths.pyへfind_context_root(start)を旧whub_root()と並存追加した。startから親方向へ最寄りの.whub/config.tomlを探索し、未検出時はPathErrorとする純粋resolverで、既存path解決には未接続。operation
+      rootをcwd、development srcを実装元として比較した結果、legacy_whub_root=、新context_root=となり、package位置依存との差を確認。focused
+      7 tests、全339 tests、ruff check/format check成功。development側CodeGraphをGit除外のlocal
+      indexとして初期化し、236 files（Python 137）を開発path基準でindex化した。'
     deleted: false
   - title: 運用情報と開発情報をownerごとに段階整理する
     acceptance:
