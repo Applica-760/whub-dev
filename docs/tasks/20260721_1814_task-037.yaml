@@ -218,6 +218,8 @@ plan:
     log:
     - '2026-07-22: 移行期間中の実行規約として、TASK-037のLog・Task/Knowledge操作および移行作業のオーケストレーションは、動作確認済みのoperation
       repository由来whub/wflowをoperation rootから実行する（Whub Task/Knowledgeには--project whubを付与）。開発sourceの編集・test・buildはWhub開発Projectで行い、検証済み固定releaseへ切り替えるまで開発版CLIを運用経路へ混在させず、開発repositoryの独立性を段階的に高める。'
+    - '2026-07-22: context root解決規約として、package位置からrootを推定せず、コマンド起動時のcurrent working
+      directoryから親方向へ最寄りの.whub/config.tomlを探索し、その親directoryをcontext rootとして確定する。cwd直下で見つかればそこで停止し、Project解決や処理中のchdir後も起動時contextを変更しない。未検出時は暗黙推定せずエラーとする。'
     deleted: false
   - title: 運用情報と開発情報をownerごとに段階整理する
     acceptance:
