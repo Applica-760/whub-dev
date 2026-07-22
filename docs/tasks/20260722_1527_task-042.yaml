@@ -61,20 +61,24 @@ plan:
     acceptance: []
     steps:
     - description: whub-devのKnowledgeとBacklogが現行内容を所有していることを照合し、Knowledgeはwhub knowledge
-        add/rmで純粋Hub後の既定値・制約へ更新した上で、rootのdocs/knowledge.yamlとdocs/backlog.mdを複製として終了する。
-      state: pending
+        add/rmで純粋Hub後の既定値・制約へ更新する。rootのKnowledge・Backlog・ADR・Specs・Issuesがwhub-dev側と一致または移管済みと確認して、root
+        docs全体を複製として終了する。
+      state: done
       skip_reason: null
       deleted: false
     - description: root READMEから製品のcommand表・manifest仕様を除き、workspace rootの役割・構成・whub-dev
         READMEへの導線だけへ縮小する。rootのAgent設定と汎用CodeGraph MCPは保持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: root .codegraphをcodegraph uninitで終了し、Project別indexをprojectPath指定で参照できることを確認する。完了済みTodoのworkspace-hubラベルは履歴として変更しない。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - whub-dev Knowledge check成功。rootのKnowledge/Backlog/ADR/Specs/Issuesは同一または移管済みを照合してdocs複製を終了し、root
+      commit 1b4b097cへ記録。READMEをHubの役割とwhub-dev導線へ縮小。root CodeGraphをuninitし、whub-dev
+      indexをsyncしてprojectPath相当のProject別参照を確認。Todoは未完了0件・完了済みworkspace-hubラベル19件を履歴のまま維持。ユーザー変更の.gitignoreは対象外として保持。
     deleted: false
   - title: releaseとoperation contextをcutoverする
     acceptance: []
@@ -99,7 +103,10 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: rootがProject contentを所有しない方針をADR・Specs・Issuesにも一貫して適用し、whub-devとの完全一致確認後にroot
+    docs全体を終了するため。
 cancellation: null
 result: null

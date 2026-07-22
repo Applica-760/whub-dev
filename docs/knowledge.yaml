@@ -12,9 +12,6 @@ definitions:
   local:
     name: local
     definition: このコンピュータにあるprojectデータを表すresource属性
-  workspace_hub:
-    name: workspace-hub
-    definition: whubのsourceを持つproject兼repositoryであり、mount・link対象のresourceではない
   manifest:
     name: manifest
     definition: project・resource・接続情報を定義する設定ファイル
@@ -33,9 +30,6 @@ definitions:
   whub_cd:
     name: whub cd
     definition: projectまたはresourceへ移動し、localではパス移動、remoteではSSH接続するコマンド
-  whub_link:
-    name: whub link
-    definition: symlink resourceをworkspace-hub配下へ接続するコマンド
   whub_todo:
     name: whub todo
     definition: project横断のtodoを管理するコマンド
@@ -124,10 +118,6 @@ definitions:
   whub_knowledge:
     name: whub knowledge
     definition: projectのKnowledge YAMLを検証・照会・初期化・カテゴリ単位で一覧・追加・削除するコマンド
-  whub_boot:
-    name: whub boot
-    definition: Agent設定・Skill・CodeGraph初期化を各resourceへ配布するコマンド
-    ref: src/whub/commands/boot.py
   remote_gui_session:
     name: remote GUI session
     definition: Mac側whubがProjectの.gitignore対象.whubへ固定launcherとpending descriptorを生成し、Linux
@@ -139,6 +129,13 @@ definitions:
   whub_fetch:
     name: whub fetch
     definition: remoteのfileを現在のWhub contextにある.whub/downloadsへ取得するcommand
+  whub_link:
+    name: whub link
+    definition: symlink resourceをworkspace rootへ接続するコマンド
+  whub_boot:
+    name: whub boot
+    definition: Agent設定・Skillをworkspace rootと対象resourceへ配布し、対象resourceのCodeGraphを初期化するコマンド
+    ref: src/whub/commands/boot.py
 relations:
 - subject: def:project
   predicate: has_resource
@@ -150,9 +147,6 @@ relations:
 - subject: def:local
   predicate: is_a
   object: def:resource
-- subject: def:workspace_hub
-  predicate: is_a
-  object: def:project
 - subject: def:manifest
   predicate: defines
   object: def:project
@@ -248,8 +242,6 @@ constraints:
     statement: Task固有MermaidビューのPhaseは、deletedを削除済み、削除されていないStepがすべてdoneまたはskippedなら完了、それ以外を未完了として色分けする
   web_task_identity_is_project_and_task:
     statement: Web appでProject別Taskを扱う識別子はProject名とrepository内のTASK-IDの組とし、Task依存・割り込み関係は同じProjectのdocs/tasks内で解決する
-  web_project_selection_from_manifest:
-    statement: Web appのProject選択はmanifestに定義されたProjectから1つを選び、workspace-hubを初期選択する
   overview_project_scope:
     statement: OverviewのProject選択はTask一覧・Task間関係グラフ・Backlogだけに適用し、Todo・Inbox・Statusには適用しない
   distinguish_unavailable_and_empty_tasks:
@@ -292,8 +284,6 @@ constraints:
     statement: whub backlogは各projectのdocs/backlog.mdへ未整理メモを追記する
   app_pid_management:
     statement: whub appは.whub/app.pidで常駐serverを管理し、無引数で起動、app downで停止する
-  fetch_destination:
-    statement: whub fetchはworkspace-hub相対パスからresourceを解決し、downloads直下へ単一ファイルを同名上書きで保存する
   whub_runs_only_on_macbook:
     statement: whubはMacBook上だけで動作するCLIとする
   do_not_distribute_whub:
@@ -308,10 +298,6 @@ constraints:
     statement: backlogの読み書きなどWebでも使う処理はservicesに置く
   cli_specific_logic_in_commands:
     statement: statusの表示やbootの配布手順などCLI固有処理は各commandに置く
-  workspace_hub_has_no_resource:
-    statement: workspace-hubはmount・link・cd対象のresourceを持たない
-  workspace_hub_resolves_as_local_target:
-    statement: project内容を参照・編集する操作ではworkspace-hubのrepository rootを合成local targetとして解決できる
   knowledge_schema_in_model:
     statement: Knowledge YAMLの分類・必須フィールド・検証規則はsrc/whub/models/knowledge.pyをSSOTとする
   workflow_engine_is_domain_independent:
@@ -321,23 +307,16 @@ constraints:
     statement: Task依存はTask間だけに表し、PhaseやStepには持たせない
   task_workflow_definition_is_ssot:
     statement: Task Workflowの状態・遷移・条件・遷移時の記録はsrc/whub/wflow/definitions/task.yamlをSSOTとし、コードは汎用engineとTask固有の不変条件に限定する
-  task_yaml_location:
-    statement: Task YAMLの標準配置はrepository root相対のdocs/tasksとし、wflow task lsは無引数で同ディレクトリを再帰走査し、任意のTASK_DIR指定で対象を上書きする
   task_reference_resolution:
     statement: 単一Taskを対象にするwflow task commandはTASK-ID・その数字部分・Task YAML pathを受け、ID参照はdocs/tasksから一意に解決する
   workflow_transition_cli:
     statement: Task Workflowの宣言済みTransitionを適用するCLI commandはwflow task transitionとする
   task_steps_use_positional_references:
     statement: PhaseとStepはTask YAMLの記載順で識別し、安定IDを持たない。wflow task doneとskipはPPP-SSS形式の位置指定を受け、指定がなければ次の未完了Stepを対象にする
-  knowledge_project_option:
-    statement: whub knowledgeはproject未指定時にworkspace-hubを対象とし、他projectは--projectで単数指定する
   knowledge_ls_requires_category:
     statement: whub knowledge lsは対象projectのdef・rel・pol・con・excのうち、必須引数で指定した1カテゴリだけを表示する
   knowledge_cli_category_arguments:
     statement: whub knowledge addとrmはdef・rel・pol・con・excのカテゴリ略記を先頭に取り、entryカテゴリはslug、Relationはsubject・predicate・objectを後続引数に取る
-  boot_applies_agent_assets_only:
-    statement: whub bootは実行ファイルをremote hostへ頒布せず、Agent設定・Skill・CodeGraph初期化だけを対象resourceへ適用する
-    ref: src/whub/commands/boot.py
   core_context_centralizes_access:
     statement: core/context.pyのWhubContextはoperation rootとWhub所有fileへのpath・基本I/Oを一元化し、consumerは保存配置を直接組み立てない
     ref: src/whub/core/context.py
@@ -356,4 +335,20 @@ constraints:
     statement: operation releaseは.whub/releases/<release-id>配下のartifact/・venv/・release.jsonを1つのimmutable
       unitとして保持する。release-idはpackage versionと元commitから構成し、release.jsonはwheel hashと検証状態を記録する。active切替は検証済みunitへのcurrent参照だけをatomicに変更する。
     ref: src/whub/release.py
+  web_project_selection_from_manifest:
+    statement: Web appのProject選択はmanifestに定義されたProjectから1つを選び、whub-devを初期選択する
+  knowledge_project_option:
+    statement: whub knowledgeはProject未指定時にwhub-devを対象とし、他Projectは--projectで単数指定する
+  task_yaml_location:
+    statement: Task YAMLの標準配置は各Projectのrepository root相対docs/tasksとし、wflow taskはProject未指定時にwhub-devを対象、--projectで対象Project、各一覧commandのTASK_DIR引数で標準配置を上書きする
+  fetch_destination:
+    statement: whub fetchはworkspace root相対パスからresourceを解決し、現在のWhub contextのdownloads直下へ単一fileを同名上書きで保存する
+  boot_applies_agent_assets_only:
+    statement: whub bootは実行fileをremote hostへ頒布せず、workspace rootにはAgent設定・Skillだけを配布し、bootが有効なresourceにはAgent設定・Skill・CodeGraph初期化を適用する。workspace
+      rootをProjectまたはresourceとして扱わない
+    ref: src/whub/commands/boot.py
+  workspace_root_is_not_project:
+    statement: workspace rootはmanifest Projectでもresourceでもなく、固定user contextが指定するProject
+      resourceの投影先とする
+    ref: src/whub/core/context.py
 exceptions: {}
