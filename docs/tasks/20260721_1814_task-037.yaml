@@ -215,7 +215,9 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - '2026-07-22: 移行期間中の実行規約として、TASK-037のLog・Task/Knowledge操作および移行作業のオーケストレーションは、動作確認済みのoperation
+      repository由来whub/wflowをoperation rootから実行する（Whub Task/Knowledgeには--project whubを付与）。開発sourceの編集・test・buildはWhub開発Projectで行い、検証済み固定releaseへ切り替えるまで開発版CLIを運用経路へ混在させず、開発repositoryの独立性を段階的に高める。'
     deleted: false
   - title: 運用情報と開発情報をownerごとに段階整理する
     acceptance:
