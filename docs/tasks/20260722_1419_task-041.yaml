@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-041
-  state: draft
+  state: in_progress
   title: Whub operation contextを~/.whubへ固定する
   objective: Whub所有データ・runtime・releaseを~/.whubへ集約し、cwdとlogical PWDに依存する親探索を廃止して、Mac内のどのdirectoryからも一意のoperation
     contextを解決できるようにする
@@ -16,7 +16,20 @@ task:
   interruption_reason: null
   interruption_source_task_id: null
 plan:
-  acceptance: []
+  acceptance:
+  - id: ACC-001
+    statement: 通常のwhubとwflowはcwdやlogical PWDに依存せず~/.whubを唯一の既定contextとして使用し、workspace_rootはconfigで明示される。
+  - id: ACC-003
+    statement: manifest・todos・downloads・releases・PID・backupsを含むoperation dataが~/.whubへ一度だけ移行され、旧workspace-hub/.whubは残らず、移行前後の内容が照合されている。
+  - id: ACC-004
+    statement: 通常CLIとWeb appが~/.whub/releasesの検証済み非editable releaseから動作し、workspace
+      rootのStable .venvも同releaseを指す。
+  - id: ACC-005
+    statement: Web appでmanifest全文とparse errorをread-only表示でき、manifest不正時にも内容とerrorを確認できる。
+  - id: ACC-006
+    statement: 関連するbackend/frontend test、build、smoke test、Knowledge検証が成功し、旧context前提が残っていない。
+  - id: ACC-007
+    statement: CLIはcontext切替optionを持たず、親探索・環境変数override・data_dir・dual-readを使用しない。開発・testの分離contextはWhubContextの直接注入だけで扱える。
   phases:
   - title: 固定user context方式へ補正する
     acceptance: []
@@ -50,9 +63,86 @@ plan:
       skip_reason: null
       deleted: false
     log: []
+    deleted: true
+  - title: 固定user context契約を実装する
+    acceptance: []
+    steps:
+    - description: WhubContextを直接context directoryを表すモデルへ変更し、既定を~/.whub、workspace
+        rootをconfig.tomlのworkspace_rootで明示する。親探索・logical PWD・cwd依存を除去する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: whub initは~/.whubとworkspace_rootを初期化する。CLIのcontext切替optionは追加せず、開発・testの分離contextはWhubContextを直接構築・注入して扱う。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: manifest・todo・downloads・releases・PID・link・vscode・Project content等の全consumerを新Contextへ切り替え、unit/CLI
+        testで既定・明示context・不正configを検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - WhubContextを直接context directoryとして扱い、current_contextは~/.whub固定、workspace_rootはconfig.toml必須へ変更した。CLI
+      context optionは追加せず、親探索・logical PWD依存を除去。init/link/vscode/manifestとtest fixtureを切替え、focused
+      66件・全355 pytest・変更対象ruff check成功。開発.venv/bin CLIの既知hidden .pth問題はPhase 004のclean
+      releaseで検証する。
     deleted: false
-approvals: []
+  - title: Web appでmanifestを観測可能にする
+    acceptance: []
+    steps:
+    - description: manifestのraw内容とparse errorを同時に返し、manifestが不正でも取得できるread-only APIを追加する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Web appへManifest画面を追加し、全文とparse errorを表示する。Frontend test・format・buildとAPI
+        testを完了する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: operation dataと固定releaseを~/.whubへcutoverする
+    acceptance: []
+    steps:
+    - description: 検証済みwheelをbuildし、~/.whub/releases/<release-id>へimmutable release
+        unitとして非editable installする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 稼働processと移行元を確認し、manifest・todos・downloads・releases・PID・1.5GBのbackupsを含むworkspace-hub/.whub全体をhash/件数記録後に~/.whubへ一度だけ移す。衝突時は停止し、dual-readや自動migrationは実装しない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: workspace rootのStable .venvとcurrent参照を新releaseへ切り替え、任意directoryから通常CLI/Web
+        appが動くこと、rollback可能性、旧workspace-hub/.whub不在を検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 最終検証とKnowledge更新を完了する
+    acceptance: []
+    steps:
+    - description: 任意directoryからwhub/wflowが同じ~/.whubを選ぶ統合testと代表smoke testを実施し、開発・test用の分離contextはWhubContextの直接注入で検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv run pytest、pre-commit、Frontend test/format/build、wheel install、Web
+        manifest表示を検証し、結果を記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: context/data_dir/PWD探索に関するKnowledgeをwhub knowledge add/rmで更新し、READMEと実装を一致させ、移行元と旧前提を終了する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: --context CLIは追加せず、通常contextを~/.whubへ固定し、開発・testの分離contextはWhubContextの直接注入だけで扱う単純な設計へ変更するため。
 cancellation: null
 result: null

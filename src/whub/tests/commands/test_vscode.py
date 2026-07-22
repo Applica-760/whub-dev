@@ -32,7 +32,7 @@ class TestVscodeSpec:
             patch("whub.commands.vscode.get_manifest", return_value=manifest()),
             patch(
                 "whub.commands.vscode.current_context",
-                return_value=SimpleNamespace(root=tmp_path),
+                return_value=SimpleNamespace(workspace_root=tmp_path),
             ),
         ):
             first = CliRunner().invoke(vscode, catch_exceptions=False)

@@ -2,91 +2,79 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
+import tomllib
 
 
 class PathError(Exception):
     """Raised when a Whub context path cannot be resolved."""
 
 
-def find_context_root(start: Path) -> Path:
-    """Find the nearest Whub context at or above START."""
-    expanded_start = start.expanduser()
-    absolute_start = (
-        expanded_start if expanded_start.is_absolute() else Path.cwd() / expanded_start
-    )
-    for candidate in (absolute_start, *absolute_start.parents):
-        if (candidate / ".whub" / "config.toml").is_file():
-            return candidate
-    raise PathError(
-        f"whub context not found from {absolute_start}: "
-        "expected .whub/config.toml in the current directory or an ancestor"
-    )
-
-
-def invocation_path() -> Path:
-    """Return a verified logical invocation path when available."""
-    physical = Path.cwd()
-    value = os.environ.get("PWD")
-    if not value:
-        return physical
-
-    logical = Path(value).expanduser()
-    if not logical.is_absolute():
-        return physical
-    try:
-        if logical.samefile(physical):
-            return logical
-    except OSError:
-        pass
-    return physical
+DEFAULT_CONTEXT_DIR = Path.home() / ".whub"
 
 
 @dataclass(frozen=True)
 class WhubContext:
     """Access Whub-owned files without exposing their storage layout."""
 
-    root: Path
-
-    @classmethod
-    def discover(cls) -> WhubContext:
-        """Resolve the nearest context from the verified invocation path."""
-        return cls(find_context_root(invocation_path()))
+    directory: Path
 
     @property
-    def config_dir(self) -> Path:
-        return self.root / ".whub"
+    def workspace_root(self) -> Path:
+        try:
+            config = tomllib.loads(self.config_path.read_text())
+        except FileNotFoundError as error:
+            raise PathError(f"whub config not found: {self.config_path}") from error
+        except (OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
+            raise PathError(
+                f"invalid whub config: {self.config_path}: {error}"
+            ) from error
+
+        value = config.get("workspace_root")
+        if not isinstance(value, str) or not value.strip():
+            raise PathError(
+                f"invalid whub config: {self.config_path}: "
+                "workspace_root must be a non-empty absolute path"
+            )
+        root = Path(value).expanduser()
+        if not root.is_absolute():
+            raise PathError(
+                f"invalid whub config: {self.config_path}: "
+                "workspace_root must be a non-empty absolute path"
+            )
+        if not root.is_dir():
+            raise PathError(f"workspace root does not exist: {root}")
+        return root
 
     @property
     def config_path(self) -> Path:
-        return self.config_dir / "config.toml"
+        return self.directory / "config.toml"
 
     @property
     def manifest_path(self) -> Path:
-        return self.config_dir / "manifest.yaml"
+        return self.directory / "manifest.yaml"
 
     @property
     def todo_path(self) -> Path:
-        return self.config_dir / "todos.yaml"
+        return self.directory / "todos.yaml"
 
     @property
     def downloads_dir(self) -> Path:
-        return self.config_dir / "downloads"
+        return self.directory / "downloads"
 
     @property
     def releases_dir(self) -> Path:
-        return self.config_dir / "releases"
+        return self.directory / "releases"
 
     @property
     def app_pid_path(self) -> Path:
-        return self.config_dir / "app.pid"
+        return self.directory / "app.pid"
 
     @property
     def app_dev_pid_path(self) -> Path:
-        return self.config_dir / "app-dev.pid"
+        return self.directory / "app-dev.pid"
 
     def read_manifest_text(self) -> str:
         return self.manifest_path.read_text()
@@ -103,8 +91,8 @@ class WhubContext:
 
 @cache
 def current_context() -> WhubContext:
-    """Return the process-wide operation context."""
-    return WhubContext.discover()
+    """Return the fixed user operation context."""
+    return WhubContext(DEFAULT_CONTEXT_DIR)
 
 
 def reset_context() -> None:

@@ -49,13 +49,19 @@ def test_wheel_serves_packaged_app_from_operation_context(tmp_path: Path) -> Non
     assert install.returncode == 0, install.stderr
 
     context_root = tmp_path / "operation"
-    config_dir = context_root / ".whub"
+    context_root.mkdir()
+    fake_home = tmp_path / "home"
+    config_dir = fake_home / ".whub"
     config_dir.mkdir(parents=True)
-    (config_dir / "config.toml").write_text("")
+    (config_dir / "config.toml").write_text(f'workspace_root = "{context_root}"\n')
     probe = subprocess.run(
         [sys.executable, "-c", _INSTALLED_WHEEL_PROBE, str(installed)],
         cwd=context_root,
-        env={**os.environ, "PYTHONPATH": str(installed)},
+        env={
+            **os.environ,
+            "HOME": str(fake_home),
+            "PYTHONPATH": str(installed),
+        },
         capture_output=True,
         text=True,
     )
@@ -78,7 +84,8 @@ from whub.webapp.server import create_app
 
 installed = Path(sys.argv[1]).resolve()
 assert Path(whub.__file__).resolve().is_relative_to(installed)
-assert current_context().root == Path.cwd()
+assert current_context().directory == Path.home() / ".whub"
+assert current_context().workspace_root == Path.cwd()
 dist_dir = packaged_app_dist()
 assert dist_dir.is_relative_to(installed)
 client = TestClient(create_app(dist_dir))

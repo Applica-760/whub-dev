@@ -50,12 +50,12 @@ def _app_context(tmp_path):
 
 
 class TestWebappServer:
-    def test_app_pid_paths_use_context_root(self, tmp_path):
+    def test_app_pid_paths_use_context_directory(self, tmp_path):
         # ケース10
         context = WhubContext(tmp_path)
 
-        assert context.app_pid_path == tmp_path / ".whub" / "app.pid"
-        assert context.app_dev_pid_path == tmp_path / ".whub" / "app-dev.pid"
+        assert context.app_pid_path == tmp_path / "app.pid"
+        assert context.app_dev_pid_path == tmp_path / "app-dev.pid"
 
     def test_health(self, tmp_path):
         # ケース1

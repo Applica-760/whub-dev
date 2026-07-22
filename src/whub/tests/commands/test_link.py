@@ -34,7 +34,7 @@ def _invoke_link(m, health_side_effect, *, symlink_to_side_effect=None, cwd=None
         patch.object(Path, "cwd", return_value=cwd or Path("/tmp/test-cwd")),
         patch(
             "whub.commands.link.current_context",
-            return_value=SimpleNamespace(root=cwd or Path("/tmp/test-cwd")),
+            return_value=SimpleNamespace(workspace_root=cwd or Path("/tmp/test-cwd")),
         ),
     ):
         return CliRunner().invoke(link, catch_exceptions=False)
@@ -55,7 +55,7 @@ class TestLinkSpec:
             patch.object(Path, "cwd", return_value=tmp_path),
             patch(
                 "whub.commands.link.current_context",
-                return_value=SimpleNamespace(root=tmp_path),
+                return_value=SimpleNamespace(workspace_root=tmp_path),
             ),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
@@ -75,7 +75,7 @@ class TestLinkSpec:
             patch.object(Path, "cwd", return_value=tmp_path),
             patch(
                 "whub.commands.link.current_context",
-                return_value=SimpleNamespace(root=tmp_path),
+                return_value=SimpleNamespace(workspace_root=tmp_path),
             ),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
@@ -95,7 +95,7 @@ class TestLinkSpec:
             patch.object(Path, "cwd", return_value=tmp_path),
             patch(
                 "whub.commands.link.current_context",
-                return_value=SimpleNamespace(root=tmp_path),
+                return_value=SimpleNamespace(workspace_root=tmp_path),
             ),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
@@ -115,7 +115,7 @@ class TestLinkSpec:
             patch.object(Path, "cwd", return_value=tmp_path),
             patch(
                 "whub.commands.link.current_context",
-                return_value=SimpleNamespace(root=tmp_path),
+                return_value=SimpleNamespace(workspace_root=tmp_path),
             ),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
@@ -134,7 +134,7 @@ class TestLinkSpec:
             patch.object(Path, "cwd", return_value=tmp_path),
             patch(
                 "whub.commands.link.current_context",
-                return_value=SimpleNamespace(root=tmp_path),
+                return_value=SimpleNamespace(workspace_root=tmp_path),
             ),
         ):
             CliRunner().invoke(link, catch_exceptions=False)
@@ -160,7 +160,7 @@ class TestLinkSpec:
             patch.object(Path, "cwd", return_value=tmp_path),
             patch(
                 "whub.commands.link.current_context",
-                return_value=SimpleNamespace(root=tmp_path),
+                return_value=SimpleNamespace(workspace_root=tmp_path),
             ),
         ):
             CliRunner().invoke(link, catch_exceptions=False)
@@ -176,7 +176,7 @@ class TestLinkSpec:
             patch.object(Path, "cwd", return_value=tmp_path / "other"),
             patch(
                 "whub.commands.link.current_context",
-                return_value=SimpleNamespace(root=tmp_path),
+                return_value=SimpleNamespace(workspace_root=tmp_path),
             ),
         ):
             result = CliRunner().invoke(link)

@@ -76,7 +76,7 @@ class SymlinkResource(BaseResource):
 
 def workspace_hub_resource() -> SymlinkResource:
     """workspace-hub自身をlocal targetとして扱う合成resource"""
-    root = current_context().root
+    root = current_context().workspace_root
     resource = SymlinkResource(type="symlink", workspace_path=".", source=str(root))
     resource._resolved_workspace_path = root
     return resource
@@ -134,7 +134,7 @@ class Manifest(SchemaModel):
         if duplicate_paths:
             raise ValueError(f"duplicate workspace_path: {', '.join(duplicate_paths)}")
 
-        root = current_context().root
+        root = current_context().workspace_root
         for project in self.projects:
             resource = project.resource
             if isinstance(resource, SymlinkResource):

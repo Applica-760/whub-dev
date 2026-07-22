@@ -58,7 +58,7 @@ def _merge_settings(existing: dict[str, Any], manifest: Manifest) -> dict[str, A
 @click.pass_context
 def vscode(ctx: click.Context) -> None:
     """Generate VS Code exclusions from manifest resources."""
-    settings_path = current_context().root / ".vscode" / "settings.json"
+    settings_path = current_context().workspace_root / ".vscode" / "settings.json"
     settings = _merge_settings(_load_settings(settings_path), get_manifest(ctx))
     content = json.dumps(settings, ensure_ascii=False, indent=2) + "\n"
 

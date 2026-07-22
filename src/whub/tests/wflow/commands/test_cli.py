@@ -179,9 +179,13 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
     data = manifest_data()
     data["projects"][0]["resource"]["source"] = str(local_root)
     data["projects"].append({"name": "workspace-hub"})
+    context_dir = tmp_path / "task-context"
+    context_dir.mkdir()
+    context_dir.joinpath("config.toml").write_text(f'workspace_root = "{hub_root}"\n')
+    context = WhubContext(context_dir)
     with patch(
         "whub.models.manifest.current_context",
-        return_value=WhubContext(hub_root),
+        return_value=context,
     ):
         loaded_manifest = Manifest.model_validate(data)
     monkeypatch.chdir(hub_root)
@@ -201,7 +205,7 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
         ),
         patch(
             "whub.models.manifest.current_context",
-            return_value=WhubContext(hub_root),
+            return_value=context,
         ),
     ):
         remote = CliRunner().invoke(

@@ -126,7 +126,12 @@ class TestManifestSpec:
     def test_validation_sets_resolved_resource_attributes(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             # ケース7
-            context = WhubContext(Path(root))
+            context_dir = Path(root) / "context"
+            context_dir.mkdir()
+            context_dir.joinpath("config.toml").write_text(
+                f'workspace_root = "{root}"\n'
+            )
+            context = WhubContext(context_dir)
             with patch("whub.models.manifest.current_context", return_value=context):
                 manifest = Manifest.model_validate(manifest_data())
 
@@ -138,8 +143,12 @@ class TestManifestSpec:
 
     def test_load_manifest_reports_user_facing_errors(self) -> None:
         with tempfile.TemporaryDirectory() as root:
-            context = WhubContext(Path(root))
-            context.config_dir.mkdir()
+            context_dir = Path(root) / "context"
+            context_dir.mkdir()
+            context_dir.joinpath("config.toml").write_text(
+                f'workspace_root = "{root}"\n'
+            )
+            context = WhubContext(context_dir)
             # ケース8
             with patch("whub.models.manifest.current_context", return_value=context):
                 with pytest.raises(ManifestError, match="manifest.yaml not found"):

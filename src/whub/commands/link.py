@@ -45,7 +45,7 @@ def _update_gitignore(top_dirs: set[str]) -> None:
 @click.pass_context
 def link(ctx: click.Context) -> None:
     """Create symlinks declared in the manifest."""
-    if Path.cwd() != current_context().root:
+    if Path.cwd() != current_context().workspace_root:
         raise click.ClickException("whub link must be run from the workspace-hub root")
     m = get_manifest(ctx)
     created = skipped = warnings = 0
