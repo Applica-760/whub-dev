@@ -348,4 +348,8 @@ constraints:
       app sourceからsrc/whub/webapp/distへ生成してwheelに同梱したpackage resourceだけを配信する。whub
       app devだけがdevelopment checkoutのapp sourceを使用する。
     ref: src/whub/webapp/resources.py
+  operation_release_is_immutable_unit:
+    statement: operation releaseは.whub/releases/<release-id>配下のartifact/・venv/・release.jsonを1つのimmutable
+      unitとして保持する。release-idはpackage versionと元commitから構成し、release.jsonはwheel hashと検証状態を記録する。active切替は検証済みunitへのcurrent参照だけをatomicに変更する。
+    ref: src/whub/release.py
 exceptions: {}

@@ -308,39 +308,39 @@ plan:
     steps:
     - description: Whub開発Projectの検証済みmain commitでWeb appをbuildし、Python CLI、wflow、Web
         APIと対応する静的distを同じrelease入力として扱う。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: whub/wflow実装、Pydantic schema、Task Workflow定義、Task固有検証、Web API、Web
         app dist、package既定resourceを同一wheelまたは同一versionのartifactへ格納し、operation .whubをartifactへ混入させない。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: artifactにversionと元commitを記録し、運用中のwhub/wflowから確認できるようにする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 外部release serviceを使用せず、検証対象のlocal artifactをoperation .whub/releases/<version>へ非Git追跡で配置し、active切替前のrelease
         candidateとして保持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: cleanな非editable環境へartifactをインストールし、development srcをimportせず、一時.whubおよびoperation
         cwdの双方でCLIとWeb appがpackage位置非依存で起動することを検証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Web app distまたは必須package resourceが欠落したartifactを昇格できない検証を設ける。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Whub開発Projectでuv run pytest、pre-commit、Frontend format/buildに加え、operation
         root cwdからのuv run --projectとwheel context解決の全検証を実行する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 検証済みartifactのversion、元commit、wheel hash、検証結果をrelease candidateとしてTASK-037へ記録する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -349,6 +349,13 @@ plan:
       repositoryへ非editableで導入し、旧source・appに依存しないこととrollbackを検証してから旧実装を除去する。
     - '2026-07-22: ユーザー承認により、operation releaseは.whub/releases/<release-id>を単なるwheel置場ではなく、artifact/・venv/・release.jsonを持つimmutable
       release unitとして配置する。release-idはpackage versionと元commitを含め、検証後のactive切替はcurrent参照で別Phaseに実施する。'
+    - 'Phase 5完了: source commit=b10e981c07d4da4fb19413fc1a0e73c793718860、release ID=0.1.0+gb10e981c。Frontend
+      format/Vitest 13/build、focused 35、全355 pytest、operation rootからuv run --project明示pathの355
+      pytest、pre-commit成功。wheel=whub-0.1.0-py3-none-any.whl、SHA-256=ec3c4dae117b5d8920908250c42ab5c1eefd87fe482a5fe6d2a240513a8e5f1f、Web
+      dist 71 entriesとbuild metadataを収録しoperation data非混入を確認。.whub/releases/0.1.0+gb10e981c/{artifact,venv,release.json}へ非editable
+      install。candidate CLIのversion/commit、site-packages import、一時context、operation
+      Task/Knowledge/status、8710 static/API起動停止、physical development checkout拒否、必須resource/hash照合に成功。開発venvの既知hidden
+      .pthは2 fileのflag解除後uv run --project成功。'
     deleted: false
   - title: operation .whubとCLIを検証済み固定releaseへatomic cutoverする
     acceptance:
