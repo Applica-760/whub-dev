@@ -222,6 +222,10 @@ plan:
       directoryから親方向へ最寄りの.whub/config.tomlを探索し、その親directoryをcontext rootとして確定する。cwd直下で見つかればそこで停止し、Project解決や処理中のchdir後も起動時contextを変更しない。未検出時は暗黙推定せずエラーとする。'
     - '2026-07-22: context data配置契約として、operation/development双方のrepositoryは各root直下に自己完結した.whubを持ち、Whubが所有するprivateなconfig.toml、manifest.yaml、todos.yaml、downloads、runtime、releasesを同一context配下へ集約する。operation側.whubを実運用SSOT、development側.whubを独立した開発・検証contextとし、開発コードで実運用contextを検証する場合はoperation
       rootをcwdとして起動時contextを選ぶ。外部data_dirとWHUB_DATA_DIRは移行互換後に廃止する。各要素のGit追跡・ignore境界は別途決定する。将来公開時にprivate履歴の除去または公開用repository再作成が必要となるトレードオフを受容する。'
+    - '2026-07-22: cutover契約として、operation repository由来の現行whub/wflowを移行期間中の擬似Stable版として固定し、旧sourceへ変更を加えない。development
+      repositoryだけで合意済みのcontext root探索・自己完結.whub・data_dir廃止を実装し、検証完了後にwheel等の固定artifactを真のStable版としてoperation
+      repositoryへ導入する。operation側は.whub内の宣言的private管理情報をGit追跡し、runtime、cache、downloads、release
+      artifact等の生成・可変データはGit追跡しない。development側.whubは将来公開可能な履歴を維持するため全体をGit追跡しない。'
     deleted: false
   - title: 運用情報と開発情報をownerごとに段階整理する
     acceptance:
