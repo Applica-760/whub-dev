@@ -24,8 +24,6 @@ plan:
   - id: ACC-004
     statement: 通常CLIとWeb appが~/.whub/releasesの検証済み非editable releaseから動作し、workspace
       rootのStable .venvも同releaseを指す。
-  - id: ACC-005
-    statement: Web appでmanifest全文とparse errorをread-only表示でき、manifest不正時にも内容とerrorを確認できる。
   - id: ACC-006
     statement: 関連するbackend/frontend test、build、smoke test、Knowledge検証が成功し、旧context前提が残っていない。
   - id: ACC-007
@@ -100,25 +98,29 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: operation dataと固定releaseを~/.whubへcutoverする
     acceptance: []
     steps:
     - description: 検証済みwheelをbuildし、~/.whub/releases/<release-id>へimmutable release
         unitとして非editable installする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 稼働processと移行元を確認し、manifest・todos・downloads・releases・PID・1.5GBのbackupsを含むworkspace-hub/.whub全体をhash/件数記録後に~/.whubへ一度だけ移す。衝突時は停止し、dual-readや自動migrationは実装しない。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: workspace rootのStable .venvとcurrent参照を新releaseへ切り替え、任意directoryから通常CLI/Web
         appが動くこと、rollback可能性、旧workspace-hub/.whub不在を検証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - wheel d13b612b（sha256 17e3252e...）を~/.whub/releases/0.1.0+gd13b612bへ非editable
+      installした。workspace-hub/.whubを衝突なしで一度だけrenameし、manifest/todos/wheel hash、Backups
+      97,107 files・10,843 dirs・1,565,144 KiBが移動前後で一致。currentとworkspace .venvは新releaseを参照し、旧releaseもrollback用に保持。旧workspace-hub/.whub不在、/tmpからwhub
+      status・wflow check成功、Web appはHTTP 200と/api/health okを確認した。
     deleted: false
   - title: 最終検証とKnowledge更新を完了する
     acceptance: []
@@ -127,8 +129,7 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    - description: uv run pytest、pre-commit、Frontend test/format/build、wheel install、Web
-        manifest表示を検証し、結果を記録する。
+    - description: uv run pytest、pre-commit、Frontend test/format/build、wheel installを検証し、結果を記録する。
       state: pending
       skip_reason: null
       deleted: false
@@ -141,8 +142,10 @@ plan:
 approvals:
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: --context CLIは追加せず、通常contextを~/.whubへ固定し、開発・testの分離contextはWhubContextの直接注入だけで扱う単純な設計へ変更するため。
+- reason: Manifest表示はContext移行と分離し、モデルへ表示責務を持ち込まず、現時点では実装しないため。
 cancellation: null
 result: null
