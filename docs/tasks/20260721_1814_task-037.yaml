@@ -347,6 +347,8 @@ plan:
     - 長期実行順序を確定する。第一に割り込みTASK-039でWhubContextの.whub直下backend化を全検証・commitまで完了する。第二にTASK-037をresumeしてWeb
       app sourceを開発repositoryのSSOT、build済みdistをCLI release artifact同梱物とするfrontend分離タスクを新たな割り込みとして実施する。第三にその成果を含む固定artifactをoperation
       repositoryへ非editableで導入し、旧source・appに依存しないこととrollbackを検証してから旧実装を除去する。
+    - '2026-07-22: ユーザー承認により、operation releaseは.whub/releases/<release-id>を単なるwheel置場ではなく、artifact/・venv/・release.jsonを持つimmutable
+      release unitとして配置する。release-idはpackage versionと元commitを含め、検証後のactive切替はcurrent参照で別Phaseに実施する。'
     deleted: false
   - title: operation .whubとCLIを検証済み固定releaseへatomic cutoverする
     acceptance:

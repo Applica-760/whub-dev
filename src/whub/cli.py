@@ -20,6 +20,7 @@ from whub.commands.status import status
 from whub.commands.todo import todo
 from whub.commands.vscode import vscode
 from whub.core.context import PathError
+from whub.release import release_version_option
 
 
 class WhubGroup(click.Group):
@@ -31,6 +32,7 @@ class WhubGroup(click.Group):
 
 
 @click.group(cls=WhubGroup)
+@release_version_option("whub")
 def main() -> None:
     """workspace-hub: manage workspaces from a single manifest."""
 

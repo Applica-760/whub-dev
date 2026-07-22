@@ -39,6 +39,7 @@ def test_context_uses_whub_directory_directly(
     assert context.manifest_path == root / ".whub/manifest.yaml"
     assert context.todo_path == root / ".whub/todos.yaml"
     assert context.downloads_dir == root / ".whub/downloads"
+    assert context.releases_dir == root / ".whub/releases"
 
 
 def test_legacy_environment_overrides_are_ignored(

@@ -33,6 +33,9 @@ app/dist/
 src/whub/webapp/dist/
 app/node_modules
 
+# Release build metadata
+src/whub/_build.json
+
 # whub link (auto-generated)
 /projects
 /vault

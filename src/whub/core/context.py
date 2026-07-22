@@ -77,6 +77,10 @@ class WhubContext:
         return self.config_dir / "downloads"
 
     @property
+    def releases_dir(self) -> Path:
+        return self.config_dir / "releases"
+
+    @property
     def app_pid_path(self) -> Path:
         return self.config_dir / "app.pid"
 
