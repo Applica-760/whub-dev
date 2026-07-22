@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-035
-  state: in_progress
+  state: completed
   title: Bootを廃止しProject Agent設定とCodeGraphを再編する
   objective: Agentの入口をhubへ統一し、各Projectが固有AGENTS.mdだけを管理する運用へ移行した上で、Bootを廃止してCodeGraph初期化を独立コマンドへ移し、配布済み共通ルール・Skillとpackage
     asset配置を整理する
@@ -120,10 +120,16 @@ plan:
       skip_reason: null
       deleted: false
     - description: CodeGraphとSessionのfocused test、全Backend test、ruff、sdist・wheelのasset収録とインストール後resource解決を検証し、Phase成果をcommitする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - Bootをwhub codegraphへ置換し、BaseResource.bootをcodegraphへ改名。Session launcherをsrc/whub/assets/sessionへ移動し、旧boot/session
+      directoryを除去。focused 30件・全Backend 353件・変更対象ruff・diff check・Knowledge check成功。repo-wide
+      ruffは差分外の既存3件を検出。wheel SHA-256=1b589ec73268976914ae0ae9c9267db14353fc164e6a4a13fa77bf6144fa9350、source
+      commit=136c2263b78566665519d6c5c9706b67aaa81033、release=0.1.0+g136c2263。wheel内にcodegraph
+      commandとSession assetを収録しBoot非収録、隔離install、Python/Bash構文、CLI help、非editable
+      importを検証。運用manifestの10 boot keyをcodegraphへ移行しcurrentを新releaseへ切替、通常whub version/status成功。
     deleted: false
   - title: 各Projectを固有AGENTS運用へ移行する
     acceptance:
@@ -134,39 +140,70 @@ plan:
         indexは維持されている。
     steps:
     - description: 移行matrixに従って各Project rootのAGENTS.mdからBoot配布の共通managed blockだけを除去し、既存のProject固有指示を保持する。AGENTS.mdがないProjectには実装に基づくProject固有AGENTS.mdを作成する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 各ProjectのCLAUDE.md、Codex・Claude設定、MCP設定からBoot配布物だけを除去し、独立したProject固有設定があれば保持する。共通指示をAGENTS.md以外へ複製しない。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 各Projectの.agents/skillsと.claude/skillsからBoot配布の共通Skillだけを削除し、Project固有Skillとhub側Skillを保持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 各ProjectのgitignoreからAgent配布物用entryと不要になったmanaged blockを除去し、.codegraph/とSession用.whub/のIgnoreは維持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 各Projectで意図したAGENTS.mdとcleanup以外の差分がないこと、共通ルール・共通Skillが再生成されないことを確認し、追跡対象の変更をProjectごとに検証・commitする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: whub codegraphをcodegraph有効なlocal・remote Projectでsmoke testし、CodeGraph初期化後もAgent配布物が生成されず、hubから各Project
         AGENTSを読んで作業開始できることを確認する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 各ProjectのAGENTS・共通ルール・共通Skill・Agent設定・MCP設定・Ignoreの整理はユーザーが手動で完了し、完了扱いとするよう明示。Project整理step
+      005-001〜005-005を完了記録へ移行した。
+    - PATH上の通常コマンド whub codegraph を実行し、codegraph有効なportfolio、recruit、doc-drill、sns-lab、solution-sprints、research-slide、esn-lab、la-il、privateの9
+      Projectすべてでcodegraph initが成功した。workspace rootと無効Projectは対象外。Project整理はユーザー確認により完了扱い。
     deleted: false
 approvals:
 - actor: user
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - hub AGENTSに対象Project root AGENTSの事前読込・取得不能時停止を規定し、CLAUDEはhub AGENTSをimportする。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - 共通ルールと5共通Skillをhub側で確認し、Project側整理はユーザー確認により完了扱い。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - 旧boot/session directoryを除去し、Session assetのsource・wheel・install後解決を検証済み。
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - 各Projectの固有AGENTS運用と配布物整理はユーザーが手動完了し、完了扱いを明示。
+- acceptance: ACC-006
+  status: passed
+  evidence:
+  - Project整理完了をユーザー確認し、whub codegraph後も対象9 Projectの初期化が成功。
+- acceptance: ACC-007
+  status: passed
+  evidence:
+  - bootをcodegraph field・whub codegraphへ置換し、focused/full test、Knowledge check、release、実manifest、9
+    Project smoke testを検証。
 change_requests:
 - reason: Boot廃止、boot flagを流用するwhub codegraph新設、Project別AGENTS運用、配布済み共通ルール・Skill撤去というユーザー決定を計画へ反映するため
 - reason: ユーザー決定によりresourceのboot flagをcodegraph flagへ改名し、command責務とmanifest表現を一致させるため
 cancellation: null
-result: null
+result:
+  summary: Bootを廃止し、hub-only Agent契約、Project固有AGENTS運用、codegraph fieldとwhub codegraph、Session
+    asset移設へ移行。releaseと実manifestを更新し、codegraph有効なlocal・remote 9 Projectで最終initに成功した。
