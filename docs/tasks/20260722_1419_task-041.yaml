@@ -1,0 +1,57 @@
+schema_version: 1
+task:
+  id: TASK-041
+  state: draft
+  title: Whub operation contextを~/.whubへ固定する
+  objective: Whub所有データ・runtime・releaseを~/.whubへ集約し、cwdとlogical PWDに依存する親探索を廃止して、Mac内のどのdirectoryからも一意のoperation
+    contextを解決できるようにする
+  approach:
+  - 通常運用では~/.whubを唯一の既定contextとして使用する。
+  - Project resourceを配置するworkspace rootはconfigで明示し、operation dataの保存先から分離する。
+  - 開発・testで別contextが必要な場合だけCLI optionで明示指定し、cwd・symlink・親directoryから暗黙推定しない。
+  - manifest.yaml・todos.yaml・downloads・runtime・releasesを~/.whubへ一度だけ移し、data_dir・dual-readを復活させない。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 固定user context方式へ補正する
+    acceptance: []
+    steps:
+    - description: 親探索・logical PWD依存を廃止し、home配下の固定user directoryをWhub operation dataの唯一のSSoTとして解決する方式を設計する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: '方針メモ: もともと運用fileをhome配下ではなくworkspace-hub自体へ集約したのは、ファイルの状態をエディタで確認できるようにするためだった。現在はWhub
+        Web appが整備されており、manifestの実内容とparse errorを表示するfrontendを用意すればSSoTの状態を間接的に確認できる。そのためoperation
+        root/.whub維持にはこだわらず、home配下の固定user directoryへ移してよい。TASK作成時approachの『operation
+        root/.whub直下のまま維持』はこの補正方針で置き換える。'
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: manifest.yaml・todos.yaml・downloads等を固定user directoryへ移行し、data_dir・dual-read・operation
+        root依存を復活させず全consumerを切り替える。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whubとwflowをMac内の任意directoryから実行して同じcontextを選ぶことを検証し、開発・test用の別contextは明示指定だけで選択できるようにする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Web appでmanifestの実内容とparse errorを確認できる画面を設け、ファイルをworkspace-hub配下に置かなくても運用状態を観測できることを検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 関連test・smoke test・Knowledge更新を完了し、旧context探索と移行元データを安全に終了する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

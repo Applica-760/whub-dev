@@ -1,0 +1,25 @@
+schema_version: 1
+task:
+  id: TASK-042
+  state: draft
+  title: workspace-hubを純粋Hubへ縮退する
+  objective: workspace-hubをProjectとして扱わず、固定user contextが指定するworkspace rootへProject
+    resourceを投影するだけのHubとし、合成resource・既定Project・root CodeGraph index等の特殊処理を廃止する
+  approach:
+  - TASK-041で~/.whubとworkspace rootを分離した後、manifestからworkspace-hub entryを削除する
+  - workspace_hub_resource、Project content解決、boot、link、Knowledge・Backlog・Task・Web
+    appのworkspace-hub固有分岐と既定値を除去する
+  - workspace-hub rootはProject link、Stable .venv、AGENTS、MCP、READMEだけを持ち、root .codegraph
+    indexは削除するがProject別CodeGraphを参照するMCPは維持する
+  - workspace rootをProjectとして扱わずにlink・status・Web app・CLIが動作することを回帰テストする
+  depends_on:
+  - TASK-041
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

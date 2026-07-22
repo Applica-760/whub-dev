@@ -1,0 +1,22 @@
+schema_version: 1
+task:
+  id: TASK-043
+  state: draft
+  title: Task・KnowledgeのProject ownershipを整理する
+  objective: workspace-hub rootにTask・Knowledge・Backlogを持たせず、各記録を内容のownerであるProjectへ移管し、Whub実装Knowledgeと運用Knowledgeの境界および参照整合性を確定する
+  approach:
+  - workspace-hubの既存Knowledge・Backlog・残存Taskを分類し、削除前にwhub・vault等のowner Projectへ移管する
+  - Whub実装の用語・制約・refはwhub Projectへ集約し、運用Project固有のKnowledgeは各Projectが所有する
+  - Knowledgeの追加・削除はwhub knowledge add・rmだけで行い、撤去済みoperation srcへのrefを終了する
+  - workspace-hub rootのdocs/tasks・docs/knowledge.yaml・docs/backlog.mdを終了し、Project別Task・Knowledge・Backlog操作と検証を成功させる
+  depends_on:
+  - TASK-042
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

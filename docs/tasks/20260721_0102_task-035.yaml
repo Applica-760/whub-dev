@@ -9,7 +9,7 @@ task:
   - package resourceの取得、version管理、原子的配置、権限設定を担う共通層を設計し、bootとsessionを移行する
   - bootはremoteへ実行ファイルを頒布しない制約と、sessionはProject runtimeへlauncherを生成する契約を維持して回帰テストする
   depends_on:
-  - TASK-030
+  - TASK-042
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
