@@ -11,7 +11,7 @@ from pathlib import Path
 
 import click
 
-from whub.core.paths import app_dev_pid_path, app_dist_path, app_pid_path
+from whub.core.context import current_context
 from whub.webapp.runner import AppProcessRecord, read_pid_record, remove_pid_record
 
 DEV_PORT = 8712
@@ -71,13 +71,14 @@ def app(ctx: click.Context, port: int) -> None:
     if ctx.invoked_subcommand is not None:
         return
 
-    dist_dir = app_dist_path()
+    context = current_context()
+    dist_dir = context.app_dist_path
     if not (dist_dir / "index.html").is_file():
         raise click.ClickException(
             "web app is not built; run `cd app && npm install && npm run build`"
         )
 
-    pid_path = app_pid_path()
+    pid_path = context.app_pid_path
     process = _read_running_process(pid_path)
     if process is not None:
         click.echo(f"app already running: http://127.0.0.1:{process.port}")
@@ -104,7 +105,8 @@ def app(ctx: click.Context, port: int) -> None:
 @click.option("--dev", "dev_mode", is_flag=True, help="Stop the development server.")
 def down(dev_mode: bool) -> None:
     """Stop a managed local web app server."""
-    pid_path = app_dev_pid_path() if dev_mode else app_pid_path()
+    context = current_context()
+    pid_path = context.app_dev_pid_path if dev_mode else context.app_pid_path
     name = "app dev" if dev_mode else "app"
     process = _read_running_process(pid_path)
     if process is None:
@@ -133,13 +135,14 @@ def down(dev_mode: bool) -> None:
 @app.command()
 def dev() -> None:
     """Start the local web app with HMR and API reload."""
-    pid_path = app_dev_pid_path()
+    context = current_context()
+    pid_path = context.app_dev_pid_path
     process = _read_running_process(pid_path)
     if process is not None:
         click.echo(f"app dev already running: http://127.0.0.1:{process.port}")
         return
 
-    app_dir = app_dist_path().parent
+    app_dir = context.app_dist_path.parent
     if not (app_dir / "package.json").is_file():
         raise click.ClickException(f"web app source is missing: {app_dir}")
 

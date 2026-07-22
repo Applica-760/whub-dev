@@ -274,8 +274,6 @@ constraints:
     statement: core/health.pyはsymlink・mountの健全性検査を集約し、remoteの健全性はstatusのhost単位probeが担う
   core_tmux_owns_session_and_shell:
     statement: core/tmux.pyはセッション命名規約とremote shell snippetの組み立てを担う
-  core_paths_centralizes_paths:
-    statement: core/paths.pyはwhub root・data_dir・manifest・todo・downloadsのパス解決を一元化する
   utils_remain_thin:
     statement: utilsには複数commandで共有する薄い補助処理だけを置きproject・resourceのドメイン判断を持たせない
   whub_root_resolution:
@@ -340,4 +338,7 @@ constraints:
   boot_applies_agent_assets_only:
     statement: whub bootは実行ファイルをremote hostへ頒布せず、Agent設定・Skill・CodeGraph初期化だけを対象resourceへ適用する
     ref: src/whub/commands/boot.py
+  core_context_centralizes_access:
+    statement: core/context.pyのWhubContextはoperation rootとWhub所有fileへのpath・基本I/Oを一元化し、consumerは保存配置を直接組み立てない
+    ref: src/whub/core/context.py
 exceptions: {}

@@ -27,9 +27,10 @@ class TestFetchSpec:
         m = manifest()
         downloads = tmp_path / "downloads"
         mock_run = MagicMock(return_value=CompletedProcess([], 0))
+        context = MagicMock(downloads_dir=downloads)
         with (
             patch("whub.commands.fetch.get_manifest", return_value=m),
-            patch("whub.commands.fetch.downloads_dir", return_value=downloads),
+            patch("whub.commands.fetch.current_context", return_value=context),
             patch("whub.commands.fetch.subprocess.run", mock_run),
         ):
             result = CliRunner().invoke(
@@ -66,9 +67,10 @@ class TestFetchSpec:
         m = manifest()
         downloads = tmp_path / "downloads"
         mock_run = MagicMock(return_value=CompletedProcess([], 23))
+        context = MagicMock(downloads_dir=downloads)
         with (
             patch("whub.commands.fetch.get_manifest", return_value=m),
-            patch("whub.commands.fetch.downloads_dir", return_value=downloads),
+            patch("whub.commands.fetch.current_context", return_value=context),
             patch("whub.commands.fetch.subprocess.run", mock_run),
         ):
             result = CliRunner().invoke(fetch, ["projects/remote/data/file.csv"])

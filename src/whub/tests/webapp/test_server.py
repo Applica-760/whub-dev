@@ -21,13 +21,14 @@ from __future__ import annotations
 
 import signal
 import subprocess
+from types import SimpleNamespace
 from unittest.mock import call, patch
 
 from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
 from whub.commands.app import _stop_process_groups, app
-from whub.core.paths import app_dev_pid_path, app_dist_path, app_pid_path
+from whub.core.context import WhubContext
 from whub.webapp.runner import AppProcessRecord
 from whub.webapp.server import create_app
 
@@ -40,14 +41,22 @@ def _dist_dir(tmp_path):
     return dist_dir
 
 
-class TestWebappServer:
-    def test_app_dist_path_uses_whub_root(self, tmp_path, monkeypatch):
-        # ケース10
-        monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
+def _app_context(tmp_path, *, dist_dir=None):
+    return SimpleNamespace(
+        app_dist_path=dist_dir or tmp_path / "app" / "dist",
+        app_pid_path=tmp_path / "app.pid",
+        app_dev_pid_path=tmp_path / "app-dev.pid",
+    )
 
-        assert app_dist_path() == tmp_path / "app" / "dist"
-        assert app_pid_path() == tmp_path / ".whub" / "app.pid"
-        assert app_dev_pid_path() == tmp_path / ".whub" / "app-dev.pid"
+
+class TestWebappServer:
+    def test_app_paths_use_context_root(self, tmp_path):
+        # ケース10
+        context = WhubContext(tmp_path)
+
+        assert context.app_dist_path == tmp_path / "app" / "dist"
+        assert context.app_pid_path == tmp_path / ".whub" / "app.pid"
+        assert context.app_dev_pid_path == tmp_path / ".whub" / "app-dev.pid"
 
     def test_health(self, tmp_path):
         # ケース1
@@ -94,7 +103,10 @@ class TestAppCommand:
 
     def test_missing_dist_shows_build_instruction(self, tmp_path):
         # ケース5
-        with patch("whub.commands.app.app_dist_path", return_value=tmp_path / "dist"):
+        with patch(
+            "whub.commands.app.current_context",
+            return_value=_app_context(tmp_path, dist_dir=tmp_path / "dist"),
+        ):
             result = CliRunner().invoke(app)
 
         assert result.exit_code != 0
@@ -104,8 +116,10 @@ class TestAppCommand:
         # ケース6,9
         dist_dir = _dist_dir(tmp_path)
         with (
-            patch("whub.commands.app.app_dist_path", return_value=dist_dir),
-            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path, dist_dir=dist_dir),
+            ),
             patch("whub.commands.app._read_running_process", return_value=None),
             patch("whub.commands.app.subprocess.Popen") as mock_popen,
         ):
@@ -120,8 +134,10 @@ class TestAppCommand:
         # ケース7
         dist_dir = _dist_dir(tmp_path)
         with (
-            patch("whub.commands.app.app_dist_path", return_value=dist_dir),
-            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path, dist_dir=dist_dir),
+            ),
             patch(
                 "whub.commands.app._read_running_process",
                 return_value=AppProcessRecord(pid=42, port=9000),
@@ -137,7 +153,10 @@ class TestAppCommand:
     def test_down_stops_managed_server(self, tmp_path):
         # ケース8
         with (
-            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
+            ),
             patch(
                 "whub.commands.app._read_running_process",
                 return_value=AppProcessRecord(pid=42, port=8710),
@@ -157,7 +176,10 @@ class TestAppCommand:
 
     def test_down_escalates_to_sigkill(self, tmp_path):
         with (
-            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
+            ),
             patch(
                 "whub.commands.app._read_running_process",
                 return_value=AppProcessRecord(pid=42, port=8712, mode="dev"),
@@ -181,10 +203,9 @@ class TestAppCommand:
         app_dir.mkdir()
         (app_dir / "package.json").write_text("{}")
         with (
-            patch("whub.commands.app.app_dist_path", return_value=app_dir / "dist"),
             patch(
-                "whub.commands.app.app_dev_pid_path",
-                return_value=tmp_path / "app-dev.pid",
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path, dist_dir=app_dir / "dist"),
             ),
             patch("whub.commands.app._read_running_process", return_value=None),
             patch("whub.commands.app.subprocess.Popen") as mock_popen,
@@ -207,8 +228,8 @@ class TestAppCommand:
     def test_dev_reuses_running_development_mode(self, tmp_path):
         with (
             patch(
-                "whub.commands.app.app_dev_pid_path",
-                return_value=tmp_path / "app-dev.pid",
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
             ),
             patch(
                 "whub.commands.app._read_running_process",
@@ -225,8 +246,8 @@ class TestAppCommand:
     def test_down_dev_stops_only_development_server(self, tmp_path):
         with (
             patch(
-                "whub.commands.app.app_dev_pid_path",
-                return_value=tmp_path / "app-dev.pid",
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
             ),
             patch(
                 "whub.commands.app._read_running_process",
@@ -247,7 +268,10 @@ class TestAppCommand:
 
     def test_down_skips_when_not_running(self, tmp_path):
         with (
-            patch("whub.commands.app.app_pid_path", return_value=tmp_path / "app.pid"),
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
+            ),
             patch("whub.commands.app._read_running_process", return_value=None),
         ):
             result = CliRunner().invoke(app, ["down"])

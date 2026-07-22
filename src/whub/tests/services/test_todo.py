@@ -26,11 +26,7 @@ from whub.tests.helpers import manifest
 @pytest.fixture
 def todo_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     path = tmp_path / "todos.yaml"
-
-    def resolve_todo_path() -> Path:
-        return path
-
-    monkeypatch.setattr("whub.models.todo.todo_path", resolve_todo_path)
+    monkeypatch.setenv("WHUB_DATA_DIR", str(tmp_path))
     return path
 
 

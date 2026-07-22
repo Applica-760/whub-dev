@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
-import pytest
 from click.testing import CliRunner
 
 from whub.commands.link import _GITIGNORE_MARKERS, link
@@ -33,7 +33,8 @@ def _invoke_link(m, health_side_effect, *, symlink_to_side_effect=None, cwd=None
         patch.object(Path, "symlink_to", side_effect=symlink_to_side_effect),
         patch.object(Path, "cwd", return_value=cwd or Path("/tmp/test-cwd")),
         patch(
-            "whub.commands.link.whub_root", return_value=cwd or Path("/tmp/test-cwd")
+            "whub.commands.link.current_context",
+            return_value=SimpleNamespace(root=cwd or Path("/tmp/test-cwd")),
         ),
     ):
         return CliRunner().invoke(link, catch_exceptions=False)
@@ -52,7 +53,10 @@ class TestLinkSpec:
             patch("whub.commands.link.inspect_symlink", side_effect=health_seq),
             patch.object(Path, "symlink_to"),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("whub.commands.link.whub_root", return_value=tmp_path),
+            patch(
+                "whub.commands.link.current_context",
+                return_value=SimpleNamespace(root=tmp_path),
+            ),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
 
@@ -69,7 +73,10 @@ class TestLinkSpec:
                 "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
             ),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("whub.commands.link.whub_root", return_value=tmp_path),
+            patch(
+                "whub.commands.link.current_context",
+                return_value=SimpleNamespace(root=tmp_path),
+            ),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
 
@@ -86,7 +93,10 @@ class TestLinkSpec:
                 "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
             ),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("whub.commands.link.whub_root", return_value=tmp_path),
+            patch(
+                "whub.commands.link.current_context",
+                return_value=SimpleNamespace(root=tmp_path),
+            ),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
 
@@ -103,7 +113,10 @@ class TestLinkSpec:
             ),
             patch.object(Path, "symlink_to", side_effect=OSError("permission denied")),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("whub.commands.link.whub_root", return_value=tmp_path),
+            patch(
+                "whub.commands.link.current_context",
+                return_value=SimpleNamespace(root=tmp_path),
+            ),
         ):
             result = CliRunner().invoke(link, catch_exceptions=False)
 
@@ -119,7 +132,10 @@ class TestLinkSpec:
                 "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
             ),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("whub.commands.link.whub_root", return_value=tmp_path),
+            patch(
+                "whub.commands.link.current_context",
+                return_value=SimpleNamespace(root=tmp_path),
+            ),
         ):
             CliRunner().invoke(link, catch_exceptions=False)
 
@@ -142,7 +158,10 @@ class TestLinkSpec:
                 "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
             ),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("whub.commands.link.whub_root", return_value=tmp_path),
+            patch(
+                "whub.commands.link.current_context",
+                return_value=SimpleNamespace(root=tmp_path),
+            ),
         ):
             CliRunner().invoke(link, catch_exceptions=False)
 
@@ -155,7 +174,10 @@ class TestLinkSpec:
         # ケース7
         with (
             patch.object(Path, "cwd", return_value=tmp_path / "other"),
-            patch("whub.commands.link.whub_root", return_value=tmp_path),
+            patch(
+                "whub.commands.link.current_context",
+                return_value=SimpleNamespace(root=tmp_path),
+            ),
         ):
             result = CliRunner().invoke(link)
 

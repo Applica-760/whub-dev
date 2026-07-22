@@ -19,7 +19,7 @@ from whub.commands.session import session
 from whub.commands.status import status
 from whub.commands.todo import todo
 from whub.commands.vscode import vscode
-from whub.core.paths import PathError
+from whub.core.context import PathError
 
 
 class WhubGroup(click.Group):

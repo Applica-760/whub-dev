@@ -5,8 +5,8 @@ import subprocess
 from pathlib import PurePosixPath
 import click
 from whub.commands import get_manifest
+from whub.core.context import current_context
 from whub.models import RemoteResource
-from whub.core.paths import downloads_dir
 from whub.core.remote import build_scp_command
 from whub.core.target import (
     TargetError,
@@ -31,7 +31,7 @@ def fetch(ctx: click.Context, path: str) -> None:
             f"path must point to a file inside the resource: {path}"
         )
 
-    downloads = downloads_dir()
+    downloads = current_context().downloads_dir
     downloads.mkdir(parents=True, exist_ok=True)
     dest = downloads / PurePosixPath(rel).name
     result = subprocess.run(

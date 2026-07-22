@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from click.testing import CliRunner
@@ -29,7 +30,10 @@ class TestVscodeSpec:
 
         with (
             patch("whub.commands.vscode.get_manifest", return_value=manifest()),
-            patch("whub.commands.vscode.whub_root", return_value=tmp_path),
+            patch(
+                "whub.commands.vscode.current_context",
+                return_value=SimpleNamespace(root=tmp_path),
+            ),
         ):
             first = CliRunner().invoke(vscode, catch_exceptions=False)
             second = CliRunner().invoke(vscode, catch_exceptions=False)

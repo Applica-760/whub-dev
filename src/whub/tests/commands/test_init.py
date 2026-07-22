@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
 from click.testing import CliRunner
@@ -35,8 +36,8 @@ def data_dir(tmp_path):
 def config_env(tmp_path, monkeypatch):
     config_dir = tmp_path / ".whub"
     config_path = config_dir / "config.toml"
-    monkeypatch.setattr("whub.commands.init.whub_config_dir", lambda: config_dir)
-    monkeypatch.setattr("whub.commands.init.whub_config_path", lambda: config_path)
+    context = SimpleNamespace(config_dir=config_dir, config_path=config_path)
+    monkeypatch.setattr("whub.commands.init.current_context", lambda: context)
     return config_dir, config_path
 
 

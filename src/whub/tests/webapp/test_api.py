@@ -360,9 +360,12 @@ def test_get_knowledge_uses_service_and_maps_missing_to_404(
     )
     mock_load.assert_called_once_with(m, "local")
 
-    with patch(
-        "whub.webapp.routers.knowledge.load_project_knowledge",
-        side_effect=NotFoundError("knowledge file not found"),
+    with (
+        patch("whub.webapp.routers.knowledge.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.knowledge.load_project_knowledge",
+            side_effect=NotFoundError("knowledge file not found"),
+        ),
     ):
         missing_response = client.get("/api/knowledge/local")
 

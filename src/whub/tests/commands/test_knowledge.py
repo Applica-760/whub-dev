@@ -225,10 +225,11 @@ def test_rm_uses_slug_and_relation_composite_key() -> None:
 
 
 def test_reports_invalid_target_no_match_and_service_error() -> None:
-    invalid_target = CliRunner().invoke(
-        knowledge_command,
-        ["rm", "rel", "def:whub"],
-    )
+    with patch("whub.commands.knowledge.get_manifest", return_value=manifest()):
+        invalid_target = CliRunner().invoke(
+            knowledge_command,
+            ["rm", "rel", "def:whub"],
+        )
     assert invalid_target.exit_code != 0
     assert "requires SUBJECT PREDICATE OBJECT" in invalid_target.output
 

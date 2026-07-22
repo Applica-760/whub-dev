@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from whub.core.paths import PathError
+from whub.core.context import PathError
 from whub.models import ManifestError
 from whub.services.errors import NotFoundError, ServiceError
 from whub.webapp.routers.backlog import router as backlog_router

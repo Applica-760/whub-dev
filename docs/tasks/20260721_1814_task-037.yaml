@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-037
-  state: draft
+  state: paused
   title: Whubの開発ディレクトリと運用ディレクトリを分離する
   objective: WhubのSSoT・Task管理・Agent sessionの入口を担う運用ディレクトリと、CLI・wflow・Web appを開発するcheckoutを分離し、Whub自身を安全に並列開発できる構成を実現する
   approach:
@@ -12,8 +12,8 @@ task:
   - 開発Projectのworktreeを実装場所として利用し、運用データとユーザー接点を各worktreeへ分散させない。
   depends_on:
   - TASK-033
-  interruption_task_id: null
-  interruption_reason: null
+  interruption_task_id: TASK-039
+  interruption_reason: Whubの全consumerを一度共通interfaceへ集約してからdata_dirを廃止し、.whub直下backendへ安全に切り替えるため。
   interruption_source_task_id: null
 plan:
   acceptance:
@@ -193,27 +193,26 @@ plan:
     steps:
     - description: 移行完了までoperation repository由来の現行whub/wflowを擬似Stable版として固定し、Task・Knowledge・移行操作はoperation
         rootから--project whub付きで行い、source変更はdevelopment repositoryだけで行う。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: development .venvのmacOS hidden flagによりeditable whub.pthが無視される状態を再現・修復またはclean再作成し、uv
         runがdevelopment srcをimportすることを確認してから以後のuv run検証へ進む。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 起動時のphysical cwdと同一実体であることを検証したlogical PWDを優先し、親方向へ最寄りの.whub/config.tomlを探索してcontext
+        rootを一度だけ確定する。未検証PWD・環境変数override・package位置fallbackは使わず、physical development
+        checkoutからの直接起動はcontext未検出エラーとする。
       state: pending
       skip_reason: null
       deleted: false
-    - description: Path.cwdから親方向へ最寄りの.whub/config.tomlを探索してcontext rootを起動時に一度だけ確定する。Stable版・development版ともoperation
-        rootをcwdとし、development codeはuv run --project ./whubで選択する。logical PWD補正、環境変数override、package位置fallbackは追加せず、physical
-        development checkoutからの直接起動はcontext未検出エラーとする。
+    - description: context確定・config.toml・manifest.yaml・todos.yaml・boot・downloads・runtime・releasesのpathと基本read/writeをWhubContext
+        APIへ集約する。各Model/Serviceは.whub配下のpathを直接組み立てずcontext APIを使い、形式解釈と業務検証だけを所有する。
       state: pending
       skip_reason: null
       deleted: false
-    - description: config.toml、manifest.yaml、todos.yaml、boot、downloads、runtime、releasesを最寄りの.whub直下へ解決するcontext
-        path APIを実装する。既存consumerの移行完了まで現行whub_rootは未変更のまま暫定利用し、新旧を接続するadapter・fallback・dual-readは追加しない。
-      state: pending
-      skip_reason: null
-      deleted: false
-    - description: config・manifest・todo・downloadsのpath解決とManifest/model/service consumerをwhub_root・whub_data_dirからcontext
-        .whubへ直接切り替える。旧実装との比較testで差を確認し、切替済みconsumerから旧経路を除去する。
+    - description: whub initを外部data_dir登録からcwdの.whub/config.tomlを作るcontext初期化へ変更し、config・manifest・todo・downloadsのconsumerをWhubContextへ切り替える。旧実装との比較testで差を確認し、切替済みconsumerから旧経路を除去する。
       state: pending
       skip_reason: null
       deleted: false
@@ -250,6 +249,8 @@ plan:
       PWDがphysical cwdと同一実体であることを検証して探索起点に用い、resolver内でsymlinkを早期resolveしない。代替としてoperation
       rootをcwdに保ちuv run --project ./whubで開発environmentだけを選択できる。development側.whubは公開可能性のためGit除外し、unit
       testでは一時contextを使用する。'
+    - '2026-07-22: operation側whubは旧operation sourceをimportし、uv run --project ./whubは開発.venvを選択することを確認。開発.venvのwhub.pthと_virtualenv.pthにmacOS
+      hidden flagが付きsite処理から除外され、whubがnamespace packageになる状態を再現した。両.pthのhidden flagだけを解除し、開発版importがへ一致することを検証した。'
     deleted: false
   - title: operation .whubへのprivate control plane移行を準備してownerを整理する
     acceptance:
@@ -425,6 +426,7 @@ plan:
     log: []
     deleted: false
 approvals:
+- actor: user
 - actor: user
 - actor: user
 acceptance_results:

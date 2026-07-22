@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-from whub.core.paths import whub_config_dir, whub_config_path
+from whub.core.context import current_context
 
 
 @click.command()
@@ -26,8 +26,9 @@ def init(data_dir: Path, force: bool) -> None:
             f"manifest.yaml not found in data directory: {source}"
         )
 
-    config_dir = whub_config_dir()
-    config_path = whub_config_path()
+    context = current_context()
+    config_dir = context.config_dir
+    config_path = context.config_path
     content = f"data_dir = {json.dumps(str(source))}\n"
 
     if config_dir.is_symlink():

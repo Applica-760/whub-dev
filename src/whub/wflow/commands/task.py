@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-from whub.core.paths import PathError
+from whub.core.context import PathError
 from whub.models import ManifestError, load_manifest, project_names
 from whub.services.errors import ServiceError
 from whub.services.project_content import resolve_project_content_root

@@ -17,7 +17,7 @@ from pydantic import (
 )
 from pydantic import ValidationError
 
-from whub.core.paths import manifest_path, whub_root
+from whub.core.context import WhubContext, current_context
 
 
 class ManifestError(Exception):
@@ -76,7 +76,7 @@ class SymlinkResource(BaseResource):
 
 def workspace_hub_resource() -> SymlinkResource:
     """workspace-hub自身をlocal targetとして扱う合成resource"""
-    root = whub_root()
+    root = current_context().root
     resource = SymlinkResource(type="symlink", workspace_path=".", source=str(root))
     resource._resolved_workspace_path = root
     return resource
@@ -134,7 +134,7 @@ class Manifest(SchemaModel):
         if duplicate_paths:
             raise ValueError(f"duplicate workspace_path: {', '.join(duplicate_paths)}")
 
-        root = whub_root()
+        root = current_context().root
         for project in self.projects:
             resource = project.resource
             if isinstance(resource, SymlinkResource):
@@ -157,10 +157,11 @@ class Manifest(SchemaModel):
         )
 
 
-def load_manifest() -> Manifest:
-    path = manifest_path()
+def load_manifest(context: WhubContext | None = None) -> Manifest:
+    context = context or current_context()
+    path = context.manifest_path
     try:
-        text = path.read_text()
+        text = context.read_manifest_text()
     except FileNotFoundError as error:
         raise ManifestError(f"manifest.yaml not found: {path}") from error
     try:

@@ -1,0 +1,108 @@
+schema_version: 1
+task:
+  id: TASK-039
+  state: in_progress
+  title: WhubContextへ管理ファイルアクセスを集約する
+  objective: config・Manifest・Todo・downloadsへのアクセスをWhubContextインターフェースへ集約し、consumerを変更せずlegacy
+    data_dir backendから.whub直下backendへ安全に切り替えられる構造にする
+  approach:
+  - Phase 1で既存の.whub/config.toml・data_dir・環境変数による解決挙動をinterface内部へ隔離してconsumerを移行し、Phase
+    2で同じinterfaceを.whub直下へhard switchしてdata_dirを廃止する。実運用データの移動とrelease cutoverは親TASK-037に残す。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: TASK-037
+plan:
+  acceptance:
+  - id: ACC-006
+    statement: 実運用データの移動、Boot・App runtime/dist・release・operation_project設定・cutoverを変更せず親TASK-037へ残す。
+  phases:
+  - title: 互換interfaceを導入しlegacy backendへconsumerを集約する
+    acceptance:
+    - id: ACC-001
+      statement: config・Manifest・Todo・downloadsのconsumerがWhubContextだけに依存し、data_dirおよび配置規則を認識しない。
+    - id: ACC-002
+      statement: legacy backend利用時のconfig.toml・data_dir・WHUB_ROOT・WHUB_DATA_DIR解決が変更前と一致し、characterization
+        testに成功する。
+    steps:
+    - description: 現行の.whub/config.toml、data_dir、WHUB_ROOT、WHUB_DATA_DIRによるconfig・Manifest・Todo・downloads解決と全consumerをCodeGraphおよびcharacterization
+        testで固定する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: physical cwdと同一実体であることを検証したlogical PWDからcontext rootを確定し、config・Manifest・Todo・downloadsを論理resourceとして扱うWhubContext
+        interfaceを実装する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 現行のconfig.tomlとdata_dir・環境変数によるpath解決および基本read/writeをlegacy backendとしてinterface内部へ隔離し、consumerへdata_dirを公開しない。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Manifest・Todo・Fetchと関連Model/ServiceをWhubContext経由へ移行し、各consumerによる.whub配下pathまたはdata_dirの直接組み立てを除去する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: focused test、既存挙動との比較test、全pytest、pre-commitを実行し、挙動不変とinterface境界を検証してPhase成果をcommitする。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 'Phase 1完了: core/context.pyへWhubContextを実装し、検証済みlogical PWD・WHUB_ROOT・package
+      fallbackによるroot選択と、WHUB_DATA_DIR・config.toml[data_dir]によるlegacy backendをinterface内部へ隔離した。Manifest・Todo・downloads・App・Init・Link・VS
+      Code・PathErrorの全consumerをWhubContextへ直接移行し、core/paths.pyと旧testを削除。CodeGraph同期後current_contextは23
+      callers、core.pathsは0件。focused 74 tests、全347 tests、変更file ruff、pre-commit Ruff/Prettier、Knowledge
+      check成功。operation rootで旧Stable版と開発版のroot・manifest・todo・downloads path一致と実Manifest読取を確認した。開発editable
+      .pthのhidden flag再発時は解除後にphysical/logical project指定を比較し、両方がdevelopment sourceをimportしflagが再発しないことを確認した。'
+    deleted: false
+  - title: 同じinterfaceを.whub直下backendへ切り替える
+    acceptance:
+    - id: ACC-003
+      statement: 同じWhubContext interfaceがconfig・Manifest・Todo・downloadsをcontextの.whub直下へ直接解決し、legacy
+        backendへのfallbackまたはdual-readが残っていない。
+    - id: ACC-004
+      statement: whub initがcwdに新規contextを作成でき、外部data_dirを要求または記録しない。
+    - id: ACC-005
+      statement: operation root、logical symlink、physical checkout、context欠落を含むpath
+        testと全回帰検証が成功する。
+    steps:
+    - description: WhubContextのbackendをconfig.toml・manifest.yaml・todos.yaml・downloadsがcontextの.whub直下へ直接解決される実装へ切り替え、新旧同時探索・fallback・dual-readを追加しない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whub initを外部data_dir登録から、cwdへ.whub/config.tomlを作成するcontext初期化へ変更する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: interface内部のdata_dir・WHUB_DATA_DIR・WHUB_ROOT・package位置fallbackとlegacy専用path
+        APIを削除し、consumerを変更せずdirect backendだけで動作させる。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: operation rootおよび検証済みlogical PWDでは同じ.whubを選択し、physical development
+        checkout直接起動とcontext欠落は明示エラーになるtestを追加する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: focused test、全pytest、pre-commit、operation rootからの開発版smoke testを実行し、実運用データ移行を行わずにPhase成果をcommitする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - 全consumerがWhubContext/current_contextへ直接依存し、CodeGraphとrgでcore.paths依存0件。legacy
+    data_dirはWhubContextのprivate backendだけに存在する。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - characterization tests 11件、全347 tests、operation rootで旧Stable版と開発版の4 path比較が成功し、WHUB_ROOT・WHUB_DATA_DIR・config
+    data_dirの既存優先順を維持した。
+change_requests: []
+cancellation: null
+result: null
