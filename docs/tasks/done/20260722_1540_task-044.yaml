@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-044
-  state: in_progress
+  state: completed
   title: Project付きTask参照とwhub-devへの改名
   objective: task-planningでProject付きTask参照を扱えるようにし、Whub開発Projectとworkspace上のSymlinkをwhub-devへ改名して、対象Projectを明確に指定できるようにする
   approach:
@@ -48,22 +48,38 @@ plan:
     steps:
     - description: .whub/manifest.yamlのWhub開発Project名とworkspace_pathをwhub-devへ変更し、CLI名・Python
         package名・repository名はwhubのまま維持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 既存whub Symlinkの参照先を確認してからworkspace直下のSymlinkをwhub-devへ付け替え、参照先が変更前と同一であることを確認する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: wflow task --project whub-dev check/show 041および044、manifestとProject解決、Skill差分を検証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - manifestのProject名とworkspace_pathをwhub-devへ変更した。旧whub Symlinkをunlink後、whub linkでwhub-devを作成し、同じsourceを指すことと旧link消失を確認した。whub
+      linkによる.gitignore更新、wflow check/show 041・044、Knowledge check、Skill一致、CLI/package/repository名維持を検証した。
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - .agentsと.claudeのSKILL.mdがcmp一致し、Project付き参照とProject引き継ぎ規則をrgで確認。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - manifestはname/workspace_pathともwhub-dev。whub-dev Symlinkは変更前と同じを指し、旧whubは存在しない。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - wflow task --project whub-dev check/show 041・044とwhub knowledge check --project
+    whub-devが成功。pyprojectのpackage名whubとrepository sourceは維持。
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: task-planningへProject付きTask参照を追加し、Whub開発Projectとworkspace Symlinkをwhub-devへ改名した。
