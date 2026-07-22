@@ -1,0 +1,63 @@
+schema_version: 1
+task:
+  id: TASK-045
+  state: completed
+  title: workspace rootのGit管理を終了する
+  objective: workspace-hub remoteの履歴を保持しながら、純粋Hub rootをGit repositoryではない運用directoryへ切り替え、既存ファイルとWhub運用を維持する
+  approach:
+  - rootのGit状態・remote同期・stashを確認し、現行履歴をremoteとrecoverable backupへ保存してから.gitをroot外へ退避する
+  - root内のAgent/MCP/VS Code/README/ユーザー成果物・Stable venv・Project linkは削除せず、Git非依存のCLI/Web/CodeGraph運用をsmoke
+    testする
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 履歴を保存してGit repositoryを解除する
+    acceptance: []
+    steps:
+    - description: root repositoryのtracked/untracked差分・stash・local refs・remote同期状態を確認し、未保存履歴を失わない保存方法を確定する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: workspace-hub remoteへ現行branchを反映し、stashを含む.git全体を~/.whub/backups配下へ衝突しない名前で退避してrootからGit管理を解除する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: root内の既存ファイル・symlink・Agent/MCP・Stable .venvが退避前後で維持され、remoteとbackupから履歴を復旧可能であることを確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - root mainはorigin/mainより3 commit先行・分岐なしをfetchで確認し、ユーザーの.vscode除外と既に削除済みtmp/display.drawioを最終archive
+      commit 291b405aへ記録してremote mainへpush。未送信stash 1件を含む111MBの.git全体を~/.whub/backups/workspace-hub.git-291b405aへ移動。rootはgit
+      rev-parse exit 128、backup fsck成功、backup HEAD・remote mainとも291b405a、stashとrootファイル・symlinkを維持。
+    deleted: false
+  - title: Git非依存の純粋Hub運用を検証する
+    acceptance: []
+    steps:
+    - description: rootがGit repositoryとして解決されないことを確認し、whub status・link・Knowledge・wflow・Web
+        app・Project別CodeGraphをsmoke testする。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ユーザー作成の.gitignore差分を含むroot内ファイルをそのまま保持し、解除結果・remote・backup path・検証結果をTaskへ記録する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Git解除後のrootでAgent配布とwhub linkを実行し、9 local linkを維持、.gitignore hash不変、.gitとroot
+      .codegraphは再生成されず、Agent/MCP/Stable .venvを確認。/tmpからwhub statusは全resource ok、Knowledge・wflow・release・Web
+      health/API成功。CodeGraphは初回の相対-pが/tmp/whub-devを指して失敗したため、absolute Project pathで再実行して成功。root内ファイルは既存状態を維持し、remote=Applica-760/workspace-hub
+      main 291b405a、recoverable backup=~/.whub/backups/workspace-hub.git-291b405a。
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: workspace-hub remoteへ最終履歴を保存し、stashを含む.gitを復旧可能なbackupへ退避してrootのGit管理を終了した。rootファイル・Agent/MCP・Stable
+    release・Project linkを維持し、Git非依存のCLI/Web/Project別CodeGraph運用を検証した。
