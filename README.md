@@ -1,7 +1,7 @@
 # whub
 
 複数PC・複数プロジェクトにまたがる開発作業を、単一マニフェストから管理する。
-symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動・Agent設定配布を一元化する。
+symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動・CodeGraph初期化を一元化する。
 
 ## 方針
 
@@ -9,7 +9,8 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 - `~/.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
 - `~/.whub/` にconfig・manifest・todo・downloads・releases・runtimeを集約する
 - ローカル`resource`はsymlink、リモート`resource`はsshfs mount（参照・編集）とSSH（実行）で操作する
-- `whub boot`で共通Agent設定を対象`resource`へ配布
+- Agentはworkspace rootから起動し、Project固有作業の前に対象rootの`AGENTS.md`を読む
+- `whub codegraph`で`codegraph: true`な対象`resource`のCodeGraphを初期化
 
 ## セットアップ
 
@@ -35,7 +36,7 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub session <COMMAND>` | remote GUI sessionの予約・command handoff・状態確認・ログ取得・削除 |
 | `whub todo` | `project`横断の単発アクションを管理 |
 | `whub backlog <TEXT> [--project PROJECT]` | projectのbacklog末尾の未整理メモへ追記（既定は`whub-dev`） |
-| `whub boot` | Agent設定を`boot: true`な`resource`へ配布 |
+| `whub codegraph` | `codegraph: true`な`resource`のCodeGraphを初期化 |
 | `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
 
 ## Task Workflow
@@ -114,7 +115,7 @@ projects:
       type: symlink
       workspace_path: whub-dev
       source: /path/to/whub
-      boot: true
+      codegraph: true
 
   - name: remote-project
     resource:
@@ -124,5 +125,5 @@ projects:
       workspace_path: projects/remote-project  # sshfs mount先（必須）
       mount: false   # 任意: 無引数mountの対象から除外
       status: false  # 任意: statusの対象から除外
-      boot: true
+      codegraph: true
 ```

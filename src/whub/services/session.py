@@ -10,7 +10,6 @@ import shlex
 import subprocess
 from zoneinfo import ZoneInfo
 
-import yaml
 from pydantic import ValidationError
 
 from whub.core.remote import build_ssh_command, run_ssh_command
@@ -223,10 +222,10 @@ def reserve_session(manifest: Manifest, project: str, task: str | None = None) -
         raise ServiceError(f"invalid task ID: {task}")
     assets = {
         "session-launcher.py": files("whub")
-        .joinpath("session/launcher.py")
+        .joinpath("assets/session/launcher.py")
         .read_text(),
         "session-launcher.sh": files("whub")
-        .joinpath("session/launcher.sh")
+        .joinpath("assets/session/launcher.sh")
         .read_text(),
     }
     payload = json.dumps({"project": project, "task": task, "assets": assets})

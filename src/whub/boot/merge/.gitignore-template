@@ -1,8 +1,0 @@
-# hub:managed:start
-.agents/
-.claude/
-.codex/
-.codegraph/
-.mcp.json
-AGENTS.md
-# hub:managed:end

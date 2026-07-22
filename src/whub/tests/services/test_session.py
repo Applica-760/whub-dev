@@ -247,13 +247,13 @@ def test_session_rejects_unsafe_run_id_before_ssh() -> None:
 
 
 def test_packaged_launcher_has_valid_bash_syntax() -> None:
-    resource = files("whub").joinpath("session/launcher.sh")
+    resource = files("whub").joinpath("assets/session/launcher.sh")
     with as_file(resource) as path:
         result = subprocess.run(["bash", "-n", path], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
 
 
 def test_packaged_launcher_helper_has_valid_python_syntax() -> None:
-    resource = files("whub").joinpath("session/launcher.py")
+    resource = files("whub").joinpath("assets/session/launcher.py")
     source = resource.read_text()
     compile(source, str(resource), "exec")

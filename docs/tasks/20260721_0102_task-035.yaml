@@ -1,21 +1,172 @@
 schema_version: 1
 task:
   id: TASK-035
-  state: draft
-  title: bootとsessionの頒布asset層を統合する
-  objective: bootとsessionが個別に持つpackage resourceの解決・更新・頒布処理を共通のasset distribution層へ整理し、各domainの責務と既存運用契約を保ったまま重複を解消する
+  state: in_progress
+  title: Bootを廃止しProject Agent設定とCodeGraphを再編する
+  objective: Agentの入口をhubへ統一し、各Projectが固有AGENTS.mdだけを管理する運用へ移行した上で、Bootを廃止してCodeGraph初期化を独立コマンドへ移し、配布済み共通ルール・Skillとpackage
+    asset配置を整理する
   approach:
-  - bootとsessionのasset構造・配布先・更新判定・local/remote差分を比較し、実際に共通する責務だけを抽出する
-  - package resourceの取得、version管理、原子的配置、権限設定を担う共通層を設計し、bootとsessionを移行する
-  - bootはremoteへ実行ファイルを頒布しない制約と、sessionはProject runtimeへlauncherを生成する契約を維持して回帰テストする
+  - hubのAGENTS.mdとCLAUDE.mdへ対象Project直下のAGENTS.mdを作業前に必ず読む契約を置き、共通ルールとSkillはhubだけで管理する
+  - resourceのboot flagをcodegraph flagへ改名し、whub codegraphがcodegraph有効ProjectだけをlocalまたはremoteでCodeGraph初期化する
+  - 各Project固有の指示とSkillを保護しながら、Bootが配布した共通ルール・共通Skill・Agent関連Ignoreだけを撤去する
+  - Boot assetを削除し、残るSession launcherはsrc/whub/assets配下へ移して開発ツリーとwheelで検証する
   depends_on:
   - TASK-042
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: Bootの位置付けを確定する
+    acceptance: []
+    steps:
+    - description: 現行Bootのasset、workspace rootとresourceへの頒布、boot target選択、CodeGraph初期化、呼出し箇所、運用Knowledgeを照合し、Sessionとの共通点と相違点を記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Bootを維持する案、改名または責務分割する案、廃止する案についてCLI・manifest・remote運用・移行コストを比較し、実装前にユーザー判断を得る。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 決定したBoot契約に合わせて実装、テスト、README、Knowledgeを最小変更し、remoteへ実行fileを頒布しない制約を含む責務境界を明示する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Bootとmanifestのfocused testおよびKnowledge checkを実行し、独立して検証可能なPhase成果をcommitする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: BootとSessionの頒布asset層を統合する
+    acceptance: []
+    steps:
+    - description: Phase 1の決定と実際のconsumerに基づき、src/whub/assets配下の共通package asset namespaceと最小限のresource
+        resolverを確定する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: BootのAgent assetとSession launcherを共通namespaceへ移し、commands/boot.py、services/session.py、関連testのresource参照を移行する。頒布先への反映処理は各domainに残す。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 旧src/whub/bootとsrc/whub/sessionおよび古い参照を除去し、READMEとKnowledgeの参照をCLI経由で新しい責務と配置へ更新する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: focused test、全Backend test、ruff、sdistとwheelのasset収録・インストール後resource解決を検証し、Phase成果をcommitする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: hub-only Agent契約を確立する
+    acceptance:
+    - id: ACC-001
+      statement: hubのAGENTS.mdとCLAUDE.mdが、対象Project直下のAGENTS.mdを作業前に必ず読み、取得不能時は開始しない契約を持つ。
+    - id: ACC-002
+      statement: 共通ルールと共通SkillはhubだけでCodex・Claudeから利用でき、Projectへの配布を必要としない。
+    steps:
+    - description: hubと全manifest Projectについて、AGENTS.md、CLAUDE.md、Boot managed block、共通Skill、Agent設定file、gitignore、mount可否、作業tree差分を調査し、Project固有内容を保護する移行matrixを記録する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: hubのAGENTS.mdへ、Project固有作業の計画・調査・実装・検証前にmanifestから対象rootを解決して直下のAGENTS.mdを必ず読み、取得不能時は作業を開始しない規則を追加する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: hubのCLAUDE.mdへ同じProject AGENTS読込契約を重複なく反映し、共通ルールと共通SkillがhubだけでCodex・Claudeの双方から利用できることを確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: hub-only運用契約と移行matrixを検証し、workspace rootはProjectまたはCodeGraph初期化対象にしない境界をTask
+        logへ記録する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - manifest 13 Projectを調査。whub-dev・vault・laplust-docsにはBoot配布物なし。portfolio・recruit・doc-drill・sns-lab・solution-sprints・research-slideには共通AGENTS/CLAUDE/Codex/MCP、3共通Skill、Agent用gitignore
+      blockが残存し、Project固有指示はCLAUDE managed block外に存在。esn-lab・la-il・privateはremote
+      stale、esn-lab-runは未mountのためPhase 5でSSH確認する。hub AGENTSへ対象Project AGENTS必読・取得不能時停止・複数Project個別読込を追加し、hub
+      CLAUDEはAGENTS importとClaude固有規則だけへ整理。Codex/Claude双方で同じ5 hub Skillを確認。workspace
+      rootはProjectでもCodeGraph対象でもない境界を維持した。
+    deleted: false
+  - title: Bootをwhub codegraphへ置換する
+    acceptance:
+    - id: ACC-004
+      statement: src/whub/bootとsrc/whub/sessionが残らず、Session launcherがsrc/whub/assets/sessionから開発ツリーとwheelの双方で解決できる。
+    - id: ACC-007
+      statement: whub bootがCLI・実装・現行文書・Knowledgeから廃止され、resource設定がbootからcodegraphへ移行し、whub
+        codegraphがcodegraph有効resourceだけでcodegraph initを実行してworkspace rootと無効resourceを対象にしない。
+    steps:
+    - description: commands/codegraph.pyへcodegraph flagが有効なresourceの収集とlocal・remoteのcodegraph
+        initを移し、workspace rootを対象外として既存の対象別WARN継続契約を維持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: whub codegraphを単一のinit操作としてCLIへ登録し、BaseResourceのboot flagをcodegraphへ改名してmanifest・test
+        fixtureを移行し、whub boot、commands/boot.py、boot command testと現行Boot Knowledgeを削除または置換する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: src/whub/bootのpackage assetを削除し、Session launcherをsrc/whub/assets/sessionへ移してservices/session.pyと関連testのresource参照を更新し、旧src/whub/sessionを除去する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: READMEとKnowledgeをBoot廃止、hub-only Agent運用、codegraph flagを使うCodeGraph初期化契約へ更新し、Knowledgeの追加・削除はwhub
+        knowledge add・rmで行う。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: CodeGraphとSessionのfocused test、全Backend test、ruff、sdist・wheelのasset収録とインストール後resource解決を検証し、Phase成果をcommitする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 各Projectを固有AGENTS運用へ移行する
+    acceptance:
+    - id: ACC-005
+      statement: 全manifest Projectのroot AGENTS.mdがProject固有指示だけを所有し、Boot配布の共通ルール・共通Skill・Agent設定が撤去され、既存のProject固有内容が保持されている。
+    - id: ACC-006
+      statement: 各ProjectのAgent配布物用Ignoreが除去され、.codegraph/とSession用.whub/のIgnoreおよびCodeGraph
+        indexは維持されている。
+    steps:
+    - description: 移行matrixに従って各Project rootのAGENTS.mdからBoot配布の共通managed blockだけを除去し、既存のProject固有指示を保持する。AGENTS.mdがないProjectには実装に基づくProject固有AGENTS.mdを作成する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 各ProjectのCLAUDE.md、Codex・Claude設定、MCP設定からBoot配布物だけを除去し、独立したProject固有設定があれば保持する。共通指示をAGENTS.md以外へ複製しない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 各Projectの.agents/skillsと.claude/skillsからBoot配布の共通Skillだけを削除し、Project固有Skillとhub側Skillを保持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 各ProjectのgitignoreからAgent配布物用entryと不要になったmanaged blockを除去し、.codegraph/とSession用.whub/のIgnoreは維持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 各Projectで意図したAGENTS.mdとcleanup以外の差分がないこと、共通ルール・共通Skillが再生成されないことを確認し、追跡対象の変更をProjectごとに検証・commitする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whub codegraphをcodegraph有効なlocal・remote Projectでsmoke testし、CodeGraph初期化後もAgent配布物が生成されず、hubから各Project
+        AGENTSを読んで作業開始できることを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: Boot廃止、boot flagを流用するwhub codegraph新設、Project別AGENTS運用、配布済み共通ルール・Skill撤去というユーザー決定を計画へ反映するため
+- reason: ユーザー決定によりresourceのboot flagをcodegraph flagへ改名し、command責務とmanifest表現を一致させるため
 cancellation: null
 result: null

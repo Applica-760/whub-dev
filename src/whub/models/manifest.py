@@ -42,7 +42,7 @@ class GitInfo(SchemaModel):
 
 class BaseResource(SchemaModel):
     git: GitInfo | None = None
-    boot: bool = False
+    codegraph: bool = False
     status: bool = True
 
 
