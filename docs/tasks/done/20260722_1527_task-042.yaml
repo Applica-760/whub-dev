@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-042
-  state: in_progress
+  state: completed
   title: workspace-hubを純粋Hubへ縮退する
   objective: workspace-hubをProjectとして扱わず、固定user contextが指定するworkspace rootへProject
     resourceを投影するだけのHubとし、合成resource・既定Project・root CodeGraph index等の特殊処理を廃止する
@@ -85,28 +85,58 @@ plan:
     steps:
     - description: Backend全test・Frontend test/format/build・pre-commitを実行し、検証済みwheelをimmutable
         releaseとして~/.whub/releasesへinstallする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: manifestからresourceなしworkspace-hub entryだけを削除し、whub-devおよび他Project・resource定義を維持する。active
         releaseとworkspace rootのStable .venvを検証済みreleaseへ切り替える。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 任意directoryからwhub status・link・Knowledge・Backlog・wflowを実行し、whub-dev既定、明示Project切替、Web
         app、root CodeGraph不在、Project別CodeGraph MCP、root Agent設定配布後もindexが再生成されないことをsmoke
         testする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - Backend 356件、Frontend 13件・Prettier・TypeScript/Vite build、pre-commit成功。commit
+      e0b9407を刻印したwheel sha256 e8df305e...をimmutable release 0.1.0+ge0b9407へ非editable
+      installしrelease.jsonで検証済みを記録。manifestはresourceなしworkspace-hubだけを削除して13 Projectを維持し、currentとStable
+      .venvを新releaseへcutover。/tmpからstatus全resource ok、Knowledge/wflow既定、Backlog既定表示、明示Project、Web
+      health/API/static成功。linkは9件skipでユーザー.gitignore差分不変。root Agent配布後もroot CodeGraph不在、whub-dev
+      Project別CodeGraph参照成功。
     deleted: false
 approvals:
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - manifest/Web APIからworkspace-hub不在。13 Projectの先頭whub-devで、Knowledge・Backlog・wflowの既定値と実resource解決を確認。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - production sourceにworkspace_hub_resourceなし。resourceなしworkspace-hubを拒否する回帰testを含むBackend全356件成功。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - boot commandを維持しroot Agent配布成功。配布前後ともroot .codegraph不在。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - root docsと.codegraph不在。最小README、Agent設定、汎用MCP、Stable .venv、9 Project linkを維持。.gitignoreのユーザー.vscode変更は不変。
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - Todo履歴19件不変。Backend 356、Frontend 13、format/build/pre-commit、immutable release、/tmp
+    CLI、Web 200、Project別CodeGraph成功。
 change_requests:
 - reason: rootがProject contentを所有しない方針をADR・Specs・Issuesにも一貫して適用し、whub-devとの完全一致確認後にroot
     docs全体を終了するため。
 cancellation: null
-result: null
+result:
+  summary: workspace-hubをProject/content所有者から純粋Hubへ縮退し、whub-dev既定化、合成resource除去、root
+    docs/index終了、manifest cutover、immutable release 0.1.0+ge0b9407への切替と全回帰検証を完了した。bootとroot
+    Agent配布、汎用MCP、Stable .venv、Project link、Todo履歴、ユーザー.gitignore変更は維持した。
