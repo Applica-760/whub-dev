@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-037
-  state: in_progress
+  state: cancelled
   title: Whubの開発ディレクトリと運用ディレクトリを分離する
   objective: WhubのSSoT・Task管理・Agent sessionの入口を担う運用ディレクトリと、CLI・wflow・Web appを開発するcheckoutを分離し、Whub自身を安全に並列開発できる構成を実現する
   approach:
@@ -485,5 +485,7 @@ change_requests:
 - reason: operationと開発のpush先を分離し、既存Git履歴を独立private remoteへ継承する要件をPhase 1へ追加するため。
 - reason: Phase 3で確定したlogical symlink context、自己完結.whub、外部data_dir廃止、擬似Stable固定、wheel
     cutover、operation/development別Git追跡契約をPhase 3以降へ反映し、陳腐化した計画を再基準化するため。
-cancellation: null
+cancellation:
+  reason: TASK-039・040・041・042で目的を達成し、root Knowledge、Project名whub、operation_project特例を前提とする残存計画は最終方針により置換されたため。
+  actor: user
 result: null
