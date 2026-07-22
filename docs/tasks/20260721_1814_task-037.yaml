@@ -401,7 +401,12 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - operation rootに.venv -> .whub/releases/current/venvの相対symlinkを作成しGit非追跡化。uv
+      runのPython=、whub import=.venv/lib/python3.12/site-packages/whub、whub/wflow=0.1.0
+      commit b10e981c、status成功を確認。operation commit=471c158。通常PATHとuv runが同一Stable
+      releaseを使用する。追加確認でoperation Knowledge checkは撤去済み旧srcへの10件のrefにより失敗し、Phase 4のKnowledge
+      owner分割が未完了であることを確認。
     deleted: false
   - title: worktreeを含む統合検証とKnowledge更新を完了する
     acceptance:
