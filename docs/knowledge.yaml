@@ -231,6 +231,10 @@ policies:
   session_handoff_is_self_contained:
     statement: whub session handoffは各entryにrun固有launcherとworkloadを実行順で含め、Linux GUI側はlauncherで対象tmuxへ入った後にworkloadを明示copy実行する
     ref: src/whub/services/session.py
+  fixed_user_context:
+    statement: 通常のwhub/wflow operation contextは~/.whubに固定し、workspace rootは~/.whub/config.tomlのworkspace_rootで明示する。cwd・PWD・親探索・data_dir・CLI
+      context切替は使わず、開発・testの分離contextはWhubContextを直接構築・注入する。
+    ref: src/whub/core/context.py
 constraints:
   common_cli_delegates_resource_dispatch:
     statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する

@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-041
-  state: in_progress
+  state: completed
   title: Whub operation contextを~/.whubへ固定する
   objective: Whub所有データ・runtime・releaseを~/.whubへ集約し、cwdとlogical PWDに依存する親探索を廃止して、Mac内のどのdirectoryからも一意のoperation
     contextを解決できるようにする
@@ -126,26 +126,55 @@ plan:
     acceptance: []
     steps:
     - description: 任意directoryからwhub/wflowが同じ~/.whubを選ぶ統合testと代表smoke testを実施し、開発・test用の分離contextはWhubContextの直接注入で検証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: uv run pytest、pre-commit、Frontend test/format/build、wheel installを検証し、結果を記録する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: context/data_dir/PWD探索に関するKnowledgeをwhub knowledge add/rmで更新し、READMEと実装を一致させ、移行元と旧前提を終了する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - /tmpから~/.whub固定context・workspace_root・whub status・project-qualified wflowを確認し、focused
+      integration 61件成功。全backend 355件、frontend 13件、pre-commit、Prettier、TypeScript/Vite
+      buildが成功。immutable wheelを新規一時venvへ非editable installし、commit d13b612b、~/.whub
+      context、workspace rootを確認。READMEを現行契約へ更新し、pol:fixed_user_contextをwhub knowledge
+      addで追加、knowledge check/query成功。ADR・過去specとProject固有session runtimeの.whubは履歴・別責務のため変更対象外とした。
     deleted: false
 approvals:
 - actor: user
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - /tmpからcurrent_context=~/.whub、workspace_root=を確認。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - 旧workspace-hub/.whub不在。manifest/todos/wheel hashとBackups 97,107 files・10,843 dirs・1,565,144
+    KiBが移動前後一致。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - workspace .venvとreleases/currentは0.1.0+gd13b612bを参照。CLI、Web HTTP 200、health ok、非editable
+    wheel install成功。
+- acceptance: ACC-006
+  status: passed
+  evidence:
+  - backend 355、frontend 13、pre-commit、Prettier、Vite build、Knowledge check/queryが成功。README更新済み。
+- acceptance: ACC-007
+  status: passed
+  evidence:
+  - source/testsで固定Contextと直接WhubContext注入を確認。CLI切替、親探索、環境変数override、data_dir、dual-readなし。
 change_requests:
 - reason: --context CLIは追加せず、通常contextを~/.whubへ固定し、開発・testの分離contextはWhubContextの直接注入だけで扱う単純な設計へ変更するため。
 - reason: Manifest表示はContext移行と分離し、モデルへ表示責務を持ち込まず、現時点では実装しないため。
 cancellation: null
-result: null
+result:
+  summary: Whub operation contextを~/.whubへ固定し、workspace_root明示、全operation data・Backups・固定releaseのcutover、Stable
+    .venv、統合／全test、README・Knowledge更新を完了した。Manifest表示は合意により対象外とした。

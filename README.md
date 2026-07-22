@@ -6,8 +6,8 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 ## 方針
 
 - 用語・CLI設計・運用規則は `docs/knowledge.yaml` を正とする
-- `.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
-- `.whub/` にconfig・manifest・todo・downloads・runtimeを集約する
+- `~/.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
+- `~/.whub/` にconfig・manifest・todo・downloads・releases・runtimeを集約する
 - ローカル`resource`はsymlink、リモート`resource`はsshfs mount（参照・編集）とSSH（実行）で操作する
 - `whub boot`で共通Agent設定を対象`resource`へ配布
 
@@ -15,17 +15,17 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 
 ```sh
 uv tool install .
-whub init
+whub init --workspace-root /path/to/workspace-hub
 source <(whub shell-init)   # .zshrc に追記
 ```
 
-初期化後、同じcontextの `.whub/` に `manifest.yaml` と必要に応じて `todos.yaml` を置く。
+通常実行のcontextはcwdや`PWD`に関係なく`~/.whub`に固定される。初期化後、`~/.whub/`に`manifest.yaml`と必要に応じて`todos.yaml`を置く。開発・testで分離する場合は、CLI optionではなく`WhubContext`を直接構築・注入する。
 
 ## コマンド一覧
 
 | コマンド | 概要 |
 |---|---|
-| `whub init [--force]` | cwdに `.whub/config.toml` を作成してcontextを初期化 |
+| `whub init --workspace-root PATH [--force]` | `~/.whub/config.toml` にworkspace rootを記録してcontextを初期化 |
 | `whub status` | 接続状態、ヘルスチェック、git差分を表示 |
 | `whub link` | manifest の symlink を一括作成（`.gitignore` も自動更新） |
 | `whub mount [PROJECT] [-a]` | remote `resource`をsshfsでツリーへマウント（`mount: false`は`-a`か名指しのみ） |
@@ -97,7 +97,7 @@ whub session logs <PROJECT> <RUN_ID> --follow [--pane PANE_OR_WINDOW]
 whub session clean <PROJECT> <RUN_ID>
 ```
 
-## `.whub/manifest.yaml` の構造
+## `~/.whub/manifest.yaml` の構造
 
 ```yaml
 version: "2"
