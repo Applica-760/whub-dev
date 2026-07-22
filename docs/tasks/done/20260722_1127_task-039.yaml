@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-039
-  state: in_progress
+  state: completed
   title: WhubContextへ管理ファイルアクセスを集約する
   objective: config・Manifest・Todo・downloadsへのアクセスをWhubContextインターフェースへ集約し、consumerを変更せずlegacy
     data_dir backendから.whub直下backendへ安全に切り替えられる構造にする
@@ -15,7 +15,7 @@ task:
 plan:
   acceptance:
   - id: ACC-006
-    statement: 実運用データの移動、Boot・App runtime/dist・release・operation_project設定・cutoverを変更せず親TASK-037へ残す。
+    statement: manifest.yaml・todos.yaml・downloadsはoperation rootの.whubへ複製し、Stable更新まではvault/whubの元データを保持して旧Stableと開発版を並行利用できる。FOCUS.mdは移行対象外とする。
   phases:
   - title: 互換interfaceを導入しlegacy backendへconsumerを集約する
     acceptance:
@@ -66,31 +66,48 @@ plan:
       statement: operation root、logical symlink、physical checkout、context欠落を含むpath
         testと全回帰検証が成功する。
     steps:
-    - description: WhubContextのbackendをconfig.toml・manifest.yaml・todos.yaml・downloadsがcontextの.whub直下へ直接解決される実装へ切り替え、新旧同時探索・fallback・dual-readを追加しない。
-      state: pending
+    - description: vault/whubのmanifest.yaml・todos.yaml・downloadsをoperation rootの.whubへ複製し、内容一致を検証する。Stable互換のため元データは削除せず、FOCUS.mdは対象外とする。
+      state: done
       skip_reason: null
       deleted: false
-    - description: whub initを外部data_dir登録から、cwdへ.whub/config.tomlを作成するcontext初期化へ変更する。
-      state: pending
+    - description: WhubContextをconfig.toml・manifest.yaml・todos.yaml・downloadsがcontextの.whub直下へ直接解決されるbackendへ切り替え、consumerを変更せず動作させる。
+      state: done
       skip_reason: null
       deleted: false
-    - description: interface内部のdata_dir・WHUB_DATA_DIR・WHUB_ROOT・package位置fallbackとlegacy専用path
-        APIを削除し、consumerを変更せずdirect backendだけで動作させる。
-      state: pending
+    - description: whub initをcwdの.whub context初期化へ変更し、data_dir・WHUB_DATA_DIR・WHUB_ROOT・package位置fallbackとlegacy専用path
+        APIを削除する。
+      state: done
       skip_reason: null
       deleted: false
-    - description: operation rootおよび検証済みlogical PWDでは同じ.whubを選択し、physical development
-        checkout直接起動とcontext欠落は明示エラーになるtestを追加する。
-      state: pending
+    - description: operation rootと検証済みlogical PWDが同じ.whubを選び、physical development
+        checkout直接起動とcontext欠落が明示エラーになるtestを追加する。
+      state: done
       skip_reason: null
       deleted: false
-    - description: focused test、全pytest、pre-commit、operation rootからの開発版smoke testを実行し、実運用データ移行を行わずにPhase成果をcommitする。
-      state: pending
+    - description: focused test・全pytest・pre-commitを実行し、旧Stableがvault/whubを、operation
+        rootからの開発版が.whubを読むsmoke testとKnowledge整合性を検証してPhase成果をcommitする。
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - vault/whubのmanifest.yaml・todos.yaml・downloads配下3 logをoperation rootの.whubへ上書きなしで複製した。5ファイルすべてSHA-256がコピー元と一致。vault/whubの元データとFOCUS.mdは変更していない。
+    - WhubContextのmanifest_path・todo_path・downloads_dirをcontext/.whub直下へhard switchし、config
+      contentをpath解決に使用しないdirect backendへ変更した。consumer変更なし。
+    - whub initを引数なしでcwdの.whub/config.tomlを作るcontext初期化へ変更。WHUB_ROOT・WHUB_DATA_DIR・package
+      fallback・legacy data_dir backendをproduction codeから削除し、rgで0件を確認した。
+    - operation root・検証済みlogical PWDはoperation .whubを選択し、physical development checkout単独はPathErrorになるtestとsmokeを確認。OpenAPI
+      exportから不要なcontext/frontend dist依存も除去した。
+    - CodeGraphを再同期し18 changed files・212 nodesを反映。current_contextは19 production callers。旧symbol名探索はsubstring結果を含むため、production
+      rgでWHUB_ROOT・WHUB_DATA_DIR・_package_workspace_root・_legacy_data_dir・data_dirが0件であることを確定した。
+    - '補足: legacy symbol 0件はdevelopment repository を対象とした結果。operation
+      repositoryの旧sourceには、固定中の擬似Stableがvault/whubを読み続けるためlegacy実装を意図的に残しており、TASK-037
+      cutover後に除去する。'
+    - focused 61 tests、OpenAPI focused 2 tests、全343 tests、pre-commit Ruff/Prettier、Knowledge
+      check、git diff --checkが成功。旧Stableはvault/whubから14 projects、開発版はoperation .whubから同じ14
+      projectsを読み、manifest/todo hash一致。logical PWD成功、physical checkoutはPathError。CodeGraph同期済み。
     deleted: false
 approvals:
+- actor: user
 - actor: user
 acceptance_results:
 - acceptance: ACC-001
@@ -103,6 +120,25 @@ acceptance_results:
   evidence:
   - characterization tests 11件、全347 tests、operation rootで旧Stable版と開発版の4 path比較が成功し、WHUB_ROOT・WHUB_DATA_DIR・config
     data_dirの既存優先順を維持した。
-change_requests: []
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - WhubContextの4管理pathをcontext/.whub直下へ固定し、development production codeのlegacy backend・fallback・dual-read参照0件。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - whub initは引数なしでcwdへ空の.whub/config.tomlを作成し、外部data_dirを要求・記録しないtestが成功。
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - operation root・logical symlink・physical checkout・context欠落のtestとsmoke、全343 tests、pre-commitが成功。
+- acceptance: ACC-006
+  status: passed
+  evidence:
+  - manifest・todos・downloads 3 filesをoperation .whubへ複製しhash一致。vault/whubとFOCUS.mdは保持し旧Stableの読取成功。
+change_requests:
+- reason: Phase 2で実運用データを.whubへコピーし、Stable更新までvault/whubとの一時重複を許容する方針へ変更するため
 cancellation: null
-result: null
+result:
+  summary: Whub管理file accessをWhubContextへ集約し、development backendをoperation .whub直下へhard
+    switchした。旧Stable向けvault copyを保持し、全343 tests・pre-commit・新旧smoke・Knowledge整合性を検証した。

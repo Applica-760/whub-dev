@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import os
-import tomllib
 from dataclasses import dataclass
-from functools import cache, cached_property
+from functools import cache
 from pathlib import Path
 
 
@@ -54,14 +53,8 @@ class WhubContext:
 
     @classmethod
     def discover(cls) -> WhubContext:
-        """Resolve the Phase 1 context while preserving legacy overrides."""
-        override = os.environ.get("WHUB_ROOT")
-        if override:
-            return cls(Path(override).expanduser().resolve())
-        try:
-            return cls(find_context_root(invocation_path()))
-        except PathError:
-            return cls(_package_workspace_root())
+        """Resolve the nearest context from the verified invocation path."""
+        return cls(find_context_root(invocation_path()))
 
     @property
     def config_dir(self) -> Path:
@@ -71,40 +64,17 @@ class WhubContext:
     def config_path(self) -> Path:
         return self.config_dir / "config.toml"
 
-    @cached_property
-    def _legacy_data_dir(self) -> Path:
-        override = os.environ.get("WHUB_DATA_DIR")
-        if override:
-            return Path(override).expanduser().resolve()
-
-        if not self.config_path.exists():
-            raise PathError(
-                "whub data_dir is not configured; run `whub init <data_dir>` "
-                f"to create {self.config_path}"
-            )
-        try:
-            data = tomllib.loads(self.config_path.read_text())
-        except tomllib.TOMLDecodeError as error:
-            raise PathError(
-                f"invalid whub config: {self.config_path}: {error}"
-            ) from error
-
-        value = data.get("data_dir")
-        if not isinstance(value, str) or not value:
-            raise PathError(f"whub config missing data_dir: {self.config_path}")
-        return Path(value).expanduser().resolve()
-
     @property
     def manifest_path(self) -> Path:
-        return self._legacy_data_dir / "manifest.yaml"
+        return self.config_dir / "manifest.yaml"
 
     @property
     def todo_path(self) -> Path:
-        return self._legacy_data_dir / "todos.yaml"
+        return self.config_dir / "todos.yaml"
 
     @property
     def downloads_dir(self) -> Path:
-        return self._legacy_data_dir / "downloads"
+        return self.config_dir / "downloads"
 
     @property
     def app_dist_path(self) -> Path:
@@ -140,11 +110,3 @@ def current_context() -> WhubContext:
 def reset_context() -> None:
     """Forget the cached context for an isolated invocation or test."""
     current_context.cache_clear()
-
-
-def _package_workspace_root() -> Path:
-    current = Path(__file__).resolve()
-    for parent in current.parents:
-        if (parent / "pyproject.toml").exists() and (parent / "src" / "whub").exists():
-            return parent
-    return current.parents[2]

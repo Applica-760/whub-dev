@@ -25,9 +25,12 @@ from whub.tests.helpers import manifest
 
 @pytest.fixture
 def todo_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    path = tmp_path / "todos.yaml"
-    monkeypatch.setenv("WHUB_DATA_DIR", str(tmp_path))
-    return path
+    config_dir = tmp_path / ".whub"
+    config_dir.mkdir()
+    (config_dir / "config.toml").write_text("")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PWD", str(tmp_path))
+    return config_dir / "todos.yaml"
 
 
 def test_todo_operations_persist_and_sort(todo_file: Path) -> None:

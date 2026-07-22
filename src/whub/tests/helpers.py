@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pathlib import Path
+
 from whub.models import Knowledge, Manifest
 
 
@@ -91,9 +91,3 @@ def knowledge_data() -> dict:
 
 def knowledge() -> Knowledge:
     return Knowledge.model_validate(knowledge_data())
-
-
-def write_config(root: Path, data_dir: Path) -> None:
-    config_dir = root / ".whub"
-    config_dir.mkdir()
-    (config_dir / "config.toml").write_text(f'data_dir = "{data_dir}"\n')

@@ -40,9 +40,7 @@ def _write_task(root: Path, task_id: str, title: str) -> None:
 
 def test_lists_tasks_from_local_remote_and_workspace_hub(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
     data = manifest_data()
     local_root = tmp_path / "local-source"
     data["projects"][0]["resource"]["source"] = str(local_root)

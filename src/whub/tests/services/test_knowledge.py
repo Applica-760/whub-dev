@@ -36,10 +36,8 @@ def _write_knowledge(root: Path, data: dict | None = None) -> None:
 
 def test_loads_local_remote_and_workspace_hub_knowledge(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # ケース1
-    monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
     data = manifest_data()
     local_source = tmp_path / "local-source"
     data["projects"][0]["resource"]["source"] = str(local_source)
@@ -65,10 +63,8 @@ def test_loads_local_remote_and_workspace_hub_knowledge(
 
 def test_reports_project_and_file_errors(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # ケース2
-    monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
     data = manifest_data()
     data["projects"][0]["resource"]["source"] = str(tmp_path / "missing-local")
     loaded_manifest = Manifest.model_validate(data)
@@ -98,9 +94,7 @@ def test_converts_invalid_knowledge_to_service_error(tmp_path: Path) -> None:
 
 def test_check_validates_project_relative_refs(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
     manifest_input = manifest_data()
     local_source = tmp_path / "local-source"
     manifest_input["projects"][0]["resource"]["source"] = str(local_source)

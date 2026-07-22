@@ -5,13 +5,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from whub.core.context import current_context
-from whub.webapp.server import create_app
+from whub.webapp.server import create_api_app
 
 
 def openapi_schema() -> dict[str, Any]:
     """Return the current web API OpenAPI schema."""
-    return create_app(current_context().app_dist_path).openapi()
+    return create_api_app().openapi()
 
 
 def main() -> None:

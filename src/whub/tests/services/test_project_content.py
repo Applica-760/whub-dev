@@ -17,9 +17,7 @@ from whub.tests.helpers import manifest
 
 def test_resolves_local_remote_and_workspace_hub_resources(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
     loaded_manifest = manifest()
     loaded_manifest.projects.append(Project(name="workspace-hub"))
 
@@ -51,9 +49,7 @@ def test_rejects_unknown_and_resourceless_projects() -> None:
 
 def test_resolves_available_project_content_roots(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
     loaded_manifest = manifest()
     local = loaded_manifest.resolve_project("local")
     remote = loaded_manifest.resolve_project("remote")

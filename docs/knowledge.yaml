@@ -15,10 +15,6 @@ definitions:
   workspace_hub:
     name: workspace-hub
     definition: whubのsourceを持つproject兼repositoryであり、mount・link対象のresourceではない
-  vault:
-    name: vault
-    definition: 固有記述とwhub運用データを集約するprivateな貯蔵庫repoで、知識・派生文書・機械データの各プレーンを持ちwhubの自己データをdata_dirとして保持する
-    ref: docs/ADR/0008-tool-data-plane-separation.md
   manifest:
     name: manifest
     definition: project・resource・接続情報を定義する設定ファイル
@@ -58,9 +54,6 @@ definitions:
   whub_run:
     name: whub run
     definition: remoteでワンショット実行するコマンド
-  whub_fetch:
-    name: whub fetch
-    definition: remoteのファイルをdata_dirのdownloadsへ取得するコマンド
   whub_vscode:
     name: whub vscode
     definition: symlinkとmount対象をVS Codeの走査対象から除外する設定を生成するコマンド
@@ -139,6 +132,13 @@ definitions:
     name: remote GUI session
     definition: Mac側whubがProjectの.gitignore対象.whubへ固定launcherとpending descriptorを生成し、Linux
       GUI側でlauncherを実行して表示環境を継承したtmuxを開始し、Mac側whubからSSH経由で観測するTask/run単位の作業session
+  vault:
+    name: vault
+    definition: 固有記述・知識・派生文書を集約するprivateな貯蔵庫repository。Whubのoperation管理fileはcontextの.whubが所有し、移行期間中だけ旧Stable向け複製を保持する
+    ref: docs/ADR/0008-tool-data-plane-separation.md
+  whub_fetch:
+    name: whub fetch
+    definition: remoteのfileを現在のWhub contextにある.whub/downloadsへ取得するcommand
 relations:
 - subject: def:project
   predicate: has_resource
@@ -276,10 +276,6 @@ constraints:
     statement: core/tmux.pyはセッション命名規約とremote shell snippetの組み立てを担う
   utils_remain_thin:
     statement: utilsには複数commandで共有する薄い補助処理だけを置きproject・resourceのドメイン判断を持たせない
-  whub_root_resolution:
-    statement: whub rootはWHUB_ROOTを優先し、通常はインストール済みpackage位置から導出する
-  data_dir_resolution:
-    statement: data_dirはWHUB_DATA_DIRを優先し、通常は.whub/config.tomlのdata_dirをSSOTとする
   cd_reports_project_without_resource:
     statement: whub cdでresourceのないprojectを指定した場合は移動先なしを通知する
   status_scope:
@@ -340,5 +336,11 @@ constraints:
     ref: src/whub/commands/boot.py
   core_context_centralizes_access:
     statement: core/context.pyのWhubContextはoperation rootとWhub所有fileへのpath・基本I/Oを一元化し、consumerは保存配置を直接組み立てない
+    ref: src/whub/core/context.py
+  context_root_resolution:
+    statement: Whub context rootはphysical cwdと同一実体だと検証したlogical PWDを起点に、最寄りの.whub/config.tomlから解決し、環境変数overrideとpackage位置fallbackを使わない
+    ref: src/whub/core/context.py
+  managed_files_live_in_context:
+    statement: config.toml・manifest.yaml・todos.yaml・downloadsはcontextの.whub直下に置き、外部data_dirやdual-readを使わない
     ref: src/whub/core/context.py
 exceptions: {}

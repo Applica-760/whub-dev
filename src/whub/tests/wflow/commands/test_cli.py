@@ -14,6 +14,7 @@ from unittest.mock import patch
 from click.testing import CliRunner
 import yaml
 
+from whub.core.context import WhubContext
 from whub.models import Manifest
 from whub.tests.helpers import manifest_data
 from whub.wflow.cli import main
@@ -175,11 +176,14 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
     remote_root = hub_root / "projects/remote"
     for root in (hub_root, local_root, remote_root):
         root.mkdir(parents=True)
-    monkeypatch.setenv("WHUB_ROOT", str(hub_root))
     data = manifest_data()
     data["projects"][0]["resource"]["source"] = str(local_root)
     data["projects"].append({"name": "workspace-hub"})
-    loaded_manifest = Manifest.model_validate(data)
+    with patch(
+        "whub.models.manifest.current_context",
+        return_value=WhubContext(hub_root),
+    ):
+        loaded_manifest = Manifest.model_validate(data)
     monkeypatch.chdir(hub_root)
 
     for root in (hub_root, remote_root):
@@ -190,9 +194,15 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
     custom_task.parent.mkdir(parents=True)
     custom_task.write_text(_TASK_PATH.read_text())
 
-    with patch(
-        "whub.wflow.commands.task.load_manifest",
-        return_value=loaded_manifest,
+    with (
+        patch(
+            "whub.wflow.commands.task.load_manifest",
+            return_value=loaded_manifest,
+        ),
+        patch(
+            "whub.models.manifest.current_context",
+            return_value=WhubContext(hub_root),
+        ),
     ):
         remote = CliRunner().invoke(
             main,

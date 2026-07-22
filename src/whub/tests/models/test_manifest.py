@@ -19,12 +19,12 @@
 
 from __future__ import annotations
 import copy
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
+from whub.core.context import WhubContext
 from whub.models import (
     Manifest,
     ManifestError,
@@ -126,32 +126,33 @@ class TestManifestSpec:
     def test_validation_sets_resolved_resource_attributes(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             # ケース7
-            with patch.dict(os.environ, {"WHUB_ROOT": root}, clear=True):
+            context = WhubContext(Path(root))
+            with patch("whub.models.manifest.current_context", return_value=context):
                 manifest = Manifest.model_validate(manifest_data())
 
         local = manifest.resolve_project("local").resource
         remote = manifest.resolve_project("remote").resource
-        assert local._resolved_workspace_path == Path(root).resolve() / "projects/local"
-        assert (
-            remote._resolved_workspace_path == Path(root).resolve() / "projects/remote"
-        )
+        assert local._resolved_workspace_path == Path(root) / "projects/local"
+        assert remote._resolved_workspace_path == Path(root) / "projects/remote"
         assert remote._resolved_host.hostname == "home.example.com"
 
     def test_load_manifest_reports_user_facing_errors(self) -> None:
-        with tempfile.TemporaryDirectory() as data_dir:
+        with tempfile.TemporaryDirectory() as root:
+            context = WhubContext(Path(root))
+            context.config_dir.mkdir()
             # ケース8
-            with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
+            with patch("whub.models.manifest.current_context", return_value=context):
                 with pytest.raises(ManifestError, match="manifest.yaml not found"):
-                    load_manifest()
+                    load_manifest(context)
 
             # ケース8
-            Path(data_dir, "manifest.yaml").write_text("version: [")
-            with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
+            context.manifest_path.write_text("version: [")
+            with patch("whub.models.manifest.current_context", return_value=context):
                 with pytest.raises(ManifestError, match="invalid manifest YAML"):
-                    load_manifest()
+                    load_manifest(context)
 
             # ケース8
-            Path(data_dir, "manifest.yaml").write_text(
+            context.manifest_path.write_text(
                 "version: '2'\n"
                 "projects:\n"
                 "- name: broken\n"
@@ -160,6 +161,6 @@ class TestManifestSpec:
                 "    workspace_path: /absolute\n"
                 "    source: relative\n"
             )
-            with patch.dict(os.environ, {"WHUB_DATA_DIR": data_dir}, clear=True):
+            with patch("whub.models.manifest.current_context", return_value=context):
                 with pytest.raises(ManifestError, match="invalid manifest"):
-                    load_manifest()
+                    load_manifest(context)

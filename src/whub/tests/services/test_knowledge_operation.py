@@ -24,8 +24,7 @@ from whub.services.knowledge_operation import (
 from whub.tests.helpers import knowledge_data, manifest_data
 
 
-def _manifest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Manifest:
-    monkeypatch.setenv("WHUB_ROOT", str(tmp_path))
+def _manifest(tmp_path: Path) -> Manifest:
     data = manifest_data()
     local_root = tmp_path / "local-source"
     local_root.mkdir()
@@ -44,9 +43,8 @@ def _write_knowledge(root: Path, data: dict | None = None) -> Path:
 
 def test_initializes_local_remote_and_workspace_hub(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manifest = _manifest(tmp_path, monkeypatch)
+    manifest = _manifest(tmp_path)
 
     for project in ("local", "remote", "workspace-hub"):
         initialized = init_project_knowledge(manifest, project)
@@ -68,9 +66,8 @@ def test_initializes_local_remote_and_workspace_hub(
 
 def test_adds_all_categories_with_stable_slugs(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manifest = _manifest(tmp_path, monkeypatch)
+    manifest = _manifest(tmp_path)
     path = _write_knowledge(tmp_path / "local-source")
 
     definition = add_definition(
@@ -129,9 +126,8 @@ def test_adds_all_categories_with_stable_slugs(
 
 def test_rejects_referenced_removal_and_removes_unreferenced_target(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manifest = _manifest(tmp_path, monkeypatch)
+    manifest = _manifest(tmp_path)
     _write_knowledge(tmp_path / "local-source")
 
     for target, reference in (
@@ -160,9 +156,8 @@ def test_rejects_referenced_removal_and_removes_unreferenced_target(
 
 def test_invalid_update_leaves_existing_file_unchanged(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manifest = _manifest(tmp_path, monkeypatch)
+    manifest = _manifest(tmp_path)
     path = _write_knowledge(tmp_path / "local-source")
     original = path.read_bytes()
 
@@ -183,9 +178,8 @@ def test_invalid_update_leaves_existing_file_unchanged(
 
 def test_replace_failure_leaves_existing_file_and_removes_temporary_file(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manifest = _manifest(tmp_path, monkeypatch)
+    manifest = _manifest(tmp_path)
     path = _write_knowledge(tmp_path / "local-source")
     original = path.read_bytes()
 

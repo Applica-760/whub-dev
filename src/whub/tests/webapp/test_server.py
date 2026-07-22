@@ -11,7 +11,7 @@
 8. downが管理PIDを停止する
 9. downが必要に応じてSIGKILLへ昇格する
 10. downが未起動時に成功する
-11. app_pid_pathがWHUB_ROOT配下のPIDファイルを返す
+11. app_pid_pathがcontext root配下のPIDファイルを返す
 
 検証しないケース:
 - 実際の常駐プロセス起動・停止（統合確認で検証）
