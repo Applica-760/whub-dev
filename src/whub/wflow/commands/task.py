@@ -43,14 +43,14 @@ from whub.wflow.services import (
 @click.group()
 @click.option(
     "--project",
+    default="whub-dev",
+    show_default=True,
     shell_complete=project_names,
     help="Target Project.",
 )
 @click.pass_context
-def task(ctx: click.Context, project: str | None) -> None:
+def task(ctx: click.Context, project: str) -> None:
     """Operate task execution records."""
-    if project is None:
-        return
     try:
         root = resolve_project_content_root(load_manifest(), project)
     except (ManifestError, PathError, ServiceError) as error:

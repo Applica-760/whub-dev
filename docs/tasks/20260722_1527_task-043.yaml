@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-043
-  state: draft
+  state: cancelled
   title: Task・KnowledgeのProject ownershipを整理する
   objective: workspace-hub rootにTask・Knowledge・Backlogを持たせず、各記録を内容のownerであるProjectへ移管し、Whub実装Knowledgeと運用Knowledgeの境界および参照整合性を確定する
   approach:
@@ -18,5 +18,7 @@ plan: null
 approvals: []
 acceptance_results: []
 change_requests: []
-cancellation: null
+cancellation:
+  reason: workspace-hub合成Project廃止と同時にroot Knowledge・Backlogを終了する方針となり、TASK-042へ目的と検証を吸収したため。
+  actor: user
 result: null

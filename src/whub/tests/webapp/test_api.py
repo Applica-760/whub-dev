@@ -222,7 +222,7 @@ def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
     assert default_response.status_code == 200
     assert mock_list.call_args_list == [
         call(m, "local"),
-        call(m, "workspace-hub"),
+        call(m, "whub-dev"),
     ]
     assert detail_response.status_code == 200
     assert detail_response.json() == document.model_dump()

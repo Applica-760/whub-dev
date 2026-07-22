@@ -21,7 +21,7 @@ def resolve_project_resource(manifest: Manifest, project_name: str) -> Resource:
     return project.resource
 
 
-# workspace-hub相対パスから、それを含むresourceとresource内相対パスを解決
+# workspace root相対パスから、それを含むresourceとresource内相対パスを解決
 def resolve_resource_by_workspace_path(
     manifest: Manifest,
     path: str,

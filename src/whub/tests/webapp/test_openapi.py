@@ -32,7 +32,7 @@ def test_openapi_schema_contains_all_resource_endpoints() -> None:
             if parameter["name"] == "project"
         )
         assert project["required"] is False
-        assert project["schema"]["default"] == "workspace-hub"
+        assert project["schema"]["default"] == "whub-dev"
 
 
 def test_main_writes_valid_json(capsys) -> None:

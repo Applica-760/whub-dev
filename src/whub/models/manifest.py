@@ -50,7 +50,7 @@ def _check_workspace_path(value: str) -> str:
     path = Path(value)
     if path.is_absolute():
         raise ValueError("workspace_path must be relative")
-    # Attachment paths must stay inside workspace-hub without resolving symlinks.
+    # Attachment paths must stay inside the workspace root without resolving symlinks.
     if ".." in path.parts:
         raise ValueError("workspace_path must not escape workspace root")
     return value
@@ -72,14 +72,6 @@ class SymlinkResource(BaseResource):
         if not Path(value).is_absolute():
             raise ValueError("source must be an absolute path")
         return value
-
-
-def workspace_hub_resource() -> SymlinkResource:
-    """workspace-hub自身をlocal targetとして扱う合成resource"""
-    root = current_context().workspace_root
-    resource = SymlinkResource(type="symlink", workspace_path=".", source=str(root))
-    resource._resolved_workspace_path = root
-    return resource
 
 
 # ── Remote ─────────────────────────────────────────────────────────────────────────────────

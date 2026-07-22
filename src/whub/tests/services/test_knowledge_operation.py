@@ -30,7 +30,6 @@ def _manifest(tmp_path: Path) -> Manifest:
     local_root.mkdir()
     data["projects"][0]["resource"]["source"] = str(local_root)
     (tmp_path / "projects" / "remote").mkdir(parents=True)
-    data["projects"].append({"name": "workspace-hub"})
     return Manifest.model_validate(data)
 
 
@@ -41,12 +40,12 @@ def _write_knowledge(root: Path, data: dict | None = None) -> Path:
     return path
 
 
-def test_initializes_local_remote_and_workspace_hub(
+def test_initializes_local_and_remote_projects(
     tmp_path: Path,
 ) -> None:
     manifest = _manifest(tmp_path)
 
-    for project in ("local", "remote", "workspace-hub"):
+    for project in ("local", "remote"):
         initialized = init_project_knowledge(manifest, project)
         assert initialized.schema_version == 4
         assert not any(

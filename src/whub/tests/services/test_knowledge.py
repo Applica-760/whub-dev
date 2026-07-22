@@ -1,7 +1,7 @@
 """Knowledge Serviceのproject解決・読込・検索テスト。
 
 検証するケース:
-1. local・remote・workspace-hubのKnowledgeを読む。
+1. local・remote ProjectのKnowledgeを読む。
 2. project不明・resourceなし・ファイル不在・remote未接続を通知する。
 3. schema不正をServiceErrorへ変換する。
 4. Definition・Constraintと直接関係するエントリを検索する。
@@ -34,7 +34,7 @@ def _write_knowledge(root: Path, data: dict | None = None) -> None:
     )
 
 
-def test_loads_local_remote_and_workspace_hub_knowledge(
+def test_loads_local_and_remote_knowledge(
     tmp_path: Path,
 ) -> None:
     # ケース1
@@ -43,8 +43,6 @@ def test_loads_local_remote_and_workspace_hub_knowledge(
     data["projects"][0]["resource"]["source"] = str(local_source)
     _write_knowledge(local_source)
     _write_knowledge(tmp_path / "projects" / "remote")
-    data["projects"].append({"name": "workspace-hub"})
-    _write_knowledge(tmp_path)
     loaded_manifest = Manifest.model_validate(data)
 
     assert (
@@ -54,10 +52,6 @@ def test_loads_local_remote_and_workspace_hub_knowledge(
     assert (
         load_project_knowledge(loaded_manifest, "remote").relations[0].subject
         == "def:whub"
-    )
-    assert (
-        "knowledge_is_ssot"
-        in load_project_knowledge(loaded_manifest, "workspace-hub").policies
     )
 
 

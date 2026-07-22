@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { useProjects } from "./useProjects";
 
-export const DEFAULT_PROJECT = "workspace-hub";
+export const DEFAULT_PROJECT = "whub-dev";
 
 export function useProjectSelection() {
   const projectState = useProjects();

@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-042
-  state: draft
+  state: in_progress
   title: workspace-hubを純粋Hubへ縮退する
   objective: workspace-hubをProjectとして扱わず、固定user contextが指定するworkspace rootへProject
     resourceを投影するだけのHubとし、合成resource・既定Project・root CodeGraph index等の特殊処理を廃止する
@@ -17,8 +17,88 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: manifestとWeb Project一覧にworkspace-hubは存在せず、whub-devは実resourceを持つ通常ProjectとしてProject-content操作の既定になる。
+  - id: ACC-002
+    statement: workspace_hub_resourceおよびworkspace-hubをresource付きとして扱うruntime特例がなく、resource必須操作はmanifestの実resourceだけを解決する。
+  - id: ACC-003
+    statement: boot commandとroot Agent設定配布は維持されるがrootはProject/resourceとして扱われず、root
+      CodeGraphを生成しない。
+  - id: ACC-004
+    statement: rootのKnowledge・Backlog・製品command表・CodeGraph indexが終了し、Agent設定・汎用MCP・最小README・Stable
+      .venv・Project linkは維持される。
+  - id: ACC-005
+    statement: 完了済みTodo履歴は変更されず、Backend/Frontend/build/pre-commit/immutable releaseと任意cwd・Web・Project別CodeGraphの回帰検証が成功する。
+  phases:
+  - title: whub-devを通常Projectとして既定化する
+    acceptance: []
+    steps:
+    - description: Project内容を扱うCLI・wflow・Web UI・APIでProject省略時の既定を通常のmanifest Projectであるwhub-devへ統一し、Todoの任意Project指定などProject-content操作ではない契約は維持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: workspace_hub_resourceとworkspace-hubをresource付きとみなすProject content解決特例を除去し、resourceを必要とする操作はmanifest上の実resourceだけを受け付ける。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: boot commandとroot Agent設定配布は維持する。rootをProject/resourceとして表現せずworkspace_rootへ直接配布し、root
+        CodeGraphは初期化しない最小限の補正だけを行い、boot廃止・再設計は対象外とする。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Backend・wflow・Web UI・OpenAPIの既定値、unknown/no-resource error、Project切替に関するtestを更新し、workspace-hub固有のruntime分岐が残っていないことを確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Project-content操作の既定をwhub-devへ統一し、workspace_hub_resourceと合成root解決を除去した。bootはworkspace_rootへ直接Agent設定を配布してroot
+      CodeGraphを初期化しない構造へ補正。focused Backend 87件、全Backend 356件、Frontend 13件、変更対象ruff、Prettier、diff
+      check成功。
+    deleted: false
+  - title: Hub rootのProject contentとindexを終了する
+    acceptance: []
+    steps:
+    - description: whub-devのKnowledgeとBacklogが現行内容を所有していることを照合し、Knowledgeはwhub knowledge
+        add/rmで純粋Hub後の既定値・制約へ更新した上で、rootのdocs/knowledge.yamlとdocs/backlog.mdを複製として終了する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: root READMEから製品のcommand表・manifest仕様を除き、workspace rootの役割・構成・whub-dev
+        READMEへの導線だけへ縮小する。rootのAgent設定と汎用CodeGraph MCPは保持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: root .codegraphをcodegraph uninitで終了し、Project別indexをprojectPath指定で参照できることを確認する。完了済みTodoのworkspace-hubラベルは履歴として変更しない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: releaseとoperation contextをcutoverする
+    acceptance: []
+    steps:
+    - description: Backend全test・Frontend test/format/build・pre-commitを実行し、検証済みwheelをimmutable
+        releaseとして~/.whub/releasesへinstallする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: manifestからresourceなしworkspace-hub entryだけを削除し、whub-devおよび他Project・resource定義を維持する。active
+        releaseとworkspace rootのStable .venvを検証済みreleaseへ切り替える。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 任意directoryからwhub status・link・Knowledge・Backlog・wflowを実行し、whub-dev既定、明示Project切替、Web
+        app、root CodeGraph不在、Project別CodeGraph MCP、root Agent設定配布後もindexが再生成されないことをsmoke
+        testする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null

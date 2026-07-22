@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from click.testing import CliRunner
+import pytest
 import yaml
 
 from whub.core.context import WhubContext
@@ -22,6 +23,17 @@ from whub.wflow.cli import main
 
 _ROOT = Path(__file__).parents[5]
 _TASK_PATH = _ROOT / "src/whub/tests/wflow/fixtures/task.yaml"
+
+
+@pytest.fixture(autouse=True)
+def default_whub_dev_manifest(monkeypatch: pytest.MonkeyPatch) -> None:
+    def load_default() -> Manifest:
+        data = manifest_data()
+        data["projects"][0]["name"] = "whub-dev"
+        data["projects"][0]["resource"]["source"] = str(Path.cwd())
+        return Manifest.model_validate(data)
+
+    monkeypatch.setattr("whub.wflow.commands.task.load_manifest", load_default)
 
 
 def test_check_uses_the_builtin_task_workflow() -> None:
@@ -167,7 +179,7 @@ def test_task_project_option_reports_project_resolution_errors(
     assert "project has no resource: no-resource" in no_resource.output
 
 
-def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
+def test_task_project_option_supports_remote_and_task_dir(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -178,7 +190,6 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
         root.mkdir(parents=True)
     data = manifest_data()
     data["projects"][0]["resource"]["source"] = str(local_root)
-    data["projects"].append({"name": "workspace-hub"})
     context_dir = tmp_path / "task-context"
     context_dir.mkdir()
     context_dir.joinpath("config.toml").write_text(f'workspace_root = "{hub_root}"\n')
@@ -190,7 +201,7 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
         loaded_manifest = Manifest.model_validate(data)
     monkeypatch.chdir(hub_root)
 
-    for root in (hub_root, remote_root):
+    for root in (remote_root,):
         task_path = root / "docs/tasks/example.yaml"
         task_path.parent.mkdir(parents=True)
         task_path.write_text(_TASK_PATH.read_text())
@@ -213,11 +224,6 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
             ["task", "--project", "remote", "check", "001"],
             catch_exceptions=False,
         )
-        workspace_hub = CliRunner().invoke(
-            main,
-            ["task", "--project", "workspace-hub", "check", "001"],
-            catch_exceptions=False,
-        )
         task_dir = CliRunner().invoke(
             main,
             ["task", "--project", "local", "ls", "custom/tasks"],
@@ -225,7 +231,6 @@ def test_task_project_option_supports_remote_workspace_hub_and_task_dir(
         )
 
     assert remote.exit_code == 0
-    assert workspace_hub.exit_code == 0
     assert task_dir.exit_code == 0
     assert "TASK-001" in task_dir.output
 
@@ -628,7 +633,7 @@ def test_task_interrupt_and_resume_use_cross_task_validation(
     assert "resumed TASK-001" in resumed.output
 
 
-def test_task_ls_uses_docs_tasks_by_default(tmp_path: Path, monkeypatch) -> None:
+def test_task_ls_uses_whub_dev_by_default(tmp_path: Path, monkeypatch) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)
     (task_dir / "example.yaml").write_text(_TASK_PATH.read_text())

@@ -182,4 +182,4 @@ class TestLinkSpec:
             result = CliRunner().invoke(link)
 
         assert result.exit_code != 0
-        assert "workspace-hub root" in result.output
+        assert "workspace root" in result.output

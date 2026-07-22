@@ -29,7 +29,7 @@ from whub.services.knowledge_operation import (
 )
 
 
-DEFAULT_PROJECT = "workspace-hub"
+DEFAULT_PROJECT = "whub-dev"
 CATEGORIES = {
     "def": "definitions",
     "rel": "relations",

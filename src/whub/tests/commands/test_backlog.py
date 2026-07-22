@@ -1,7 +1,7 @@
 """`whub backlog`コマンドのCLI振る舞いテスト。
 
 検証するケース:
-1. Project未指定時はworkspace-hubへ追記
+1. Project未指定時はwhub-devへ追記
 2. --projectで明示したProjectへ追記
 3. 入力メモの前後空白除去
 4. 空メモの拒否
@@ -24,7 +24,7 @@ from whub.tests.helpers import manifest
 
 
 class TestBacklogCmdSpec:
-    def test_defaults_to_workspace_hub(self):
+    def test_defaults_to_whub_dev(self):
         # ケース1
         m = manifest()
         with (
@@ -38,8 +38,8 @@ class TestBacklogCmdSpec:
             )
 
         assert result.exit_code == 0
-        assert "backlog workspace-hub: add feature X" in result.output
-        mock_append.assert_called_once_with(m, "workspace-hub", "add feature X")
+        assert "backlog whub-dev: add feature X" in result.output
+        mock_append.assert_called_once_with(m, "whub-dev", "add feature X")
 
     def test_accepts_project_option(self):
         # ケース2

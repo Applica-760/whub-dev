@@ -19,13 +19,13 @@ from typing import Callable, Iterator
 import click
 
 from whub.commands import get_manifest
+from whub.core.context import current_context
 from whub.models import (
     Host,
     Manifest,
     Project,
     RemoteResource,
     SymlinkResource,
-    workspace_hub_resource,
 )
 from whub.core.remote import run_rsync_command, run_ssh_command
 from whub.core.target import TargetItem, on_targets
@@ -43,7 +43,8 @@ _SKILLS_DESTS = (".claude/skills", ".agents/skills")
 
 # ── Merge ─────────────────────────────────────────────────────────
 def _merge_json(overlay_text: str, existing: str | None) -> str:
-    dump = lambda d: json.dumps(d, indent=2, ensure_ascii=False) + "\n"
+    def dump(data: dict) -> str:
+        return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
     def unique(items: list) -> list:
         seen: set[str] = set()
@@ -161,8 +162,15 @@ def _apply_local_boot(
     resource: SymlinkResource,
     project: Project,
 ) -> None:
-    name = project.name
-    target = resource._resolved_workspace_path
+    _apply_local_boot_to(project.name, resource._resolved_workspace_path)
+
+
+def _apply_local_boot_to(
+    name: str,
+    target: Path,
+    *,
+    init_codegraph: bool = True,
+) -> None:
     if not target.exists():
         click.echo(f"  {'skip':6s}  {name} (not found)")
         return
@@ -188,12 +196,16 @@ def _apply_local_boot(
         click.echo(f"  {'WARN':6s}  {name}: deploy failed: {error}")
         return
     click.echo(f"  {'done':6s}  {name}")
-    _init_local_codegraph(name, target)
+    if init_codegraph:
+        _init_local_codegraph(name, target)
 
 
 def _apply_workspace_boot() -> None:
-    resource = workspace_hub_resource()
-    _apply_local_boot(resource, Project(name="workspace-hub", resource=resource))
+    _apply_local_boot_to(
+        "workspace root",
+        current_context().workspace_root,
+        init_codegraph=False,
+    )
 
 
 def _apply_remote_boot(

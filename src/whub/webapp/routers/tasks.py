@@ -25,19 +25,19 @@ class TaskGraphResponse(BaseModel):
 
 
 @router.get("", response_model=TaskListResponse)
-def get_tasks(project: str = "workspace-hub") -> TaskListResponse:
+def get_tasks(project: str = "whub-dev") -> TaskListResponse:
     return TaskListResponse(tasks=list_project_tasks(load_manifest(), project))
 
 
 @router.get("/{task_id}", response_model=TaskDocument)
-def get_task(task_id: str, project: str = "workspace-hub") -> TaskDocument:
+def get_task(task_id: str, project: str = "whub-dev") -> TaskDocument:
     return load_project_task(load_manifest(), project, task_id)
 
 
 @router.get("/{task_id}/graph", response_model=TaskGraphResponse)
 def get_task_flow_graph(
     task_id: str,
-    project: str = "workspace-hub",
+    project: str = "whub-dev",
 ) -> TaskGraphResponse:
     return TaskGraphResponse(
         mermaid=render_project_task_flow(load_manifest(), project, task_id),

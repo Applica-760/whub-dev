@@ -38,21 +38,18 @@ def _write_task(root: Path, task_id: str, title: str) -> None:
     )
 
 
-def test_lists_tasks_from_local_remote_and_workspace_hub(
+def test_lists_tasks_from_local_and_remote_projects(
     tmp_path: Path,
 ) -> None:
     data = manifest_data()
     local_root = tmp_path / "local-source"
     data["projects"][0]["resource"]["source"] = str(local_root)
-    data["projects"].append({"name": "workspace-hub"})
     _write_task(local_root, "TASK-001", "Local")
     _write_task(tmp_path / "projects" / "remote", "TASK-001", "Remote")
-    _write_task(tmp_path, "TASK-001", "Workspace")
     loaded_manifest = Manifest.model_validate(data)
 
     assert list_project_tasks(loaded_manifest, "local")[0].title == "Local"
     assert list_project_tasks(loaded_manifest, "remote")[0].title == "Remote"
-    assert list_project_tasks(loaded_manifest, "workspace-hub")[0].title == "Workspace"
 
 
 def test_distinguishes_missing_tasks_from_unavailable_resource(

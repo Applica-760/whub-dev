@@ -14,7 +14,7 @@ from whub.services.errors import ServiceError
 @click.argument("text")
 @click.option(
     "--project",
-    default="workspace-hub",
+    default="whub-dev",
     show_default=True,
     shell_complete=project_names,
 )

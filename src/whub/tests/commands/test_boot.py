@@ -3,7 +3,7 @@
 検証するケース:
 1. localリソースへmerge/skills配布で"done"出力
 2. リソース未存在でskip出力
-3. workspace-hub自身への配布（_apply_workspace_boot）
+3. workspace rootへのAgent設定配布（_apply_workspace_boot）
 4. boot=falseは_collect_boot_targetsで除外される
 5. _merge_json：再帰マージ・リスト重複排除（ADR-0009例外：複雑分岐）
 6. CodeGraph init失敗が後続ターゲットの配布を止めない（fail-safe）
@@ -19,17 +19,17 @@
 from __future__ import annotations
 
 import subprocess
-from pathlib import Path
 from unittest.mock import patch
 
 from click.testing import CliRunner
 
 from whub.commands.boot import (
+    _apply_workspace_boot,
     boot,
     _collect_boot_targets,
     _merge_json,
 )
-from whub.models import Manifest, SymlinkResource
+from whub.models import Manifest
 from whub.tests.helpers import manifest
 
 
@@ -77,6 +77,18 @@ class TestBootSpec:
             CliRunner().invoke(boot, catch_exceptions=False)
 
         mock_ws.assert_called_once()
+
+    def test_workspace_boot_does_not_initialize_codegraph(self, tmp_path):
+        with (
+            patch("whub.commands.boot.current_context") as context,
+            patch("whub.commands.boot._merged_files", return_value=iter(())),
+            patch("whub.commands.boot.shutil.copytree"),
+            patch("whub.commands.boot._init_local_codegraph") as init_codegraph,
+        ):
+            context.return_value.workspace_root = tmp_path
+            _apply_workspace_boot()
+
+        init_codegraph.assert_not_called()
 
     def test_collect_excludes_boot_false(self):
         # ケース4

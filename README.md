@@ -1,4 +1,4 @@
-# workspace-hub
+# whub
 
 複数PC・複数プロジェクトにまたがる開発作業を、単一マニフェストから管理する。
 symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動・Agent設定配布を一元化する。
@@ -15,7 +15,7 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 
 ```sh
 uv tool install .
-whub init --workspace-root /path/to/workspace-hub
+whub init --workspace-root /path/to/workspace
 source <(whub shell-init)   # .zshrc に追記
 ```
 
@@ -34,7 +34,7 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
 | `whub session <COMMAND>` | remote GUI sessionの予約・command handoff・状態確認・ログ取得・削除 |
 | `whub todo` | `project`横断の単発アクションを管理 |
-| `whub backlog <PROJECT> <TEXT...>` | projectのbacklog末尾の未整理メモへ追記 |
+| `whub backlog <TEXT> [--project PROJECT]` | projectのbacklog末尾の未整理メモへ追記（既定は`whub-dev`） |
 | `whub boot` | Agent設定を`boot: true`な`resource`へ配布 |
 | `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
 
@@ -42,7 +42,7 @@ source <(whub shell-init)   # .zshrc に追記
 
 新規・未完了の個別作業はTask YAMLをSSOTとし、完了済みMarkdown Taskは履歴として扱う。対話・承認の詳細は`task-planning` Skillに従う。
 表内で`wflow task`を省略したコマンドは、すべてそのサブコマンドを表す。
-workspace-hubから別Projectを操作する場合は`wflow task --project PROJECT COMMAND`を使う。`--project`省略時は従来どおりカレントディレクトリの`docs/tasks`を対象とする。
+`wflow task`の既定Projectは`whub-dev`とする。別Projectを操作する場合は`wflow task --project PROJECT COMMAND`を使う。
 
 | 区分 | コマンド |
 |---|---|
@@ -109,13 +109,11 @@ hosts:
     identity_file: "~/.ssh/id_rsa"
 
 projects:
-  - name: workspace-hub
-
-  - name: my-project
+  - name: whub-dev
     resource:
       type: symlink
-      workspace_path: projects/my-project
-      source: /path/to/repo
+      workspace_path: whub-dev
+      source: /path/to/whub
       boot: true
 
   - name: remote-project

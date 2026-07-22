@@ -61,7 +61,7 @@ function renderInMantine(component: React.ReactNode) {
 describe("KnowledgeWidget", () => {
   it("分類タブと検索で表示を絞り込む", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(KNOWLEDGE)));
-    renderInMantine(<KnowledgeWidget project="workspace-hub" />);
+    renderInMantine(<KnowledgeWidget project="whub-dev" />);
 
     await screen.findAllByText("def:whub");
     fireEvent.click(screen.getByRole("tab", { name: "CON" }));
@@ -89,20 +89,18 @@ describe("KnowledgeWidget", () => {
       "fetch",
       vi.fn().mockResolvedValue(response({ detail: "request failed" }, status)),
     );
-    renderInMantine(<KnowledgeWidget project="workspace-hub" />);
+    renderInMantine(<KnowledgeWidget project="whub-dev" />);
 
     expect(await screen.findByText(expected)).toBeTruthy();
   });
 });
 
 describe("KnowledgePage", () => {
-  it("workspace-hubを初期選択し、project切替で再取得する", async () => {
+  it("whub-devを初期選択し、project切替で再取得する", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const path = String(input);
       if (path === "/api/projects") {
-        return Promise.resolve(
-          response({ projects: ["local", "workspace-hub"] }),
-        );
+        return Promise.resolve(response({ projects: ["local", "whub-dev"] }));
       }
       return Promise.resolve(response(KNOWLEDGE));
     });
@@ -111,7 +109,7 @@ describe("KnowledgePage", () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        "/api/knowledge/workspace-hub",
+        "/api/knowledge/whub-dev",
         undefined,
       );
     });

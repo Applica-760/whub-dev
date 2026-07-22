@@ -15,7 +15,7 @@ from whub.services.errors import ServiceError
 from whub.tests.helpers import knowledge, manifest, manifest_data
 
 
-def test_check_defaults_to_workspace_hub() -> None:
+def test_check_defaults_to_whub_dev() -> None:
     loaded_manifest = manifest()
     with (
         patch("whub.commands.knowledge.get_manifest", return_value=loaded_manifest),
@@ -32,10 +32,10 @@ def test_check_defaults_to_workspace_hub() -> None:
 
     assert result.exit_code == 0
     assert result.output.strip() == (
-        "valid workspace-hub: 2 definitions, 1 relations, 1 policies, "
+        "valid whub-dev: 2 definitions, 1 relations, 1 policies, "
         "1 constraints, 1 exceptions"
     )
-    mock_load.assert_called_once_with(loaded_manifest, "workspace-hub")
+    mock_load.assert_called_once_with(loaded_manifest, "whub-dev")
 
 
 def test_query_accepts_project_option_and_outputs_yaml() -> None:
@@ -211,13 +211,13 @@ def test_rm_uses_slug_and_relation_composite_key() -> None:
     assert entry_result.output.strip() == "removed con:preserve_references"
     remove_entry.assert_called_once_with(
         loaded_manifest,
-        "workspace-hub",
+        "whub-dev",
         "con:preserve_references",
     )
     assert relation_result.exit_code == 0
     remove_edge.assert_called_once_with(
         loaded_manifest,
-        "workspace-hub",
+        "whub-dev",
         "def:whub",
         "uses",
         "def:project",
