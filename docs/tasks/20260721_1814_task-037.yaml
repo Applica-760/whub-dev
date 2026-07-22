@@ -185,11 +185,11 @@ plan:
       statement: installed packageの位置とoperation rootが独立して解決され、開発checkoutの場所から運用参照先が変化しない。
     - id: ACC-006
       statement: workspace-hubという名前に依存したProject/resource解決の例外が残っていない。
-    - id: ACC-026
-      statement: logical symlinkまたはoperation root cwdから起動した開発版とStable版が同じoperation
-        .whubを選び、physical development checkoutやpackage位置からoperation contextを暗黙推定しない。
     - id: ACC-027
       statement: Manifest・Todo・private設定は最寄りの.whub直下へ直接解決され、外部data_dir・WHUB_DATA_DIR・whub_rootによるpackage位置推定が残っていない。
+    - id: ACC-029
+      statement: Stable版とuv run --projectで選択したdevelopment版がoperation rootの同じ.whubを使用し、physical
+        development checkoutからの直接起動はcontext未検出エラーとなる。
     steps:
     - description: 移行完了までoperation repository由来の現行whub/wflowを擬似Stable版として固定し、Task・Knowledge・移行操作はoperation
         rootから--project whub付きで行い、source変更はdevelopment repositoryだけで行う。
@@ -201,19 +201,19 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    - description: 起動時のlogical working directoryをphysical cwdとの同一実体検証付きで保持し、symlink
-        pathを早期resolveせず親方向へ最寄りの.whub/config.tomlを探索してcontext rootを一度だけ確定する。operation
-        rootをcwdに保つuv run --project ./whubも同じcontextを選ぶことをtestする。
+    - description: Path.cwdから親方向へ最寄りの.whub/config.tomlを探索してcontext rootを起動時に一度だけ確定する。Stable版・development版ともoperation
+        rootをcwdとし、development codeはuv run --project ./whubで選択する。logical PWD補正、環境変数override、package位置fallbackは追加せず、physical
+        development checkoutからの直接起動はcontext未検出エラーとする。
       state: pending
       skip_reason: null
       deleted: false
-    - description: config.toml、manifest.yaml、todos.yaml、boot、downloads、runtime、releasesを最寄りの.whub直下へ集約するcontext
-        path APIをlegacy APIと並存実装し、外部data_dirを持たない自己完結構成をtestで固定する。
+    - description: config.toml、manifest.yaml、todos.yaml、boot、downloads、runtime、releasesを最寄りの.whub直下へ解決するcontext
+        path APIを実装する。既存consumerの移行完了まで現行whub_rootは未変更のまま暫定利用し、新旧を接続するadapter・fallback・dual-readは追加しない。
       state: pending
       skip_reason: null
       deleted: false
-    - description: 最初にconfig・manifest・todo・downloadsのpath解決とManifest/model/service利用箇所をwhub_root・whub_data_dirからcontext
-        .whubへ移行し、旧実装との比較testと移行互換を維持する。
+    - description: config・manifest・todo・downloadsのpath解決とManifest/model/service consumerをwhub_root・whub_data_dirからcontext
+        .whubへ直接切り替える。旧実装との比較testで差を確認し、切替済みconsumerから旧経路を除去する。
       state: pending
       skip_reason: null
       deleted: false
@@ -223,8 +223,8 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    - description: 全consumer移行後にwhub_root・_package_workspace_root・workspace_hub_resourceを削除し、data_dir・WHUB_DATA_DIR・WHUB_ROOTの移行互換を終了する。operation
-        root、logical symlink、physical development checkout、installed wheel、linked
+    - description: 全consumer移行後にwhub_root・_package_workspace_root・workspace_hub_resource・data_dir・WHUB_DATA_DIR・WHUB_ROOTを後方互換adapterなしで削除する。operation
+        root cwd、uv run --project、physical development checkout、installed wheel、linked
         worktree、context未検出を網羅するtestを成功させる。
       state: pending
       skip_reason: null
@@ -327,8 +327,8 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    - description: Whub開発Projectでuv run pytest、pre-commit、Frontend format/buildに加え、logical
-        symlink・uv run --project・wheel context解決の全検証を実行する。
+    - description: Whub開発Projectでuv run pytest、pre-commit、Frontend format/buildに加え、operation
+        root cwdからのuv run --projectとwheel context解決の全検証を実行する。
       state: pending
       skip_reason: null
       deleted: false
@@ -358,7 +358,7 @@ plan:
       deleted: false
     - description: 新operation .whubをSSOTとしてwflow task --project whub、whub knowledge
         --project whub、operation_project向けKnowledge、status、link、boot、Web appをoperation
-        rootとlogical symlink経由でsmoke testする。
+        rootからsmoke testする。
       state: pending
       skip_reason: null
       deleted: false
@@ -396,8 +396,9 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    - description: root直下whub symlink、physical development checkout、linked worktreeの各起動経路を検証し、logical
-        symlinkはoperation contextを選択し、physical checkout/worktreeは独自contextがなければ明示エラーとなり、branchコードが運用SSOTを暗黙変更しないことを確認する。
+    - description: physical development checkoutとlinked worktreeをuv run --projectの対象としてoperation
+        rootから実行し、同じoperation contextを明示選択することを確認する。各checkoutをcwdとして直接起動した場合は独自contextがなければ明示エラーとなり、package位置やsymlinkからoperation
+        SSOTを暗黙推定しないことを確認する。
       state: pending
       skip_reason: null
       deleted: false
@@ -407,7 +408,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: Whub開発Projectでuv run pytest、pre-commit、Frontend format/build、wheel
-        install、logical/physical cwd、rollbackの最終検証を再実行し、結果を記録する。
+        install、operation root cwdからのproject選択、physical checkout直接起動エラー、rollbackの最終検証を再実行し、結果を記録する。
       state: pending
       skip_reason: null
       deleted: false
@@ -416,7 +417,7 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    - description: 分離構成、logical symlink、development実行、operation .whubの追跡境界、release昇格、data
+    - description: 分離構成、operation root cwdからのdevelopment実行、operation .whubの追跡境界、release昇格、data
         migration、rollback、Task/Knowledge操作の手順と全検証証跡を文書化する。
       state: pending
       skip_reason: null
