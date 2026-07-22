@@ -12,8 +12,9 @@ task:
   - 開発Projectのworktreeを実装場所として利用し、運用データとユーザー接点を各worktreeへ分散させない。
   depends_on:
   - TASK-033
-  interruption_task_id: TASK-039
-  interruption_reason: Whubの全consumerを一度共通interfaceへ集約してからdata_dirを廃止し、.whub直下backendへ安全に切り替えるため。
+  interruption_task_id: TASK-040
+  interruption_reason: Web app sourceをdevelopment repositoryのSSoTとし、build済みdistを固定wheelへ同梱してStable
+    cutover前にfrontend runtimeをoperation旧appから分離するため。
   interruption_source_task_id: null
 plan:
   acceptance:

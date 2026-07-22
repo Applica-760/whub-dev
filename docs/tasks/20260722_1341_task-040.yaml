@@ -1,0 +1,73 @@
+schema_version: 1
+task:
+  id: TASK-040
+  state: in_progress
+  title: Web app distをWhub release artifactへ同梱する
+  objective: 開発repositoryのapp sourceをSSoTとし、build済みWeb app distをWhub wheel内のpackage-owned
+    resourceとして配布して、Stable whub appをoperation・development repositoryのapp directoryから独立させる
+  approach:
+  - whub appはwheel同梱distを配信し、whub app devだけがdevelopment checkoutのapp sourceを使う。WhubContextからapp
+    dist配置責務を除去し、cleanな非editable wheel installで静的appとAPIを検証する。Stable cutoverとoperation旧実装削除は親TASK-037に残す。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: TASK-037
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: Web app sourceのSSoTはdevelopment repositoryのapp/だけで、app/distはrelease時の生成artifactとして扱われる。
+  - id: ACC-002
+    statement: productionのwhub appはwheel同梱distだけを配信し、operation repositoryまたはdevelopment
+      checkoutのapp directoryをruntime参照しない。
+  - id: ACC-003
+    statement: whub app devはdevelopment app sourceを使用し、production 8710・development
+      frontend 8712・development API 8713とapp.pid/app-dev.pidの分離を維持する。
+  - id: ACC-004
+    statement: build済みwheelへ必須distが収録され、欠落artifactを拒否し、clean非editable環境からoperation
+      contextの静的appとAPIを起動できる。
+  - id: ACC-005
+    statement: Stable cutoverとoperation repositoryの旧src・app削除は変更せず、親TASK-037へ残す。
+  phases:
+  - title: Web app sourceとrelease distを分離してwheelへ同梱する
+    acceptance: []
+    steps:
+    - description: 現行のWhubContext.app_dist_path・whub app/app dev・Vite/API port・uv_build
+        wheel内容とtest依存をCodeGraphおよびcharacterization testで固定する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv_buildが確実に収録するpackage-owned resource領域へapp build出力を配置するrelease
+        build経路を実装し、source app/を生成distと分離したSSoTとして維持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whub appをwheel同梱distのresolverへ切り替え、WhubContext.app_dist_pathとoperation/development
+        repositoryのapp directoryへのproduction依存を削除する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whub app devだけがdevelopment checkoutのapp sourceを検証して使用するresolverへ分離し、frontend
+        8712・API 8713・専用PIDの既存契約を維持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: wheelへのdist収録、dist欠落artifactの拒否、clean非editable install、operation
+        contextからの静的file/API起動、development app非依存を統合testで検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Frontend format/test/build、Python focused test・全pytest・pre-commit、wheel内容検査とsmoke
+        testを実行し、Knowledgeを更新してPhase成果をcommitする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: wflow task interruptがdraft childを直接開始するため。計画内容とユーザー承認は変更しない。
+cancellation: null
+result: null
