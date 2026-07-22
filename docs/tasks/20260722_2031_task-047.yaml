@@ -1,0 +1,18 @@
+schema_version: 1
+task:
+  id: TASK-047
+  state: draft
+  title: whub-devから運用releaseへの反映手順を定式化する
+  objective: whub-devを更新・検証した後、その成果を運用releaseへ安全かつ再現可能に反映する標準手順を定義する
+  approach:
+  - 現行のbuild・検証・immutable release作成・current切替・常駐process更新までを整理し、最小の運用手順として文書化する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
