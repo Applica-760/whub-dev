@@ -1,0 +1,44 @@
+schema_version: 1
+task:
+  id: TASK-046
+  state: completed
+  title: HubのVS Code Git検出をwhub-devへ限定する
+  objective: workspace-hubを開いたVS Codeで接続Project全体を走査せず、whub-dev symlinkのGit差分だけをSource
+    Controlへ表示できる設定にする
+  approach:
+  - 既存のwatch/search除外を維持し、Git自動走査深度を0にしてgit.scanRepositoriesへwhub-devだけを指定する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: whub-dev限定Git検出を設定・検証する
+    acceptance: []
+    steps:
+    - description: root .vscode/settings.jsonだけにGit自動走査深度0とgit.scanRepositories=[whub-dev]を追加し、whub-devをwatch/search/python除外から外す。Whub製品コードは変更しない。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: JSON妥当性、インストール済みVS Code設定schema、whub-dev symlinkのGit root解決を確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - rootローカル.vscode/settings.jsonだけへgit.autoRepositoryDetection=subFolders、repositoryScanMaxDepth=0、scanRepositories=[whub-dev]を設定し、whub-devをwatch/search/python除外から除去。個人要望をWhub製品コードへ入れる案はユーザー指摘により撤回し、src
+      diffなし。JSONとインストール済みVS Code 10.0.0 Git extension schema、symlink経由Git root=を確認。Knowledge更新なし。
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: whub vscode再実行でwhub-devがwatcher/search/python除外へ追加され、Git限定表示の恒久化にはgeneratorとtestの変更が必要と判明したため。
+- reason: ユーザー指示によりKnowledge更新を対象外とするため。
+- reason: ユーザー指摘により個人用VS Code設定をWhub製品コードへ含めず、rootローカル設定だけへ限定するため。
+cancellation: null
+result:
+  summary: Hub固有のVS Code設定だけで再帰Git走査を停止し、whub-dev symlinkだけを明示検出する構成を設定・検証した。Whub製品コードとKnowledgeは変更していない。
