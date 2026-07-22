@@ -16,13 +16,13 @@ npm run generate:types
 
 ## 開発
 
-リポジトリルートから開発モードを起動する。
+Whub contextからdevelopment checkoutのCLIを選び、開発モードを起動する。
 
 ```sh
-whub app dev
+uv run --project ./whub whub app dev
 ```
 
-画面は`http://127.0.0.1:8710`で配信され、ViteのHMRとFastAPIのリロードが有効になる。`/api`は内部のFastAPI（`8711`）へプロキシされる。停止は`whub app down`を使う。
+画面は`http://127.0.0.1:8712`で配信され、ViteのHMRとFastAPIのリロードが有効になる。`/api`は内部のFastAPI（`8713`）へプロキシされる。停止は`uv run --project ./whub whub app down --dev`を使う。配布版の`whub app`は`8710`を使用するため、同時に起動できる。
 
 ## ビルドと検証
 
@@ -32,4 +32,4 @@ npm run build
 uv run pytest
 ```
 
-`npm run build`の出力先は`app/dist/`であり、`whub app`が静的配信する。
+`npm run build`の出力先は`src/whub/webapp/dist/`であり、Whub wheelへpackage resourceとして同梱される。`app/`はfrontend sourceだけを管理する。

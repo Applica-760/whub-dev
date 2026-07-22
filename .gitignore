@@ -30,6 +30,7 @@ __pycache__/
 
 # Web app build output
 app/dist/
+src/whub/webapp/dist/
 app/node_modules
 
 # whub link (auto-generated)

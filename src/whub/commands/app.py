@@ -12,6 +12,11 @@ from pathlib import Path
 import click
 
 from whub.core.context import current_context
+from whub.webapp.resources import (
+    AppResourceError,
+    development_app_source,
+    packaged_app_dist,
+)
 from whub.webapp.runner import AppProcessRecord, read_pid_record, remove_pid_record
 
 DEV_PORT = 8712
@@ -72,11 +77,10 @@ def app(ctx: click.Context, port: int) -> None:
         return
 
     context = current_context()
-    dist_dir = context.app_dist_path
-    if not (dist_dir / "index.html").is_file():
-        raise click.ClickException(
-            "web app is not built; run `cd app && npm install && npm run build`"
-        )
+    try:
+        dist_dir = packaged_app_dist()
+    except AppResourceError as error:
+        raise click.ClickException(str(error)) from error
 
     pid_path = context.app_pid_path
     process = _read_running_process(pid_path)
@@ -142,9 +146,10 @@ def dev() -> None:
         click.echo(f"app dev already running: http://127.0.0.1:{process.port}")
         return
 
-    app_dir = context.app_dist_path.parent
-    if not (app_dir / "package.json").is_file():
-        raise click.ClickException(f"web app source is missing: {app_dir}")
+    try:
+        app_dir = development_app_source()
+    except AppResourceError as error:
+        raise click.ClickException(str(error)) from error
 
     subprocess.Popen(
         [

@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-037
-  state: paused
+  state: in_progress
   title: Whubの開発ディレクトリと運用ディレクトリを分離する
   objective: WhubのSSoT・Task管理・Agent sessionの入口を担う運用ディレクトリと、CLI・wflow・Web appを開発するcheckoutを分離し、Whub自身を安全に並列開発できる構成を実現する
   approach:

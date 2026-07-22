@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-040
-  state: in_progress
+  state: completed
   title: Web app distをWhub release artifactへ同梱する
   objective: 開発repositoryのapp sourceをSSoTとし、build済みWeb app distをWhub wheel内のpackage-owned
     resourceとして配布して、Stable whub appをoperation・development repositoryのapp directoryから独立させる
@@ -33,41 +33,72 @@ plan:
     steps:
     - description: 現行のWhubContext.app_dist_path・whub app/app dev・Vite/API port・uv_build
         wheel内容とtest依存をCodeGraphおよびcharacterization testで固定する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: uv_buildが確実に収録するpackage-owned resource領域へapp build出力を配置するrelease
         build経路を実装し、source app/を生成distと分離したSSoTとして維持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: whub appをwheel同梱distのresolverへ切り替え、WhubContext.app_dist_pathとoperation/development
         repositoryのapp directoryへのproduction依存を削除する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: whub app devだけがdevelopment checkoutのapp sourceを検証して使用するresolverへ分離し、frontend
         8712・API 8713・専用PIDの既存契約を維持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: wheelへのdist収録、dist欠落artifactの拒否、clean非editable install、operation
         contextからの静的file/API起動、development app非依存を統合testで検証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Frontend format/test/build、Python focused test・全pytest・pre-commit、wheel内容検査とsmoke
         testを実行し、Knowledgeを更新してPhase成果をcommitする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - '2026-07-22: ユーザー承認により、Vite release buildは開発repositoryのsrc/whub/webapp/distへ直接出力し、uv_buildがPython
+      package treeとしてwheelへ同梱する単一artifact構成を採用する。app/はfrontend sourceのSSoTとして維持し、production
+      resolverとdevelopment checkout resolverを分離する。'
+    - Vite outDirをsrc/whub/webapp/distへ変更し、package resource resolverとdevelopment checkout
+      resolverを分離。WhubContext.app_dist_pathを削除し、CodeGraph同期後もproduction参照0件。Frontend
+      format 1・Vitest 13・build成功、Web app pytest 39・全pytest 348・Ruff・pre-commit成功。uv_build
+      wheelへdist 71 filesを含む4.76MBを収録し、clean非editable venvのoperation contextで8710
+      static/API起動・停止成功。developmentは8712/8713・app-dev.pidでVite経由healthと停止後解放を確認。
     deleted: false
 approvals:
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - app/はsourceのみを維持し、Vite buildはignored生成物src/whub/webapp/distへ直接出力。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - productionはimportlib.resources由来のpackaged_app_distだけを使用し、WhubContext.app_dist_pathを削除。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - production 8710/app.pid、development 8712+8713/app-dev.pid。development実起動と停止後解放を確認。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - wheelにdist 71 entriesを収録。非editable clean venvのoperation contextでstatic/API起動・停止成功。欠落distとinstalled
+    wheelのdev source解決を拒否。
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - operation repository旧source・appとStable cutoverは変更せず、親TASK-037に維持。
 change_requests:
 - reason: wflow task interruptがdraft childを直接開始するため。計画内容とユーザー承認は変更しない。
 cancellation: null
-result: null
+result:
+  summary: Web app build出力をPython package treeへ移し、productionをwheel同梱dist、developmentをcheckout
+    app sourceへ分離。wheel/clean install/8710 production/8712+8713 developmentを検証完了。

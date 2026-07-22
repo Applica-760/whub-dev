@@ -5,13 +5,13 @@
 2. dist配下の静的ファイルを返す
 3. 非APIの未マッチパスはSPAフォールバックする
 4. 未定義のAPIパスはSPAフォールバックしない
-5. dist欠如時にビルド手順を案内する
+5. package dist欠如時に明示エラーを返す
 6. 常駐子プロセスを指定portで起動する
 7. 起動済みサーバーを再利用する
 8. downが管理PIDを停止する
 9. downが必要に応じてSIGKILLへ昇格する
 10. downが未起動時に成功する
-11. app_pid_pathがcontext root配下のPIDファイルを返す
+11. app PIDがcontext root配下のPIDファイルを使う
 
 検証しないケース:
 - 実際の常駐プロセス起動・停止（統合確認で検証）
@@ -29,6 +29,7 @@ from fastapi.testclient import TestClient
 
 from whub.commands.app import _stop_process_groups, app
 from whub.core.context import WhubContext
+from whub.webapp.resources import AppResourceError
 from whub.webapp.runner import AppProcessRecord
 from whub.webapp.server import create_app
 
@@ -41,20 +42,18 @@ def _dist_dir(tmp_path):
     return dist_dir
 
 
-def _app_context(tmp_path, *, dist_dir=None):
+def _app_context(tmp_path):
     return SimpleNamespace(
-        app_dist_path=dist_dir or tmp_path / "app" / "dist",
         app_pid_path=tmp_path / "app.pid",
         app_dev_pid_path=tmp_path / "app-dev.pid",
     )
 
 
 class TestWebappServer:
-    def test_app_paths_use_context_root(self, tmp_path):
+    def test_app_pid_paths_use_context_root(self, tmp_path):
         # ケース10
         context = WhubContext(tmp_path)
 
-        assert context.app_dist_path == tmp_path / "app" / "dist"
         assert context.app_pid_path == tmp_path / ".whub" / "app.pid"
         assert context.app_dev_pid_path == tmp_path / ".whub" / "app-dev.pid"
 
@@ -101,16 +100,22 @@ class TestAppCommand:
             call(42, signal.SIGKILL),
         ]
 
-    def test_missing_dist_shows_build_instruction(self, tmp_path):
+    def test_missing_package_dist_is_rejected(self, tmp_path):
         # ケース5
-        with patch(
-            "whub.commands.app.current_context",
-            return_value=_app_context(tmp_path, dist_dir=tmp_path / "dist"),
+        with (
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
+            ),
+            patch(
+                "whub.commands.app.packaged_app_dist",
+                side_effect=AppResourceError("web app distribution is missing"),
+            ),
         ):
             result = CliRunner().invoke(app)
 
         assert result.exit_code != 0
-        assert "cd app && npm install && npm run build" in result.output
+        assert "web app distribution is missing" in result.output
 
     def test_starts_detached_server_with_requested_port(self, tmp_path):
         # ケース6,9
@@ -118,8 +123,9 @@ class TestAppCommand:
         with (
             patch(
                 "whub.commands.app.current_context",
-                return_value=_app_context(tmp_path, dist_dir=dist_dir),
+                return_value=_app_context(tmp_path),
             ),
+            patch("whub.commands.app.packaged_app_dist", return_value=dist_dir),
             patch("whub.commands.app._read_running_process", return_value=None),
             patch("whub.commands.app.subprocess.Popen") as mock_popen,
         ):
@@ -136,8 +142,9 @@ class TestAppCommand:
         with (
             patch(
                 "whub.commands.app.current_context",
-                return_value=_app_context(tmp_path, dist_dir=dist_dir),
+                return_value=_app_context(tmp_path),
             ),
+            patch("whub.commands.app.packaged_app_dist", return_value=dist_dir),
             patch(
                 "whub.commands.app._read_running_process",
                 return_value=AppProcessRecord(pid=42, port=9000),
@@ -205,8 +212,9 @@ class TestAppCommand:
         with (
             patch(
                 "whub.commands.app.current_context",
-                return_value=_app_context(tmp_path, dist_dir=app_dir / "dist"),
+                return_value=_app_context(tmp_path),
             ),
+            patch("whub.commands.app.development_app_source", return_value=app_dir),
             patch("whub.commands.app._read_running_process", return_value=None),
             patch("whub.commands.app.subprocess.Popen") as mock_popen,
         ):

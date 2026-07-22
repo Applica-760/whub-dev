@@ -343,4 +343,9 @@ constraints:
   managed_files_live_in_context:
     statement: config.toml・manifest.yaml・todos.yaml・downloadsはcontextの.whub直下に置き、外部data_dirやdual-readを使わない
     ref: src/whub/core/context.py
+  web_app_release_dist_is_package_owned:
+    statement: productionのwhub appはoperation・development repositoryのapp directoryをruntime参照せず、development
+      app sourceからsrc/whub/webapp/distへ生成してwheelに同梱したpackage resourceだけを配信する。whub
+      app devだけがdevelopment checkoutのapp sourceを使用する。
+    ref: src/whub/webapp/resources.py
 exceptions: {}
