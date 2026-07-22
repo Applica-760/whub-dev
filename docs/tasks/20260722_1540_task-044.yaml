@@ -1,0 +1,69 @@
+schema_version: 1
+task:
+  id: TASK-044
+  state: in_progress
+  title: Project付きTask参照とwhub-devへの改名
+  objective: task-planningでProject付きTask参照を扱えるようにし、Whub開発Projectとworkspace上のSymlinkをwhub-devへ改名して、対象Projectを明確に指定できるようにする
+  approach:
+  - <project>:<番号>をwflow task --project <project> check/show <番号>へ変換する規則を.agentsと.claudeのtask-planning
+    Skillへ追加する
+  - manifestのProject名とworkspace_pathをwhub-devへ変更し、workspace直下Symlinkを安全に付け替える
+  - CLI・Python package・repository名はwhubのまま維持し、bootによるSkill配布は対象外とする
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: <project>:<番号>指定時に、指定Projectへ対するwflow task check/showを実行する規則が.agentsと.claudeのtask-planning
+      Skillに一致して記載されている。
+  - id: ACC-002
+    statement: manifestのProject名とworkspace_path、およびworkspace直下Symlinkがwhub-devとなり、Symlinkの参照先は変更前と同一である。
+  - id: ACC-003
+    statement: wflow task --project whub-dev check/show 041および044が成功し、CLI・Python package・repository名は変更されていない。
+  phases:
+  - title: Project付きTask参照をSkillへ追加する
+    acceptance: []
+    steps:
+    - description: .agents/skills/task-planning/SKILL.mdへ<project>:<番号>の解釈規則と、wflow
+        task --project <project> check/show <番号>を使う手順を追加し、数字だけの指定は現行挙動を維持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: .claude/skills/task-planning/SKILL.mdへ同じ規則を追加し、2つのSkillが一致することを確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: bootによるSkill配布を行わず、指定された2ファイルだけが変更対象であることを確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Project付き参照規則を.agentsと.claudeへ個別に追加し、両ファイル一致をcmpで確認した。boot assetは未変更で差分があることを確認し、whub
+      bootは実行していない。
+    deleted: false
+  - title: ProjectとSymlinkをwhub-devへ改名する
+    acceptance: []
+    steps:
+    - description: .whub/manifest.yamlのWhub開発Project名とworkspace_pathをwhub-devへ変更し、CLI名・Python
+        package名・repository名はwhubのまま維持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 既存whub Symlinkの参照先を確認してからworkspace直下のSymlinkをwhub-devへ付け替え、参照先が変更前と同一であることを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: wflow task --project whub-dev check/show 041および044、manifestとProject解決、Skill差分を検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

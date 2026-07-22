@@ -10,7 +10,8 @@ task:
   - Project resourceを配置するworkspace rootはconfigで明示し、operation dataの保存先から分離する。
   - 開発・testで別contextが必要な場合だけCLI optionで明示指定し、cwd・symlink・親directoryから暗黙推定しない。
   - manifest.yaml・todos.yaml・downloads・runtime・releasesを~/.whubへ一度だけ移し、data_dir・dual-readを復活させない。
-  depends_on: []
+  depends_on:
+  - TASK-044
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
