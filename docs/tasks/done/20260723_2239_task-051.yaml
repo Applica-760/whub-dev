@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-051
-  state: in_progress
+  state: completed
   title: whub lsによるProject解決インターフェース
   objective: task-planning開始時、Project名を解決するためにエージェントがmanifest.yamlを探索・直接参照し、無駄な手順とCLIの抽象化を破る操作が発生している。whub
     lsでProject名・resource type・workspace_pathだけを取得可能にし、Agent指示をCLI経由の解決へ統一する。
@@ -46,22 +46,25 @@ plan:
     acceptance: []
     steps:
     - description: ルートAGENTS.mdのProject解決をmanifest直接参照からwhub ls利用へ変更する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: task-planning SkillのProject特定・Task参照時の前提をwhub lsによる解決へ統一する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: .claude/skills/task-planning/SKILL.mdもwhub lsによるProject解決へ同期する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: whub lsの実行、対象テスト、全テスト、Task checkで変更全体を検証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - Agent指示3箇所を更新。source上の対象テスト2件・全363件・ruffは成功。PATH上のwhubは旧releaseのためls未反映で、release適用前の実行検証を保留。
+    - release 0.1.0+g04b4926dへatomic切替。PATH上のwhub --version、whub ls、wflow TASK-051
+      checkが成功。旧release 0.1.0+gaa8c380bはrollback用に保持。
     deleted: false
 approvals:
 - actor: user
@@ -72,4 +75,6 @@ change_requests:
 - reason: 公開3列の検証で十分なため、非公開フィールドの否定テストを削除する
 - reason: Claude用task-planning Skillも同じProject解決手順へ同期する
 cancellation: null
-result: null
+result:
+  summary: whub lsをproject・type・workspace_pathの3列で実装し、Agent指示をmanifest直接参照からCLI解決へ統一。.agentsと.claudeのtask-planning
+    Skillを同期し、検証済みrelease 0.1.0+g04b4926dへ反映した。
