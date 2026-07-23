@@ -19,12 +19,18 @@
 
 from __future__ import annotations
 
-from subprocess import CompletedProcess
+from subprocess import CompletedProcess, TimeoutExpired
 from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
-from whub.commands.mount import mount, unmount, _mount_one, _select_targets
+from whub.commands.mount import (
+    _mount_one,
+    _probe_mount_readable,
+    _select_targets,
+    mount,
+    unmount,
+)
 from whub.core.health import ResourceHealth
 from whub.tests.helpers import manifest
 
@@ -201,3 +207,43 @@ class TestMountSpec:
 
         assert status == "FAIL: failed"
         assert mountpoint.exists()
+
+    def test_mount_readability_failure_unmounts_and_reports(self, tmp_path):
+        m = manifest()
+        project = m.resolve_project("remote")
+        resource = project.resource
+        mountpoint = tmp_path / "mnt"
+        resource._resolved_workspace_path = mountpoint
+        health_seq = [ResourceHealth("unmounted"), ResourceHealth("ok")]
+        with (
+            patch("whub.commands.mount.inspect_mount", side_effect=health_seq),
+            patch("whub.commands.mount.build_sshfs_command", return_value=["sshfs"]),
+            patch(
+                "whub.commands.mount.subprocess.run",
+                return_value=CompletedProcess([], 0),
+            ),
+            patch(
+                "whub.commands.mount._probe_mount_readable",
+                return_value="readability probe failed: Operation not permitted",
+            ),
+            patch(
+                "whub.commands.mount._unmount_one", return_value="unmount"
+            ) as cleanup,
+        ):
+            status = _mount_one(project, resource)
+
+        assert status == (
+            "FAIL: mount unreadable: readability probe failed: "
+            "Operation not permitted; cleanup=unmount"
+        )
+        cleanup.assert_called_once_with(project, resource, force=True)
+        assert not mountpoint.exists()
+
+    def test_mount_readability_probe_times_out(self, tmp_path):
+        with patch(
+            "whub.commands.mount.subprocess.run",
+            side_effect=TimeoutExpired(["ls"], 3),
+        ):
+            error = _probe_mount_readable(str(tmp_path))
+
+        assert error == "readability probe timed out after 3s"

@@ -12,6 +12,27 @@ from whub.models import Manifest, Project, RemoteResource, project_names
 from whub.core.remote import build_sshfs_command
 from whub.utils.render import render_table
 
+_MOUNT_PROBE_TIMEOUT = 3
+
+
+def _probe_mount_readable(mountpoint: str) -> str | None:
+    """子要素の列挙を別プロセスで試し、読取不能の理由を返す。"""
+    try:
+        result = subprocess.run(
+            ["ls", "-A", mountpoint],
+            capture_output=True,
+            text=True,
+            timeout=_MOUNT_PROBE_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return f"readability probe timed out after {_MOUNT_PROBE_TIMEOUT}s"
+    except OSError as error:
+        return f"readability probe failed: {error}"
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"exit {result.returncode}"
+        return f"readability probe failed: {detail}"
+    return None
+
 
 def _select_targets(
     m: Manifest,
@@ -62,6 +83,12 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
     for _ in range(10):
         health = inspect_mount(resource, project.name)
         if health.state == "ok":
+            if error := _probe_mount_readable(str(mountpoint)):
+                cleanup = _unmount_one(project, resource, force=True)
+                if cleanup == "unmount" and created_mountpoint:
+                    with contextlib.suppress(OSError):
+                        mountpoint.rmdir()
+                return f"FAIL: mount unreadable: {error}; cleanup={cleanup}"
             return "mount"
         time.sleep(0.2)
     if health.state == "unmounted" and created_mountpoint:

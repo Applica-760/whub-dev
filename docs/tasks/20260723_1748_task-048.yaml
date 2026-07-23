@@ -1,0 +1,105 @@
+schema_version: 1
+task:
+  id: TASK-048
+  state: in_progress
+  title: sshfs mount読取障害の根因特定と解消
+  objective: remote resourceのmountがstat可能でも内容を読めない障害を再現・分離し、発生源を特定してmount動作を恒久的に解消する
+  approach:
+  - sshfs/fuse-t/macOS権限とwhubのmount optionを制御比較し、根因に対する最小修正を実装して実mountと自動テストで検証する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: mount障害の必要条件・十分条件と発生責務層が再現証拠付きで特定されている
+  - id: ACC-002
+    statement: 修正後のla-ilでmount rootだけでなく子要素と既知ファイルを読める
+  - id: ACC-003
+    statement: 修正後のmount経由でwflow task --project la-il check/show 002が成功する
+  - id: ACC-004
+    statement: 関連テストと全体回帰テストが成功し、PATH上の運用経路で復旧を確認できる
+  phases:
+  - title: 再現と基準化
+    acceptance: []
+    steps:
+    - description: sshfs・fuse-t・macOS・whubのversion、現行mount command/options、mount table/process/権限状態を採取する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: remote直接読取とmount経由のstat・列挙・既知ファイル読取を比較し、失敗条件を再現可能なprobeとして固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '基準採取: macOS 26.5.2 (25F84)、whub 0.1.0 commit 136c226、SSHFS 3.7.5 / FUSE 3.19.0-rc0、sshfs-fuse-t
+      2026.05.12-cebbdd3。la-il sshfs PID 31313 は17:34:31起動、現行optionsは -s, IdentityFile,
+      port=22, reconnect, ServerAliveInterval=15, ServerAliveCountMax=3, noappledouble,
+      noapplexattr, defer_permissions, volname=whub-la-il。再現probe: remote直接はroot列挙とTASK-002先頭読取に成功。mount経由はroot/docs
+      stat成功だがroot列挙と既知Task YAML読取がOperation not permitted。ネットワーク再接続後もwhub runは成功しており、remote到達性ではなくmount
+      data-path障害と確定。'
+    deleted: false
+  - title: mount構成の分離調査
+    acceptance: []
+    steps:
+    - description: la-ilだけを対象に現行whub mountを再実行し、unmount/remount前後の状態と再現性を記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 最小sshfs構成と現行optionを一項目ずつ制御比較し、障害の必要条件・十分条件・安全な復旧手順を特定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '比較結果: 現行whub remount、最小sshfs、最小+allow_otherはいずれもmount自体は成功しroot stat可能だが、子要素列挙と既知Task
+      YAML readはOperation not permitted。さらにworkspace外の一時mountpoint /tmp/whub-la-il-probe-fv27nkkb
+      へ最小sshfsでmountしても同一のPermissionError (Errno 1)を再現し、unmount exit 0・一時dir cleanup成功。workspace
+      pathやwhub option固有ではなく、fuse-t/NFS backendまたはmacOS権限層全体の外部要因と確定。安全な現時点の復旧条件は外部権限解消後の再mountであり、whub側はmount後の実可読性probeに失敗したmountを自動unmountして成功扱いしない。'
+    - '一次情報で根因確定: fuse-t公式READMEのPossible Issuesは、FUSE配下を列挙できずOperation not permittedになる原因として、アクセス元アプリのPrivacy
+      & Security > Files and Folders > Network Volumes権限無効を明記。FUSE-TがNFS backendを使うことに由来する。最小sshfsと/tmpでも再現した実測と一致する。復旧にはTerminal/Codexなど各アクセス元アプリのNetwork
+      Volumes許可が必要。'
+    deleted: false
+  - title: 根因修正
+    acceptance: []
+    steps:
+    - description: 確定した根因の責務層へ最小修正を実装し、command builder・mount lifecycle・関連箇所の回帰テストを追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 根因修正が外部要因の場合は、whub側で再現を防ぐoption・事前条件・復旧処理へ落とし込む
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 根因はwhub optionではなくworkspace外でも再現するfuse-t/NFS backendまたはmacOS権限層の外部要因。TASK-049のhealth分類・wflow表示・永続ログへ範囲を広げず、TASK-048の最小恒久策としてsshfs成功後にls
+      -Aを子process・3秒timeoutで実行する実可読性probeを追加。非zero・timeout・OSErrorではforce unmountし、whub
+      mountをFAIL mount unreadable reason cleanup resultとしてexit 1にする。新規作成mountpointはunmount成功時に削除。関連12件、全355件pytest、Ruff
+      format、git diff check成功。
+    - 'root再検証: uv run pytest src/whub/tests/commands/test_mount.py -q は12 passed、uv
+      run pytest -qは355 passed、git diff --check成功。ruff format --checkは2 files already
+      formatted。ruff checkはHEAD時点から存在するtest_mount.py:128の未使用変数remote 1件のみ失敗し、今回差分外のため変更していない。'
+    deleted: false
+  - title: 運用復旧と検証
+    acceptance: []
+    steps:
+    - description: uv run pytestで関連テストと全体回帰を検証し、検証済み変更を既存release運用に従って反映する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: la-ilを固定済み経路でmountし、子要素・Task YAMLの読取とwflow check/show成功を実機確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 根因、修正、復旧条件、検証証拠をPhase logへ記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
