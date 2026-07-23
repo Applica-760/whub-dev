@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-048
-  state: in_progress
+  state: completed
   title: sshfs mount読取障害の根因特定と解消
   objective: remote resourceのmountがstat可能でも内容を読めない障害を再現・分離し、発生源を特定してmount動作を恒久的に解消する
   approach:
@@ -84,22 +84,46 @@ plan:
     acceptance: []
     steps:
     - description: uv run pytestで関連テストと全体回帰を検証し、検証済み変更を既存release運用に従って反映する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: la-ilを固定済み経路でmountし、子要素・Task YAMLの読取とwflow check/show成功を実機確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 根因、修正、復旧条件、検証証拠をPhase logへ記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 'Phase 4完了: 関連12件・全355件pytest成功。commit 0b2c82d4ac2e8faa5031879bdf1d419ac40116c3をwheelへ刻印し、SHA-256
+      3683ad26055b74598b5386b62d2296fb4a9e5a94ddc66294b62733fab3b82ac3、非editable import、全resource
+      status、Knowledge、TASK-048解決を検証。immutable release 0.1.0+g0b2c82dを作成しcurrentへ切替。Network
+      Volumes同意をtccutil reset SystemPolicyNetworkVolumes com.openai.codexで再要求後、修正版PATH
+      whubでla-ilをunmount/mountし、子列挙、TASK-002 YAML読取、wflow check/show 002成功。VS CodeとTerminalの同意状態も対応bundle
+      IDでreset済み。'
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - 現行・最小・allow_other・/tmpの全mountでErrno 1を再現し、fuse-t公式READMEのNetwork Volumes権限説明と一致
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Network Volumes再同意後、修正版whubでla-ilをremountしls -A成功
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - wflow task --project la-il check 002とshow 002がTASK YAMLを正常取得
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - 関連12件・全355件成功、release 0.1.0+g0b2c82dをPATHへ反映しversion/status/remountを検証
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: Network Volumes権限拒否を根因として確定・復旧し、whub mountへpost-mount実可読性probeと失敗時cleanupを追加してrelease
+    0.1.0+g0b2c82dへ反映した
