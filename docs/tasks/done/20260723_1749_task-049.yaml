@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-049
-  state: in_progress
+  state: completed
   title: mount・wflow診断表示と復旧ログの強化
   objective: mount内容の読取不能を正常・Task不存在と誤認せず、原因と復旧手順を即座に判断できるエラー表示・health判定・診断ログを提供する
   approach:
@@ -89,11 +89,11 @@ plan:
       skip_reason: null
       deleted: false
     - description: uv run pytestの関連テストと全体回帰を通し、既存release運用に従って反映する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 実mountまたは同等の障害probeで、表示と永続ログから復旧手順を判断できることを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -101,10 +101,40 @@ plan:
       100件rotation・option/stderr redaction、status exit、Project root local/remote recovery、docs/tasks
       unreadableとreadable not foundを検証。focused 59 passed、全361 passed、変更対象Ruff check・format
       check、git diff check成功。release切替・実mountはroot担当のため004-002/003はpending維持。'
+    - 全361 tests・focused 59 tests・Ruff/format/diff check成功。commit aa8c380b21cb1bdc0d313fa09b04839196237dc8からwheelをbuildし、SHA256
+      254582ab8baf58278b0bdf7e913e44823c94326c992f7b79dc34fe15c5ef0cfc、非editable import、runtime
+      release IDを検証。immutable release 0.1.0+gaa8c380bを作成しcurrentへ切替え、PATH上のwhub/wflowが同commitを報告。旧releaseはrollback用に保持。
+    - '実地検証: ネットワーク切断後のremote mountsを新releaseのwhub statusがstaleとしてexit nonzero検出。la-ilをwhub
+      unmount --force後にwhub mountし、post-mount子列挙probeを通過。最終statusは全remote mount=ok、mount配下AGENTS.md等を列挙可能、wflow
+      task --project la-il check/show 002成功。~/.whub/runtime/logs/mount.jsonlの直近3件にversion=0.1.0+gaa8c380b、project=la-il、mountpoint、precheck/sshfs/post_mount_probe、safe
+      option名、result/recoveryを確認し、host/user/remote path/identity値なし。失敗時のunreadable表示・Network
+      Volumes復旧案内・cleanup logは自動テストで検証。'
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - healthのtimeout付きmount子列挙probeがunreadableを返しstatusは非zero、mountはpost-mount unreadable時にforce
+    cleanup。該当自動テスト成功、実mount正常probeも成功。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Project rootとdocs/tasksを探索前に可読性probeし、unreadableとreadableなTASK not foundを別のWflowErrorへ分類。回帰テスト成功、実la-il
+    check/show 002成功。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - JSONLは最大100件rotation。version/project/mountpoint/stage/safe option名/result/detail/recoveryを保持し、sshfs
+    stderrとoption値を永続化しないテスト成功。実logでrelease 0.1.0+gaa8c380bの3段階記録を確認。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - focused 59 tests、全361 tests、変更対象Ruff/format、git diff check成功。immutable wheelをdeployし、全resource
+    status=ok、wflow check/show互換性を実地確認。
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: mountのstat成功・子列挙不能をunreadableとして検出し、wflowの読取不能をTask不存在から分離。秘密情報を除いた最大100件のmount
+    JSONL診断ログと復旧案内を追加。全361 testsと実la-il mount/wflow検証を通し、release 0.1.0+gaa8c380bへ反映した。
