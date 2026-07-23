@@ -6,7 +6,6 @@
     - `cd`と`status`のSSH異常系・終了コードの自動テスト
     - SSHFS復活・tmux運用・Mutagen不採用などの経緯をADR化する
 - [ ] whub appの残機能
-    - FOCUSビュー（FOCUS.md再構成タスクの決着後）
     - スマホからinbox/backlogへ投げるためのアクセス経路（LAN公開 or Tailscale経由）。入力フォームのWeb UIとPOST APIは実装済み
     - discourse連携ビュー: 解説結果を眺め、skip/keep/noteやinbox/backlog/todo/literatureへの振り分けを行う
         - URL投入→headless Claude（`claude -p` or Agent SDK）を非同期ジョブで起動し、`vault/literature/pending/`へ解説mdを出力（frontmatterにurl/type/summary/提案tags/session_id）
@@ -49,7 +48,7 @@
 - [ ] レートリミットの有効活用: 寝る前にルールベースのinbox自動整理を走らせる案
     - 複雑な設計判断はAgentに委ねず、分類・振り分け候補提示など安全な範囲に留める
     - 寝る前に実行し、Skill記述の陳腐化やドキュメント更新が追いついていない箇所を検査する仕組みも同枠で走らせる
-- [ ] daily / FOCUS の日次振り返り運用（Obsidian Daily相当、vault連携前提）
+- [ ] dailyの日次振り返り運用（Obsidian Daily相当、vault連携前提）
     - その日の終わりにgit差分・todo・backlogの消化度合いからサマリーと感想を作り、前進感を得られるようにする
     - 発展: Web appで履歴を見られるようにし、グラフ等で成長を可視化する
     - 必要性の裏付け（2026-07-15）: 直近1ヶ月のgit履歴・Claude/Codexセッションログを手動集計したところ、休息日ゼロ・活動の28%が21時〜深夜2時台という稼働過多を初めて客観視できた（`vault/inbox/20260715_直近1ヶ月の開発量サマリ.md`）

@@ -1,0 +1,116 @@
+schema_version: 1
+task:
+  id: TASK-050
+  state: in_progress
+  title: ナレッジ管理と入力・昇格運用を再設計する
+  objective: 外部情報・個人メモ・Project知識・作業候補を低摩擦で蓄積・発見・昇格できるよう、Knowledge YAMLの必要性をゼロベースで評価し、Inbox・Literature・Backlog・Todo・Taskとの最小な責務分担を確定する
+  approach:
+  - FOCUSは現役運用から除外し、Daily入力はTASK-032の責務として本Taskでは下流との境界だけを扱う
+  - Knowledge YAMLの維持・縮小または自動生成・廃止を、検索負担・発見性・鮮度・重複・検証可能性・移行コストで比較する
+  - 既存Knowledgeを前提にせず、実装・参照箇所・利用場面と代表的な情報取得課題から必要なナレッジ機構を導く
+  - 採用方式の決定後に、SSOT・Skill・入力から昇格までの経路を一貫させ、必要な実装変更と検証を行う
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: FOCUSの定義・運用規約・制約・現役ファイルが除外され、現在の運用経路から参照されない
+  - id: ACC-002
+    statement: Knowledge YAMLの維持・縮小または生成・廃止が、現行実装と代表的な情報取得場面に基づいて比較され、採用理由が記録される
+  - id: ACC-003
+    statement: 実証されていないmandatory queryを残さず、有用な確定知識を失わない保存先または移行方法が定義される
+  - id: ACC-004
+    statement: Daily・Inbox・discourse・vault知識・Backlog・Todo・Task・Project知識の責務と昇格条件が重複なく定義される
+  - id: ACC-005
+    statement: TASK-032のDaily入力実装と重複せず、本TaskはDaily以降の整理境界だけを扱う
+  - id: ACC-006
+    statement: 採用方式が実装・データ・Project AGENTS・hub Skill・vault運用文書へ一貫して反映され、代表場面と回帰テストで検証される
+  phases:
+  - title: 現状と評価課題を確定する
+    acceptance: []
+    steps:
+    - description: FOCUS除外の実行結果とTASK-022の陳腐化理由を記録し、旧前提を現行設計へ持ち込まない
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Knowledgeのモデル・CLI・Web・AGENTS・Skill・テスト・実データと、必須queryが入る全経路を調査する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ナレッジ取得が必要な代表場面を定義し、検索負担・発見性・鮮度・重複・検証可能性・移行コストの評価基準を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - FOCUSを現役Knowledgeから除外し、def:focus、関連Policy 3件、Constraint 1件をwhub knowledge rmで削除してcheck成功。vault/whub/FOCUS.mdを削除し、AGENTSとBacklogの現役参照を除去。TASK-022はpure
+      Hub分離・固定context化後の陳腐化したapproachを更新できないためcancelし、本Taskへ置換した。過去Task・spec・literatureの歴史的言及は変更していない。
+    - 'Knowledge subsystemをCodeGraphと実装で調査。docs/knowledge.yamlは342行、DEF 42・REL 12・POL
+      19・CON 53の計126エントリで、実装やADRへのrefは18件、RELのrefは0件。local ProjectでKnowledge YAMLが存在するのはwhub-devだけ。queryはcase-insensitive
+      substring一致と直接Relation/Exception展開で、意味検索・ranking・自動context選択はない（例: taskで80行）。固有価値はschema/重複key/参照整合性/ref
+      path検証、atomic write、参照中entryの安全な削除。consumerはCLIと読み取りWeb UIで、製品runtimeやtestがKnowledge内容から挙動を導く構造はない。mandatory
+      queryはwhub-dev AGENTSの2条件とrefile Skillの2箇所にあり、同内容はREADME・ADR・実装・testにも重複する。FOCUSの陳腐化は手動複製の鮮度問題を実証した。'
+    - 代表場面を、実装変更前の不変条件確認、用語・責務・設計理由の確認、運用フロー判断、未知コード領域の調査、過去意思決定の確認に確定。評価基準を、正確性、情報到達までの手間、鮮度、更新重複、検証可能性、発見性、移行時の情報損失に確定し、ユーザー合意を得た。
+    deleted: false
+  - title: Knowledgeの必要性を判断する
+    acceptance: []
+    steps:
+    - description: Knowledge YAMLを維持する案、縮小または既存資料から生成する案、廃止する案を現行実装と代表場面で比較する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: ファイル検索・CodeGraph・構造化docs・Skillによる必要時読込など、mandatory queryを減らす代替方式を比較する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 有用情報を失わない移行方法と変更影響を示し、採用方式をユーザー判断で確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 入力・整理・昇格フローを再設計する
+    acceptance: []
+    steps:
+    - description: 外部URL・Daily・Inbox・vault知識・Project Backlog・Todo・Task・確定済みProject知識の入口と出口を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Backlogを放置される保管庫にしないため、精査契機・残留条件・昇格・棄却を含む排出契約を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 採用方式に合わせてSSOTとdiscourse・refile・task-planning・Project AGENTSの責務を重複なく割り当て、TASK-032との境界を明示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 採用方式を反映して検証する
+    acceptance: []
+    steps:
+    - description: 採用方式に基づき、Knowledge機能・データ・Project AGENTS・hub Skill・vault運用文書を一ファイルずつ更新または廃止する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 既存の有用な確定知識を移行または保持し、古いFOCUS・workflow・vault内運用データ配置の参照を残さない
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 外部URL・個人メモ・未成熟なProject案・実装制約確認の代表場面を実走し、不要なqueryなしで情報へ到達できることを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 変更範囲に応じたfocused test、全体回帰、参照整合性を検証し、独立したPhase成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

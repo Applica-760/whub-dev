@@ -57,9 +57,6 @@ definitions:
   task_planning:
     name: task-planning
     definition: YAML Taskを作成・承認・実行・完了する個別作業の対話的運用
-  focus:
-    name: FOCUS.md
-    definition: whubから全projectの現在地を得て次の注力先を相談するための集約ビュー
   discourse:
     name: discourse
     definition: 外部ソースを取得・解説しliteratureへ記録するSkill
@@ -193,12 +190,6 @@ policies:
     statement: backlogの入力はTask YAML・execution-spec・ADRへ昇格する
   external_sources_via_discourse:
     statement: 外部ソースはdiscourseを経由してliterature/log.jsonlとliterature/sourcesへ記録する
-  task_changes_feed_focus:
-    statement: backlogとTask YAMLの開始・完了はFOCUS.mdの更新材料にする
-  keep_focus_concise:
-    statement: 詳細な進捗や構想はbacklogとTask YAMLに置きFOCUS.mdは要約に留める
-  consult_agent_with_focus:
-    statement: FOCUS.mdを材料にAI Agentへ次に着手すべきことを相談する
   vault_readme_is_ssot:
     statement: vaultの構造と配置判断はvault/readme.mdをSSOTとする
   knowledge_contains_confirmed_facts:
@@ -292,8 +283,6 @@ constraints:
     statement: remote resourceへのwhub cd接続先ではwhub commandを利用可能にしない
   whub_available_in_local_directories:
     statement: Mac内ではlocal resourceへ移動した先を含むどのdirectoryからでもwhubを実行可能にする
-  focus_has_project_summaries:
-    statement: FOCUS.mdはprojectごとに1つの現在状態サマリーを持つ
   shared_backlog_logic_in_services:
     statement: backlogの読み書きなどWebでも使う処理はservicesに置く
   knowledge_schema_in_model:

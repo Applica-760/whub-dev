@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-022
-  state: in_progress
+  state: cancelled
   title: literature・inbox・backlogの振り分け運用再編案の検討
   objective: vaultに蓄積した外部知識・思いつきを漏らさず活用できるよう、振り分け運用の前提を整理し、改修案をブラッシュアップして固める
   approach:
@@ -33,5 +33,7 @@ approvals:
 - actor: user
 acceptance_results: []
 change_requests: []
-cancellation: null
+cancellation:
+  reason: whub-devのpure Hub分離・固定user context化・Knowledge運用導入後に前提が陳腐化し、objective/approachをCLIで更新できないため後継Taskへ置き換える
+  actor: user
 result: null
