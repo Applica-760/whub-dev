@@ -19,20 +19,26 @@
 
 from __future__ import annotations
 
-from subprocess import CompletedProcess, TimeoutExpired
+from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
 
+import pytest
 from click.testing import CliRunner
 
 from whub.commands.mount import (
     _mount_one,
-    _probe_mount_readable,
     _select_targets,
     mount,
     unmount,
 )
 from whub.core.health import ResourceHealth
 from whub.tests.helpers import manifest
+
+
+@pytest.fixture(autouse=True)
+def _disable_mount_log():
+    with patch("whub.commands.mount.write_mount_log"):
+        yield
 
 
 class TestMountSpec:
@@ -125,7 +131,6 @@ class TestMountSpec:
     def test_unmounts_remote_resource(self):
         # ケース7
         m = manifest()
-        remote = m.resolve_project("remote").resource
         health_seq = [ResourceHealth("ok"), ResourceHealth("unmounted")]
         mock_run = MagicMock(return_value=CompletedProcess([], 0))
         with (
@@ -214,7 +219,14 @@ class TestMountSpec:
         resource = project.resource
         mountpoint = tmp_path / "mnt"
         resource._resolved_workspace_path = mountpoint
-        health_seq = [ResourceHealth("unmounted"), ResourceHealth("ok")]
+        health_seq = [
+            ResourceHealth("unmounted"),
+            ResourceHealth(
+                "unreadable",
+                "Operation not permitted",
+                "allow Network Volumes access, then remount",
+            ),
+        ]
         with (
             patch("whub.commands.mount.inspect_mount", side_effect=health_seq),
             patch("whub.commands.mount.build_sshfs_command", return_value=["sshfs"]),
@@ -223,27 +235,42 @@ class TestMountSpec:
                 return_value=CompletedProcess([], 0),
             ),
             patch(
-                "whub.commands.mount._probe_mount_readable",
-                return_value="readability probe failed: Operation not permitted",
-            ),
-            patch(
                 "whub.commands.mount._unmount_one", return_value="unmount"
             ) as cleanup,
         ):
             status = _mount_one(project, resource)
 
         assert status == (
-            "FAIL: mount unreadable: readability probe failed: "
-            "Operation not permitted; cleanup=unmount"
+            "FAIL: mount unreadable: Operation not permitted; cleanup=unmount; "
+            "recovery: allow Network Volumes access, then remount"
         )
         cleanup.assert_called_once_with(project, resource, force=True)
         assert not mountpoint.exists()
 
-    def test_mount_readability_probe_times_out(self, tmp_path):
-        with patch(
-            "whub.commands.mount.subprocess.run",
-            side_effect=TimeoutExpired(["ls"], 3),
+    def test_sshfs_stderr_is_not_persisted(self, tmp_path):
+        m = manifest()
+        project = m.resolve_project("remote")
+        resource = project.resource
+        resource._resolved_workspace_path = tmp_path / "mnt"
+        secret = "user@host:/private/path IdentityFile=/Users/private/key"
+        with (
+            patch(
+                "whub.commands.mount.inspect_mount",
+                return_value=ResourceHealth("unmounted"),
+            ),
+            patch("whub.commands.mount.build_sshfs_command", return_value=["sshfs"]),
+            patch(
+                "whub.commands.mount.subprocess.run",
+                return_value=CompletedProcess([], 1, "", secret),
+            ),
+            patch("whub.commands.mount.write_mount_log") as write_log,
         ):
-            error = _probe_mount_readable(str(tmp_path))
+            _mount_one(project, resource)
 
-        assert error == "readability probe timed out after 3s"
+        sshfs_record = next(
+            call.kwargs
+            for call in write_log.call_args_list
+            if call.kwargs["stage"] == "sshfs"
+        )
+        assert sshfs_record["detail"] == "sshfs command failed"
+        assert secret not in repr(sshfs_record)

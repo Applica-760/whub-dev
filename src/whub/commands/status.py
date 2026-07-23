@@ -27,5 +27,7 @@ def status(ctx: click.Context) -> None:
         right_align={5},
     )
 
-    if any(item.state != "ok" or item.mount == "stale" for item in statuses):
+    if any(
+        item.state != "ok" or item.mount in {"stale", "unreadable"} for item in statuses
+    ):
         raise click.exceptions.Exit(1)

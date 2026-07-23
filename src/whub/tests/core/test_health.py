@@ -181,10 +181,13 @@ class TestMountHealthSpec:
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             process = subprocess.CompletedProcess(["pgrep"], 0, "", "")
             stat = subprocess.CompletedProcess(["stat"], 0, "", "")
+            listing = subprocess.CompletedProcess(["ls"], 0, "", "")
             with (
                 patch.object(health_module, "_read_mount_table", return_value=table),
                 patch.object(
-                    health_module.subprocess, "run", side_effect=[process, stat]
+                    health_module.subprocess,
+                    "run",
+                    side_effect=[process, stat, listing],
                 ),
             ):
                 health = inspect_mount(resource, "remote")
@@ -231,6 +234,31 @@ class TestMountHealthSpec:
                 ):
                     health = inspect_mount(resource, "remote")
                 assert health.state == "stale"
+
+    def test_child_listing_failure_reports_unreadable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            mountpoint = Path(tmp) / "remote"
+            resource = _remote_resource(mountpoint)
+            table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
+            with (
+                patch.object(health_module, "_read_mount_table", return_value=table),
+                patch.object(
+                    health_module.subprocess,
+                    "run",
+                    side_effect=[
+                        subprocess.CompletedProcess(["pgrep"], 0, "", ""),
+                        subprocess.CompletedProcess(["stat"], 0, "", ""),
+                        subprocess.CompletedProcess(
+                            ["ls"], 1, "", "Operation not permitted"
+                        ),
+                    ],
+                ),
+            ):
+                health = inspect_mount(resource, "remote")
+
+        assert health.state == "unreadable"
+        assert health.detail == "Operation not permitted"
+        assert "Network Volumes" in health.recovery
 
     def test_mountpoint_in_table_and_stat_failure_reports_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

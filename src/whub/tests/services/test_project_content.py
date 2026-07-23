@@ -66,3 +66,37 @@ def test_rejects_unavailable_project_content_root() -> None:
         match="project resource is not available: remote",
     ):
         resolve_project_content_root(manifest(), "remote")
+
+
+def test_rejects_unreadable_project_content_root(tmp_path: Path) -> None:
+    loaded_manifest = manifest()
+    remote = loaded_manifest.resolve_project("remote")
+    remote.resource._resolved_workspace_path = tmp_path
+
+    with (
+        pytest.MonkeyPatch.context() as monkeypatch,
+        pytest.raises(
+            ServiceError, match="project resource is unreadable.*Network Volumes"
+        ),
+    ):
+        monkeypatch.setattr(
+            "whub.services.project_content.probe_directory_readable",
+            lambda path: "Operation not permitted",
+        )
+        resolve_project_content_root(loaded_manifest, "remote")
+
+
+def test_local_unreadable_recovery_uses_filesystem_permissions(tmp_path: Path) -> None:
+    loaded_manifest = manifest()
+    local = loaded_manifest.resolve_project("local")
+    local.resource.source = str(tmp_path)
+
+    with (
+        pytest.MonkeyPatch.context() as monkeypatch,
+        pytest.raises(ServiceError, match="check local filesystem permissions"),
+    ):
+        monkeypatch.setattr(
+            "whub.services.project_content.probe_directory_readable",
+            lambda path: "Permission denied",
+        )
+        resolve_project_content_root(loaded_manifest, "local")

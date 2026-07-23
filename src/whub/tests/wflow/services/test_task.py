@@ -503,3 +503,17 @@ def test_resolves_task_ids_and_rejects_missing_or_ambiguous_ids(tmp_path: Path) 
 
     with pytest.raises(WflowError, match="task ID is ambiguous: TASK-001"):
         resolve_task_reference("TASK-001", tmp_path)
+
+
+def test_rejects_unreadable_task_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "whub.wflow.services.task.common.probe_directory_readable",
+        lambda path: "Operation not permitted",
+    )
+
+    with pytest.raises(
+        WflowError, match="task directory is unreadable.*Network Volumes"
+    ):
+        resolve_task_reference("TASK-001", tmp_path)

@@ -11,6 +11,7 @@ import tempfile
 import yaml
 from pydantic import ValidationError
 
+from whub.core.health import probe_directory_readable
 from whub.utils.apple_double import is_apple_double
 from whub.wflow.models.task import TASK_ID_PATTERN, TaskDocument, TaskHeader
 from whub.wflow.services.errors import WflowError
@@ -27,6 +28,12 @@ def load_task(path: Path) -> TaskDocument:
 
 def iter_task_paths(root: Path) -> Iterator[Path]:
     """Yield Task YAML paths while excluding AppleDouble sidecars."""
+    if detail := probe_directory_readable(root):
+        raise WflowError(
+            f"task directory is unreadable: {root}: {detail}; "
+            "check filesystem permissions; for mounted resources, allow "
+            "Network Volumes access for this app and remount"
+        )
     return (path for path in root.rglob("*.yaml") if not is_apple_double(path))
 
 

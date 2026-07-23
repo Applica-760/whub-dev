@@ -8,30 +8,10 @@ import contextlib
 import click
 from whub.commands import get_manifest
 from whub.core.health import inspect_mount
+from whub.core.mount_log import safe_option_names, write_mount_log
 from whub.models import Manifest, Project, RemoteResource, project_names
 from whub.core.remote import build_sshfs_command
 from whub.utils.render import render_table
-
-_MOUNT_PROBE_TIMEOUT = 3
-
-
-def _probe_mount_readable(mountpoint: str) -> str | None:
-    """子要素の列挙を別プロセスで試し、読取不能の理由を返す。"""
-    try:
-        result = subprocess.run(
-            ["ls", "-A", mountpoint],
-            capture_output=True,
-            text=True,
-            timeout=_MOUNT_PROBE_TIMEOUT,
-        )
-    except subprocess.TimeoutExpired:
-        return f"readability probe timed out after {_MOUNT_PROBE_TIMEOUT}s"
-    except OSError as error:
-        return f"readability probe failed: {error}"
-    if result.returncode != 0:
-        detail = result.stderr.strip() or f"exit {result.returncode}"
-        return f"readability probe failed: {detail}"
-    return None
 
 
 def _select_targets(
@@ -60,10 +40,20 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
     mountpoint = resource._resolved_workspace_path
     host = resource._resolved_host
     health = inspect_mount(resource, project.name)
+    write_mount_log(
+        project=project.name,
+        mountpoint=mountpoint,
+        stage="precheck",
+        result=health.state,
+        detail=health.detail,
+        recovery=health.recovery,
+    )
     if health.state == "ok":
         return "skip"
     if health.state == "stale":
-        return "STALE: run `whub unmount --force` first"
+        return f"STALE: {health.detail}; recovery: {health.recovery}"
+    if health.state == "unreadable":
+        return f"UNREADABLE: {health.detail}; recovery: {health.recovery}"
 
     created_mountpoint = not mountpoint.exists()
     mountpoint.mkdir(parents=True, exist_ok=True)
@@ -74,6 +64,19 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
         volname=f"whub-{project.name}",
     )
     result = subprocess.run(cmd, capture_output=True, text=True)
+    options = safe_option_names(cmd)
+    write_mount_log(
+        project=project.name,
+        mountpoint=mountpoint,
+        stage="sshfs",
+        result="ok" if result.returncode == 0 else "failed",
+        # sshfs stderr may contain host, user, remote path, or identity path.
+        detail="sshfs command failed" if result.returncode != 0 else None,
+        recovery="check SSH connectivity and mount options"
+        if result.returncode != 0
+        else None,
+        options=options,
+    )
     if result.returncode != 0:
         if created_mountpoint:
             with contextlib.suppress(OSError):
@@ -83,18 +86,46 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
     for _ in range(10):
         health = inspect_mount(resource, project.name)
         if health.state == "ok":
-            if error := _probe_mount_readable(str(mountpoint)):
-                cleanup = _unmount_one(project, resource, force=True)
-                if cleanup == "unmount" and created_mountpoint:
-                    with contextlib.suppress(OSError):
-                        mountpoint.rmdir()
-                return f"FAIL: mount unreadable: {error}; cleanup={cleanup}"
+            write_mount_log(
+                project=project.name,
+                mountpoint=mountpoint,
+                stage="post_mount_probe",
+                result="ok",
+                options=options,
+            )
             return "mount"
+        if health.state == "unreadable":
+            cleanup = _unmount_one(project, resource, force=True)
+            if cleanup == "unmount" and created_mountpoint:
+                with contextlib.suppress(OSError):
+                    mountpoint.rmdir()
+            write_mount_log(
+                project=project.name,
+                mountpoint=mountpoint,
+                stage="cleanup",
+                result=cleanup,
+                detail=health.detail,
+                recovery=health.recovery,
+                options=options,
+            )
+            return (
+                f"FAIL: mount unreadable: {health.detail}; cleanup={cleanup}; "
+                f"recovery: {health.recovery}"
+            )
         time.sleep(0.2)
     if health.state == "unmounted" and created_mountpoint:
         with contextlib.suppress(OSError):
             mountpoint.rmdir()
-    return f"FAIL: {health.state}"
+    write_mount_log(
+        project=project.name,
+        mountpoint=mountpoint,
+        stage="post_mount_probe",
+        result=health.state,
+        detail=health.detail,
+        recovery=health.recovery,
+        options=options,
+    )
+    return f"FAIL: {health.state}: {health.detail}; recovery: {health.recovery}"
 
 
 def _unmount_one(project: Project, resource: RemoteResource, force: bool) -> str:

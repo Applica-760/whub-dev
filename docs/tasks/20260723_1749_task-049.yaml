@@ -1,0 +1,110 @@
+schema_version: 1
+task:
+  id: TASK-049
+  state: in_progress
+  title: mount・wflow診断表示と復旧ログの強化
+  objective: mount内容の読取不能を正常・Task不存在と誤認せず、原因と復旧手順を即座に判断できるエラー表示・health判定・診断ログを提供する
+  approach:
+  - TASK-048で確定した原因と正常条件を契約にし、mount後の実可読性検証、wflowのエラー分類、復旧に必要な診断情報と回帰テストを追加する
+  depends_on:
+  - TASK-048
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: mount rootをstatできても子要素を読めない状態をwhub statusとwhub mountが非正常として検出する
+  - id: ACC-002
+    statement: wflowがProjectまたはdocs/tasksの読取不能と、読取可能なTask不存在を異なるエラーで返す
+  - id: ACC-003
+    statement: 診断ログにversion・project・mountpoint・失敗段階・安全なoption情報・結果・復旧候補が残り、秘密情報を含まず保存量が制限される
+  - id: ACC-004
+    statement: 正常時のCLI互換性を維持し、関連テストと全体回帰テストが成功する
+  phases:
+  - title: 診断契約
+    acceptance: []
+    steps:
+    - description: TASK-048で確定した根因・正常条件を基に、unmounted・stale・mounted-but-unreadable・not-foundの判定契約を定義する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ~/.whub/runtime/logsの保存形式・上限・ローテーション・秘密情報除外・復旧情報を定義する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '診断契約: unmountedはmount table未登録、staleはmount table不明・sshfs process欠落・root stat失敗/timeout、unreadableはmount
+      table/process/root statは正常だがtimeout隔離した子列挙が失敗、okは全probe成功。各healthはdetailとrecoveryを保持する。wflowはProject
+      rootとdocs/tasksの存在確認後に同じ子列挙probeを行い、読取不能を不存在から分離する。永続ログは~/.whub/runtime/logs/mount.jsonl、1行1JSON、最大100件。version/project/mountpoint/stage/optionsの安全な名前だけ/result/detail/recoveryを記録し、host/user/identity
+      path/remote path/valueは記録しない。書込・rotation失敗はmount処理へ伝播させない。'
+    deleted: false
+  - title: mount healthとログ
+    acceptance: []
+    steps:
+    - description: mount table・process・root statに加えて、timeout付き子要素列挙または既知probeで実可読性を検査する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: whub mountの事前確認・実行・post-mount検証・失敗段階・復旧候補をCLI表示と保存数制限付き診断ログへ記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - ResourceHealthへunreadableとrecoveryを追加し、mount table・sshfs process・root statの後に共通の3秒timeout子列挙probeを実行。TASK-048のmount.py固有probeを削除しhealthへ集約。mount
+      CLIはprecheck、sshfs、post_mount_probe、cleanupをdetail/recovery付きで表示・記録し、unreadable時はforce
+      unmount結果も返す。~/.whub/runtime/logs/mount.jsonlへrelease ID・project・mountpoint・stage・安全なoption名・result/detail/recoveryを最大100件でbest-effort保存し、接続先・user・remote
+      path・identity値を除外。
+    - '監査補強: sshfs stderrはhost/user/remote path/identity pathを含み得るため永続ログへ保存せず、失敗stageのdetailはsshfs
+      command failedへ固定。optionも安全な名前だけを保存する。mount unit testsはwrite_mount_logをautouse
+      patchし実operation logを汚染しない。'
+    deleted: false
+  - title: wflowエラー分類
+    acceptance: []
+    steps:
+    - description: wflowのProject rootとdocs/tasksを探索前に検査し、読取不能をTask不存在と区別したactionable
+        errorにする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 読取可能なTask不存在、Project root読取不能、docs/tasks読取不能の回帰テストを追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Project content rootをchdir前に共通子列挙probeし、読取不能をproject resource is unreadableとNetwork
+      Volumes権限・remount案内で停止。docs/tasksはiter_task_pathsの探索前に同じprobeを行い、task directory
+      is unreadableをTask ID not foundから分離。読取可能な不存在は従来のtask ID not foundを維持。health/mount/log/status/Project
+      root/wflowの関連57 tests成功。
+    - recoveryはremote Project rootではNetwork Volumes権限とremount、local rootではlocal filesystem
+      permissionsへ分岐。docs/tasks単体probeはresource種別を持たないためfilesystem permissionsを主案、mounted
+      resourceの場合だけNetwork Volumes/remountを補足する。
+    deleted: false
+  - title: 統合検証と運用反映
+    acceptance: []
+    steps:
+    - description: 正常・stale・mounted-but-unreadableを再現する自動テストでstatus、mount、wflowのexit
+        code・表示・ログを検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: uv run pytestの関連テストと全体回帰を通し、既存release運用に従って反映する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 実mountまたは同等の障害probeで、表示と永続ログから復旧手順を判断できることを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - '自動統合検証: healthy/unmounted/stale/unreadable、mount成功・unreadable cleanup、JSONL
+      100件rotation・option/stderr redaction、status exit、Project root local/remote recovery、docs/tasks
+      unreadableとreadable not foundを検証。focused 59 passed、全361 passed、変更対象Ruff check・format
+      check、git diff check成功。release切替・実mountはroot担当のため004-002/003はpending維持。'
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

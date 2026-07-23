@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from whub.core.health import probe_directory_readable
 from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.services.errors import ServiceError
 
@@ -31,4 +32,13 @@ def resolve_project_content_root(manifest: Manifest, project: str) -> Path:
     )
     if not root.is_dir():
         raise ServiceError(f"project resource is not available: {project}")
+    if detail := probe_directory_readable(root):
+        recovery = (
+            "allow Network Volumes access for this app, then remount"
+            if isinstance(resource, RemoteResource)
+            else "check local filesystem permissions"
+        )
+        raise ServiceError(
+            f"project resource is unreadable: {project}: {detail}; {recovery}"
+        )
     return root

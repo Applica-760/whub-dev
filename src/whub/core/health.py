@@ -17,6 +17,7 @@ HealthState = Literal[
     "unreachable",
     "unmounted",
     "stale",
+    "unreadable",
 ]
 
 
@@ -24,6 +25,28 @@ HealthState = Literal[
 class ResourceHealth:
     state: HealthState
     detail: str | None = None
+    recovery: str | None = None
+
+
+def probe_directory_readable(path: Path, timeout: int = 3) -> str | None:
+    """Probe directory enumeration in a timeout-isolated process."""
+    try:
+        result = subprocess.run(
+            ["ls", "-A", str(path)],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return f"directory listing timed out after {timeout}s"
+    except OSError as error:
+        return f"directory listing failed: {error}"
+    if result.returncode != 0:
+        return (
+            result.stderr.strip()
+            or f"directory listing failed: exit {result.returncode}"
+        )
+    return None
 
 
 def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
@@ -61,10 +84,14 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
     table = _read_mount_table()
     # テーブルを読めない＝状態不明。unmountがskipしないようstale扱い（fail-safe）
     if table is None:
-        return ResourceHealth("stale", "mount table unreadable")
+        return ResourceHealth(
+            "stale",
+            "mount table unreadable",
+            "retry; if persistent, run `whub unmount --force`",
+        )
     in_mount_table = any(f" on {mountpoint} (" in line for line in table.splitlines())
     if not in_mount_table:
-        return ResourceHealth("unmounted", str(mountpoint))
+        return ResourceHealth("unmounted", str(mountpoint), "run `whub mount`")
     try:
         process = subprocess.run(
             ["pgrep", "-f", f"volname=whub-{project_name}"],
@@ -72,9 +99,15 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
             timeout=3,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
-        return ResourceHealth("stale", str(error))
+        return ResourceHealth(
+            "stale", str(error), "run `whub unmount --force`, then `whub mount`"
+        )
     if process.returncode != 0:
-        return ResourceHealth("stale", f"sshfs process missing: whub-{project_name}")
+        return ResourceHealth(
+            "stale",
+            f"sshfs process missing: whub-{project_name}",
+            "run `whub unmount --force`, then `whub mount`",
+        )
     try:
         # stale mountはstatがブロックするため、子プロセス＋timeoutで隔離する
         subprocess.run(
@@ -84,7 +117,21 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
             check=True,
         )
     except subprocess.TimeoutExpired:
-        return ResourceHealth("stale", str(mountpoint))
+        return ResourceHealth(
+            "stale",
+            str(mountpoint),
+            "run `whub unmount --force`, then `whub mount`",
+        )
     except (OSError, subprocess.CalledProcessError) as error:
-        return ResourceHealth("stale", str(error))
+        return ResourceHealth(
+            "stale",
+            str(error),
+            "run `whub unmount --force`, then `whub mount`",
+        )
+    if error := probe_directory_readable(mountpoint):
+        return ResourceHealth(
+            "unreadable",
+            error,
+            "allow Network Volumes access for this app, then remount",
+        )
     return ResourceHealth("ok")
