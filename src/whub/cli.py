@@ -13,6 +13,7 @@ from whub.commands.fetch import fetch
 from whub.commands.init import init
 from whub.commands.knowledge import knowledge
 from whub.commands.link import link
+from whub.commands.ls import ls
 from whub.commands.mount import mount, unmount
 from whub.commands.run import run
 from whub.commands.session import session
@@ -38,6 +39,7 @@ def main() -> None:
 
 
 main.add_command(link)
+main.add_command(ls)
 main.add_command(mount)
 main.add_command(unmount)
 main.add_command(cd)

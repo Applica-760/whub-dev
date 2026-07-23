@@ -27,6 +27,7 @@ source <(whub shell-init)   # .zshrc に追記
 | コマンド | 概要 |
 |---|---|
 | `whub init --workspace-root PATH [--force]` | `~/.whub/config.toml` にworkspace rootを記録してcontextを初期化 |
+| `whub ls` | project名、resource type、workspace pathを表示 |
 | `whub status` | 接続状態、ヘルスチェック、git差分を表示 |
 | `whub link` | manifest の symlink を一括作成（`.gitignore` も自動更新） |
 | `whub mount [PROJECT] [-a]` | remote `resource`をsshfsでツリーへマウント（`mount: false`は`-a`か名指しのみ） |
@@ -38,6 +39,12 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub backlog <TEXT> [--project PROJECT]` | projectのbacklog末尾の未整理メモへ追記（既定は`whub-dev`） |
 | `whub codegraph` | `codegraph: true`な`resource`のCodeGraphを初期化 |
 | `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
+
+`whub ls`はmanifestの接続情報を公開せず、Project解決に必要な情報だけを表示する。
+
+```sh
+whub ls
+```
 
 ## Task Workflow
 
