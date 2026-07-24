@@ -104,10 +104,13 @@ plan:
     acceptance: []
     steps:
     - description: Serviceの成功・失敗・復旧・冪等性とCLIの引数・終了状態をテストし、関連テストと全pytestを実行してrelease手順を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - release build・verify・applyを実環境で実行。frontend optional dependency欠落時は旧app再起動を確認後、node_modules再installで復旧。更新release
+      0.1.0+gfe9b56dfのbuild・verify・apply、current切替、新app起動、release CLI help、HTTP応答を確認し、全pytest
+      374件とruffが成功。
     deleted: false
 approvals:
 - actor: user
