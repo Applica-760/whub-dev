@@ -92,12 +92,13 @@ plan:
       deleted: false
     - description: commands/release.pyにbuild・verify・applyを追加し、services/release.pyの3操作へ委譲する。cli.pyへrelease
         groupを登録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - release build・verify・applyをservices/release.pyへ実装し、commands/release.pyの3 CLIから委譲する構成を完成。対象pytest
       10件とruffが成功し、apply失敗時のcurrent/staging/app復旧を検証した。
+    - build・verify・applyの3 CLIをcommands/release.pyへ追加し、release groupはcli.pyへ登録済みであることを確認。
     deleted: false
   - title: release操作を検証する
     acceptance: []
