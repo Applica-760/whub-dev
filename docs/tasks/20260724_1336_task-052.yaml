@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-052
-  state: in_progress
+  state: cancelled
   title: mount安定化とwhub高コスト要因の対策
   objective: sshfsマウントのフラッピングを止め、whub起因の電力・CPUコストを削減する
   approach:
@@ -134,7 +134,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: 'commit (feat: TASK-052:003)'
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -161,6 +161,7 @@ plan:
       passed
     - 'uv run pytest: 399 passed'
     - la-il:docs/tmux_probe.mdでfetch→編集→push往復成功。remote側変更後のpush拒否(lost update)確認。テスト後リモート・ローカルとも原状復帰
+    - commit 21711bad, release 0.1.0+g4ff32907 build/verify/apply完了
     deleted: false
   - title: 既存コマンド群のmountレス対応
     acceptance: []
@@ -182,5 +183,7 @@ change_requests:
 - reason: 決定済みの暫定軽減措置(keepalive延長)を実行Phaseとして追加する
 - reason: 決定済み方針のfetch/push構築と既存コマンド群改修をPhaseとして追加
 - reason: Phase3の粗枠StepをLog済み要件・方針に基づく具体Stepへ置き換える
-cancellation: null
+cancellation:
+  reason: mount常用廃止はAgentic開発とVS Codeの利便性を損なうため、mountレス化方針を撤回し、mount改修は別Taskで扱う
+  actor: user
 result: null

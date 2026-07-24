@@ -1,0 +1,80 @@
+schema_version: 1
+task:
+  id: TASK-054
+  state: in_progress
+  title: Task操作自由度の整備
+  objective: 実行記録の整合性を保ちながら、Taskの各要素を必要な時点で操作できるCLIを整備する
+  approach:
+  - 操作対象ごとの状態制約を明文化し、Logは論理削除と表示上の取り消し線で履歴を保持する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 現状調査と要件記録
+    acceptance: []
+    steps:
+    - description: 実装済み操作と不足機能を調査し、要件を実行ログへ記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - '現状: Task本体のtitle・objective・approachはinit時だけ書込み可能。'
+    - '現状: Phase/Step、依存関係、受け入れ条件はdraft時だけ追加・更新・論理削除可能。'
+    - '現状: Stepのdone/skip、受け入れ結果、Phase Log追記はin_progressで可能。Phase Log追記はpausedでも可能。'
+    - '現状: Step完了・skip、受け入れ結果、Phase Logはいずれも後から更新・削除できない。'
+    - '不足: Approach・title・objectiveの編集、実行開始後の計画・依存関係・受け入れ条件の編集、Stepの再オープンと並べ替え。'
+    - '要件: Logの物理削除は許可せず、Phase/Stepと同様の論理削除と取り消し線表示を実装する。'
+    - '調査根拠: src/whub/wflow/commands/task.py、services/task/operation.py、models/task.py、definitions/task.yaml、関連テスト。'
+    deleted: false
+  - title: 操作モデル設計
+    acceptance: []
+    steps:
+    - description: 操作対象・状態・履歴保持の不変条件を定義し、Logを単一キー・文字列値のJSONペアと論理削除フラグだけで検証・保存するデータモデルを設計する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        実装: Taskヘッダの共通更新サービスと task update CLIを追加し、title・objective・approachの置換と空化を可能にした
+      deleted: false
+    - value:
+        実装: Phase Logを単一JSONペアと論理削除フラグで表現し、更新・削除・復元の共通サービスとCLIを追加した
+      deleted: false
+    - value:
+        検証: Task Pythonテスト49件、フロントエンドtypecheck、フロントエンドテスト13件が成功した
+      deleted: false
+    - value:
+        完了: Logデータモデルと状態制約を確定し、Phase 2を完了した
+      deleted: false
+    deleted: false
+  - title: CLIとサービス実装
+    acceptance: []
+    steps:
+    - description: '編集・論理削除・復元を扱うTask CLIとサービス層を実装し、JSON入力を - [キー]: バリュー の形式で表示する'
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: 状態別の操作制約、単一JSONペアの入力検証と表示、論理削除表示、既存ワークフロー整合性をテストする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: Logを分類付きの構造化入力に制約する要件を追加するため
+- reason: Logをカテゴリと本文ではなく単一キー・値のJSONペアとして保存・表示する要件へ明確化するため
+cancellation: null
+result: null
