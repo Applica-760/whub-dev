@@ -42,8 +42,13 @@ def _context(tmp_path: Path) -> WhubContext:
     return context
 
 
-def _result(command: list[str], returncode: int = 0, stdout: str = ""):
-    return subprocess.CompletedProcess(command, returncode, stdout, "build failed")
+def _result(
+    command: list[str],
+    returncode: int = 0,
+    stdout: str = "",
+    stderr: str = "build failed",
+):
+    return subprocess.CompletedProcess(command, returncode, stdout, stderr)
 
 
 def _wheel(context: WhubContext, release_id: str, *, valid_webapp: bool = True) -> Path:
@@ -145,6 +150,30 @@ def test_build_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> No
     assert not (source / "src" / "whub" / "_build.json").exists()
 
 
+def test_build_suggests_frontend_dependency_recovery(monkeypatch, tmp_path: Path) -> None:
+    source = _source(tmp_path)
+    context = _context(tmp_path)
+
+    def run(command, *, cwd, capture_output, text):
+        del cwd, capture_output, text
+        if command[:3] == ["git", "status", "--porcelain"]:
+            return _result(command)
+        if command[:3] == ["git", "rev-parse", "HEAD"]:
+            return _result(command, stdout="a" * 40 + "\n")
+        if command == ["npm", "run", "build"]:
+            return _result(
+                command,
+                returncode=1,
+                stderr="Cannot find module '@rollup/rollup-darwin-arm64'",
+            )
+        return _result(command)
+
+    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+
+    with pytest.raises(ReleaseBuildError, match="npm optional dependency"):
+        build_release(source, context=context)
+
+
 def test_verify_records_wheel_hash_after_staging_smoke_test(monkeypatch, tmp_path: Path) -> None:
     context = _context(tmp_path)
     release_id = "0.1.0+gaaaaaaaa"
@@ -216,7 +245,19 @@ def test_apply_moves_verified_release_and_switches_current(monkeypatch, tmp_path
     assert result.release_path == context.releases_dir / release_id
     assert not staging.exists()
     assert (context.releases_dir / "current").resolve() == result.release_path
-    assert calls == [[str(result.release_path / "venv" / "bin" / "whub"), "app"]]
+    assert calls == [
+        ["uv", "venv", "--clear", "--no-project", str(result.release_path / "venv")],
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            str(result.release_path / "venv" / "bin" / "python"),
+            str(result.release_path / "artifact" / "whub-0.1.0-py3-none-any.whl"),
+        ],
+        [str(result.release_path / "venv" / "bin" / "whub"), "--version"],
+        [str(result.release_path / "venv" / "bin" / "whub"), "app"],
+    ]
 
 
 def test_apply_failure_restores_current_and_staging(monkeypatch, tmp_path: Path) -> None:
@@ -229,7 +270,10 @@ def test_apply_failure_restores_current_and_staging(monkeypatch, tmp_path: Path)
     def run(command, *, cwd, capture_output, text):
         del cwd, capture_output, text
         calls.append(command)
-        if str(context.releases_dir / release_id) in command[0]:
+        if command == [
+            str(context.releases_dir / release_id / "venv" / "bin" / "whub"),
+            "app",
+        ]:
             return _result(command, returncode=1)
         return _result(command)
 

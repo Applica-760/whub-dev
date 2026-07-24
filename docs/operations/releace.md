@@ -33,6 +33,7 @@ releaseは`~/.whub/releases/<release-id>`配下の`artifact/`・`venv/`・`relea
 
 - `release.json`が検証済みで、staging venvが存在するreleaseだけを対象にする。
 - staging unitを`~/.whub/releases/<release-id>`へatomicに配置し、既存の同一release-idは上書きしない。
+- venvは絶対pathを含むため、配置後のrelease pathでwheelから再作成する。
 - `~/.whub/releases/current`を新releaseへatomicに切り替える。
 - 確認を求めず最後まで実行し、新releaseの`whub app`を必ず起動する。
 - `~/.local/bin/whub`と`~/.local/bin/wflow`は`current/venv/bin/`を参照し続けるため、再起動後のappと次回起動から新releaseが使われる。

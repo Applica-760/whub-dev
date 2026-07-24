@@ -88,6 +88,16 @@ def _source_release(source: Path) -> ReleaseInfo:
     return ReleaseInfo(version, commit)
 
 
+def _frontend_build_error(error: ReleaseBuildError, source: Path) -> ReleaseBuildError:
+    if "@rollup/rollup-" not in str(error):
+        return error
+    return ReleaseBuildError(
+        f"{error}\n"
+        "The npm optional dependency installation may be incomplete. "
+        f"Try removing {source / 'app' / 'node_modules'} and running npm install in {source / 'app'}."
+    )
+
+
 def build_release(
     source: Path,
     *,
@@ -120,7 +130,10 @@ def build_release(
             )
             + "\n"
         )
-        _run(["npm", "run", "build"], cwd=source / "app")
+        try:
+            _run(["npm", "run", "build"], cwd=source / "app")
+        except ReleaseBuildError as error:
+            raise _frontend_build_error(error, source) from error
         _run(
             ["uv", "build", "--wheel", "--out-dir", str(artifact_dir), "--clear"],
             cwd=source,
@@ -319,6 +332,19 @@ def _replace_current(context: WhubContext, target: Path) -> None:
         raise ReleaseApplyError(f"failed to switch current release: {error}") from error
 
 
+def _install_release_venv(release_path: Path) -> None:
+    wheels = list((release_path / "artifact").glob("whub-*.whl"))
+    if len(wheels) != 1:
+        raise ReleaseApplyError(f"expected one wheel in {release_path / 'artifact'}")
+    venv = release_path / "venv"
+    _run(["uv", "venv", "--clear", "--no-project", str(venv)], cwd=release_path)
+    _run(
+        ["uv", "pip", "install", "--python", str(venv / "bin" / "python"), str(wheels[0])],
+        cwd=release_path,
+    )
+    _run([str(venv / "bin" / "whub"), "--version"], cwd=release_path)
+
+
 def apply_release(
     release_id: str,
     *,
@@ -342,6 +368,7 @@ def apply_release(
     try:
         os.replace(staging, target)
         moved = True
+        _install_release_venv(target)
         _replace_current(context, target)
         switched = True
         _run([str(target / "venv" / "bin" / "whub"), "app"], cwd=target)
@@ -357,6 +384,7 @@ def apply_release(
                 _replace_current(context, old_release)
             if moved:
                 os.replace(target, staging)
+                _install_release_venv(staging)
             _restart_operation_app(old_whub, cwd=old_release)
         except (OSError, ReleaseApplyError, ReleaseBuildError) as rollback_error:
             raise ReleaseApplyError(f"{error}; failed to restore old release: {rollback_error}") from error
