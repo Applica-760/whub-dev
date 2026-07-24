@@ -2,13 +2,13 @@ schema_version: 1
 task:
   id: TASK-050
   state: in_progress
-  title: ナレッジ管理と入力・昇格運用を再設計する
-  objective: 外部情報・個人メモ・Project知識・作業候補を低摩擦で蓄積・発見・昇格できるよう、Knowledge YAMLの必要性をゼロベースで評価し、Inbox・Literature・Backlog・Todo・Taskとの最小な責務分担を確定する
+  title: Project Knowledgeを規範管理として再設計する
+  objective: Project固有の規範を人間とAgentが低負担かつ正確に参照できるよう、Knowledgeの責務・schema・段階的取得・evidenceとの分担を再設計する
   approach:
-  - FOCUSは現役運用から除外し、Daily入力はTASK-032の責務として本Taskでは下流との境界だけを扱う
+  - FOCUSは現役運用から除外し、Vaultの入力・整理・昇格運用は別Taskで扱う
   - Knowledge YAMLの維持・縮小または自動生成・廃止を、検索負担・発見性・鮮度・重複・検証可能性・移行コストで比較する
   - 既存Knowledgeを前提にせず、実装・参照箇所・利用場面と代表的な情報取得課題から必要なナレッジ機構を導く
-  - 採用方式の決定後に、SSOT・Skill・入力から昇格までの経路を一貫させ、必要な実装変更と検証を行う
+  - 採用方式の決定後に、KnowledgeのSSOT・schema・Agent取得経路を一貫させ、必要な実装変更と検証を行う
   depends_on: []
   interruption_task_id: null
   interruption_reason: null
@@ -22,11 +22,7 @@ plan:
   - id: ACC-003
     statement: 実証されていないmandatory queryを残さず、有用な確定知識を失わない保存先または移行方法が定義される
   - id: ACC-004
-    statement: Daily・Inbox・discourse・vault知識・Backlog・Todo・Task・Project知識の責務と昇格条件が重複なく定義される
-  - id: ACC-005
-    statement: TASK-032のDaily入力実装と重複せず、本TaskはDaily以降の整理境界だけを扱う
-  - id: ACC-006
-    statement: 採用方式が実装・データ・Project AGENTS・hub Skill・vault運用文書へ一貫して反映され、代表場面と回帰テストで検証される
+    statement: 採用方式がKnowledge機能・データ・Project AGENTS・Agent取得経路へ一貫して反映され、代表場面と回帰テストで検証される
   phases:
   - title: 現状と評価課題を確定する
     acceptance: []
@@ -68,7 +64,16 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 'ユーザー回答: Knowledgeは人間とAgentの双方が参照し、自由記述Markdownより定式化できる点を期待して導入。目的は制約見落とし、運用不一致文書、実装・運用乖離の軽減。DefinitionとPolicy等を分ける分類思想には価値を認める。Agentにはterm
+      queryの連打ではなく、必要情報の自動取得と明示制約への即時追従を求める。実装から導ける情報でも深読みによってしか分からない場合は文書化価値がある。Project情報は各Projectに保持し、Vaultへの統合はしない。Remote
+      Resourceを含め保存場所を跨ぐ乖離を避け、共有するなら仕組みだけとする。中央台帳と発生源配置に関する質問は再具体化が必要。'
+    - '追加回答: Knowledgeは規約変更時に更新する法律文書として維持したい。Agentは変更対象pathに関連する制約を自動取得する。Relationの価値は薄く、Exceptionには価値を感じる。テスト可能な制約はテストを正本とし、部分適用・想定ケースはコードまたはテストのコメント挿入を徹底したい。Web閲覧よりAgent取得を優先。Remote
+      Projectは未mount時に開発不能なのでKnowledgeも取得不能でよく、local cacheは不要。基準ケースはCLI運用規約の自動提示とする。'
+    - '追加回答: Knowledgeを規範の正本、testを実装保証のevidenceとし、不一致時は自動的に片方へ合わせず判断する分担に合意。applies_to・symbol・ADR・test等の関連情報は動作安定に寄与するなら採用可。取得頻度は対象により異なり、毎回取得によるcontext圧迫を避けるため現時点で固定せず実走後に検討する。コメント形式はsrc/whub/tests/models/test_manifest.pyの冒頭ケース列挙と、対応実装内の単行コメントを基準にする。'
+    - 'schema方向の追加合意: 規約は原子的に分ける案に同意しつつ、context圧迫を避ける段階的参照も候補とする。Project相対pathとの対応付けは有用で、applies_toを任意fieldとして採用。短いrationaleをKnowledge内に持ち、長い経緯はADRへ逃がす。汎用Relationは廃止し、applies_to・evidence・exception_to・adr等の用途別参照へ置換する。'
+    - '現在の確定方針を統合: KnowledgeはProject-localな規範の正本（法律文書）として維持し、testは実装保証のevidenceとする。規約は原子的に保持し、対象pathが決まった時点で概要、必要な規約本文・例外、evidence・ADRの順に段階的参照できる設計とする。applies_toは任意fieldとし、Project相対glob（例:
+      src/whub/commands/**）を許容する。同一対象に該当する複数規約は加算適用し、打ち消し・逸脱はexception_toでのみ明示する。各規約にmust・should・mayの強度fieldを持たせる。汎用Relationは用途別参照へ置換し、短いrationaleはKnowledge、長い経緯はADR、検証ケースはtest冒頭列挙、非自明な適用理由は実装内の単行commentに置く。'
     deleted: false
   - title: 入力・整理・昇格フローを再設計する
     acceptance: []
@@ -86,19 +91,19 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: 採用方式を反映して検証する
     acceptance: []
     steps:
-    - description: 採用方式に基づき、Knowledge機能・データ・Project AGENTS・hub Skill・vault運用文書を一ファイルずつ更新または廃止する
+    - description: 採用方式に基づき、Knowledge機能・データ・Project AGENTS・Agent取得経路を一ファイルずつ更新する
       state: pending
       skip_reason: null
       deleted: false
-    - description: 既存の有用な確定知識を移行または保持し、古いFOCUS・workflow・vault内運用データ配置の参照を残さない
+    - description: 既存の有用な確定知識を移行または保持し、古いFOCUS参照と汎用Relationを現役Knowledgeに残さない
       state: pending
       skip_reason: null
       deleted: false
-    - description: 外部URL・個人メモ・未成熟なProject案・実装制約確認の代表場面を実走し、不要なqueryなしで情報へ到達できることを確認する
+    - description: CLI運用規約と実装制約確認の代表場面を実走し、不要なqueryなしで対象pathに適用される規範へ到達できることを確認する
       state: pending
       skip_reason: null
       deleted: false
@@ -110,7 +115,9 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: Knowledge再設計とVault運用再編はProject・SSOT・検証単位が独立するため、ユーザー指示によりTASK-050からVault固有scopeを分離する
 cancellation: null
 result: null
