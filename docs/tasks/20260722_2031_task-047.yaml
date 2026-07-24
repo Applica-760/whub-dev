@@ -87,7 +87,7 @@ plan:
       deleted: false
     - description: 'apply: 検証済みstaging unitだけをimmutable releaseへ昇格し、currentをatomicに切替え、新releaseのwhub
         appを必ず再起動する。失敗時は旧currentと旧appを復旧する'
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: commands/release.pyにbuild・verify・applyを追加し、services/release.pyの3操作へ委譲する。cli.pyへrelease

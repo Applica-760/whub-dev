@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import zipfile
@@ -13,7 +14,9 @@ import pytest
 from whub.core.context import WhubContext
 from whub.services.release import (
     ReleaseBuildError,
+    ReleaseApplyError,
     ReleaseVerifyError,
+    apply_release,
     build_release,
     verify_release,
 )
@@ -31,9 +34,11 @@ def _source(tmp_path: Path) -> Path:
 
 def _context(tmp_path: Path) -> WhubContext:
     context = WhubContext(tmp_path / "operation")
-    executable = context.releases_dir / "current" / "venv" / "bin" / "whub"
+    current_release = context.releases_dir / "0.0.1+g00000000"
+    executable = current_release / "venv" / "bin" / "whub"
     executable.parent.mkdir(parents=True)
     executable.touch()
+    os.symlink(current_release, context.releases_dir / "current")
     return context
 
 
@@ -63,6 +68,24 @@ def _wheel(context: WhubContext, release_id: str, *, valid_webapp: bool = True) 
             archive.writestr("whub/webapp/dist/index.html", "<html></html>")
             archive.writestr("whub/webapp/dist/assets/app.js", "console.log('ok')")
     return wheel
+
+
+def _verified_staging(context: WhubContext, release_id: str) -> Path:
+    wheel = _wheel(context, release_id)
+    staging = wheel.parents[1]
+    (staging / "venv" / "bin").mkdir(parents=True)
+    (staging / "venv" / "bin" / "whub").touch()
+    (staging / "release.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "release_id": release_id,
+                "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
+                "verified": True,
+            }
+        )
+    )
+    return staging
 
 
 def test_build_stages_wheel_and_removes_generated_metadata(
@@ -173,3 +196,48 @@ def test_verify_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> N
         verify_release(release_id, context=context)
 
     assert calls[-1][-1] == "app"
+
+
+def test_apply_moves_verified_release_and_switches_current(monkeypatch, tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    release_id = "0.1.0+gaaaaaaaa"
+    staging = _verified_staging(context, release_id)
+    calls: list[list[str]] = []
+
+    def run(command, *, cwd, capture_output, text):
+        del cwd, capture_output, text
+        calls.append(command)
+        return _result(command)
+
+    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+
+    result = apply_release(release_id, context=context)
+
+    assert result.release_path == context.releases_dir / release_id
+    assert not staging.exists()
+    assert (context.releases_dir / "current").resolve() == result.release_path
+    assert calls == [[str(result.release_path / "venv" / "bin" / "whub"), "app"]]
+
+
+def test_apply_failure_restores_current_and_staging(monkeypatch, tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    release_id = "0.1.0+gaaaaaaaa"
+    staging = _verified_staging(context, release_id)
+    old_release = (context.releases_dir / "current").resolve()
+    calls: list[list[str]] = []
+
+    def run(command, *, cwd, capture_output, text):
+        del cwd, capture_output, text
+        calls.append(command)
+        if str(context.releases_dir / release_id) in command[0]:
+            return _result(command, returncode=1)
+        return _result(command)
+
+    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+
+    with pytest.raises(ReleaseApplyError, match="app"):
+        apply_release(release_id, context=context)
+
+    assert staging.is_dir()
+    assert (context.releases_dir / "current").resolve() == old_release
+    assert calls[-1] == [str(context.releases_dir / "current" / "venv" / "bin" / "whub"), "app"]

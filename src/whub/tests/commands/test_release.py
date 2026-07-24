@@ -8,7 +8,7 @@ from click.testing import CliRunner
 
 from whub.cli import main
 from whub.commands.release import release
-from whub.services.release import ReleaseBuild, ReleaseVerification
+from whub.services.release import ReleaseApplication, ReleaseBuild, ReleaseVerification
 
 
 def test_build_requires_source() -> None:
@@ -52,3 +52,20 @@ def test_verify_reports_verified_release(monkeypatch, tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert result.output == f"verified 0.1.0+g12345678: {'a' * 64}\n"
+
+
+def test_apply_reports_applied_release(monkeypatch, tmp_path: Path) -> None:
+    release_path = tmp_path / "releases" / "0.1.0+g12345678"
+    monkeypatch.setattr(
+        "whub.commands.release.apply_release",
+        lambda value: ReleaseApplication("0.1.0+g12345678", release_path),
+    )
+
+    result = CliRunner().invoke(
+        release,
+        ["apply", "0.1.0+g12345678"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert result.output == f"applied 0.1.0+g12345678: {release_path}\n"

@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 
 from whub.services.errors import ServiceError
-from whub.services.release import build_release, verify_release
+from whub.services.release import apply_release, build_release, verify_release
 
 
 @click.group()
@@ -40,3 +40,14 @@ def verify(release_id: str) -> None:
     except ServiceError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"verified {result.release_id}: {result.wheel_sha256}")
+
+
+@release.command(name="apply")
+@click.argument("release_id")
+def apply(release_id: str) -> None:
+    """Apply one verified release."""
+    try:
+        result = apply_release(release_id)
+    except ServiceError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"applied {result.release_id}: {result.release_path}")
