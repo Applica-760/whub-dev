@@ -18,7 +18,10 @@ HealthState = Literal[
     "unmounted",
     "stale",
     "unreadable",
+    "slow",
 ]
+
+ProbeOutcome = Literal["ok", "denied", "timeout", "error"]
 
 
 @dataclass(frozen=True)
@@ -28,7 +31,13 @@ class ResourceHealth:
     recovery: str | None = None
 
 
-def probe_directory_readable(path: Path, timeout: int = 3) -> str | None:
+@dataclass(frozen=True)
+class DirectoryProbe:
+    outcome: ProbeOutcome
+    detail: str | None = None
+
+
+def probe_directory_readable(path: Path, timeout: int = 3) -> DirectoryProbe:
     """Probe directory enumeration in a timeout-isolated process."""
     try:
         result = subprocess.run(
@@ -38,15 +47,19 @@ def probe_directory_readable(path: Path, timeout: int = 3) -> str | None:
             timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        return f"directory listing timed out after {timeout}s"
+        # 遅延は障害ではない: 判定契約 mount_health_latency_independent
+        return DirectoryProbe("timeout", f"directory listing exceeded {timeout}s")
     except OSError as error:
-        return f"directory listing failed: {error}"
+        return DirectoryProbe("error", f"directory listing failed: {error}")
     if result.returncode != 0:
-        return (
+        detail = (
             result.stderr.strip()
             or f"directory listing failed: exit {result.returncode}"
         )
-    return None
+        if "operation not permitted" in detail.lower():
+            return DirectoryProbe("denied", detail)
+        return DirectoryProbe("error", detail)
+    return DirectoryProbe("ok")
 
 
 def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
@@ -117,21 +130,27 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
             check=True,
         )
     except subprocess.TimeoutExpired:
-        return ResourceHealth(
-            "stale",
-            str(mountpoint),
-            "run `whub unmount --force`, then `whub mount`",
-        )
+        # sshfsプロセス生存確認済みのため遅延とみなす（stale=プロセス消失・table不明に限定）
+        return ResourceHealth("slow", f"stat exceeded 3s: {mountpoint}")
     except (OSError, subprocess.CalledProcessError) as error:
         return ResourceHealth(
             "stale",
             str(error),
             "run `whub unmount --force`, then `whub mount`",
         )
-    if error := probe_directory_readable(mountpoint):
+    probe = probe_directory_readable(mountpoint)
+    if probe.outcome == "denied":
         return ResourceHealth(
             "unreadable",
-            error,
+            probe.detail,
             "allow Network Volumes access for this app, then remount",
+        )
+    if probe.outcome == "timeout":
+        return ResourceHealth("slow", probe.detail)
+    if probe.outcome == "error":
+        return ResourceHealth(
+            "stale",
+            probe.detail,
+            "run `whub unmount --force`, then `whub mount`",
         )
     return ResourceHealth("ok")

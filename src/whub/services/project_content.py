@@ -32,13 +32,15 @@ def resolve_project_content_root(manifest: Manifest, project: str) -> Path:
     )
     if not root.is_dir():
         raise ServiceError(f"project resource is not available: {project}")
-    if detail := probe_directory_readable(root):
+    probe = probe_directory_readable(root)
+    # timeoutは高遅延mountでも起きるため障害扱いせず続行（denied/errorのみ停止）
+    if probe.outcome in ("denied", "error"):
         recovery = (
             "allow Network Volumes access for this app, then remount"
             if isinstance(resource, RemoteResource)
             else "check local filesystem permissions"
         )
         raise ServiceError(
-            f"project resource is unreadable: {project}: {detail}; {recovery}"
+            f"project resource is unreadable: {project}: {probe.detail}; {recovery}"
         )
     return root

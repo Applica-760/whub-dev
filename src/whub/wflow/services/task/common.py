@@ -28,9 +28,11 @@ def load_task(path: Path) -> TaskDocument:
 
 def iter_task_paths(root: Path) -> Iterator[Path]:
     """Yield Task YAML paths while excluding AppleDouble sidecars."""
-    if detail := probe_directory_readable(root):
+    probe = probe_directory_readable(root)
+    # timeoutは高遅延mountでも起きるため障害扱いせず続行（denied/errorのみ停止）
+    if probe.outcome in ("denied", "error"):
         raise WflowError(
-            f"task directory is unreadable: {root}: {detail}; "
+            f"task directory is unreadable: {root}: {probe.detail}; "
             "check filesystem permissions; for mounted resources, allow "
             "Network Volumes access for this app and remount"
         )

@@ -11,6 +11,8 @@
 8. mount失敗時、作成したmountpointはrmdirされる（副作用境界）
 9. mount失敗時、既存のmountpointは保持される（副作用境界）
 10. stale mountはsshfsを起動せず、force unmountで解除する
+11. slow（健全だが高遅延）はprecheckでskipし再mountしない
+12. post-mount probeがslowでもmount成功扱いとしcleanupしない
 
 検証しないケース:
 - 実際のsshfs/umount/diskutil実行
@@ -246,6 +248,51 @@ class TestMountSpec:
         )
         cleanup.assert_called_once_with(project, resource, force=True)
         assert not mountpoint.exists()
+
+    def test_skips_when_mounted_but_slow(self):
+        # ケース11
+        m = manifest()
+        mock_run = MagicMock()
+        with (
+            patch("whub.commands.mount.get_manifest", return_value=m),
+            patch(
+                "whub.commands.mount.inspect_mount",
+                return_value=ResourceHealth("slow", "directory listing exceeded 3s"),
+            ),
+            patch(
+                "whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"
+            ),
+            patch("whub.commands.mount.subprocess.run", mock_run),
+        ):
+            result = CliRunner().invoke(mount, ["remote"], catch_exceptions=False)
+
+        assert result.exit_code == 0
+        assert "skip" in result.output
+        mock_run.assert_not_called()
+
+    def test_slow_post_mount_probe_succeeds_without_cleanup(self, tmp_path):
+        # ケース12
+        m = manifest()
+        project = m.resolve_project("remote")
+        resource = project.resource
+        resource._resolved_workspace_path = tmp_path / "mnt"
+        health_seq = [
+            ResourceHealth("unmounted"),
+            ResourceHealth("slow", "directory listing exceeded 3s"),
+        ]
+        with (
+            patch("whub.commands.mount.inspect_mount", side_effect=health_seq),
+            patch("whub.commands.mount.build_sshfs_command", return_value=["sshfs"]),
+            patch(
+                "whub.commands.mount.subprocess.run",
+                return_value=CompletedProcess([], 0),
+            ),
+            patch("whub.commands.mount._unmount_one") as cleanup,
+        ):
+            status = _mount_one(project, resource)
+
+        assert status == "mount"
+        cleanup.assert_not_called()
 
     def test_sshfs_stderr_is_not_persisted(self, tmp_path):
         m = manifest()

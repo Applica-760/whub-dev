@@ -64,22 +64,32 @@ plan:
     acceptance: []
     steps:
     - description: probe_directory_readableを構造化結果へ変更し、health.pyのslow・unreadable・stale判定を新契約へ更新して単体テストを追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: mount.pyのcleanupをdenied限定へ変更し、recovery文言とmount.jsonl記録を遅延・拒否で分離してテストを追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: wflow task/common.pyとservices/project_content.pyのprobeをtimeout時続行・denied時停止へ変更し、回帰テストを追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: statusとwebappのslow表示(exit 0維持)を実装してテストし、検証済み成果をcommitする
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        実装: probe_directory_readableをDirectoryProbe(ok/denied/timeout/error)へ構造化。deniedはOperation
+          not permittedの即時失敗のみ。inspect_mountはtimeout(stat/ls)をslow、deniedをunreadable、その他即時エラーをstaleへ分類
+      deleted: false
+    - value:
+        実装: mount precheckはok/slowをskip、post-mount probeはslowを成功(mount)扱いとしcleanupはunreadable(denied)限定。mount.jsonlへslowのdetailを記録
+      deleted: false
+    - value:
+        実装: wflow iter_task_pathsとresolve_project_content_rootはdenied/errorのみ停止しtimeoutは続行。遅延中のwflow誤停止を解消
+      deleted: false
     deleted: false
   - title: host単位mount集約
     acceptance: []

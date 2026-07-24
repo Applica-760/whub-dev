@@ -458,7 +458,7 @@ export interface components {
              * State
              * @enum {string}
              */
-            state: "ok" | "missing" | "source-missing" | "broken" | "wrong-target" | "unexpected" | "unreachable" | "unmounted" | "stale" | "unreadable";
+            state: "ok" | "missing" | "source-missing" | "broken" | "wrong-target" | "unexpected" | "unreachable" | "unmounted" | "stale" | "unreadable" | "slow";
             /**
              * Type
              * @enum {string}

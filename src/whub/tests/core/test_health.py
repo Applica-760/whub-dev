@@ -267,7 +267,6 @@ class TestMountHealthSpec:
             resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             cases = (
-                subprocess.TimeoutExpired(["stat"], 3),
                 OSError("stat failed"),
                 subprocess.CalledProcessError(1, ["stat"], stderr="failed"),
             )
@@ -287,3 +286,75 @@ class TestMountHealthSpec:
                 ):
                     health = inspect_mount(resource, "remote")
                 assert health.state == "stale"
+
+    def test_stat_timeout_with_live_process_reports_slow(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            # ケース14: レイテンシ非依存契約 — timeoutは障害根拠にしない
+            mountpoint = Path(tmp) / "remote"
+            resource = _remote_resource(mountpoint)
+            table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
+            with (
+                patch.object(health_module, "_read_mount_table", return_value=table),
+                patch.object(
+                    health_module.subprocess,
+                    "run",
+                    side_effect=[
+                        subprocess.CompletedProcess(["pgrep"], 0, "", ""),
+                        subprocess.TimeoutExpired(["stat"], 3),
+                    ],
+                ),
+            ):
+                health = inspect_mount(resource, "remote")
+
+        assert health.state == "slow"
+        assert health.recovery is None
+
+    def test_child_listing_timeout_reports_slow(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            # ケース14: レイテンシ非依存契約 — timeoutは障害根拠にしない
+            mountpoint = Path(tmp) / "remote"
+            resource = _remote_resource(mountpoint)
+            table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
+            with (
+                patch.object(health_module, "_read_mount_table", return_value=table),
+                patch.object(
+                    health_module.subprocess,
+                    "run",
+                    side_effect=[
+                        subprocess.CompletedProcess(["pgrep"], 0, "", ""),
+                        subprocess.CompletedProcess(["stat"], 0, "", ""),
+                        subprocess.TimeoutExpired(["ls"], 3),
+                    ],
+                ),
+            ):
+                health = inspect_mount(resource, "remote")
+
+        assert health.state == "slow"
+        assert "exceeded 3s" in health.detail
+        assert health.recovery is None
+
+    def test_child_listing_generic_error_reports_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            # denied以外の即時エラーはstale（自動cleanup対象にしない）
+            mountpoint = Path(tmp) / "remote"
+            resource = _remote_resource(mountpoint)
+            table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
+            with (
+                patch.object(health_module, "_read_mount_table", return_value=table),
+                patch.object(
+                    health_module.subprocess,
+                    "run",
+                    side_effect=[
+                        subprocess.CompletedProcess(["pgrep"], 0, "", ""),
+                        subprocess.CompletedProcess(["stat"], 0, "", ""),
+                        subprocess.CompletedProcess(
+                            ["ls"], 1, "", "Input/output error"
+                        ),
+                    ],
+                ),
+            ):
+                health = inspect_mount(resource, "remote")
+
+        assert health.state == "stale"
+        assert health.detail == "Input/output error"
+        assert "unmount --force" in health.recovery

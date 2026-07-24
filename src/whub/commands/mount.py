@@ -48,7 +48,7 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
         detail=health.detail,
         recovery=health.recovery,
     )
-    if health.state == "ok":
+    if health.state in ("ok", "slow"):
         return "skip"
     if health.state == "stale":
         return f"STALE: {health.detail}; recovery: {health.recovery}"
@@ -85,12 +85,14 @@ def _mount_one(project: Project, resource: RemoteResource) -> str:
     # fuse-t on macOS: mount table lags ~0.2-0.4s behind sshfs exit.
     for _ in range(10):
         health = inspect_mount(resource, project.name)
-        if health.state == "ok":
+        # slow=健全だが高遅延。unmountすると再mountフラッピングになるため成功扱い
+        if health.state in ("ok", "slow"):
             write_mount_log(
                 project=project.name,
                 mountpoint=mountpoint,
                 stage="post_mount_probe",
-                result="ok",
+                result=health.state,
+                detail=health.detail,
                 options=options,
             )
             return "mount"

@@ -73,3 +73,17 @@ class TestStatusCommand:
 
         assert result.exit_code != 0
         assert "stale" in result.output
+
+    def test_slow_mount_exits_zero(self) -> None:
+        # slowは正常系（高遅延の可視化のみ）
+        with (
+            patch("whub.commands.status.get_manifest"),
+            patch(
+                "whub.commands.status.collect_resource_status",
+                return_value=[_status("remote", type="remote", mount="slow")],
+            ),
+        ):
+            result = CliRunner().invoke(status, catch_exceptions=False)
+
+        assert result.exit_code == 0
+        assert "slow" in result.output

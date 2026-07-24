@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from whub.core.health import DirectoryProbe
 from whub.models import Project, RemoteResource, SymlinkResource
 from whub.services.errors import ServiceError
 from whub.services.project_content import (
@@ -81,9 +82,22 @@ def test_rejects_unreadable_project_content_root(tmp_path: Path) -> None:
     ):
         monkeypatch.setattr(
             "whub.services.project_content.probe_directory_readable",
-            lambda path: "Operation not permitted",
+            lambda path: DirectoryProbe("denied", "Operation not permitted"),
         )
         resolve_project_content_root(loaded_manifest, "remote")
+
+
+def test_timeout_probe_continues_for_slow_mount(tmp_path: Path) -> None:
+    loaded_manifest = manifest()
+    remote = loaded_manifest.resolve_project("remote")
+    remote.resource._resolved_workspace_path = tmp_path
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            "whub.services.project_content.probe_directory_readable",
+            lambda path: DirectoryProbe("timeout", "directory listing exceeded 3s"),
+        )
+        assert resolve_project_content_root(loaded_manifest, "remote") == tmp_path
 
 
 def test_local_unreadable_recovery_uses_filesystem_permissions(tmp_path: Path) -> None:
@@ -97,6 +111,6 @@ def test_local_unreadable_recovery_uses_filesystem_permissions(tmp_path: Path) -
     ):
         monkeypatch.setattr(
             "whub.services.project_content.probe_directory_readable",
-            lambda path: "Permission denied",
+            lambda path: DirectoryProbe("error", "Permission denied"),
         )
         resolve_project_content_root(loaded_manifest, "local")

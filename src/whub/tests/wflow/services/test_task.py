@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from whub.core.health import DirectoryProbe
 from whub.wflow.models import TaskDocument
 from whub.wflow.models.task import AcceptanceCriterion
 from whub.wflow.services import (
@@ -510,10 +511,25 @@ def test_rejects_unreadable_task_directory(
 ) -> None:
     monkeypatch.setattr(
         "whub.wflow.services.task.common.probe_directory_readable",
-        lambda path: "Operation not permitted",
+        lambda path: DirectoryProbe("denied", "Operation not permitted"),
     )
 
     with pytest.raises(
         WflowError, match="task directory is unreadable.*Network Volumes"
     ):
         resolve_task_reference("TASK-001", tmp_path)
+
+
+def test_slow_task_directory_probe_continues(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # timeoutは高遅延mountでも起きるため停止しない
+    first = _task_data()
+    first_path = tmp_path / "first.yaml"
+    _write_task(tmp_path, first_path.name, first)
+    monkeypatch.setattr(
+        "whub.wflow.services.task.common.probe_directory_readable",
+        lambda path: DirectoryProbe("timeout", "directory listing exceeded 3s"),
+    )
+
+    assert resolve_task_reference("TASK-001", tmp_path) == first_path
