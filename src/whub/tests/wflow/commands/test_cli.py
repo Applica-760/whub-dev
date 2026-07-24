@@ -288,6 +288,46 @@ def test_task_init_rejects_invalid_input_without_creating_yaml(
     assert list((tmp_path / "docs/tasks").glob("*.yaml")) == []
 
 
+def test_task_update_replaces_header_fields_and_approaches(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(
+        main, ["task", "init", "旧タイトル", "旧目的", "--approach", "旧方針"]
+    ).exit_code == 0
+
+    result = runner.invoke(
+        main,
+        [
+            "task",
+            "update",
+            "001",
+            "--title",
+            "新タイトル",
+            "--objective",
+            "新目的",
+            "--approach",
+            "方針1",
+            "--approach",
+            "方針2",
+        ],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    path = next((tmp_path / "docs/tasks").glob("*.yaml"))
+    updated = yaml.safe_load(path.read_text())["task"]
+    assert updated["title"] == "新タイトル"
+    assert updated["objective"] == "新目的"
+    assert updated["approach"] == ["方針1", "方針2"]
+    cleared = runner.invoke(
+        main, ["task", "update", "001", "--clear-approaches"], catch_exceptions=False
+    )
+    assert cleared.exit_code == 0
+    assert yaml.safe_load(path.read_text())["task"]["approach"] == []
+
+
 def test_task_plan_is_created_and_approved_only_through_cli(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -298,7 +338,7 @@ def test_task_plan_is_created_and_approved_only_through_cli(
         ["task", "init", "前提Task", "依存先を完了する"],
         ["task", "plan", "insert", "001", "前提Step", "--phase-title", "前提Phase"],
         ["task", "transition", "001", "approve_plan", "--actor", "user"],
-        ["task", "done", "001", "--log", "前提を完了した"],
+        ["task", "done", "001", "--log", '{"記録":"前提を完了した"}'],
         ["task", "complete", "001", "--result", "前提完了"],
     ]
     for command in prerequisite_commands:
@@ -690,9 +730,9 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
             "001",
             "001",
             "--log",
-            "discussion finding",
+            '{"調査":"discussion finding"}',
             "--log",
-            "second discussion",
+            '{"調査":"second discussion"}',
         ],
         catch_exceptions=False,
     )
@@ -705,9 +745,9 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
             "done",
             "001",
             "--log",
-            "current style located",
+            '{"確認":"current style located"}',
             "--log",
-            "second finding",
+            '{"確認":"second finding"}',
         ],
         catch_exceptions=False,
     )
@@ -728,10 +768,10 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
     updated = yaml.safe_load(path.read_text())
     assert updated["task"]["state"] == "in_progress"
     assert updated["plan"]["phases"][0]["log"] == [
-        "discussion finding",
-        "second discussion",
-        "current style located",
-        "second finding",
+        {"value": {"調査": "discussion finding"}, "deleted": False},
+        {"value": {"調査": "second discussion"}, "deleted": False},
+        {"value": {"確認": "current style located"}, "deleted": False},
+        {"value": {"確認": "second finding"}, "deleted": False},
     ]
     assert updated["plan"]["phases"][1]["steps"][1]["skip_reason"] == "not needed"
     assert updated["acceptance_results"] == [
@@ -745,9 +785,9 @@ def test_task_commands_update_a_task_record(tmp_path: Path, monkeypatch) -> None
         "[001-001] [x] 設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する"
         in show.output
     )
-    assert "- current style located" in show.output
-    assert "- second finding" in show.output
-    assert "- discussion finding" in show.output
+    assert "- [確認]: current style located" in show.output
+    assert "- [確認]: second finding" in show.output
+    assert "- [調査]: discussion finding" in show.output
     assert "[002-002] [-] READMEに記載した手順でテストを実行する" in show.output
     assert "- skipped: not needed" in show.output
     assert "ACC-" not in show.output

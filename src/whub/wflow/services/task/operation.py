@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import re
 
 from pydantic import ValidationError
 
-from whub.wflow.models.task import TaskDocument
+from whub.wflow.models.task import PhaseLog, TaskDocument
 from whub.wflow.models.workflow import WorkflowDefinition
 from whub.wflow.services.errors import WflowError
 from whub.wflow.services.task.eligibility import in_progress_error
@@ -15,6 +16,7 @@ from whub.wflow.services.task.integrity import validate_task
 
 STEP_REFERENCE_PATTERN = r"^[0-9]{3}-[0-9]{3}$"
 PHASE_REFERENCE_PATTERN = r"^[0-9]{3}$"
+LOG_REFERENCE_PATTERN = r"^[0-9]{3}$"
 
 
 def _phase_index(phases: list[dict], reference: str) -> int:
@@ -51,11 +53,64 @@ def _plan_indices(
     raise WflowError("plan reference must be PPP or PPP-SSS")
 
 
+def _log_index(logs: list[object], reference: str) -> int:
+    if re.fullmatch(LOG_REFERENCE_PATTERN, reference) is None:
+        raise WflowError("log reference must be LLL, for example '003'")
+    log_index = int(reference) - 1
+    if log_index < 0 or log_index >= len(logs):
+        raise WflowError(f"log reference not found: {reference}")
+    return log_index
+
+
+def parse_phase_logs(logs: tuple[str, ...]) -> tuple[dict[str, object], ...]:
+    """Parse CLI JSON values into new Phase Log entries."""
+    parsed: list[dict[str, object]] = []
+    for value in logs:
+        try:
+            item = json.loads(value)
+        except json.JSONDecodeError as error:
+            raise WflowError(f"phase log must be JSON: {error.msg}") from error
+        try:
+            entry = PhaseLog.model_validate({"value": item})
+        except ValidationError as error:
+            raise WflowError(
+                "phase log must be one non-empty string key-value pair"
+            ) from error
+        parsed.append(entry.model_dump(mode="python"))
+    return tuple(parsed)
+
+
+def update_task_header(
+    task: TaskDocument,
+    *,
+    title: str | None = None,
+    objective: str | None = None,
+    approaches: tuple[str, ...] | None = None,
+) -> TaskDocument:
+    """Update Task header fields while its execution record remains active."""
+    if task.task.state in {"completed", "cancelled"}:
+        raise WflowError("task header cannot be updated after the task is terminal")
+    if title is None and objective is None and approaches is None:
+        raise WflowError("at least one task header field is required")
+    data = task.model_dump(mode="python")
+    header = data["task"]
+    if title is not None:
+        header["title"] = title
+    if objective is not None:
+        header["objective"] = objective
+    if approaches is not None:
+        header["approach"] = list(approaches)
+    try:
+        return TaskDocument.model_validate(data)
+    except ValidationError as error:
+        raise WflowError(f"failed to update task header: {error}") from error
+
+
 def complete_step(
     task: TaskDocument,
     workflow: WorkflowDefinition,
     step_ref: str | None = None,
-    logs: tuple[str, ...] = (),
+    logs: tuple[dict[str, object], ...] = (),
 ) -> TaskDocument:
     """Mark a selected or next incomplete Step done."""
     return _finish_step(task, workflow, step_ref, "done", None, logs)
@@ -66,7 +121,7 @@ def skip_step(
     workflow: WorkflowDefinition,
     step_ref: str | None,
     reason: str,
-    logs: tuple[str, ...] = (),
+    logs: tuple[dict[str, object], ...] = (),
 ) -> TaskDocument:
     """Skip a selected or next incomplete Step with a reason."""
     return _finish_step(task, workflow, step_ref, "skipped", reason, logs)
@@ -78,7 +133,7 @@ def _finish_step(
     step_ref: str | None,
     state: str,
     reason: str | None,
-    logs: tuple[str, ...],
+    logs: tuple[dict[str, object], ...],
 ) -> TaskDocument:
     """Record one terminal Step outcome, logging a completed Phase."""
     if error := in_progress_error(task, "steps"):
@@ -139,7 +194,7 @@ def _finish_step(
 
 
 def append_phase_log(
-    task: TaskDocument, phase_ref: str, logs: tuple[str, ...]
+    task: TaskDocument, phase_ref: str, logs: tuple[dict[str, object], ...]
 ) -> TaskDocument:
     """Append log lines to one Phase without changing its Steps."""
     if task.task.state not in {"in_progress", "paused"}:
@@ -159,6 +214,45 @@ def append_phase_log(
         raise WflowError(
             f"failed to append phase log '{phase_ref}': {error}"
         ) from error
+
+
+def update_phase_log(
+    task: TaskDocument,
+    phase_ref: str,
+    log_ref: str,
+    *,
+    value: dict[str, object] | None = None,
+    deleted: bool | None = None,
+) -> TaskDocument:
+    """Update one structured Phase Log value or logical-deletion state."""
+    if (value is None) == (deleted is None):
+        raise WflowError("set exactly one of value or deleted for a phase log")
+    if task.task.state not in {"in_progress", "paused"}:
+        raise WflowError(
+            "phase logs can only be recorded while the task is in_progress or paused"
+        )
+    if task.plan is None:
+        raise WflowError("task has no plan")
+    data = task.model_dump(mode="python")
+    phase = data["plan"]["phases"][_phase_index(data["plan"]["phases"], phase_ref)]
+    log_index = _log_index(phase["log"], log_ref)
+    item = phase["log"][log_index]
+    if isinstance(item, str):
+        raise WflowError(f"legacy phase log cannot be updated: {log_ref}")
+    if value is not None:
+        if item["deleted"]:
+            raise WflowError(f"phase log is deleted: {log_ref}")
+        item["value"] = value["value"]
+    else:
+        assert deleted is not None
+        if item["deleted"] == deleted:
+            state = "deleted" if deleted else "active"
+            raise WflowError(f"phase log is already {state}: {log_ref}")
+        item["deleted"] = deleted
+    try:
+        return TaskDocument.model_validate(data)
+    except ValidationError as error:
+        raise WflowError(f"failed to update phase log '{log_ref}': {error}") from error
 
 
 def record_acceptance(

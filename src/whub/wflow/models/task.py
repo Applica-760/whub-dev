@@ -63,11 +63,22 @@ class PlanStep(TaskModel):
         return self
 
 
+class PhaseLog(TaskModel):
+    value: dict[NonEmptyStr, NonEmptyStr]
+    deleted: bool = False
+
+    @model_validator(mode="after")
+    def _validate_single_pair(self) -> PhaseLog:
+        if len(self.value) != 1:
+            raise ValueError("phase log requires exactly one key-value pair")
+        return self
+
+
 class PlanPhase(TaskModel):
     title: NonEmptyStr
     acceptance: list[AcceptanceCriterion] = Field(default_factory=list)
     steps: list[PlanStep] = Field(min_length=1)
-    log: list[NonEmptyStr] = Field(default_factory=list)
+    log: list[NonEmptyStr | PhaseLog] = Field(default_factory=list)
     deleted: bool = False
 
 

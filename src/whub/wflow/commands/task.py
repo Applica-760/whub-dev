@@ -29,11 +29,14 @@ from whub.wflow.services import (
     load_task_records,
     load_task_workflow,
     record_acceptance,
+    parse_phase_logs,
     resolve_task_reference,
     resume_task,
     skip_step,
     update_acceptance,
     update_dependency,
+    update_task_header,
+    update_phase_log,
     update_plan_item,
     validate_task,
     write_task,
@@ -71,6 +74,43 @@ def init(title: str, objective: str, approaches: tuple[str, ...]) -> None:
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"initialized {record.task.id}: {path}")
+
+
+@task.command("update")
+@click.argument("task_ref")
+@click.option("--title", help="Replace the Task title.")
+@click.option("--objective", help="Replace the Task objective.")
+@click.option(
+    "--approach",
+    "approaches",
+    multiple=True,
+    help="Replace approaches; repeat for each approach.",
+)
+@click.option("--clear-approaches", is_flag=True, help="Remove all approaches.")
+def update_task(
+    task_ref: str,
+    title: str | None,
+    objective: str | None,
+    approaches: tuple[str, ...],
+    clear_approaches: bool,
+) -> None:
+    """Update Task title, objective, or approaches."""
+    if clear_approaches and approaches:
+        raise click.UsageError("--clear-approaches cannot be used with --approach")
+    try:
+        path = resolve_task_reference(task_ref)
+        write_task(
+            path,
+            update_task_header(
+                load_task(path),
+                title=title,
+                objective=objective,
+                approaches=() if clear_approaches else approaches or None,
+            ),
+        )
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"updated {task_ref}")
 
 
 @task.group("plan")
@@ -358,7 +398,12 @@ def show(task_ref: str) -> None:
                 if step.skip_reason is not None:
                     click.echo(f"    - skipped: {step.skip_reason}")
             for log in phase.log:
-                click.echo(f"    - {log}")
+                if isinstance(log, str):
+                    click.echo(f"    - {log}")
+                    continue
+                key, value = next(iter(log.value.items()))
+                text = f"[{key}]: {value}"
+                click.echo(f"    - {'~~' + text + '~~' if log.deleted else text}")
     except WflowError as error:
         raise click.ClickException(str(error)) from error
 
@@ -513,17 +558,72 @@ def accept(
     "logs",
     multiple=True,
     required=True,
-    help="Line appended to the Phase log.",
+    help="JSON object with one string key-value pair appended to the Phase log.",
 )
 def log(task_ref: str, phase_ref: str, logs: tuple[str, ...]) -> None:
     """Append lines to one Phase log without changing Task progress."""
     try:
         task_path = resolve_task_reference(task_ref)
-        updated = append_phase_log(load_task(task_path), phase_ref, logs)
+        updated = append_phase_log(
+            load_task(task_path), phase_ref, parse_phase_logs(logs)
+        )
         write_task(task_path, updated)
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"logged {phase_ref}")
+
+
+@task.command("log-update")
+@click.argument("task_ref")
+@click.argument("phase_ref")
+@click.argument("log_ref")
+@click.option("--log", "log", required=True, help="Replacement JSON Log value.")
+def log_update(task_ref: str, phase_ref: str, log_ref: str, log: str) -> None:
+    """Replace one active structured Phase Log entry."""
+    try:
+        task_path = resolve_task_reference(task_ref)
+        value = parse_phase_logs((log,))[0]
+        write_task(
+            task_path,
+            update_phase_log(load_task(task_path), phase_ref, log_ref, value=value),
+        )
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"updated log {phase_ref}-{log_ref}")
+
+
+@task.command("log-delete")
+@click.argument("task_ref")
+@click.argument("phase_ref")
+@click.argument("log_ref")
+def log_delete(task_ref: str, phase_ref: str, log_ref: str) -> None:
+    """Logically delete one structured Phase Log entry."""
+    try:
+        task_path = resolve_task_reference(task_ref)
+        write_task(
+            task_path,
+            update_phase_log(load_task(task_path), phase_ref, log_ref, deleted=True),
+        )
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"deleted log {phase_ref}-{log_ref}")
+
+
+@task.command("log-restore")
+@click.argument("task_ref")
+@click.argument("phase_ref")
+@click.argument("log_ref")
+def log_restore(task_ref: str, phase_ref: str, log_ref: str) -> None:
+    """Restore one logically deleted structured Phase Log entry."""
+    try:
+        task_path = resolve_task_reference(task_ref)
+        write_task(
+            task_path,
+            update_phase_log(load_task(task_path), phase_ref, log_ref, deleted=False),
+        )
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"restored log {phase_ref}-{log_ref}")
 
 
 @task.command()
@@ -547,7 +647,7 @@ def done(
             load_task(task_path),
             load_task_workflow(),
             step_ref,
-            logs,
+            parse_phase_logs(logs),
         )
         write_task(task_path, updated)
     except WflowError as error:
@@ -579,7 +679,7 @@ def skip(
             load_task_workflow(),
             step_ref,
             reason,
-            logs,
+            parse_phase_logs(logs),
         )
         write_task(task_path, updated)
     except WflowError as error:

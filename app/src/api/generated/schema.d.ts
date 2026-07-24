@@ -393,6 +393,18 @@ export interface components {
             /** Ref */
             ref?: string | null;
         };
+        /** PhaseLog */
+        PhaseLog: {
+            /** Value */
+            value: {
+                [key: string]: string;
+            };
+            /**
+             * Deleted
+             * @default false
+             */
+            deleted: boolean;
+        };
         /** PlanApproval */
         PlanApproval: {
             /** Actor */
@@ -407,7 +419,7 @@ export interface components {
             /** Steps */
             steps: components["schemas"]["PlanStep"][];
             /** Log */
-            log?: string[];
+            log?: (string | components["schemas"]["PhaseLog"])[];
             /**
              * Deleted
              * @default false
@@ -446,7 +458,7 @@ export interface components {
              * State
              * @enum {string}
              */
-            state: "ok" | "missing" | "source-missing" | "broken" | "wrong-target" | "unexpected" | "unreachable" | "unmounted" | "stale";
+            state: "ok" | "missing" | "source-missing" | "broken" | "wrong-target" | "unexpected" | "unreachable" | "unmounted" | "stale" | "unreadable";
             /**
              * Type
              * @enum {string}

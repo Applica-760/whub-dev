@@ -133,16 +133,24 @@ export function TaskDetailPage() {
                           )}
                         </Stack>
                       ))}
-                      {(phase.log ?? []).map((item, logIndex) => (
-                        <Text
-                          c="dimmed"
-                          key={`${logIndex}-${item}`}
-                          pl="md"
-                          size="sm"
-                        >
-                          - {item}
-                        </Text>
-                      ))}
+                      {(phase.log ?? []).map((item, logIndex) => {
+                        const legacy = typeof item === "string";
+                        const [key, value] = legacy
+                          ? [undefined, item]
+                          : Object.entries(item.value)[0];
+                        const text = key ? `[${key}]: ${value}` : value;
+                        return (
+                          <Text
+                            c="dimmed"
+                            key={`${logIndex}-${text}`}
+                            pl="md"
+                            size="sm"
+                            td={!legacy && item.deleted ? "line-through" : undefined}
+                          >
+                            - {text}
+                          </Text>
+                        );
+                      })}
                     </Stack>
                   ))
                 ) : (

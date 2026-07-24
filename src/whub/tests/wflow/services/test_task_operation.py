@@ -19,8 +19,11 @@ from whub.wflow.services import (
     insert_plan_step,
     load_task,
     load_task_workflow,
+    parse_phase_logs,
     record_acceptance,
     update_plan_item,
+    update_task_header,
+    update_phase_log,
     skip_step,
     update_acceptance,
     update_dependency,
@@ -71,6 +74,28 @@ def test_creates_draft_task_with_next_id_and_standard_path(tmp_path: Path) -> No
         and task.plan is None
     )
     assert load_task(path) == task
+
+
+def test_updates_task_header_fields_until_terminal_state() -> None:
+    updated = update_task_header(
+        _draft_task(),
+        title="更新済みタイトル",
+        objective="更新済み目的",
+        approaches=("方針1", "方針2"),
+    )
+
+    assert updated.task.title == "更新済みタイトル"
+    assert updated.task.objective == "更新済み目的"
+    assert updated.task.approach == ["方針1", "方針2"]
+    assert update_task_header(updated, approaches=()).task.approach == []
+
+    terminal = updated.model_copy(
+        update={"task": updated.task.model_copy(update={"state": "completed"})}
+    )
+    with pytest.raises(WflowError, match="terminal"):
+        update_task_header(terminal, title="不可")
+    with pytest.raises(WflowError, match="at least one"):
+        update_task_header(updated)
 
 
 def test_create_task_rejects_existing_target_without_overwriting(
@@ -166,3 +191,25 @@ def test_step_log_skip_and_acceptance_operations(tmp_path: Path) -> None:
     accepted = record_acceptance(active, "ACC-001", "passed")
     with pytest.raises(WflowError, match="already recorded"):
         record_acceptance(accepted, "ACC-001", "passed")
+
+
+def test_parses_updates_and_logically_deletes_structured_phase_logs() -> None:
+    workflow = load_task_workflow()
+    active = apply_transition(_draft_task(), workflow, "approve_plan", "user")
+    logs = parse_phase_logs((r'{"要件":"記録する"}',))
+    logged = append_phase_log(active, "001", logs)
+
+    assert logged.plan.phases[0].log[0].value == {"要件": "記録する"}
+    updated = update_phase_log(
+        logged,
+        "001",
+        "001",
+        value=parse_phase_logs((r'{"要件":"更新する"}',))[0],
+    )
+    deleted = update_phase_log(updated, "001", "001", deleted=True)
+    restored = update_phase_log(deleted, "001", "001", deleted=False)
+
+    assert restored.plan.phases[0].log[0].value == {"要件": "更新する"}
+    assert not restored.plan.phases[0].log[0].deleted
+    with pytest.raises(WflowError, match="one non-empty"):
+        parse_phase_logs((r'{"要件":"a","観測":"b"}',))
