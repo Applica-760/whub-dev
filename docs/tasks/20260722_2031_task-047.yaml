@@ -82,7 +82,7 @@ plan:
       deleted: false
     - description: 'verify: staging wheelのmetadata・hash・webapp dist・entry pointを検査し、非editable
         venvでwhub/wflow smoke testを実行してrelease.jsonへ検証結果を記録する'
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 'apply: 検証済みstaging unitだけをimmutable releaseへ昇格し、currentをatomicに切替え、新releaseのwhub

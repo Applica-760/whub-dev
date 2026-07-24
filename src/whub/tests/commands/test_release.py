@@ -8,7 +8,7 @@ from click.testing import CliRunner
 
 from whub.cli import main
 from whub.commands.release import release
-from whub.services.release import ReleaseBuild
+from whub.services.release import ReleaseBuild, ReleaseVerification
 
 
 def test_build_requires_source() -> None:
@@ -35,3 +35,20 @@ def test_build_reports_staged_wheel(monkeypatch, tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert result.output == f"built 0.1.0+g12345678: {wheel}\n"
+
+
+def test_verify_reports_verified_release(monkeypatch, tmp_path: Path) -> None:
+    wheel = tmp_path / "whub-0.1.0-py3-none-any.whl"
+    monkeypatch.setattr(
+        "whub.commands.release.verify_release",
+        lambda value: ReleaseVerification("0.1.0+g12345678", wheel, "a" * 64),
+    )
+
+    result = CliRunner().invoke(
+        release,
+        ["verify", "0.1.0+g12345678"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert result.output == f"verified 0.1.0+g12345678: {'a' * 64}\n"

@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 import subprocess
+import zipfile
 
 import pytest
 
 from whub.core.context import WhubContext
-from whub.services.release import ReleaseBuildError, build_release
+from whub.services.release import (
+    ReleaseBuildError,
+    ReleaseVerifyError,
+    build_release,
+    verify_release,
+)
 
 
 def _source(tmp_path: Path) -> Path:
@@ -31,6 +39,30 @@ def _context(tmp_path: Path) -> WhubContext:
 
 def _result(command: list[str], returncode: int = 0, stdout: str = ""):
     return subprocess.CompletedProcess(command, returncode, stdout, "build failed")
+
+
+def _wheel(context: WhubContext, release_id: str, *, valid_webapp: bool = True) -> Path:
+    wheel = context.releases_dir / ".staging" / release_id / "artifact" / "whub-0.1.0-py3-none-any.whl"
+    wheel.parent.mkdir(parents=True)
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr(
+            "whub/_build.json",
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "package_version": "0.1.0",
+                    "source_commit": "a" * 40,
+                }
+            ),
+        )
+        archive.writestr(
+            "whub-0.1.0.dist-info/entry_points.txt",
+            "[console_scripts]\nwhub = whub.cli:main\nwflow = whub.wflow.cli:main\n",
+        )
+        if valid_webapp:
+            archive.writestr("whub/webapp/dist/index.html", "<html></html>")
+            archive.writestr("whub/webapp/dist/assets/app.js", "console.log('ok')")
+    return wheel
 
 
 def test_build_stages_wheel_and_removes_generated_metadata(
@@ -88,3 +120,56 @@ def test_build_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> No
 
     assert calls[-1][-1] == "app"
     assert not (source / "src" / "whub" / "_build.json").exists()
+
+
+def test_verify_records_wheel_hash_after_staging_smoke_test(monkeypatch, tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    release_id = "0.1.0+gaaaaaaaa"
+    wheel = _wheel(context, release_id)
+    calls: list[list[str]] = []
+
+    def run(command, *, cwd, capture_output, text):
+        del cwd, capture_output, text
+        calls.append(command)
+        if command[:3] == ["uv", "venv", "--clear"]:
+            venv = Path(command[-1])
+            (venv / "bin").mkdir(parents=True)
+            for executable in ("python", "whub", "wflow"):
+                (venv / "bin" / executable).touch()
+        if command[-1] == "--version":
+            return _result(command, stdout="whub, version 0.1.0 (commit " + "a" * 40 + ")\n")
+        return _result(command)
+
+    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+
+    result = verify_release(release_id, context=context)
+
+    expected_hash = hashlib.sha256(wheel.read_bytes()).hexdigest()
+    release_json = wheel.parents[1] / "release.json"
+    assert result.wheel_sha256 == expected_hash
+    assert json.loads(release_json.read_text()) == {
+        "schema_version": 1,
+        "release_id": release_id,
+        "wheel_sha256": expected_hash,
+        "verified": True,
+    }
+    assert [str(wheel.parents[1] / "venv" / "bin" / "wflow"), "--help"] in calls
+
+
+def test_verify_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    release_id = "0.1.0+gaaaaaaaa"
+    _wheel(context, release_id, valid_webapp=False)
+    calls: list[list[str]] = []
+
+    def run(command, *, cwd, capture_output, text):
+        del cwd, capture_output, text
+        calls.append(command)
+        return _result(command)
+
+    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+
+    with pytest.raises(ReleaseVerifyError, match="webapp index.html"):
+        verify_release(release_id, context=context)
+
+    assert calls[-1][-1] == "app"
