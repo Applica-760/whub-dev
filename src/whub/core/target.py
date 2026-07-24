@@ -21,11 +21,26 @@ def resolve_project_resource(manifest: Manifest, project_name: str) -> Resource:
     return project.resource
 
 
-# workspace root相対パスから、それを含むresourceとresource内相対パスを解決
-def resolve_resource_by_workspace_path(
+def resolve_resource_path(
     manifest: Manifest,
     path: str,
 ) -> tuple[Project, Resource, str]:
+    if ":" in path:
+        name, _, relative_path = path.partition(":")
+        if not name or not relative_path:
+            raise TargetError(f"ref must be <project>:<path>: {path}")
+        project = manifest.resolve_project(name)
+        if project is None:
+            raise TargetError(f"unknown project: {name}")
+        if project.resource is None:
+            raise TargetError(f"project has no resource: {name}")
+        parts = PurePosixPath(relative_path).parts
+        if PurePosixPath(relative_path).is_absolute() or ".." in parts:
+            raise TargetError(
+                f"ref path must be relative to the resource root: {path}"
+            )
+        return project, project.resource, relative_path
+
     parts = PurePosixPath(path).parts
     if PurePosixPath(path).is_absolute() or ".." in parts:
         raise TargetError(f"path must be relative to the workspace root: {path}")

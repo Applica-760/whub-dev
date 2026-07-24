@@ -102,6 +102,63 @@ def build_sshfs_command(
     ]
 
 
+def build_remote_hash_command(path: str) -> str:
+    return f"sha256sum -- {shlex.quote(path)}"
+
+
+def parse_sha256sum_output(output: str) -> str:
+    hash_value, _, _ = output.strip().partition(" ")
+    if len(hash_value) != 64:
+        raise ValueError(f"unexpected sha256sum output: {output!r}")
+    return hash_value
+
+
+def remote_file_hash(
+    host: Host,
+    path: str,
+    *,
+    timeout: int | None = None,
+) -> str | None:
+    """pathのsha256を返す。未存在・実行失敗・想定外出力ではNone。"""
+    result = run_ssh_command(
+        host,
+        build_remote_hash_command(path),
+        batch_mode=True,
+        connect_timeout=5,
+        timeout=timeout,
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        return parse_sha256sum_output(result.stdout)
+    except ValueError:
+        return None
+
+
+def build_remote_write_command(path: str) -> str:
+    """標準入力の内容をpathへatomicに書き込むリモートシェルコマンドを返す。"""
+    quoted = shlex.quote(path)
+    tmp = shlex.quote(f"{path}.whub-tmp")
+    return f"cat > {tmp} && mv -f {tmp} {quoted}"
+
+
+def remote_write_file(
+    host: Host,
+    path: str,
+    content: str,
+    *,
+    timeout: int | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return run_ssh_command(
+        host,
+        build_remote_write_command(path),
+        input=content,
+        batch_mode=True,
+        connect_timeout=5,
+        timeout=timeout,
+    )
+
+
 def _escape_scp_glob(path: str) -> str:
     # scpはリモートパスをglobとして解釈するため、リテラルパス扱いにする
     return re.sub(r"([\\*?\[\]])", r"\\\1", path)

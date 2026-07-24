@@ -4,12 +4,14 @@
 1. `resolve_project_resource()`は既知projectのresourceを返す。
 2. `resolve_project_resource()`は未知projectを拒否する。
 3. `resolve_project_resource()`はresourceなしprojectを拒否する。
-4. `resolve_resource_by_workspace_path()`は相対パスからresourceとresource内相対パスを返す。
-5. `resolve_resource_by_workspace_path()`はネストしたresourceでは最長一致を優先する。
-6. `resolve_resource_by_workspace_path()`は絶対パス・`..`・未所属パスを拒否する。
+4. `resolve_resource_path()`はworkspace相対パスからresourceとresource内相対パスを返す。
+5. `resolve_resource_path()`はネストしたresourceでは最長一致を優先する。
+6. `resolve_resource_path()`は絶対パス・`..`・未所属パスを拒否する。
 7. `require_resource_type()`は期待型なら返し、不一致なら拒否する。
 8. `collect_targets()`はresourceを持つprojectだけを集める。
 9. `on_targets()`はsymlinkをlocal関数へ、remoteをremote関数へ振り分ける。
+10. `resolve_resource_path()`は`<project>:<relpath>`からresourceと相対パスを返す。
+11. `resolve_resource_path()`は形式不正・未知project・resourceなし・不正パスを拒否する。
 
 検証しないケース:
 1. `assert_never`に到達する不正Resource型。
@@ -30,7 +32,7 @@ from whub.core.target import (
     on_targets,
     require_resource_type,
     resolve_project_resource,
-    resolve_resource_by_workspace_path,
+    resolve_resource_path,
 )
 from whub.tests.helpers import manifest
 
@@ -56,11 +58,11 @@ class TestTargetSpec:
         with pytest.raises(TargetError, match="project has no resource"):
             resolve_project_resource(manifest(), "no-resource")
 
-    def test_resolve_resource_by_workspace_path_returns_resource_and_relative_path(
+    def test_resolve_resource_path_returns_resource_and_relative_path(
         self,
     ) -> None:
         # ケース4
-        project, resource, relative_path = resolve_resource_by_workspace_path(
+        project, resource, relative_path = resolve_resource_path(
             manifest(),
             "projects/remote/data/out.nc",
         )
@@ -69,9 +71,9 @@ class TestTargetSpec:
         assert isinstance(resource, RemoteResource)
         assert relative_path == "data/out.nc"
 
-    def test_resolve_resource_by_workspace_path_prefers_longest_match(self) -> None:
+    def test_resolve_resource_path_prefers_longest_match(self) -> None:
         # ケース5
-        project, resource, relative_path = resolve_resource_by_workspace_path(
+        project, resource, relative_path = resolve_resource_path(
             manifest(),
             "projects/remote/nested/log.txt",
         )
@@ -80,7 +82,7 @@ class TestTargetSpec:
         assert isinstance(resource, RemoteResource)
         assert relative_path == "log.txt"
 
-    def test_resolve_resource_by_workspace_path_rejects_invalid_or_uncontained_paths(
+    def test_resolve_resource_path_rejects_invalid_or_uncontained_paths(
         self,
     ) -> None:
         # ケース6
@@ -91,7 +93,7 @@ class TestTargetSpec:
             "unknown/file.txt",
         ):
             with pytest.raises(TargetError):
-                resolve_resource_by_workspace_path(manifest(), path)
+                resolve_resource_path(manifest(), path)
 
     def test_require_resource_type_returns_expected_type_and_rejects_mismatch(
         self,
@@ -137,3 +139,26 @@ class TestTargetSpec:
 
         assert results == ["local:a", "remote:b"]
         assert calls == [("local", "projects/local"), ("remote", "projects/remote")]
+
+    def test_resolve_resource_path_returns_resource_from_ref(self) -> None:
+        # ケース10
+        project, resource, relative_path = resolve_resource_path(
+            manifest(), "remote:data/out.nc"
+        )
+
+        assert project.name == "remote"
+        assert isinstance(resource, RemoteResource)
+        assert relative_path == "data/out.nc"
+
+    def test_resolve_resource_path_rejects_malformed_or_invalid_refs(self) -> None:
+        # ケース11
+        for ref in (
+            "remote:",
+            ":data/out.nc",
+            "missing:data/out.nc",
+            "no-resource:data/out.nc",
+            "remote:/absolute",
+            "remote:../outside",
+        ):
+            with pytest.raises(TargetError):
+                resolve_resource_path(manifest(), ref)

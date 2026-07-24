@@ -62,7 +62,7 @@ class WhubContext:
 
     @property
     def downloads_dir(self) -> Path:
-        return self.directory / "downloads"
+        return self.workspace_root / "downloads"
 
     @property
     def releases_dir(self) -> Path:

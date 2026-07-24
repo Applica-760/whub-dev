@@ -5,6 +5,8 @@
 2. localリソース → エラー（require_resource_type）
 3. リソース直下パス（rel空） → エラー
 4. scp失敗時、exit codeを握りつぶさず伝搬する
+5. ref形式(<project>:<path>)からもscp実行できる
+6. 成功時、downloadsメタデータへref・sha256・fetched_atを記録する
 
 検証しないケース:
 - 実際のscp実行
@@ -12,32 +14,44 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
 from whub.commands.fetch import fetch
+from whub.core.download_meta import load_download_meta
 from whub.tests.helpers import manifest
+
+
+def _run_fetch(tmp_path, path: str, returncode: int = 0):
+    m = manifest()
+    downloads = tmp_path / "downloads"
+
+    def side_effect(command, **_kwargs):
+        dest = Path(command[-1])
+        if returncode == 0:
+            dest.write_bytes(b"remote content")
+        return CompletedProcess(command, returncode)
+
+    mock_run = MagicMock(side_effect=side_effect)
+    context = MagicMock(downloads_dir=downloads)
+    with (
+        patch("whub.commands.fetch.get_manifest", return_value=m),
+        patch("whub.commands.fetch.current_context", return_value=context),
+        patch("whub.commands.fetch.subprocess.run", mock_run),
+    ):
+        result = CliRunner().invoke(fetch, [path], catch_exceptions=False)
+    return result, mock_run, downloads
 
 
 class TestFetchSpec:
     def test_fetches_remote_file(self, tmp_path):
         # ケース1
-        m = manifest()
-        downloads = tmp_path / "downloads"
-        mock_run = MagicMock(return_value=CompletedProcess([], 0))
-        context = MagicMock(downloads_dir=downloads)
-        with (
-            patch("whub.commands.fetch.get_manifest", return_value=m),
-            patch("whub.commands.fetch.current_context", return_value=context),
-            patch("whub.commands.fetch.subprocess.run", mock_run),
-        ):
-            result = CliRunner().invoke(
-                fetch,
-                ["projects/remote/data/file.csv"],
-                catch_exceptions=False,
-            )
+        result, mock_run, _downloads = _run_fetch(
+            tmp_path, "projects/remote/data/file.csv"
+        )
 
         assert result.exit_code == 0
         assert "fetch" in result.output
@@ -64,15 +78,28 @@ class TestFetchSpec:
 
     def test_scp_exit_code_propagation(self, tmp_path):
         # ケース4
-        m = manifest()
-        downloads = tmp_path / "downloads"
-        mock_run = MagicMock(return_value=CompletedProcess([], 23))
-        context = MagicMock(downloads_dir=downloads)
-        with (
-            patch("whub.commands.fetch.get_manifest", return_value=m),
-            patch("whub.commands.fetch.current_context", return_value=context),
-            patch("whub.commands.fetch.subprocess.run", mock_run),
-        ):
-            result = CliRunner().invoke(fetch, ["projects/remote/data/file.csv"])
+        result, _mock_run, _downloads = _run_fetch(
+            tmp_path, "projects/remote/data/file.csv", returncode=23
+        )
 
         assert result.exit_code == 23
+
+    def test_fetches_remote_file_by_ref(self, tmp_path):
+        # ケース5
+        result, mock_run, _downloads = _run_fetch(tmp_path, "remote:data/file.csv")
+
+        assert result.exit_code == 0
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == "scp"
+
+    def test_records_download_metadata_on_success(self, tmp_path):
+        # ケース6
+        result, _mock_run, downloads = _run_fetch(
+            tmp_path, "projects/remote/data/file.csv"
+        )
+
+        assert result.exit_code == 0
+        records = load_download_meta(downloads)
+        record = records["file.csv"]
+        assert record.ref == "remote:data/file.csv"
+        assert record.sha256 == __import__("hashlib").sha256(b"remote content").hexdigest()

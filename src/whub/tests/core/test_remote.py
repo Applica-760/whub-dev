@@ -11,6 +11,11 @@
 8. `build_scp_command()`はremote path中のglob文字をescapeする。
 9. `build_rsync_command()`は`rsync -a`、ssh transport、`local_src/`、`target:remote_dest/`を作る。
 10. `run_rsync_command()`はrsync argvと実行オプションを`subprocess.run()`へ渡す。
+11. `build_remote_hash_command()`は`sha256sum --`にquote済みpathを続けたコマンドを返す。
+12. `parse_sha256sum_output()`はsha256sum出力からhashを抽出し、想定外の出力を拒否する。
+13. `remote_file_hash()`は成功時にhashを返し、コマンド失敗・想定外出力ではNoneを返す。
+14. `build_remote_write_command()`は標準入力をtmpへ書いてからmvするコマンドを返す。
+15. `remote_write_file()`はcontentをinputとしてssh経由でatomic書き込みコマンドを実行する。
 
 検証しないケース:
 1. 実SSH接続・実scp・実rsync・実sshfsの成功失敗。
@@ -23,14 +28,21 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 import whub.core.remote as remote_module
 from whub.models import Host
 from whub.core.remote import (
     build_remote_exec_command,
+    build_remote_hash_command,
+    build_remote_write_command,
     build_rsync_command,
     build_scp_command,
     build_ssh_command,
     build_sshfs_command,
+    parse_sha256sum_output,
+    remote_file_hash,
+    remote_write_file,
     run_rsync_command,
     run_ssh_command,
     ssh_target,
@@ -224,3 +236,85 @@ class TestRemoteSpec:
         )
         assert execute.call_args.kwargs["timeout"] == 30
         assert execute.call_args.kwargs["check"]
+
+    def test_build_remote_hash_command_builds_sha256sum_argv(self) -> None:
+        # ケース11
+        command = build_remote_hash_command("/srv/remote/out.nc")
+
+        assert command == "sha256sum -- /srv/remote/out.nc"
+
+    def test_build_remote_hash_command_quotes_path(self) -> None:
+        # ケース11b
+        command = build_remote_hash_command("/srv/remote/file with space.md")
+
+        assert command == "sha256sum -- '/srv/remote/file with space.md'"
+
+    def test_parse_sha256sum_output_extracts_hash(self) -> None:
+        # ケース12
+        digest = "a" * 64
+        assert parse_sha256sum_output(f"{digest}  out.nc\n") == digest
+
+    def test_parse_sha256sum_output_rejects_unexpected_output(self) -> None:
+        # ケース12b
+        for output in ("", "not a hash\n", "abc  out.nc\n"):
+            with pytest.raises(ValueError):
+                parse_sha256sum_output(output)
+
+    def test_remote_file_hash_returns_hash_on_success(self) -> None:
+        # ケース13
+        digest = "b" * 64
+        completed = subprocess.CompletedProcess([], 0, f"{digest}  out.nc\n", "")
+        with patch.object(
+            remote_module.subprocess, "run", return_value=completed
+        ) as execute:
+            result = remote_file_hash(_host(), "/srv/remote/out.nc", timeout=5)
+
+        assert result == digest
+        assert execute.call_args.args[0] == build_ssh_command(
+            _host(),
+            build_remote_hash_command("/srv/remote/out.nc"),
+            batch_mode=True,
+            connect_timeout=5,
+        )
+
+    def test_remote_file_hash_returns_none_on_failure_or_bad_output(self) -> None:
+        # ケース13b
+        with patch.object(
+            remote_module.subprocess,
+            "run",
+            return_value=subprocess.CompletedProcess([], 1, "", "no such file"),
+        ):
+            assert remote_file_hash(_host(), "/missing") is None
+
+        with patch.object(
+            remote_module.subprocess,
+            "run",
+            return_value=subprocess.CompletedProcess([], 0, "garbage\n", ""),
+        ):
+            assert remote_file_hash(_host(), "/srv/remote/out.nc") is None
+
+    def test_build_remote_write_command_writes_tmp_then_moves(self) -> None:
+        # ケース14
+        command = build_remote_write_command("/srv/remote/out.nc")
+
+        assert command == "cat > /srv/remote/out.nc.whub-tmp && mv -f /srv/remote/out.nc.whub-tmp /srv/remote/out.nc"
+
+    def test_remote_write_file_sends_content_via_atomic_write_command(self) -> None:
+        # ケース15
+        completed = subprocess.CompletedProcess([], 0, "", "")
+        with patch.object(
+            remote_module.subprocess, "run", return_value=completed
+        ) as execute:
+            result = remote_write_file(
+                _host(), "/srv/remote/out.nc", "new content", timeout=10
+            )
+
+        assert result is completed
+        assert execute.call_args.args[0] == build_ssh_command(
+            _host(),
+            build_remote_write_command("/srv/remote/out.nc"),
+            batch_mode=True,
+            connect_timeout=5,
+        )
+        assert execute.call_args.kwargs["input"] == "new content"
+        assert execute.call_args.kwargs["timeout"] == 10

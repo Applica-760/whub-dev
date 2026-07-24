@@ -34,7 +34,7 @@ def test_context_uses_directory_directly(tmp_path: Path) -> None:
     assert context.config_path == context_dir / "config.toml"
     assert context.manifest_path == context_dir / "manifest.yaml"
     assert context.todo_path == context_dir / "todos.yaml"
-    assert context.downloads_dir == context_dir / "downloads"
+    assert context.downloads_dir == workspace_root / "downloads"
     assert context.releases_dir == context_dir / "releases"
     assert context.workspace_root == workspace_root
 
