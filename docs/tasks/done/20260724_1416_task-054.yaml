@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-054
-  state: in_progress
+  state: completed
   title: Task操作自由度の整備
   objective: 実行記録の整合性を保ちながら、Taskの各要素を必要な時点で操作できるCLIを整備する
   approach:
@@ -54,19 +54,28 @@ plan:
     acceptance: []
     steps:
     - description: '編集・論理削除・復元を扱うTask CLIとサービス層を実装し、JSON入力を - [キー]: バリュー の形式で表示する'
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        仕様: Phase・Stepはdraft/in_progressで編集、pausedではLog操作のみ許可。terminalでは全編集を拒否。実行履歴を持つPhase/Stepも論理削除・復元可能とし、完了済みPhaseへのStep挿入は拒否する。
+      deleted: false
+    - value:
+        実装: Phase・Stepの編集、論理削除・復元、状態制約、CLI表示を実装した。
+      deleted: false
     deleted: false
   - title: 検証
     acceptance: []
     steps:
     - description: 状態別の操作制約、単一JSONペアの入力検証と表示、論理削除表示、既存ワークフロー整合性をテストする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        検証: 対象29件と全402件のpytest、変更ファイルのRuff、git diff --checkが成功した。
+      deleted: false
     deleted: false
 approvals:
 - actor: user
@@ -77,4 +86,5 @@ change_requests:
 - reason: Logを分類付きの構造化入力に制約する要件を追加するため
 - reason: Logをカテゴリと本文ではなく単一キー・値のJSONペアとして保存・表示する要件へ明確化するため
 cancellation: null
-result: null
+result:
+  summary: Taskヘッダのapproach編集と、実行中のPhase/Step計画編集・論理削除・復元を追加し、pausedとterminalの操作制約を検証した。

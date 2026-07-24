@@ -75,7 +75,7 @@ PYTHONPATH="$source/src" uv run --project "$source" python -m whub release apply
 | 依存関係 | `depends add TASK DEPENDENCY` / `depends delete TASK DEPENDENCY`（draftのみ） |
 | 計画追加・承認 | `plan insert TASK "Step"` → `check` → `transition TASK approve_plan --actor user` |
 | 進行記録 | `done` / `skip --reason` / `log TASK PPP --log` |
-| 計画変更 | `transition TASK request_plan_change --actor agent --reason "…"` → `plan delete` / `plan insert` → 再承認 |
+| 計画編集 | `plan update` / `plan insert` / `plan delete` / `plan restore`（draft・in_progressのみ） |
 | 割り込み | `interrupt PARENT CHILD --reason "…"` / `resume PARENT` |
 | 受入・完了 | `accept` / `complete TASK --result "…"` |
 

@@ -412,6 +412,12 @@ def test_task_plan_insert_and_delete_update_a_draft(
     deleted = CliRunner().invoke(
         main, ["task", "plan", "delete", "001", "001-001"], catch_exceptions=False
     )
+    shown = CliRunner().invoke(
+        main, ["task", "show", "001"], catch_exceptions=False
+    )
+    restored = CliRunner().invoke(
+        main, ["task", "plan", "restore", "001", "001-001"], catch_exceptions=False
+    )
     named_phase = CliRunner().invoke(
         main,
         [
@@ -463,6 +469,8 @@ def test_task_plan_insert_and_delete_update_a_draft(
 
     assert inserted.exit_code == 0
     assert deleted.exit_code == 0
+    assert "~~設定ファイルと既存ドキュメントから正しいセットアップ手順を確認する~~" in shown.output
+    assert restored.exit_code == 0
     assert named_phase.exit_code == 0
     assert selected_phase.exit_code == 0
     assert updated.exit_code == 0
@@ -477,7 +485,7 @@ def test_task_plan_insert_and_delete_update_a_draft(
     assert updated["plan"]["phases"][1]["steps"][1]["description"] == "追加"
     assert updated["plan"]["phases"][1]["steps"][2]["description"] == "更新済みStep"
     assert updated["plan"]["phases"][2]["title"] == "名前付きPhase"
-    assert updated["plan"]["phases"][0]["steps"][0]["deleted"] is True
+    assert updated["plan"]["phases"][0]["steps"][0]["deleted"] is False
     assert updated["task"]["depends_on"] == []
     assert [item["id"] for item in updated["plan"]["acceptance"]] == ["ACC-001"]
     assert updated["plan"]["phases"][0]["acceptance"][0]["id"] == "ACC-003"

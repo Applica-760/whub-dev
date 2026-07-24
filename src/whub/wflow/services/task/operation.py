@@ -62,6 +62,14 @@ def _log_index(logs: list[object], reference: str) -> int:
     return log_index
 
 
+def _plan_operation_error(task: TaskDocument) -> str | None:
+    if task.task.state == "paused":
+        return "plan operations cannot be performed while the task is paused"
+    if task.task.state not in {"draft", "in_progress"}:
+        return "plan operations cannot be performed after the task is terminal"
+    return None
+
+
 def parse_phase_logs(logs: tuple[str, ...]) -> tuple[dict[str, object], ...]:
     """Parse CLI JSON values into new Phase Log entries."""
     parsed: list[dict[str, object]] = []
@@ -285,10 +293,12 @@ def record_acceptance(
         ) from error
 
 
-def delete_plan_item(task: TaskDocument, reference: str) -> TaskDocument:
-    """Logically delete one pending Phase or Step while the Task is draft."""
-    if task.task.state != "draft":
-        raise WflowError("plan operations require a draft task")
+def _set_plan_item_deleted(
+    task: TaskDocument, reference: str, deleted: bool
+) -> TaskDocument:
+    """Set one Phase or Step's logical-deletion state."""
+    if error := _plan_operation_error(task):
+        raise WflowError(error)
     if task.plan is None:
         raise WflowError("task has no plan")
     data = task.model_dump(mode="python")
@@ -296,22 +306,31 @@ def delete_plan_item(task: TaskDocument, reference: str) -> TaskDocument:
     phase_index, step_index = _plan_indices(phases, reference)
     if step_index is None:
         phase = phases[phase_index]
-        if phase["deleted"]:
-            raise WflowError(f"phase is deleted: {reference}")
-        if phase["log"] or any(
-            step["state"] in {"done", "skipped"} for step in phase["steps"]
-        ):
-            raise WflowError(f"phase has execution history: {reference}")
-        phase["deleted"] = True
+        item = phase
+        kind = "phase"
     else:
         phase = phases[phase_index]
         step = phase["steps"][step_index]
-        if phase["deleted"] or step["deleted"]:
-            raise WflowError(f"step is deleted: {reference}")
-        if step["state"] in {"done", "skipped"}:
-            raise WflowError(f"step has execution history: {reference}")
-        step["deleted"] = True
-    return TaskDocument.model_validate(data)
+        item = step
+        kind = "step"
+    if item["deleted"] == deleted:
+        state = "deleted" if deleted else "active"
+        raise WflowError(f"{kind} is already {state}: {reference}")
+    item["deleted"] = deleted
+    try:
+        return TaskDocument.model_validate(data)
+    except ValidationError as error:
+        raise WflowError(f"failed to update {kind} '{reference}': {error}") from error
+
+
+def delete_plan_item(task: TaskDocument, reference: str) -> TaskDocument:
+    """Logically delete one Phase or Step while the Task is editable."""
+    return _set_plan_item_deleted(task, reference, True)
+
+
+def restore_plan_item(task: TaskDocument, reference: str) -> TaskDocument:
+    """Restore one logically deleted Phase or Step while the Task is editable."""
+    return _set_plan_item_deleted(task, reference, False)
 
 
 def insert_plan_step(
@@ -321,9 +340,9 @@ def insert_plan_step(
     phase_title: str | None = None,
     phase_ref: str | None = None,
 ) -> TaskDocument:
-    """Insert a named Phase or a pending Step into a draft Task plan."""
-    if task.task.state != "draft":
-        raise WflowError("plan operations require a draft task")
+    """Insert a named Phase or pending Step while the Task is editable."""
+    if error := _plan_operation_error(task):
+        raise WflowError(error)
     if phase_title is not None and phase_ref is not None:
         raise WflowError("phase_title and phase_ref cannot be used together")
     data = task.model_dump(mode="python")
@@ -358,6 +377,12 @@ def insert_plan_step(
             phase_index = _phase_index(phases, phase_ref)
             if phases[phase_index]["deleted"]:
                 raise WflowError(f"phase reference not found: {phase_ref}")
+            if all(
+                item["state"] in {"done", "skipped"}
+                for item in phases[phase_index]["steps"]
+                if not item["deleted"]
+            ):
+                raise WflowError(f"phase is already complete: {phase_ref}")
             steps = phases[phase_index]["steps"]
             if after is None:
                 steps.append(step)
@@ -399,9 +424,9 @@ def insert_plan_step(
 def update_plan_item(
     task: TaskDocument, reference: str, description: str
 ) -> TaskDocument:
-    """Update a pending Phase title or Step description in a draft Task."""
-    if task.task.state != "draft":
-        raise WflowError("plan operations require a draft task")
+    """Update a Phase title or Step description while the Task is editable."""
+    if error := _plan_operation_error(task):
+        raise WflowError(error)
     if task.plan is None:
         raise WflowError("task has no plan")
     data = task.model_dump(mode="python")
@@ -416,8 +441,6 @@ def update_plan_item(
         step = phase["steps"][step_index]
         if phase["deleted"] or step["deleted"]:
             raise WflowError(f"step is deleted: {reference}")
-        if step["state"] in {"done", "skipped"}:
-            raise WflowError(f"step has execution history: {reference}")
         step["description"] = description
     try:
         return TaskDocument.model_validate(data)

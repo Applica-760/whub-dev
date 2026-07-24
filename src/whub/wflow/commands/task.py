@@ -29,6 +29,7 @@ from whub.wflow.services import (
     load_task_records,
     load_task_workflow,
     record_acceptance,
+    restore_plan_item,
     parse_phase_logs,
     resolve_task_reference,
     resume_task,
@@ -115,7 +116,7 @@ def update_task(
 
 @task.group("plan")
 def plan() -> None:
-    """Edit a draft Task plan."""
+    """Edit a draft or in-progress Task plan."""
 
 
 @plan.command("delete")
@@ -129,6 +130,19 @@ def delete(task_ref: str, reference: str) -> None:
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"deleted {reference}")
+
+
+@plan.command("restore")
+@click.argument("task_ref")
+@click.argument("reference")
+def restore(task_ref: str, reference: str) -> None:
+    """Restore logically deleted Phase PPP or Step PPP-SSS."""
+    try:
+        path = resolve_task_reference(task_ref)
+        write_task(path, restore_plan_item(load_task(path), reference))
+    except WflowError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"restored {reference}")
 
 
 @plan.command("insert")
@@ -146,7 +160,7 @@ def insert(
     phase_title: str | None,
     phase_ref: str | None,
 ) -> None:
-    """Insert a Phase or Step into a draft Task plan."""
+    """Insert a Phase or Step into a draft or in-progress Task plan."""
     try:
         path = resolve_task_reference(task_ref)
         write_task(
@@ -389,12 +403,16 @@ def show(task_ref: str) -> None:
 
         for phase_number, phase in enumerate(record.plan.phases, start=1):
             click.echo()
-            click.echo(f"Phase {phase_number}: {phase.title}")
+            phase_title = phase.title
+            if phase.deleted:
+                phase_title = f"~~{phase_title}~~"
+            click.echo(f"Phase {phase_number}: {phase_title}")
             for step_number, step in enumerate(phase.steps, start=1):
                 marker = {"done": "x", "skipped": "-"}.get(step.state, " ")
-                click.echo(
-                    f" [{phase_number:03}-{step_number:03}] [{marker}] {step.description}"
-                )
+                description = step.description
+                if phase.deleted or step.deleted:
+                    description = f"~~{description}~~"
+                click.echo(f" [{phase_number:03}-{step_number:03}] [{marker}] {description}")
                 if step.skip_reason is not None:
                     click.echo(f"    - skipped: {step.skip_reason}")
             for log in phase.log:

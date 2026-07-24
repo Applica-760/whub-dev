@@ -21,6 +21,7 @@ from whub.wflow.services import (
     load_task_workflow,
     parse_phase_logs,
     record_acceptance,
+    restore_plan_item,
     update_plan_item,
     update_task_header,
     update_phase_log,
@@ -155,24 +156,35 @@ def test_updates_draft_dependencies_and_task_or_phase_acceptance() -> None:
     assert [item.id for item in removed.plan.acceptance] == ["ACC-001"]
 
 
-def test_plan_operations_reject_non_draft_and_execution_history() -> None:
+def test_plan_operations_allow_active_history_but_reject_paused_and_terminal() -> None:
     task = _draft_task()
     active = apply_transition(task, load_task_workflow(), "approve_plan", "user")
-    with pytest.raises(WflowError, match="draft"):
-        insert_plan_step(active, "追加する")
+    completed_phase = complete_step(
+        active, load_task_workflow(), "001-001", logs=("done",)
+    )
+    updated = update_plan_item(completed_phase, "001", "更新済みPhase")
+    deleted_step = delete_plan_item(updated, "001-001")
+    restored_step = restore_plan_item(deleted_step, "001-001")
+    deleted_phase = delete_plan_item(restored_step, "001")
+    restored_phase = restore_plan_item(deleted_phase, "001")
 
-    completed_step = complete_step(
-        active, load_task_workflow(), "002-001", logs=("done",)
+    assert restored_phase.plan.phases[0].title == "更新済みPhase"
+    assert not restored_phase.plan.phases[0].deleted
+    assert not restored_phase.plan.phases[0].steps[0].deleted
+    with pytest.raises(WflowError, match="already complete"):
+        insert_plan_step(restored_phase, "追加する", phase_ref="001")
+
+    paused = restored_phase.model_copy(
+        update={"task": restored_phase.task.model_copy(update={"state": "paused"})}
     )
-    changed = apply_transition(
-        completed_step,
-        load_task_workflow(),
-        "request_plan_change",
-        "agent",
-        {"reason": "revise pending work"},
+    with pytest.raises(WflowError, match="paused"):
+        update_plan_item(paused, "001", "不可")
+
+    terminal = restored_phase.model_copy(
+        update={"task": restored_phase.task.model_copy(update={"state": "completed"})}
     )
-    with pytest.raises(WflowError, match="execution history"):
-        update_plan_item(changed, "002-001", "書き換え")
+    with pytest.raises(WflowError, match="terminal"):
+        delete_plan_item(terminal, "001")
 
 
 def test_step_log_skip_and_acceptance_operations(tmp_path: Path) -> None:
