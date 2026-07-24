@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-047
-  state: in_progress
+  state: completed
   title: whub-devから運用releaseへの反映手順を定式化する
   objective: whub-devを更新・検証した後、その成果を運用releaseへ安全かつ再現可能に反映する標準手順を定義する
   approach:
@@ -119,4 +119,6 @@ acceptance_results: []
 change_requests:
 - reason: docs/operations/releace.mdを正本として、whub release build/verify/applyの実装計画を追加するため
 cancellation: null
-result: null
+result:
+  summary: whub release build・verify・applyを実装し、0.1.0+gfe9b56dfを実環境へrelease。app起動・CLI・HTTPと全pytest
+    374件を確認。

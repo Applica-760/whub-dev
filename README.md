@@ -39,12 +39,27 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub backlog <TEXT> [--project PROJECT]` | projectのbacklog末尾の未整理メモへ追記（既定は`whub-dev`） |
 | `whub codegraph` | `codegraph: true`な`resource`のCodeGraphを初期化 |
 | `whub shell-init [--shell zsh]` | zsh関数＋補完設定を出力 |
+| `whub release build --source PATH` | 開発checkoutからoperation releaseのwheelをstagingへ作成 |
+| `whub release verify RELEASE_ID` | staging wheelとvenvを検証してrelease recordを作成 |
+| `whub release apply RELEASE_ID` | 検証済みreleaseをcurrentへ切替え、appを再起動 |
 
 `whub ls`はmanifestの接続情報を公開せず、Project解決に必要な情報だけを表示する。
 
 ```sh
 whub ls
 ```
+
+## Operation release
+
+開発checkoutをoperation releaseへ反映するには、clean worktreeをsourceとして順に実行する。
+
+```sh
+whub release build --source /path/to/whub
+whub release verify <release-id>
+whub release apply <release-id>
+```
+
+各段階の停止・復旧・検証条件は[operation release contract](docs/operations/releace.md)に従う。
 
 ## Task Workflow
 
