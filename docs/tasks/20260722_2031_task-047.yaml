@@ -77,7 +77,7 @@ plan:
     steps:
     - description: 'build: --sourceのclean worktreeとHEADを検査し、appを停止、webapp build・build
         metadata刻印・wheel作成・staging保存を行う。失敗時は旧currentのappを再起動する'
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 'verify: staging wheelのmetadata・hash・webapp dist・entry pointを検査し、非editable

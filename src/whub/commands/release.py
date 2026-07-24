@@ -1,0 +1,31 @@
+"""whub release — build operation release artifacts."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import click
+
+from whub.services.errors import ServiceError
+from whub.services.release import build_release
+
+
+@click.group()
+def release() -> None:
+    """Build, verify, and apply operation releases."""
+
+
+@release.command()
+@click.option(
+    "--source",
+    type=click.Path(path_type=Path, exists=True, file_okay=False),
+    required=True,
+    help="Path to the whub development checkout.",
+)
+def build(source: Path) -> None:
+    """Build one wheel into the operation release staging area."""
+    try:
+        result = build_release(source)
+    except ServiceError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"built {result.release_id}: {result.wheel_path}")

@@ -15,13 +15,14 @@ from whub.commands.knowledge import knowledge
 from whub.commands.link import link
 from whub.commands.ls import ls
 from whub.commands.mount import mount, unmount
+from whub.commands.release import release
 from whub.commands.run import run
 from whub.commands.session import session
 from whub.commands.status import status
 from whub.commands.todo import todo
 from whub.commands.vscode import vscode
 from whub.core.context import PathError
-from whub.core import release
+from whub.core import release as release_metadata
 
 
 def show_version(
@@ -34,8 +35,8 @@ def show_version(
     if not value or context.resilient_parsing:
         return
     try:
-        info = release.current_release()
-    except release.ReleaseMetadataError as error:
+        info = release_metadata.current_release()
+    except release_metadata.ReleaseMetadataError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"{context.command.name}, version {info.display}")
     context.exit()
@@ -66,6 +67,7 @@ main.add_command(link)
 main.add_command(ls)
 main.add_command(mount)
 main.add_command(unmount)
+main.add_command(release)
 main.add_command(cd)
 main.add_command(run)
 main.add_command(session)
