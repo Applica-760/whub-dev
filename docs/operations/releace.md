@@ -4,12 +4,24 @@
 開発checkoutから、PATH上の`whub`と`wflow`が参照するoperation releaseを更新する手順を定義する。
 releaseは`~/.whub/releases/<release-id>`配下の`artifact/`・`venv/`・`release.json`からなるimmutable unitとし、検証が完了するまで`current`を変更しない。
 
+release操作だけは、古い`current` releaseの実装に依存しないよう、cleanな開発checkoutのPython moduleとして実行する。通常の`whub`・`wflow`操作は引き続きPATH上のCLIを使う。
+
 ## 前提
 
-- `whub release build --source <path>`の`<path>`はwhub-devの開発checkoutである。
+- release commandでは`<path>/src`を`PYTHONPATH`に指定し、`uv run --project <path> python -m whub release ...`を使う。
+- `build --source <path>`の`<path>`はwhub-devの開発checkoutである。
 - `--source`は必須である。config.tomlのworkspace_rootから開発checkoutを推測しない。
 - Git worktreeはcleanで、release-idはpackage versionとHEAD commitから決定する。
 - frontend依存とPython build環境が利用可能である。
+
+## 実行形式
+
+```sh
+source=/path/to/whub
+PYTHONPATH="$source/src" uv run --project "$source" python -m whub release build --source "$source"
+PYTHONPATH="$source/src" uv run --project "$source" python -m whub release verify <release-id>
+PYTHONPATH="$source/src" uv run --project "$source" python -m whub release apply <release-id>
+```
 
 ## `whub release build --source <path>`
 

@@ -51,12 +51,13 @@ whub ls
 
 ## Operation release
 
-開発checkoutをoperation releaseへ反映するには、clean worktreeをsourceとして順に実行する。
+開発checkoutをoperation releaseへ反映するには、clean worktreeをsourceとして順に実行する。release操作だけは、古い`current` releaseに依存しないよう開発checkoutのPython moduleを実行する。通常の`whub`・`wflow`操作はPATH上のCLIを使う。
 
 ```sh
-whub release build --source /path/to/whub
-whub release verify <release-id>
-whub release apply <release-id>
+source=/path/to/whub
+PYTHONPATH="$source/src" uv run --project "$source" python -m whub release build --source "$source"
+PYTHONPATH="$source/src" uv run --project "$source" python -m whub release verify <release-id>
+PYTHONPATH="$source/src" uv run --project "$source" python -m whub release apply <release-id>
 ```
 
 各段階の停止・復旧・検証条件は[operation release contract](docs/operations/releace.md)に従う。
