@@ -8,8 +8,6 @@ from importlib.resources import files
 import json
 import re
 
-import click
-
 
 class ReleaseMetadataError(Exception):
     """Raised when packaged release metadata is invalid."""
@@ -54,31 +52,3 @@ def current_release() -> ReleaseInfo:
     if not isinstance(commit, str) or re.fullmatch(r"[0-9a-f]{40}", commit) is None:
         raise ReleaseMetadataError("invalid packaged release source_commit")
     return ReleaseInfo(installed_version, commit)
-
-
-def release_version_option(program_name: str):
-    """Add a shared eager --version option to a Click command."""
-
-    def show_version(
-        context: click.Context,
-        parameter: click.Parameter,
-        value: bool,
-    ) -> None:
-        del parameter
-        if not value or context.resilient_parsing:
-            return
-        try:
-            info = current_release()
-        except ReleaseMetadataError as error:
-            raise click.ClickException(str(error)) from error
-        click.echo(f"{program_name}, version {info.display}")
-        context.exit()
-
-    return click.option(
-        "--version",
-        is_flag=True,
-        is_eager=True,
-        expose_value=False,
-        callback=show_version,
-        help="Show the installed Whub release and exit.",
-    )

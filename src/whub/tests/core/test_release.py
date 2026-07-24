@@ -8,7 +8,7 @@ from pathlib import Path
 from click.testing import CliRunner
 import pytest
 
-from whub import release
+from whub.core import release
 from whub.cli import main as whub_main
 from whub.wflow.cli import main as wflow_main
 

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from whub.core.context import current_context
-from whub.release import current_release
+from whub.core.release import current_release
 
 _MAX_RECORDS = 100
 _SAFE_OPTIONS = {

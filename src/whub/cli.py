@@ -21,7 +21,24 @@ from whub.commands.status import status
 from whub.commands.todo import todo
 from whub.commands.vscode import vscode
 from whub.core.context import PathError
-from whub.release import release_version_option
+from whub.core import release
+
+
+def show_version(
+    context: click.Context,
+    parameter: click.Parameter,
+    value: bool,
+) -> None:
+    """Show the installed release for this CLI."""
+    del parameter
+    if not value or context.resilient_parsing:
+        return
+    try:
+        info = release.current_release()
+    except release.ReleaseMetadataError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"{context.command.name}, version {info.display}")
+    context.exit()
 
 
 class WhubGroup(click.Group):
@@ -32,8 +49,15 @@ class WhubGroup(click.Group):
             raise click.ClickException(str(error)) from error
 
 
-@click.group(cls=WhubGroup)
-@release_version_option("whub")
+@click.group(name="whub", cls=WhubGroup)
+@click.option(
+    "--version",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=show_version,
+    help="Show the installed Whub release and exit.",
+)
 def main() -> None:
     """workspace-hub: manage workspaces from a single manifest."""
 

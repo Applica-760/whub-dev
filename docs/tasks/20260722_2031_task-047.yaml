@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-047
-  state: draft
+  state: in_progress
   title: whub-devから運用releaseへの反映手順を定式化する
   objective: whub-devを更新・検証した後、その成果を運用releaseへ安全かつ再現可能に反映する標準手順を定義する
   approach:
@@ -10,9 +10,107 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: 0.1.0+g2b791026リリース作成の実行ログ
+    acceptance: []
+    steps:
+    - description: whub app実行時に「web app distribution is missing」が発生。packaged_app_dist()がwheel内のwebapp/dist/index.htmlを要求するが、稼働中release
+        0.1.0+g04b4926dのwheelにはwebapp/distが同梱されておらず、src/whub/webapp/dist自体も生成されていなかった（app/distも同様に未生成）。npm
+        run buildが一度も実行されないままwheel化・リリースされていたことが原因と判明。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: app/でnpm run buildを実行したところ、Cannot find module '@rollup/rollup-darwin-arm64'で失敗（npm
+        optional depsの既知バグ、npm/cli#4828）。node_modulesのみ削除しpackage-lock.jsonは残したままnpm
+        installを再実行したところ解消し、ビルドが通った。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: wheelをビルドして展開したところ、whub --versionが古いコミット(aa8c380b)を報告することに気づいた。src/whub/_build.json(.gitignore対象の生成物)が前回リリース時のsource_commitのまま残っており更新されていなかったのが原因。現HEAD(2b791026)へ手動で書き換えてから再度uv
+        build --wheelしたところ、正しいコミットがwhub --versionに反映された。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 新規releaseのvenvをuv venvで作成し、python -m pip install <wheel>を試したところNo
+        module named pipで失敗。uv venvが作る仮想環境にはpipが同梱されないため、代わりにuv pip install --python
+        venv/bin/python <wheel>を使ったところ、依存込みで正常にインストールできた。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: currentシンボリックリンクの切替でln -sfn current.tmp && mv -T current.tmp currentを試みたところ、macOSのBSD
+        mvには-Tオプションがなくillegal optionで失敗（GNU coreutils固有オプションのため）。代わりにPythonのos.replace('current.tmp',
+        'current')でsymlinkをatomicに置換したところ成功した。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: current切替後にPATH上のwhub --versionを確認したところ、旧release(0.1.0+g04b4926d)のコミットのままだった。which
+        whubで実体を確認すると、このシェルセッションのPATHがcurrent経由ではなく旧releaseの絶対パスに直接固定されていたことが判明。releases/current/venv/bin/whubを直接呼ぶと新releaseが正しく解決されることを確認し、新しいターミナルセッションを開けば反映される旨をユーザーへ報告した。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - release 0.1.0+g2b791026作成時の実行ログ。(1)webapp/dist欠落によるwhub appのAppResourceError発生と原因特定、(2)npm
+      optional depsバグでのnpm run build失敗とnode_modules再インストールによる解消、(3)_build.jsonのsource_commit更新漏れとwhub
+      --version誤表示、(4)uv venvにpipが同梱されずuv pip install --pythonでの代替、(5)BSD mvの-T非対応とos.replace()によるcurrent
+      symlinkのatomic切替、(6)current切替後もシェルPATHが旧release絶対パスに固定され新ターミナルが必要だった事象。いずれも0.1.0+g2b791026の1回の実行で遭遇した実例であり、汎用手順としてではなく個別事象の記録として残す。
+    - 運用契約をdocs/operations/releace.mdへ記載。以後のwhub release実装は同契約を正本とする。
+    deleted: false
+  - title: release契約と基盤を確定する
+    acceptance: []
+    steps:
+    - description: docs/operations/releace.mdを、必須--source・常時app停止/新releaseでの再起動・失敗時の旧release復旧・確認なしapplyの契約へ更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 既存のインストール済みrelease metadataをsrc/whub/core/release.pyへ移し、Click依存の--version処理をCLI層へ分離する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 運用契約へ必須--source・app停止/復旧/再起動・確認なしapplyを反映。release metadataをcoreへ移し、CLIのversion
+      callbackを分離。release/mount logの参照更新後、対象pytest 9件とruffが成功。
+    deleted: false
+  - title: build・verify・applyを実装する
+    acceptance: []
+    steps:
+    - description: 'build: --sourceのclean worktreeとHEADを検査し、appを停止、webapp build・build
+        metadata刻印・wheel作成・staging保存を行う。失敗時は旧currentのappを再起動する'
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 'verify: staging wheelのmetadata・hash・webapp dist・entry pointを検査し、非editable
+        venvでwhub/wflow smoke testを実行してrelease.jsonへ検証結果を記録する'
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 'apply: 検証済みstaging unitだけをimmutable releaseへ昇格し、currentをatomicに切替え、新releaseのwhub
+        appを必ず再起動する。失敗時は旧currentと旧appを復旧する'
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: commands/release.pyにbuild・verify・applyを追加し、services/release.pyの3操作へ委譲する。cli.pyへrelease
+        groupを登録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: release操作を検証する
+    acceptance: []
+    steps:
+    - description: Serviceの成功・失敗・復旧・冪等性とCLIの引数・終了状態をテストし、関連テストと全pytestを実行してrelease手順を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: docs/operations/releace.mdを正本として、whub release build/verify/applyの実装計画を追加するため
 cancellation: null
 result: null
