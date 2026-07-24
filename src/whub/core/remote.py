@@ -86,7 +86,7 @@ def build_sshfs_command(
         f"IdentityFile={identity}",
         f"port={port}",
         "reconnect",
-        "ServerAliveInterval=15",
+        "ServerAliveInterval=60",
         "ServerAliveCountMax=3",
         "noappledouble",
         "noapplexattr",
