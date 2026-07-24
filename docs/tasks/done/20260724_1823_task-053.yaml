@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-053
-  state: in_progress
+  state: completed
   title: Harden operation release frontend recovery
   objective: 既知のRollup optional dependency欠損を安全に復旧し、release失敗時のapp再起動ハングを解消する
   approach:
@@ -43,14 +43,18 @@ plan:
     acceptance: []
     steps:
     - description: 対象テスト、全pytest、frontend buildを実行して成功・失敗経路を確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - 対象21テスト、全399 pytest、npm ci後のnpm run build、実whub release buildを実行。0.1.0+g4ff32907のwheelをstagingへ作成し、release
+      buildはハングせず完了した。
     deleted: false
 approvals:
 - actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: 既知Rollup native optional dependency欠損時のnpm ci一回復旧とapp再起動のstdio分離を実装し、実release
+    buildの完了を確認した。
