@@ -95,7 +95,9 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - release build・verify・applyをservices/release.pyへ実装し、commands/release.pyの3 CLIから委譲する構成を完成。対象pytest
+      10件とruffが成功し、apply失敗時のcurrent/staging/app復旧を検証した。
     deleted: false
   - title: release操作を検証する
     acceptance: []
