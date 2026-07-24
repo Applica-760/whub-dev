@@ -133,7 +133,12 @@ class TestAppCommand:
 
         assert result.exit_code == 0
         assert "app starting: http://127.0.0.1:9000" in result.output
-        assert mock_popen.call_args.kwargs == {"start_new_session": True}
+        assert mock_popen.call_args.kwargs == {
+            "start_new_session": True,
+            "stdin": subprocess.DEVNULL,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+        }
         assert mock_popen.call_args.args[0][1:3] == ["-m", "whub.webapp.runner"]
 
     def test_reuses_running_server(self, tmp_path):

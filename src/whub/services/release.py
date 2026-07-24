@@ -32,6 +32,9 @@ class ReleaseApplyError(ServiceError):
     """Raised when a verified operation release cannot be applied."""
 
 
+_ROLLUP_NATIVE_DEPENDENCY = re.compile(r"@rollup/rollup-[a-z0-9-]+")
+
+
 def _run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
     try:
         result = subprocess.run(command, cwd=cwd, capture_output=True, text=True)
@@ -88,14 +91,23 @@ def _source_release(source: Path) -> ReleaseInfo:
     return ReleaseInfo(version, commit)
 
 
-def _frontend_build_error(error: ReleaseBuildError, source: Path) -> ReleaseBuildError:
-    if "@rollup/rollup-" not in str(error):
-        return error
-    return ReleaseBuildError(
-        f"{error}\n"
-        "The npm optional dependency installation may be incomplete. "
-        f"Try removing {source / 'app' / 'node_modules'} and running npm install in {source / 'app'}."
-    )
+def _build_frontend(app_dir: Path) -> None:
+    try:
+        _run(["npm", "run", "build"], cwd=app_dir)
+    except ReleaseBuildError as error:
+        if not _ROLLUP_NATIVE_DEPENDENCY.search(str(error)):
+            raise
+
+    _run(["npm", "ci"], cwd=app_dir)
+    try:
+        _run(["npm", "run", "build"], cwd=app_dir)
+    except ReleaseBuildError as error:
+        if _ROLLUP_NATIVE_DEPENDENCY.search(str(error)):
+            raise ReleaseBuildError(
+                f"{error}\n"
+                "The npm optional dependency is still incomplete after npm ci."
+            ) from error
+        raise
 
 
 def build_release(
@@ -130,10 +142,7 @@ def build_release(
             )
             + "\n"
         )
-        try:
-            _run(["npm", "run", "build"], cwd=source / "app")
-        except ReleaseBuildError as error:
-            raise _frontend_build_error(error, source) from error
+        _build_frontend(source / "app")
         _run(
             ["uv", "build", "--wheel", "--out-dir", str(artifact_dir), "--clear"],
             cwd=source,

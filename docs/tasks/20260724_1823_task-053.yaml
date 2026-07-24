@@ -1,0 +1,56 @@
+schema_version: 1
+task:
+  id: TASK-053
+  state: in_progress
+  title: Harden operation release frontend recovery
+  objective: 既知のRollup optional dependency欠損を安全に復旧し、release失敗時のapp再起動ハングを解消する
+  approach:
+  - Rollup native optional dependency欠損時のみlockfileを変更しないnpm ciで1回復旧・再試行し、production
+    appのstdioを切り離してrelease子プロセスのpipe待機を防ぐ
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 再現テスト
+    acceptance: []
+    steps:
+    - description: 失敗経路と既存のテスト構成を確認し、Rollup欠損の復旧とapp起動のstdio分離を検証するテストを追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - Rollup native dependency欠損からnpm ci・再試行を期待するテストと、production appのstdio分離テストを追加した。
+    deleted: false
+  - title: 復旧実装
+    acceptance: []
+    steps:
+    - description: 既知のRollup native optional dependency欠損時だけnpm ciで復旧後にbuildを1回再試行し、その他の失敗はそのまま返す
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: production appのバックグラウンド起動でstdioをDEVNULLへ分離し、releaseの再起動処理がpipe
+        EOFを待たないようにする
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - 既知Rollup欠損時のみnpm ci後にbuildを一度再試行し、production appのstdin/stdout/stderrをDEVNULLへ分離した。対象21テストは成功。
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: 対象テスト、全pytest、frontend buildを実行して成功・失敗経路を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

@@ -101,6 +101,9 @@ def app(ctx: click.Context, port: int) -> None:
             str(pid_path),
         ],
         start_new_session=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     click.echo(f"app starting: http://127.0.0.1:{port}")
 

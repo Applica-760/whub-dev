@@ -150,28 +150,41 @@ def test_build_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> No
     assert not (source / "src" / "whub" / "_build.json").exists()
 
 
-def test_build_suggests_frontend_dependency_recovery(monkeypatch, tmp_path: Path) -> None:
+def test_build_recovers_rollup_native_dependency_once(monkeypatch, tmp_path: Path) -> None:
     source = _source(tmp_path)
     context = _context(tmp_path)
+    calls: list[list[str]] = []
+    build_attempts = 0
 
     def run(command, *, cwd, capture_output, text):
         del cwd, capture_output, text
+        nonlocal build_attempts
+        calls.append(command)
         if command[:3] == ["git", "status", "--porcelain"]:
             return _result(command)
         if command[:3] == ["git", "rev-parse", "HEAD"]:
             return _result(command, stdout="a" * 40 + "\n")
         if command == ["npm", "run", "build"]:
-            return _result(
-                command,
-                returncode=1,
-                stderr="Cannot find module '@rollup/rollup-darwin-arm64'",
-            )
+            build_attempts += 1
+            if build_attempts == 1:
+                return _result(
+                    command,
+                    returncode=1,
+                    stderr="Cannot find module '@rollup/rollup-darwin-arm64'",
+                )
+        if command[:3] == ["uv", "build", "--wheel"]:
+            output = Path(command[command.index("--out-dir") + 1])
+            output.mkdir(parents=True, exist_ok=True)
+            (output / "whub-0.1.0-py3-none-any.whl").touch()
         return _result(command)
 
     monkeypatch.setattr("whub.services.release.subprocess.run", run)
 
-    with pytest.raises(ReleaseBuildError, match="npm optional dependency"):
-        build_release(source, context=context)
+    result = build_release(source, context=context)
+
+    assert result.wheel_path.is_file()
+    assert calls.count(["npm", "run", "build"]) == 2
+    assert ["npm", "ci"] in calls
 
 
 def test_verify_records_wheel_hash_after_staging_smoke_test(monkeypatch, tmp_path: Path) -> None:
