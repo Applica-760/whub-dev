@@ -339,4 +339,10 @@ constraints:
     ref: src/whub/commands/codegraph.py
   cli_specific_logic_in_commands:
     statement: statusの表示やCodeGraph初期化手順などCLI固有処理は各commandに置く
+  mount_health_latency_independent:
+    statement: mountの状態判定はレイテンシに影響されない事実(mount table登録・sshfsプロセス生存・probeの即時エラー)だけを根拠にし、probe完走時間のtimeout超過は障害根拠にせずslow(正常系・exit
+      0)として扱う
+  mount_cleanup_denied_only:
+    statement: 自動force unmount(cleanup)は即時権限拒否(denied, Operation not permitted)の検出時に限り、timeoutでは決してunmountしない。wflow・project
+      content解決の事前probeもdenied時のみ停止しtimeout時は続行する
 exceptions: {}

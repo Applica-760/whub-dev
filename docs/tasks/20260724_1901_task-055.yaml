@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-055
-  state: draft
+  state: in_progress
   title: Remote mountの安定性改善
   objective: remote mountを開発基盤として維持しつつ、遅延を障害と誤判定して発生する自動unmountとフラッピングを解消し、常用時の不要な消費電力を抑える
   approach:
@@ -10,8 +10,115 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: 高遅延下でdirectory listingが3秒を超えてもmountは自動unmountされず、statusはslow表示でexit
+      0を返す
+  - id: ACC-002
+    statement: Network Volumes拒否による即時Errno 1はunreadableとして検出され、従来どおりcleanupされる
+  - id: ACC-003
+    statement: wflow task操作とproject content解決が遅延timeoutで停止しない
+  - id: ACC-004
+    statement: omenの常駐接続(ssh・sshfs・go-nfsv4)が1組へ集約される
+  - id: ACC-005
+    statement: 全回帰テストが成功し、releaseがbuild・verify・applyされている
+  phases:
+  - title: 判定契約とADR整理
+    acceptance: []
+    steps:
+    - description: probe結果をdenied(即時Errno 1)・timeout・その他エラーへ構造化する契約と、slow新設・staleの限定(sshfsプロセス消失・mount
+        table未登録)・自動unmountはdeniedのみとするhealth mappingをknowledge constraintへ登録し(ADRは増やさない)、ADR
+        0007のSuperseded矛盾を整理する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 実manifestのhost・mount対象resourceの配置とmount_root前提をwhubコマンドで確認し、host集約設計の前提をPhase
+        logへ記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        観測: 稼働中mountは3本とも同一host takumi@100.105.236.93、remote pathは{esn-lab,
+          LAplust/IL, private}でmount_root=の包含前提が成立。esn-lab-runはstatus/mount対象外
+      deleted: false
+    - value:
+        観測: 稼働中sshfsプロセス(PID 65207/65223/65236)はServerAliveInterval=15で動作しており、TASK-052の60s化(commit
+          5f89bacd)は再mountされず未適用。本Taskのrelease後再mountで60sへ移行する
+      deleted: false
+    - value:
+        観測: fuse-t NFSはmount tableにfuse-t:/whub-<project>として3エントリ。go-nfsv4の独立常駐プロセスは観測されず、NFS
+          serverはsshfsプロセス内蔵とみられるため、接続集約の観測指標はsshfsプロセス数とhostへのTCP接続数を用いる
+      deleted: false
+    - value:
+        完了: 判定契約をknowledge constraint 2件(mount_health_latency_independent, mount_cleanup_denied_only)として登録。ユーザー方針によりADR新設は取りやめ(作成した0013は削除)。ADR
+          0007はmount再導入・mountレス化撤回の経緯をHistoryへ記し再発効(Accepted)へ整理
+      deleted: false
+    - value:
+        完了: host集約前提の実測確認済み。3 mountとも同一host・配下でmount_root前提成立。詳細は本Phase
+          logの観測3件
+      deleted: false
+    deleted: false
+  - title: probe/health修正とフラッピング解消
+    acceptance: []
+    steps:
+    - description: probe_directory_readableを構造化結果へ変更し、health.pyのslow・unreadable・stale判定を新契約へ更新して単体テストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: mount.pyのcleanupをdenied限定へ変更し、recovery文言とmount.jsonl記録を遅延・拒否で分離してテストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: wflow task/common.pyとservices/project_content.pyのprobeをtimeout時続行・denied時停止へ変更し、回帰テストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: statusとwebappのslow表示(exit 0維持)を実装してテストし、検証済み成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: host単位mount集約
+    acceptance: []
+    steps:
+    - description: Host.mount_rootをmanifestスキーマへ追加し、mount対象resourceのpath包含バリデーションとテストを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: mount/unmountをhost単位化して~/.whub/runtime/mounts/<host>を実体mountpointとし、各workspace_pathをmount内へのsymlinkとして管理するhealth合成(symlink+host
+        mount)とテストを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: status・vscode除外・mount_logをhost単位mountへ追随させてテストし、検証済み成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 実地検証とrelease反映
+    acceptance: []
+    steps:
+    - description: 全pytestとRuffを実行し、docs/operations/releace.mdに従いrelease build・verify・applyを実施する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: omen実環境で再mount→status→wflowが自動unmountなしで成功すること、mount.jsonlのslow記録とcleanup非発生、tccutil
+        resetによるdenied→cleanup経路、常駐接続(ssh・sshfs・go-nfsv4)の1組化を観測する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: mount判定契約と運用変更をknowledgeへ反映する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null

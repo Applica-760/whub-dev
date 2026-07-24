@@ -1,8 +1,8 @@
 # ADR-0007: sshfs シングルスレッドモード (-s)
 
-- **Status:** Superseded
+- **Status:** Accepted（2026-07-24 再発効）
 - **Date:** 2026-06-21
-- **Superseded:** 2026-06-22
+- **Superseded:** 2026-06-22（2026-07-24 撤回）
 
 ## Context
 
@@ -13,9 +13,10 @@ sshfs はデフォルトでマルチスレッドで動作し、リソース数�
 
 `-s` フラグ（シングルスレッドモード）を常時付与する。
 
-## Superseded
+## History
 
-remoteリソースをローカルへマウントせず、SSH経由で直接操作する方式へ変更した。SSHFS、mount、unmountの実装を廃止したため、この決定は適用されない。
+- 2026-06-22: remoteリソースをローカルへマウントせずSSH経由で直接操作する方式への変更に伴い、mount/unmount実装の廃止とともにSupersededとした
+- 2026-07-24: mount/unmountは再導入済みで、mountレス化方針もTASK-052で撤回されたため、本決定を再発効とする（TASK-055）
 
 ## Consequences
 
