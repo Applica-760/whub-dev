@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-059
-  state: in_progress
+  state: completed
   title: Overviewの左右サイド列を折りたたみ可能にする
   objective: Overviewの3列固定レイアウトで、狭画面やSplit View時に各列が1/3幅へ圧縮され激しく改行される問題を、左右サイド列の手動折りたたみで解消する
   approach:
@@ -88,12 +88,15 @@ plan:
       skip_reason: null
       deleted: false
     - description: Split View相当の狭幅で改行が実際に改善しているかを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - value:
         field_test: ユーザーがdev server(127.0.0.1:8712)で実画面を確認し折りたたみ・展開の動作自体はOKと判定。あわせてトグルの位置をrail内からheaderのライト/ダークトグルと同じ位置(VSCode風)へ寄せる指示を受けた
+      deleted: false
+    - value:
+        field_test: ユーザーがheader配置版の実画面を確認し、狭幅での折りたたみ動作と改行の改善を問題なしと判定
       deleted: false
     deleted: false
   - title: トグルをheaderへ移設
@@ -129,4 +132,6 @@ acceptance_results: []
 change_requests:
 - reason: トグルの配置をrailからheaderへ移す指示を受けたため計画へPhaseを追加する
 cancellation: null
-result: null
+result:
+  summary: Overviewの左右サイド列を折りたたみ可能にした。トグルはheader右端でColorSchemeToggleと並ぶVSCode風の配置とし、折りたたんだ列はdisplay:noneで消して3列->2列->1列へ詰まる。状態はlocalStorage(whub.overview.collapsed)へ永続化。列幅変化にTask
+    graphが追従するようResizeObserverでcy.resize()+fitを追加。responsiveな自動縮退はスコープ外とした
