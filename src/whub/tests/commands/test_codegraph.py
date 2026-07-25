@@ -127,8 +127,8 @@ def test_remote_init_uses_ssh() -> None:
         result = CliRunner().invoke(codegraph, catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert "codegraph init" in run.call_args.args[1]
-    assert project.resource.remote_path in run.call_args.args[1]
+    # PATHはrun_ssh_command側のpreludeで解決するため、shell初期化の前置きを持たない
+    assert run.call_args.args[1] == f"codegraph init {project.resource.remote_path}"
     assert "init    remote (CodeGraph)" in result.output
 
 

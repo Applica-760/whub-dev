@@ -10,8 +10,8 @@ task:
     1箇所へ集約し、build_remote_exec_command(whub run)と内部run_ssh_command系の双方で共有する。login shellがrcを読むcd・tmux経路は対象外
   - 対象はhome-serverのみとする。esn-lab-run(supercomputer)は本Taskの想定外とし、セットアップもドキュメントもhost差を扱わない
   - home-serverのlogin shellはbashであることを実測したため、sh -cラップは行わずログインシェル任せの現状を維持する
-  - codegraphはnpm-shim(#!/usr/bin/env node)であり、PATH前置きだけではsystem node v18を拾うため、home-serverへnvm
-    node v22.22.3をpinしたwrapperを手動配置してから、whub codegraphのnvm preludeを除去する。ホスト側の初期セットアップはwhubの責務としない
+  - codegraphのnpm-shimはユーザー側nodeをランチャーとしてのみ使い本体は同梱Node 24で動く(system node v18からの起動を実測)。よってnode
+    pinは不要とし、~/.local/binへsymlink 1本を手動配置する。ホスト側の初期セットアップはwhubの責務としない
   - 全文検索はhome-serverにrgが無いためgrep -rnを正とし、rgのリモート導入は行わない
   depends_on: []
   interruption_task_id: null
@@ -80,18 +80,18 @@ plan:
   - title: ホスト配置・呼び出し統一・ドキュメント
     acceptance: []
     steps:
-    - description: home-serverの~/.local/binへcodegraph起動wrapper(nvmのnode v22.22.3を絶対pathで起動)を手動配置し、whub
-        run経由でPATHのみから解決できることを実測する。system node v18を拾わせない意図と、node更新時にwrapperの修正が必要である運用注意を記録する
-      state: pending
+    - description: home-serverの~/.local/binへcodegraphのsymlink(nvm配下のcodegraph)を手動配置し、whub
+        run経由でPATHのみから解決できることを実測する。nvmのnodeバージョン更新でリンクが切れる運用上の注意を記録する
+      state: done
       skip_reason: null
       deleted: false
     - description: whub codegraphのnvm prelude(source $HOME/.nvm/nvm.sh)を除去しPATH解決へ一本化する。remote初期化がwrapper経由で成功することを実測し、テストを追随させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: workspace-hub/AGENTS.mdの探索コマンド例示を実機確認済みの形へ修正する。全文検索はgrep -rnを正とし、codegraph呼び出しからnvm
         source前置きを削除する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: workspace-hub/AGENTS.mdの探索コマンド例示を実機で動作確認した形へ修正し、whub run <project>
@@ -100,14 +100,78 @@ plan:
       skip_reason: null
       deleted: true
     - description: 全体回帰(pytest・Ruff)を通し、検証済み成果をcommitする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: docs/operations/releace.mdに従いrelease build --source・verify・applyを実施し、PATH上のwhubでwhub
+        run <project> codegraph explore が解決することを確認する(buildはclean worktreeが前提のため003-005のcommit後に実施)
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        実装: home-serverへ ~/.local/bin/codegraph -> 
+          のsymlinkを手動配置(ln -sfn)。node pinのwrapperは採らず、npm-shimがユーザー側nodeをランチャーとしてのみ使う設計に依拠した
+      deleted: false
+    - value:
+        実地検証: PATH prelude適用済みの開発版CLIで whub run esn-lab which codegraph が 
+          を返し、codegraph --version が 1.4.1 を返す。nvm source前置き無しで解決できることを確認
+      deleted: false
+    - value:
+        運用注意: symlink先はnvmのnodeバージョン(v22.22.3)に固定されるため、nvmでnodeを更新・削除するとリンクが切れる。その場合は同じlnコマンドで新バージョンのbinへ張り直す
+      deleted: false
+    - value:
+        別問題: 'remote索引が壊れており codegraph status・explore が duplicate column name: file_path
+          で失敗する。PATH解決とは独立の索引スキーマ問題で、003-002のcodegraph init実測時に再構築で解消するか確認する'
+      deleted: false
+    - value:
+        実装: commands/codegraph._init_remote_codegraphからnvm prelude(source "$HOME/.nvm/nvm.sh"
+          2>/dev/null;)を除去し、run_ssh_command側のPATH preludeへ一本化。test_codegraphのremote
+          initアサートを部分一致から完全一致(codegraph init <remote_path>)へ強化し、shell初期化の前置きが残らないことを検証可能にした
+      deleted: false
+    - value:
+        実地検証: load_manifest + _init_remote_codegraphをesn-lab 1件へ直接適用し(whub codegraphは全project一括のため範囲を限定)、nvm前置き無しでinit成功(init
+          esn-lab (CodeGraph))
+      deleted: false
+    - value:
+        検証: pytest src/whub/tests/commands/test_codegraph.py 6 passed
+      deleted: false
+    - value:
+        別問題の解消: '003-001で検出したremote索引のduplicate column name: file_pathは、codegraph
+          initでは解消せず(既存.codegraphがあるとno-op)、codegraph indexによる再構築で解消。再構築後は status(50
+          files/425 nodes/832 edges)とexploreが正常応答。索引スキーマの問題でありPATH解決とは独立'
+      deleted: false
+    - value:
+        実装: workspace-hub/AGENTS.mdの探索コマンド例示を更新。全文検索をrgからgrep -rn <pattern> <dir>へ差し替え(remoteにrgが無い旨を併記)、codegraph
+          explore・nodeからnvm source前置きとbash -cラッパを削除して whub run <project> codegraph
+          ... の直呼びへ簡素化
+      deleted: false
+    - value:
+        実地検証: PATH prelude適用済みの開発版CLIで4例を実行し、grep -rn(3 hit)、find(pyproject.toml等)、codegraph
+          explore(train 8 symbols)、codegraph node(trainer.py:5)がいずれも応答することを確認
+      deleted: false
+    - value:
+        未解消: 'PATH上のrelease版whub(0.1.0+gf6c537ea)はPATH preludeを含まないため、whub run esn-lab
+          codegraph --version は exec: codegraph: not found で失敗する。AGENTS.mdの記述が実効となるにはrelease
+          build・verify・applyが必要'
+      deleted: false
+    - value:
+        検証: '全体回帰: pytest 434 passed。変更2ファイル(commands/codegraph.py・tests/commands/test_codegraph.py)のruff
+          check成功'
+      deleted: false
+    - value:
+        既存問題: test_codegraph.pyのruff format指摘(run_ssh_のwith句改行)は本変更で触れていない箇所で、TASK-056でもHEAD時点から存在する範囲外として記録済みのため据え置いた
+      deleted: false
     deleted: false
 approvals:
 - actor: user
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: codegraphのnpm-shimはユーザー側nodeをランチャーとしてのみ使い本体は同梱Node 24で動くため、system node v18からの起動を実測で確認した(codegraph
+    --version=1.4.1)。nvm nodeをpinするwrapperは不要となり、symlink 1本へ簡素化する
+- reason: PATH上のrelease版whubはPATH preludeを含まず、AGENTS.mdへ記載した探索コマンドがapplyまで実効にならないため、release
+    build・verify・applyと実効確認の工程を追加する
 cancellation: null
 result: null
