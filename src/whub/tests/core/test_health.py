@@ -9,11 +9,11 @@
 6. `inspect_symlink()`はtargetが存在しなければ`missing`を返す。
 7. `_read_mount_table()`は`mount`成功時にstdoutを返す。
 8. `_read_mount_table()`は`mount`失敗・timeout・OSError時に`None`を返す。
-9. `inspect_mount()`はmount tableが読めなければfail-safeで`stale`を返す。
-10. `inspect_mount()`はmount tableにmountpointがなければ`unmounted`を返す。
-11. `inspect_mount()`はmount tableにmountpointがあり、sshfsプロセスと`stat`が成功なら`ok`を返す。
-12. `inspect_mount()`はsshfsプロセス不在・検査失敗なら`stale`を返す。
-13. `inspect_mount()`は`stat` timeout/OSError/CalledProcessErrorなら`stale`を返す。
+9. `inspect_mountpoint()`はmount tableが読めなければfail-safeで`stale`を返す。
+10. `inspect_mountpoint()`はmount tableにmountpointがなければ`unmounted`を返す。
+11. `inspect_mountpoint()`はmount tableにmountpointがあり、sshfsプロセスと`stat`が成功なら`ok`を返す。
+12. `inspect_mountpoint()`はsshfsプロセス不在・検査失敗なら`stale`を返す。
+13. `inspect_mountpoint()`は`stat` timeout/OSError/CalledProcessErrorなら`stale`を返す。
 14. `inspect_mountpoint()`は指定volnameで既存の遅延非障害契約を適用する。
 
 検証しないケース:
@@ -34,7 +34,6 @@ import whub.core.health as health_module
 from whub.core.health import (
     _read_mount_table,
     inspect_aggregated_mount,
-    inspect_mount,
     inspect_mountpoint,
     inspect_symlink,
 )
@@ -175,19 +174,19 @@ class TestMountHealthSpec:
     def test_mount_table_unreadable_reports_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース9
-            resource = _remote_resource(Path(tmp) / "remote")
+            mountpoint = Path(tmp) / "remote"
             with patch.object(health_module, "_read_mount_table", return_value=None):
-                health = inspect_mount(resource, "remote")
+                health = inspect_mountpoint(mountpoint, "whub-remote")
 
         assert health.state == "stale"
 
     def test_mountpoint_absent_from_table_reports_unmounted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース10
-            resource = _remote_resource(Path(tmp) / "remote")
+            mountpoint = Path(tmp) / "remote"
             table = "/dev/disk1 on /other/path (apfs, local)\n"
             with patch.object(health_module, "_read_mount_table", return_value=table):
-                health = inspect_mount(resource, "remote")
+                health = inspect_mountpoint(mountpoint, "whub-remote")
 
         assert health.state == "unmounted"
 
@@ -195,7 +194,6 @@ class TestMountHealthSpec:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース11
             mountpoint = Path(tmp) / "remote"
-            resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             process = subprocess.CompletedProcess(["pgrep"], 0, "", "")
             stat = subprocess.CompletedProcess(["stat"], 0, "", "")
@@ -208,7 +206,7 @@ class TestMountHealthSpec:
                     side_effect=[process, stat, listing],
                 ),
             ):
-                health = inspect_mount(resource, "remote")
+                health = inspect_mountpoint(mountpoint, "whub-remote")
 
         assert health.state == "ok"
 
@@ -216,7 +214,6 @@ class TestMountHealthSpec:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース12
             mountpoint = Path(tmp) / "remote"
-            resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             missing = subprocess.CompletedProcess(["pgrep"], 1, "", "")
             with (
@@ -225,7 +222,7 @@ class TestMountHealthSpec:
                     health_module.subprocess, "run", return_value=missing
                 ) as run,
             ):
-                health = inspect_mount(resource, "remote")
+                health = inspect_mountpoint(mountpoint, "whub-remote")
 
         assert health.state == "stale"
         run.assert_called_once_with(
@@ -240,7 +237,6 @@ class TestMountHealthSpec:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース12
             mountpoint = Path(tmp) / "remote"
-            resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             cases = (OSError("pgrep failed"), subprocess.TimeoutExpired(["pgrep"], 3))
             for case in cases:
@@ -250,13 +246,12 @@ class TestMountHealthSpec:
                     ),
                     patch.object(health_module.subprocess, "run", side_effect=case),
                 ):
-                    health = inspect_mount(resource, "remote")
+                    health = inspect_mountpoint(mountpoint, "whub-remote")
                 assert health.state == "stale"
 
     def test_child_listing_failure_reports_unreadable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             mountpoint = Path(tmp) / "remote"
-            resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             with (
                 patch.object(health_module, "_read_mount_table", return_value=table),
@@ -272,7 +267,7 @@ class TestMountHealthSpec:
                     ],
                 ),
             ):
-                health = inspect_mount(resource, "remote")
+                health = inspect_mountpoint(mountpoint, "whub-remote")
 
         assert health.state == "unreadable"
         assert health.detail == "Operation not permitted"
@@ -282,7 +277,6 @@ class TestMountHealthSpec:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース13
             mountpoint = Path(tmp) / "remote"
-            resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             cases = (
                 OSError("stat failed"),
@@ -302,14 +296,13 @@ class TestMountHealthSpec:
                         ],
                     ),
                 ):
-                    health = inspect_mount(resource, "remote")
+                    health = inspect_mountpoint(mountpoint, "whub-remote")
                 assert health.state == "stale"
 
     def test_stat_timeout_with_live_process_reports_slow(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース14: レイテンシ非依存契約 — timeoutは障害根拠にしない
             mountpoint = Path(tmp) / "remote"
-            resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             with (
                 patch.object(health_module, "_read_mount_table", return_value=table),
@@ -322,7 +315,7 @@ class TestMountHealthSpec:
                     ],
                 ),
             ):
-                health = inspect_mount(resource, "remote")
+                health = inspect_mountpoint(mountpoint, "whub-remote")
 
         assert health.state == "slow"
         assert health.recovery is None
@@ -331,7 +324,6 @@ class TestMountHealthSpec:
         with tempfile.TemporaryDirectory() as tmp:
             # ケース14: レイテンシ非依存契約 — timeoutは障害根拠にしない
             mountpoint = Path(tmp) / "remote"
-            resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             with (
                 patch.object(health_module, "_read_mount_table", return_value=table),
@@ -345,7 +337,7 @@ class TestMountHealthSpec:
                     ],
                 ),
             ):
-                health = inspect_mount(resource, "remote")
+                health = inspect_mountpoint(mountpoint, "whub-remote")
 
         assert health.state == "slow"
         assert "exceeded 3s" in health.detail
@@ -355,7 +347,6 @@ class TestMountHealthSpec:
         with tempfile.TemporaryDirectory() as tmp:
             # denied以外の即時エラーはstale（自動cleanup対象にしない）
             mountpoint = Path(tmp) / "remote"
-            resource = _remote_resource(mountpoint)
             table = f"server:/srv/remote on {mountpoint} (macfuse)\n"
             with (
                 patch.object(health_module, "_read_mount_table", return_value=table),
@@ -371,7 +362,7 @@ class TestMountHealthSpec:
                     ],
                 ),
             ):
-                health = inspect_mount(resource, "remote")
+                health = inspect_mountpoint(mountpoint, "whub-remote")
 
         assert health.state == "stale"
         assert health.detail == "Input/output error"

@@ -55,6 +55,7 @@ def _host(identity_file: str = "~/.ssh/id_home") -> Host:
         user="takumi",
         port=2222,
         identity_file=identity_file,
+        mount_root="/srv",
     )
 
 

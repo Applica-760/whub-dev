@@ -158,18 +158,9 @@ def inspect_mountpoint(mountpoint: Path, volname: str) -> ResourceHealth:
     return ResourceHealth("ok")
 
 
-def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth:
-    return inspect_mountpoint(
-        resource._resolved_workspace_path,
-        f"whub-{project_name}",
-    )
-
-
 def aggregated_link_source(resource: RemoteResource, host_mountpoint: Path) -> Path:
     """Return the path inside the shared host mount a workspace path links to."""
     mount_root = resource._resolved_host.mount_root
-    if mount_root is None:
-        raise ValueError("aggregated mount requires host.mount_root")
     relative_path = PurePosixPath(normpath(resource.path)).relative_to(mount_root)
     return host_mountpoint / Path(relative_path)
 

@@ -34,13 +34,11 @@ class Host(SchemaModel):
     user: str
     port: int = 22
     identity_file: str
-    mount_root: str | None = None
+    mount_root: str
 
     @field_validator("mount_root")
     @classmethod
-    def _validate_mount_root(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
+    def _validate_mount_root(cls, value: str) -> str:
         if value.startswith("~") or not PurePosixPath(value).is_absolute():
             raise ValueError("mount_root must be an absolute path without '~'")
         return normpath(value)
@@ -151,14 +149,14 @@ class Manifest(SchemaModel):
                     f"'{resource.host}'"
                 )
             host = self.hosts[resource.host]
-            if host.mount_root is not None and resource.mount:
-                try:
-                    PurePosixPath(normpath(resource.path)).relative_to(host.mount_root)
-                except ValueError as error:
-                    raise ValueError(
-                        f"project '{project.name}' remote path must be under "
-                        f"host '{resource.host}' mount_root"
-                    ) from error
+            # mount: falseも名指しmountの対象になりうるため、全remote resourceを検査する
+            try:
+                PurePosixPath(normpath(resource.path)).relative_to(host.mount_root)
+            except ValueError as error:
+                raise ValueError(
+                    f"project '{project.name}' remote path must be under "
+                    f"host '{resource.host}' mount_root"
+                ) from error
             resource._resolved_host = host
             resource._resolved_workspace_path = root / resource.workspace_path
         return self

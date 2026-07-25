@@ -11,7 +11,6 @@ from pathlib import Path
 from whub.core.health import (
     HealthState,
     inspect_aggregated_mount,
-    inspect_mount,
     inspect_symlink,
 )
 from whub.core.remote import run_ssh_command
@@ -113,14 +112,11 @@ def _fetch_remote_info(
     project: Project,
     probe: tuple[str, str, str] | None,
 ) -> ResourceStatus:
-    if resource.mount and resource._resolved_host.mount_root is not None:
-        mount = inspect_aggregated_mount(
-            resource,
-            host_mountpoint(resource.host),
-            host_volume_name(resource.host),
-        ).state
-    else:
-        mount = inspect_mount(resource, project.name).state
+    mount = inspect_aggregated_mount(
+        resource,
+        host_mountpoint(resource.host),
+        host_volume_name(resource.host),
+    ).state
     if probe is None:
         return ResourceStatus(project.name, "unreachable", resource.type, mount=mount)
 

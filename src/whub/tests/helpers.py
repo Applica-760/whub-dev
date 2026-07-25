@@ -12,6 +12,7 @@ def manifest_data() -> dict:
                 "user": "takumi",
                 "port": 2222,
                 "identity_file": "~/.ssh/id_home",
+                "mount_root": "/srv",
             },
         },
         "projects": [

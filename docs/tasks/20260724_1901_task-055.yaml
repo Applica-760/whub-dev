@@ -216,24 +216,64 @@ plan:
     - description: 全pytestとRuffを実行し、docs/operations/releace.mdに従いrelease build・verify・applyを実施する
       state: pending
       skip_reason: null
-      deleted: false
+      deleted: true
     - description: omen実環境で再mount→status→wflowが自動unmountなしで成功すること、mount.jsonlのslow記録とcleanup非発生、tccutil
         resetによるdenied→cleanup経路、常駐接続(ssh・sshfs・go-nfsv4)の1組化を観測する
       state: pending
       skip_reason: null
-      deleted: false
+      deleted: true
     - description: mount判定契約と運用変更をknowledgeへ反映する
       state: pending
       skip_reason: null
-      deleted: false
+      deleted: true
     - description: remote resourceの探索は対象project directory以下へ限定し、find・rg等はwhub run
         <project>でremote host上に実行させる運用規則をKnowledgeへ登録し、README等の利用案内との整合を確認する
       state: pending
       skip_reason: null
+      deleted: true
+    - description: '個別mount経路を廃止しhost集約へ一本化する: Host.mount_rootを必須(str)化、services/mountの_mount_one・_unmount_one・_is_sharedとcore/health.inspect_mountを削除、status.pyの個別mount分岐を削除、path包含validationをmount
+        flag問わず全remote resourceへ拡張、mount_logのstage名からhost_ prefixを除去。READMEとテストを追随させ全体回帰後にcommitする'
+      state: done
+      skip_reason: null
       deleted: false
-    log: []
+    - description: 現行releaseで旧個別mountを全解除し、mount tableとsshfsプロセスが残らないことを確認する。manifest更新前に実施し、旧releaseで操作可能な状態を保つ
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: docs/operations/releace.mdに従いrelease build・verify・applyを実施する。releaseフローはmanifestを読まないため、manifest更新前に完了させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: ~/.whub/manifest.yamlの両hostへmount_rootを追加する(home-server=,
+        supercomputer=)。esn-lab-runはmount:falseを維持し引数指定時のみmount対象とする。extra=forbidのためapply直後の手編集で切り替える
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: omen実環境でwhub mount→status→wflowが自動unmountなしで成功すること、mount.jsonlのslow記録とcleanup非発生、tccutil
+        resetによるdenied→cleanup経路、常駐接続(ssh・sshfs)がhostあたり1組へ集約されることを観測する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: mount判定契約(レイテンシ非依存・cleanup denied限定)とhost集約契約をKnowledgeへ記録する。Knowledge廃止までの暫定記録として扱う
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: remote resourceの扱いと探索コマンドの制約(探索は対象project directory以下へ限定、横断検索・大量走査はmount上で行わずwhub
+        runでremote host上に実行)をworkspace-hub/AGENTS.mdへ記載し、whub-dev/AGENTS.mdのKnowledge参照規約(冒頭2行)を削除する。READMEとの整合を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        実装・検証: 個別mount経路を廃止しhost集約へ一本化。Host.mount_rootをstr必須化、path包含validationをmount
+          flag問わず全remote resourceへ拡張。services/mountから_mount_one・_unmount_one・_is_sharedを削除し_group_by_hostへ集約、core/healthのinspect_mountとaggregated_link_sourceのNone分岐を削除、status.pyの個別mount分岐を削除。mount
+          logのstage名からhost_ prefixを除去しprecheck/sshfs/post_mount_probe/cleanupへ統一。tests/helpersのhomeへmount_root=/srvを追加し、test_health(inspect_mountpoint直呼びへ)・test_remote・test_manifest(mount:falseも包含検査対象)・test_mount(host単位19ケースへ再構成)・test_statusを追随。pytest
+          430 passed、変更ファイルのRuff check/format check、frontend typecheck(tsc -b)成功、git
+          diff --check成功。READMEはmount_root必須・host単位集約・mount/unmountの説明を更新。
+      deleted: false
     deleted: false
 approvals:
+- actor: user
 - actor: user
 - actor: user
 - actor: user
@@ -243,5 +283,8 @@ change_requests:
 - reason: 共有host mountではproject別unmountを提供せず、引数なしで全remote host mountを解除する方針を反映するため
 - reason: remote resourceの探索範囲とコマンド実行場所を定め、sshfs越しの不要なメタデータ往復と出力を抑える運用規則を追加するため
 - reason: ユーザー承認済みのCommands層からService層へのmount orchestration分離をPhase 3成果として明示するため
+- reason: 個別mount経路を廃止しhost集約へ一本化する方針(A)を採用。Host.mount_rootを必須化し、両hostへmount_rootを設定する。併せてPhase
+    3の重複Step(003-002/003-003)を整理し、Phase 4へコード削除・manifest更新・切替順序のStepを追加、004-004の記録先をKnowledgeからhub
+    AGENTS.mdへ変更する。
 cancellation: null
 result: null

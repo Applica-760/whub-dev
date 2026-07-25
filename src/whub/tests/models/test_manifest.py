@@ -86,7 +86,7 @@ class TestManifestSpec:
             with pytest.raises(ValidationError):
                 Manifest.model_validate(invalid)
 
-    def test_mount_root_requires_absolute_path_and_contains_auto_mounts(self) -> None:
+    def test_mount_root_is_required_and_contains_every_remote_path(self) -> None:
         # ケース9
         data = manifest_data()
         data["hosts"]["home"]["mount_root"] = "/srv/remote"
@@ -94,23 +94,24 @@ class TestManifestSpec:
         manifest = Manifest.model_validate(data)
         assert manifest.hosts["home"].mount_root == "/srv/remote"
 
+        missing = copy.deepcopy(data)
+        del missing["hosts"]["home"]["mount_root"]
+        with pytest.raises(ValidationError, match="mount_root"):
+            Manifest.model_validate(missing)
+
         for value in ("relative/path", "~/remote"):
             invalid = copy.deepcopy(data)
             invalid["hosts"]["home"]["mount_root"] = value
             with pytest.raises(ValidationError):
                 Manifest.model_validate(invalid)
 
-        for path in ("/srv/remote-other", "/srv/remote/../outside"):
-            invalid = copy.deepcopy(data)
-            invalid["projects"][1]["resource"]["path"] = path
-            with pytest.raises(ValidationError, match="mount_root"):
-                Manifest.model_validate(invalid)
-
-        excluded = copy.deepcopy(data)
-        excluded["projects"][2]["resource"]["path"] = "/outside"
-        assert isinstance(
-            Manifest.model_validate(excluded).projects[2].resource, RemoteResource
-        )
+        # mount: falseも名指しmountの対象になりうるため包含検査から除外しない
+        for index in (1, 2):
+            for path in ("/srv/remote-other", "/srv/remote/../outside"):
+                invalid = copy.deepcopy(data)
+                invalid["projects"][index]["resource"]["path"] = path
+                with pytest.raises(ValidationError, match="mount_root"):
+                    Manifest.model_validate(invalid)
 
     def test_duplicate_project_names_are_rejected(self) -> None:
         # ケース4

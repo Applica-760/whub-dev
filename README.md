@@ -9,7 +9,8 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 - `~/.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
 - `~/.whub/` にconfig・manifest・todo・downloads・releases・runtimeを集約する
 - ローカル`resource`はsymlink、リモート`resource`はsshfs mount（参照・編集）とSSH（実行）で操作する
-- `host`に`mount_root`を定義すると、その配下の`resource`はhostごとに1本のsshfsへ集約され、各`workspace_path`はmount内へのsymlinkになる（未定義hostは`resource`ごとの個別mount）
+- mountはhost単位に集約する。`host.mount_root`を`~/.whub/runtime/mounts/`配下へsshfsで1本だけ接続し、各`workspace_path`はそのmount内へのsymlinkとして張る
+- `resource`の`path`は所属`host`の`mount_root`配下でなければならない（`mount: false`も名指しmountの対象になりうるため対象）
 - Agentはworkspace rootから起動し、Project固有作業の前に対象rootの`AGENTS.md`を読む
 - `whub codegraph`で`codegraph: true`な対象`resource`のCodeGraphを初期化
 
@@ -31,8 +32,8 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub ls` | project名、resource type、workspace pathを表示 |
 | `whub status` | 接続状態、ヘルスチェック、git差分を表示 |
 | `whub link` | manifest の symlink を一括作成（`.gitignore` も自動更新） |
-| `whub mount [PROJECT] [-a]` | remote `resource`をsshfsでツリーへマウント（`mount: false`は`-a`か名指しのみ） |
-| `whub unmount [--force]` | 全remote `resource`をアンマウント（staleマウントは`--force`で強制解除） |
+| `whub mount [PROJECT] [-a]` | 対象`resource`のhostをsshfsでマウントし`workspace_path`のsymlinkを張る（`mount: false`は`-a`か名指しのみ） |
+| `whub unmount [--force]` | 全hostのマウントを解除（staleマウントは`--force`で強制解除） |
 | `whub cd <PROJECT>` | localならパス移動、remoteならtmuxセッションへSSH接続（`--plain`で素シェル） |
 | `whub run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
 | `whub session <COMMAND>` | remote GUI sessionの予約・command handoff・状態確認・ログ取得・削除 |
@@ -132,7 +133,7 @@ hosts:
     hostname: "..."
     user: "..."
     identity_file: "~/.ssh/id_rsa"
-    mount_root: /remote   # 任意: host単位mountの起点。配下のmount対象resourceを1本のsshfsへ集約
+    mount_root: /remote   # 必須: host単位mountの起点。配下のresourceを1本のsshfsへ集約
 
 projects:
   - name: whub-dev
@@ -147,7 +148,7 @@ projects:
       type: remote
       host: host-name
       path: /remote/path
-      workspace_path: projects/remote-project  # ツリー上の参照先（必須）。host集約時はmount内へのsymlink
+      workspace_path: projects/remote-project  # ツリー上の参照先（必須）。host mount内へのsymlinkになる
       mount: false   # 任意: 無引数mountの対象から除外
       status: false  # 任意: statusの対象から除外
       codegraph: true
