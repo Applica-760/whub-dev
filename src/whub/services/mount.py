@@ -89,6 +89,25 @@ def _group_by_host(
     return by_host
 
 
+def _remove_if_empty(directory: Path) -> bool:
+    """Remove one directory only after confirming it holds no entries."""
+    try:
+        if any(directory.iterdir()):
+            return False
+        directory.rmdir()
+    except OSError:
+        return False
+    return True
+
+
+def _links_to(target: Path, source: Path) -> bool:
+    if not target.is_symlink():
+        return False
+    linked = target.readlink()
+    actual = linked if linked.is_absolute() else target.parent / linked
+    return Path(normpath(str(actual))) == source
+
+
 def _ensure_shared_links(
     targets: list[tuple[Project, RemoteResource]],
     mountpoint: Path,
@@ -97,9 +116,7 @@ def _ensure_shared_links(
         target = resource._resolved_workspace_path
         source = aggregated_link_source(resource, mountpoint)
         if target.is_symlink():
-            linked = target.readlink()
-            actual = linked if linked.is_absolute() else target.parent / linked
-            if Path(normpath(str(actual))) == source:
+            if _links_to(target, source):
                 continue
             target.unlink()
         elif target.exists():
@@ -107,6 +124,26 @@ def _ensure_shared_links(
         target.parent.mkdir(parents=True, exist_ok=True)
         target.symlink_to(source)
     return None
+
+
+def _remove_shared_links(
+    targets: list[tuple[Project, RemoteResource]],
+    mountpoint: Path,
+) -> None:
+    """Drop the workspace symlinks this mount owns, leaving no dangling links."""
+    for _, resource in targets:
+        target = resource._resolved_workspace_path
+        # mountが作ったlinkだけを消す。実体や無関係なsymlinkには触れない
+        if not _links_to(target, aggregated_link_source(resource, mountpoint)):
+            continue
+        with contextlib.suppress(OSError):
+            target.unlink()
+        # mountのmkdir(parents=True)と対称に、空になった親だけを畳む
+        for parent in list(target.parents)[
+            : len(Path(resource.workspace_path).parts) - 1
+        ]:
+            if not _remove_if_empty(parent):
+                break
 
 
 def _mount_host(
@@ -156,8 +193,7 @@ def _mount_host(
     )
     if result.returncode != 0:
         if created_mountpoint:
-            with contextlib.suppress(OSError):
-                mountpoint.rmdir()
+            _remove_if_empty(mountpoint)
         return f"FAIL: {result.stderr.strip()}"
     # fuse-t on macOS: mount table lags ~0.2-0.4s behind sshfs exit.
     for _ in range(10):
@@ -177,7 +213,7 @@ def _mount_host(
             )
             return "mount"
         if health.state == "unreadable":
-            cleanup = _unmount_host(host_name, force=True)
+            cleanup = _unmount_host(host_name, targets, force=True)
             write_mount_log(
                 project=host_name,
                 mountpoint=mountpoint,
@@ -193,8 +229,7 @@ def _mount_host(
             )
         time.sleep(0.2)
     if health.state == "unmounted" and created_mountpoint:
-        with contextlib.suppress(OSError):
-            mountpoint.rmdir()
+        _remove_if_empty(mountpoint)
     write_mount_log(
         project=host_name,
         mountpoint=mountpoint,
@@ -207,10 +242,15 @@ def _mount_host(
     return f"FAIL: {health.state}: {health.detail}; recovery: {health.recovery}"
 
 
-def _unmount_host(host_name: str, force: bool) -> str:
+def _unmount_host(
+    host_name: str,
+    targets: list[tuple[Project, RemoteResource]],
+    force: bool,
+) -> str:
     mountpoint = host_mountpoint(host_name)
     health = inspect_host_mount(host_name)
     if health.state == "unmounted":
+        _remove_shared_links(targets, mountpoint)
         return "skip"
     if health.state == "stale" and not force:
         return "STALE: retry with --force"
@@ -229,8 +269,8 @@ def _unmount_host(host_name: str, force: bool) -> str:
         return f"FAIL: {result.stderr.strip()}"
     if inspect_host_mount(host_name).state != "unmounted":
         return "FAIL: still mounted"
-    with contextlib.suppress(OSError):
-        mountpoint.rmdir()
+    _remove_shared_links(targets, mountpoint)
+    _remove_if_empty(mountpoint)
     return "unmount"
 
 
@@ -252,8 +292,8 @@ def mount_targets(
 
 def unmount_targets(manifest: Manifest, *, force: bool = False) -> list[MountResult]:
     """Unmount every host serving a remote resource."""
-    targets = select_targets(manifest, None)
+    by_host = _group_by_host(select_targets(manifest, None))
     return [
-        MountResult(host_name, _unmount_host(host_name, force))
-        for host_name in sorted(_group_by_host(targets))
+        MountResult(host_name, _unmount_host(host_name, by_host[host_name], force))
+        for host_name in sorted(by_host)
     ]

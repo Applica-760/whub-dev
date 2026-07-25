@@ -33,7 +33,7 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub status` | 接続状態、ヘルスチェック、git差分を表示 |
 | `whub link` | manifest の symlink を一括作成（`.gitignore` も自動更新） |
 | `whub mount [PROJECT] [-a]` | 対象`resource`のhostをsshfsでマウントし`workspace_path`のsymlinkを張る（`mount: false`は`-a`か名指しのみ） |
-| `whub unmount [--force]` | 全hostのマウントを解除（staleマウントは`--force`で強制解除） |
+| `whub unmount [--force]` | 全hostのマウントを解除し`workspace_path`のsymlinkも撤去（staleマウントは`--force`で強制解除） |
 | `whub cd <PROJECT>` | localならパス移動、remoteならtmuxセッションへSSH接続（`--plain`で素シェル） |
 | `whub run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
 | `whub session <COMMAND>` | remote GUI sessionの予約・command handoff・状態確認・ログ取得・削除 |

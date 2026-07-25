@@ -237,7 +237,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: 現行releaseで旧個別mountを全解除し、mount tableとsshfsプロセスが残らないことを確認する。manifest更新前に実施し、旧releaseで操作可能な状態を保つ
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: docs/operations/releace.mdに従いrelease build・verify・applyを実施する。releaseフローはmanifestを読まないため、manifest更新前に完了させる
@@ -270,6 +270,27 @@ plan:
           logのstage名からhost_ prefixを除去しprecheck/sshfs/post_mount_probe/cleanupへ統一。tests/helpersのhomeへmount_root=/srvを追加し、test_health(inspect_mountpoint直呼びへ)・test_remote・test_manifest(mount:falseも包含検査対象)・test_mount(host単位19ケースへ再構成)・test_statusを追随。pytest
           430 passed、変更ファイルのRuff check/format check、frontend typecheck(tsc -b)成功、git
           diff --check成功。READMEはmount_root必須・host単位集約・mount/unmountの説明を更新。
+      deleted: false
+    - value:
+        検証: 旧release(0.1.0+gdae2616)のwhub unmountで個別mount 3本(esn-lab・la-il・private)を解除。解除前はServerAliveInterval=15の旧optionで稼働(PID
+          65207/65223/65236)。解除後、mount tableのfuse-tエントリ0件、sshfsプロセス0件、対象hostへのssh接続0件を確認。esn-lab-runはmount対象外でskip。
+      deleted: false
+    - value:
+        要対処: 旧mountpoint directoryが3件残存し、新設計の_ensure_shared_linksはsymlink以外のpathを上書きせずFAILするため、このままではwhub
+          mountが失敗する。うちprojects/LAplust/ILにはmount未接続中に書かれたローカル実体docs/issues/20260723_2233_hilserl_scale_fix_rerun_analysis.md(21746
+          bytes, 2026-07-24 13:08)が存在し、remote hostへ未反映。esn-lab・privateは空ディレクトリ。
+      deleted: false
+    - value:
+        対処: 旧mountpoint残骸を整理。projects/LAplust/ILのローカル実体はremoteの同名ファイルと双方に固有内容があり(LOCALは#4
+          serialization修正・#5 Actor OOM運用対応の2セクションが多く、REMOTEは指標説明とbuffer.py分析の加筆が厚い)、上書きせず別名20260723_2233_hilserl_scale_fix_rerun_analysis.local-1308.mdとしてremoteへscp(sha256
+          c26b29b3...一致を確認)。remoteのAppleDouble ._20260723_...mdを削除。ローカルのIL・esn-lab・privateディレクトリを削除し、新設計のsymlink作成先を空けた。
+      deleted: false
+    - value:
+        設計変更: 'unmount時にworkspace symlinkも撤去する方式へ変更(003-007のsymlink保持決定を上書き)。runtime
+          mountpointをrmdirする以上、symlinkを残すとdangling symlinkが残存しls/rg/find/VS Codeの走査がENOENTを踏むため。whub
+          statusはcollect_targets(manifest)駆動でfilesystemを走査せず、symlink不在でもproject行は表示されmount列がmissing(recovery:
+          run whub mount)になるだけなので可視性は失われない。削除対象は_links_toでmountが作ったlinkと確認できたものに限定し、実体や別を指すsymlinkには触れない。親ディレクトリはmountのmkdir(parents=True)と対称にworkspace_pathの階層数を上限として空のものだけ畳む。rmdirは例外任せにせず_remove_if_emptyでiterdirによる空確認を明示的に行い、mount側の3箇所とsymlink側で共通利用。pytest
+          432 passed、対象Ruff check/format check、git diff --check成功。'
       deleted: false
     deleted: false
 approvals:

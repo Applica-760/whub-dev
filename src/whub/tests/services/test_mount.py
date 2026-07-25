@@ -11,15 +11,17 @@
 8. 名指し → mount=falseでもmount対象になる
 9. 無引数はmount=falseを除外し、include_allで含める
 10. 名指しが未知projectならServiceError
-11. unmountはhost単位で一度だけ行い、workspace symlinkを残しmountpointを削除する
-12. staleは--forceでunmountする
-13. mount失敗時、作成したmountpointはrmdirされる（副作用境界）
-14. mount失敗時、既存のmountpointは保持される（副作用境界）
-15. post-mount probeがunreadableならcleanupして報告する
-16. slow（健全だが高遅延）はprecheckでskipし再mountしない
-17. post-mount probeがslowでもmount成功扱いとしcleanupしない
-18. sshfs stderrはmount logへ永続化しない
-19. host識別子はpath componentとして安全化される
+11. unmountはhost単位で一度だけ行い、workspace symlinkとmountpointを削除する
+12. unmountはmountが作ったlink以外（実体・別を指すsymlink）に触れない
+13. unmountは他のエントリを持つ親ディレクトリを残す
+14. staleは--forceでunmountする
+15. mount失敗時、作成したmountpointはrmdirされる（副作用境界）
+16. mount失敗時、既存のmountpointは保持される（副作用境界）
+17. post-mount probeがunreadableならcleanupして報告する
+18. slow（健全だが高遅延）はprecheckでskipし再mountしない
+19. post-mount probeがslowでもmount成功扱いとしcleanupしない
+20. sshfs stderrはmount logへ永続化しない
+21. host識別子はpath componentとして安全化される
 
 検証しないケース:
 - 実際のsshfs/umount/diskutil実行
@@ -72,7 +74,7 @@ def _relocate(m, name: str, root: Path) -> None:
 
 class TestHostIdentifiers:
     def test_host_mount_id_is_a_safe_path_component(self) -> None:
-        # ケース19
+        # ケース21
         host_name = "../../outside"
 
         assert host_mount_id(host_name) == "host-..%2F..%2Foutside"
@@ -258,7 +260,7 @@ class TestMountSpec:
         with pytest.raises(ServiceError, match="unknown project"):
             select_targets(m, "no-such-project")
 
-    def test_unmounts_host_once_and_keeps_workspace_symlink(self, tmp_path):
+    def test_unmounts_host_once_and_removes_workspace_symlink(self, tmp_path):
         # ケース11
         m = manifest()
         _relocate(m, "remote", tmp_path / "workspace")
@@ -284,11 +286,69 @@ class TestMountSpec:
             capture_output=True,
             text=True,
         )
-        assert resource._resolved_workspace_path.is_symlink()
+        # dangling symlinkを残さない
+        assert not resource._resolved_workspace_path.is_symlink()
+        assert not resource._resolved_workspace_path.exists()
         assert not mountpoint.exists()
 
-    def test_force_unmounts_stale_host(self, tmp_path):
+    def test_unmount_leaves_paths_it_does_not_own(self, tmp_path):
         # ケース12
+        m = manifest()
+        _relocate(m, "remote", tmp_path / "workspace")
+        _relocate(m, "nested", tmp_path / "workspace")
+        remote = m.resolve_project("remote").resource
+        nested = m.resolve_project("nested").resource
+        mountpoint = tmp_path / "runtime" / "mounts" / "home"
+        mountpoint.mkdir(parents=True)
+        remote._resolved_workspace_path.parent.mkdir(parents=True, exist_ok=True)
+        # 実ディレクトリと、別の場所を指すsymlinkはmountの所有物ではない
+        remote._resolved_workspace_path.mkdir()
+        nested._resolved_workspace_path.symlink_to(tmp_path / "elsewhere")
+        with (
+            patch(
+                "whub.services.mount.inspect_host_mount",
+                side_effect=[ResourceHealth("ok"), ResourceHealth("unmounted")],
+            ),
+            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
+            patch(
+                "whub.services.mount.subprocess.run",
+                return_value=CompletedProcess([], 0),
+            ),
+        ):
+            unmount_targets(m)
+
+        assert remote._resolved_workspace_path.is_dir()
+        assert nested._resolved_workspace_path.readlink() == tmp_path / "elsewhere"
+
+    def test_unmount_keeps_parent_directory_holding_other_entries(self, tmp_path):
+        # ケース13
+        m = manifest()
+        _relocate(m, "remote", tmp_path / "workspace")
+        resource = m.resolve_project("remote").resource
+        mountpoint = tmp_path / "runtime" / "mounts" / "home"
+        mountpoint.mkdir(parents=True)
+        parent = resource._resolved_workspace_path.parent
+        parent.mkdir(parents=True, exist_ok=True)
+        resource._resolved_workspace_path.symlink_to(mountpoint / "remote")
+        (parent / "unrelated").write_text("keep me\n")
+        with (
+            patch(
+                "whub.services.mount.inspect_host_mount",
+                side_effect=[ResourceHealth("ok"), ResourceHealth("unmounted")],
+            ),
+            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
+            patch(
+                "whub.services.mount.subprocess.run",
+                return_value=CompletedProcess([], 0),
+            ),
+        ):
+            unmount_targets(m)
+
+        assert not resource._resolved_workspace_path.is_symlink()
+        assert (parent / "unrelated").read_text() == "keep me\n"
+
+    def test_force_unmounts_stale_host(self, tmp_path):
+        # ケース14
         m = manifest()
         mountpoint = tmp_path / "runtime" / "mounts" / "home"
         mountpoint.mkdir(parents=True)
@@ -311,7 +371,7 @@ class TestMountSpec:
         )
 
     def test_mount_failure_removes_created_mountpoint(self, tmp_path):
-        # ケース13
+        # ケース15
         m = manifest()
         project = m.resolve_project("remote")
         mountpoint = tmp_path / "mnt"
@@ -333,7 +393,7 @@ class TestMountSpec:
         assert not mountpoint.exists()
 
     def test_mount_failure_keeps_existing_mountpoint(self, tmp_path):
-        # ケース14
+        # ケース16
         m = manifest()
         project = m.resolve_project("remote")
         mountpoint = tmp_path / "mnt"
@@ -356,7 +416,7 @@ class TestMountSpec:
         assert mountpoint.exists()
 
     def test_mount_readability_failure_unmounts_and_reports(self, tmp_path):
-        # ケース15
+        # ケース17
         m = manifest()
         project = m.resolve_project("remote")
         mountpoint = tmp_path / "mnt"
@@ -380,16 +440,17 @@ class TestMountSpec:
                 "whub.services.mount._unmount_host", return_value="unmount"
             ) as cleanup,
         ):
-            status = _mount_host("home", [(project, project.resource)])
+            targets = [(project, project.resource)]
+            status = _mount_host("home", targets)
 
         assert status == (
             "FAIL: mount unreadable: Operation not permitted; cleanup=unmount; "
             "recovery: allow Network Volumes access, then remount"
         )
-        cleanup.assert_called_once_with("home", force=True)
+        cleanup.assert_called_once_with("home", targets, force=True)
 
     def test_skips_when_mounted_but_slow(self, tmp_path, _sshfs_installed):
-        # ケース16
+        # ケース18
         m = manifest()
         _relocate(m, "remote", tmp_path / "workspace")
         mock_run = MagicMock()
@@ -410,7 +471,7 @@ class TestMountSpec:
         mock_run.assert_not_called()
 
     def test_slow_post_mount_probe_succeeds_without_cleanup(self, tmp_path):
-        # ケース17
+        # ケース19
         m = manifest()
         _relocate(m, "remote", tmp_path / "workspace")
         project = m.resolve_project("remote")
@@ -437,7 +498,7 @@ class TestMountSpec:
         cleanup.assert_not_called()
 
     def test_sshfs_stderr_is_not_persisted(self, tmp_path):
-        # ケース18
+        # ケース20
         m = manifest()
         project = m.resolve_project("remote")
         secret = "user@host:/private/path IdentityFile=/Users/private/key"
