@@ -2,12 +2,14 @@ schema_version: 1
 task:
   id: TASK-031
   state: in_progress
-  title: Whub Overview内タスク詳細表示
-  objective: OverviewのBacklog列先頭に選択中Taskのフローと詳細を表示し、Task依存グラフのノード選択でページ遷移せず表示内容を切り替えられるようにする
+  title: Whub Overview横断Task依存グラフと詳細表示
+  objective: OverviewのTask依存グラフを全Project横断で描画し、ノード選択でページ遷移せずOverview内に選択TaskのフローとStep詳細を表示する
   approach:
-  - TaskDetailPage内のTask詳細WidgetFrameと取得処理を再利用可能なTaskDetailWidgetへ抽出する
-  - TaskFlowGraphWidgetとTaskDetailWidgetをOverviewのBacklog列先頭へ配置する
-  - TaskDependencyGraphWidgetを選択コールバック対応にし、OverviewPageで選択Task状態を管理する
+  - 全ProjectのTaskをProject単位のエラー隔離付きで返す集約エンドポイントを追加する
+  - TaskDependencyGraphのnode idを<project>/<task_id>へ複合化し、依存解決を同一Project内へ限定する
+  - Project単位のcompound parentノードでProjectごとにノードを寄せ、ラベルへProject名を前置する
+  - TaskDetailPage内のTask詳細をTaskDetailWidgetへ抽出し、TaskFlowGraphWidgetとともにOverviewのBacklog列先頭へ配置する
+  - TaskDependencyGraphWidgetを選択コールバック対応にし、OverviewPageで(project, taskId)の選択状態を管理する
   depends_on: []
   interruption_task_id: null
   interruption_reason: null
@@ -16,42 +18,103 @@ plan:
   acceptance:
   - id: ACC-001
     statement: OverviewのTask依存グラフでノードを選択するとURL遷移せず、同じOverview内のTaskフローと詳細が選択Taskへ切り替わる
-  - id: ACC-002
-    statement: OverviewでProjectを切り替えるとTask選択が解除され、別ProjectのTaskを誤表示・誤取得しない
   - id: ACC-003
     statement: TasksPageのTask依存グラフでノードを選択すると、従来どおり選択Taskの個別詳細ページへ遷移する
   - id: ACC-004
     statement: TaskDetailPageの既存URL・Taskフロー・Task情報・手順・依存関係・一覧導線が維持される
+  - id: ACC-005
+    statement: OverviewのTask依存グラフが全ProjectのTaskを1つの図に描画し、同一Task IDを持つ別Project（vault・sns-lab・research-slideのTASK-001）が別ノードとして表示される
+  - id: ACC-006
+    statement: depends_onとinterruption_source_task_idが同一Project内でのみ解決され、Project跨ぎの依存エッジが生成されない
+  - id: ACC-007
+    statement: ノードがProjectごとにまとまって配置され、ラベルが<project>:TASK-NNN形式で表示される
+  - id: ACC-008
+    statement: 1つのProjectのTask取得が失敗しても、他ProjectのTaskがグラフに描画される
   phases:
   - title: 共有Task詳細Widgetの抽出
     acceptance: []
     steps:
     - description: TaskDetailPage内のTask取得・依存元算出・手順表示を、project・taskId・任意actionを受け取るTaskDetailWidgetへ抽出する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Task未選択時はAPIを呼ばず選択案内を表示できるようにし、Overviewでも同じWidgetを利用可能にする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: TaskDetailPageをTaskFlowGraphWidgetとTaskDetailWidgetの構成へ置換し、既存URL・一覧へ戻るリンク・表示内容を維持する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 共有WidgetとTaskDetailPageの取得・表示回帰テストを追加・更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: TaskDetailPageの取得・依存元算出・手順表示をTaskDetailWidget(taskId・project・action・emptyMessage)へ抽出。taskId未指定ではloadTaskがfetchせずemptyMessageを描画する。TaskDetailPageはTaskFlowGraphWidgetとTaskDetailWidgetの構成へ置換し、一覧へ戻るリンクはaction、未指定時文言は既存のTask
+          IDがありませんを維持。TaskDetailWidget.test.tsxで取得表示とAPI未呼び出しを検証。npm test 6 files/18
+          passed、npm run typecheck成功
+      deleted: false
+    deleted: false
+  - title: 全Project横断Task取得APIの追加
+    acceptance: []
+    steps:
+    - description: 全ProjectのTaskをProject名付きで返す集約エンドポイントを追加し、Project単位でエラーを隔離して部分成功を返す
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: openapi.jsonと生成schemaを更新し、集約エンドポイントの型をフロントへ反映する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 集約エンドポイントのテストを追加し、Task未保持Projectと取得失敗Projectを含む部分成功を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 全Project横断のTask取得hookを追加し、Project単位のエラーを保持したままTask一覧を返す
       state: pending
       skip_reason: null
       deleted: false
     log: []
     deleted: false
-  - title: Overview内選択と専用Taskビュー遷移の分離
+  - title: 依存グラフのProject横断描画
     acceptance: []
     steps:
-    - description: TaskDependencyGraphWidgetに任意のonSelectTaskを追加し、指定時はコールバック、未指定時は従来どおりtaskDetailPathへ遷移させる
+    - description: TaskGraphItemにprojectを追加し、node idを<project>/<task_id>へ複合化してProject間のID衝突を解消する
       state: pending
       skip_reason: null
       deleted: false
-    - description: OverviewPageで選択TaskをProjectに紐づけて管理し、Project切替時に選択を解除する
+    - description: depends_onとinterruption_source_task_idを同一Project内でのみ解決し、Project跨ぎの誤結線を防ぐ
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: ノードラベルを<project>:TASK-NNN形式へ変更し、Project名を各ノード上に表示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Project単位のcompound parentノードを導入し、fcoseでProjectごとにノードが寄って配置されるようにする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: compound parentを薄い枠のみのスタイルにし、既存のstate別background・borderの表現を維持する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: buildTaskGraphElementsの複合ID・Project内依存解決・compound親生成のテストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Overview横断表示と選択Task連携
+    acceptance: []
+    steps:
+    - description: TaskDependencyGraphWidgetを横断モード対応にし、onSelectTaskへ(project, taskId)を渡す。未指定時は従来どおりtaskDetailPathへ遷移させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: OverviewPageで選択Taskを(project, taskId)として管理し、ProjectタブのProject切替では選択を解除しない
       state: pending
       skip_reason: null
       deleted: false
@@ -59,7 +122,15 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    - description: Overviewではノード選択がURL遷移せず表示Taskを切り替え、TasksPageでは従来どおり個別詳細へ遷移することをテストする
+    - description: Overviewではノード選択がURL遷移せず表示Taskを切り替え、別ProjectのTaskも選択できることをテストする。TasksPageでは従来どおり単一Projectで個別詳細へ遷移することをテストする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 横断時のノード数に合わせてOverviewの依存グラフ高さを調整する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: TasksPageの依存グラフは単一Project表示のまま維持されることを確認する
       state: pending
       skip_reason: null
       deleted: false
@@ -80,7 +151,9 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: Task依存グラフを全Project横断描画へ拡張する方針が決まったため、集約API・複合ID・Project単位クラスタ配置のPhaseを追加する
 cancellation: null
 result: null
