@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-056
-  state: in_progress
+  state: completed
   title: remote resourceのmanifestフィールド設計見直し
   objective: host集約mountの実地運用結果を踏まえ、remote resourceがmanifestへ持つべきフィールドを再設計し、path表現の重複とmount設定への依存を整理する
   approach:
@@ -108,7 +108,7 @@ plan:
       deleted: false
     - description: '実地検証: whub lsが13 projectを解決し、whub mountでsshfs 1本・mount table 1件の集約が維持され、workspace
         symlinkの向き先が正しいこと、status・run・fetch・cdが従来と同一のremote絶対pathで動作することを確認する'
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -134,10 +134,46 @@ plan:
           must be relative 4件とmount extra_forbidden 1件で拒否することを確認し、移行後はwhub lsが13 projectを解決。なお当該shellのVIRTUAL_ENVが旧release
           venvを指すためPATH上のwhub/wflowは旧実装のままで、manifest移行後は~/.local/bin配下を明示しないとextra_forbiddenで失敗する
       deleted: false
+    - value:
+        実地検証: 新release 0.1.0+gf6c537eaで再mount。sshfs 1本(PID 578)・mount table 1件(fuse-t:/whub-host-home-server)の集約を維持し、workspace
+          symlink 3件の向き先がruntime/mounts/host-home-server配下の相対path位置(esn-lab, LAplust/IL,
+          private)と一致。auto_mount:falseのsupercomputerはmount対象外。whub statusは12 resource全てstate=ok(remote
+          3件はmount=ok)でgit差分もremote越しに取得。whub runはesn-lab=、la-il=、private=、esn-lab-run=と従来と同一の絶対pathへcd。whub
+          fetchはprojects/research/esn-lab/AGENTS.mdをdownloads/へ取得(1332 bytes)
+      deleted: false
+    - value:
+        検証範囲: cdは非ttyでEXIT_SSH(100)となり実地でpathを観測できないため、test_cdへssh commandにcd /srv/remoteが載ることのassertを追加して担保した(commit
+          cf60afa)。session・push・backlogはremote書き込み・GUI session予約の副作用が大きいため実地実行を見送り、resource.remote_pathを渡すだけの同型変更であることとpytest
+          434 passedを根拠とする
+      deleted: false
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - RemoteResource.pathをmount_root相対必須(RelativePath)へ変更し、包含validationを削除。実manifestのremote
+    4件からmount_root前置が消え、host.mount_rootの変更だけで絶対pathが追随することをtest_manifestのケース9(mount_root=/srv/remoteでremote_pathが/srv/remote/remoteへ変化)で検証
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Host.auto_mountを追加しRemoteResource.mountを廃止。select_targetsの無引数選択がauto_mount基準になることをtest_mountケース8・9で検証し、resource側mountはextra_forbiddenで拒否されることをtest_manifestケース6で検証。実地でもauto_mount:falseのsupercomputerがwhub
+    mountの対象外となり、名指しのwhub run esn-lab-runは動作した
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - 実機でstatus(remote 3件のgit差分取得)、run(4 project全てで従来と同一の絶対pathへcd)、fetch(AGENTS.md
+    1332 bytes取得)を確認。cdはtest_cdのssh command assertで担保。session・push・backlogは副作用が大きく実地実行を見送り、同型変更とpytest
+    434 passedを根拠とした
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - pytest 434 passed、frontend typecheck(tsc -b)成功、変更ファイルのruff check/format成功。release
+    0.1.0+gf6c537eaをbuild・verify(sha 9c767989...)・applyし、移行後のwhub lsが13 projectを解決
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: remote resourceのmanifestフィールドを再設計し、pathをhost.mount_root相対へ一本化して絶対path前置の重複を解消した。消費11箇所はRemoteResource.remote_pathでの合成に切り替え、mount_root包含validationとcore/health.aggregated_link_sourceは相対化により不要となり削除。併せてmount可否をsshfsの単位に合わせてHost.auto_mountへ移し、resource側mount
+    flagを廃止してvscode除外を全remote resource一律へ変更した。release 0.1.0+gf6c537eaをbuild・verify・applyし、実manifestを新スキーマへ移行。実測でsshfs
+    1本・mount table 1件の集約を維持したまま、run・fetch・statusが従来と同一のremote絶対pathで動作することを確認した。
