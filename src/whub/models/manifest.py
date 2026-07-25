@@ -35,6 +35,7 @@ class Host(SchemaModel):
     port: int = 22
     identity_file: str
     mount_root: str
+    auto_mount: bool = True
 
     @field_validator("mount_root")
     @classmethod
@@ -90,7 +91,6 @@ class RemoteResource(BaseResource):
     # mount_rootの前置を各resourceへ重複させないため相対で持つ
     path: RelativePath
     workspace_path: RelativePath
-    mount: bool = True
     _resolved_host: Host = PrivateAttr()
     _resolved_workspace_path: Path = PrivateAttr()
 

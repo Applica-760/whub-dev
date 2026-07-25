@@ -83,7 +83,7 @@ def test_uses_aggregated_health_for_every_remote_resource() -> None:
 
     remote = next(item for item in statuses if item.project == "remote")
     nested = next(item for item in statuses if item.project == "nested")
-    # mount: falseのnestedも共有host mount越しに解決するため合成healthで判定する
+    # nestedも共有host mount越しに解決するため合成healthで判定する
     assert remote.mount == "slow"
     assert nested.mount == "slow"
     assert aggregated.call_count == 2

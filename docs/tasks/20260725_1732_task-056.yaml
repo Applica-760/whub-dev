@@ -33,7 +33,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: 全体回帰(pytest・対象Ruff check/format・frontend typecheck)を通し、検証済み成果をcommitする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -47,25 +47,41 @@ plan:
           / resource.pathの1行になったため関数ごと削除し呼び出し3箇所へインライン化、PurePosixPath importとservices/mountからhealthへのimportを1本削減。test_healthのfixtureとhelpersを相対pathへ追随させ、run・fetch・codegraphのテストへ合成後の絶対path
           assertを追加。pytest 433 passed
       deleted: false
+    - value:
+        検証: '全体回帰: pytest 433 passed、frontend typecheck (tsc -b) 成功、git diff --check成功。変更ファイルのruff
+          checkは全て成功。ruff formatはcd.py・session.pyが本変更で行長超過となったため整形し、push.py・test_codegraph.py・test_fetch.pyの指摘はHEAD時点(cda24a3b)から存在する本Task範囲外として据え置いた。commit
+          a87d108'
+      deleted: false
     deleted: false
   - title: mount制御のhost単位化
     acceptance: []
     steps:
     - description: Host.auto_mount(bool, default true)を追加し、RemoteResource.mountを廃止する。resource側にlink
         flagは持たせない+モデルテスト
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: services/mount.select_targetsの無引数選択をhost.auto_mount基準へ変更し、名指し・--allの既存挙動を維持する。commands/vscodeの除外判定をmount
         flag非依存(全remote resource一律除外)へ変更する+テスト
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 全体回帰(pytest・対象Ruff check/format・frontend typecheck)を通し、検証済み成果をcommitする
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        実装・検証: Host.auto_mount(bool, default true)を追加しRemoteResource.mountを廃止。resource側にlink
+          flagは持たせない。tests/helpersからmount:Falseを削除し、unknown field拒否テストの検体をauto_mountからkeepaliveへ差し替え、resource側mountを拒否するケースとauto_mountのhost単位defaultを検証するケース10を追加。pytest
+          src/whub/tests/models/test_manifest.py 10 passed
+      deleted: false
+    - value:
+        実装・検証: select_targetsの無引数選択をresource._resolved_host.auto_mount基準へ変更し、名指し・--allがauto_mountを無視する既存挙動を維持。commands/vscodeの除外をmount
+          flag非依存とし、auto_mount:false hostも名指しmountでsymlinkが張られるため全remote resourceを一律除外へ変更。whub
+          mount --allのhelp文言をauto_mount基準へ更新。test_mountのケース8・9をauto_mount契約へ書き換え(_manifest_without_auto_mountを追加)、test_vscodeの期待値へnestedを追加。pytest
+          434 passed
+      deleted: false
     deleted: false
   - title: ドキュメント・移行・実地検証
     acceptance: []

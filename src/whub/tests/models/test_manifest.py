@@ -10,6 +10,7 @@
 7. validation後、resourceの解決済み属性を設定する。
 8. `load_manifest()`はmanifest欠落・YAML不正・schema不正を`ManifestError`にする。
 9. hostの`mount_root`は絶対pathを要求し、`remote_path`はそこからの相対`path`で合成される。
+10. hostの`auto_mount`は既定でtrueで、無引数mountの対象可否をhost単位で表す。
 
 検証しないケース:
 1. Pydanticの全エラーメッセージ本文の完全一致。
@@ -112,6 +113,14 @@ class TestManifestSpec:
             with pytest.raises(ValidationError):
                 Manifest.model_validate(invalid)
 
+    def test_auto_mount_is_host_level_and_defaults_to_true(self) -> None:
+        # ケース10
+        data = manifest_data()
+        assert Manifest.model_validate(data).hosts["home"].auto_mount is True
+
+        data["hosts"]["home"]["auto_mount"] = False
+        assert Manifest.model_validate(data).hosts["home"].auto_mount is False
+
     def test_duplicate_project_names_are_rejected(self) -> None:
         # ケース4
         data = manifest_data()
@@ -146,7 +155,13 @@ class TestManifestSpec:
             Manifest.model_validate(legacy)
 
         data = manifest_data()
-        data["hosts"]["home"]["auto_mount"] = True
+        data["hosts"]["home"]["keepalive"] = 60
+        with pytest.raises(ValidationError):
+            Manifest.model_validate(data)
+
+        # mountの可否はhost.auto_mountへ移したため、resource側では受け付けない
+        data = manifest_data()
+        data["projects"][1]["resource"]["mount"] = False
         with pytest.raises(ValidationError):
             Manifest.model_validate(data)
 

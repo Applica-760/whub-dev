@@ -37,7 +37,7 @@ def _echo_results(results: list[MountResult]) -> None:
     "-a",
     "include_all",
     is_flag=True,
-    help="Include resources with mount=false.",
+    help="Include hosts with auto_mount=false.",
 )
 @click.pass_context
 def mount(ctx: click.Context, project: str | None, include_all: bool) -> None:

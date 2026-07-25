@@ -40,7 +40,6 @@ def manifest_data() -> dict:
                     "host": "home",
                     "path": "remote/nested",
                     "workspace_path": "projects/remote/nested",
-                    "mount": False,
                 },
             },
             {"name": "no-resource"},

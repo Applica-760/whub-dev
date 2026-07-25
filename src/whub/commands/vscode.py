@@ -17,9 +17,8 @@ def _excluded_paths(manifest: Manifest) -> list[str]:
     paths: list[str] = []
     for project in manifest.projects:
         resource = project.resource
-        if isinstance(resource, SymlinkResource):
-            paths.append(f"{resource.workspace_path}/**")
-        elif isinstance(resource, RemoteResource) and resource.mount:
+        # auto_mount: falseのhostも名指しmountでsymlinkが張られるため一律除外する
+        if isinstance(resource, SymlinkResource | RemoteResource):
             paths.append(f"{resource.workspace_path}/**")
     return sorted(paths)
 

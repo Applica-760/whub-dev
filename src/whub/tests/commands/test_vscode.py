@@ -13,10 +13,14 @@ from whub.tests.helpers import manifest
 
 
 class TestVscodeSpec:
-    def test_builds_exclusions_for_symlink_and_mounted_remote(self) -> None:
+    def test_builds_exclusions_for_symlink_and_every_remote(self) -> None:
         settings = _build_settings(manifest())
 
-        paths = ["projects/local/**", "projects/remote/**"]
+        paths = [
+            "projects/local/**",
+            "projects/remote/**",
+            "projects/remote/nested/**",
+        ]
         assert settings == {
             "files.watcherExclude": {path: True for path in paths},
             "search.exclude": {path: True for path in paths},
@@ -47,4 +51,5 @@ class TestVscodeSpec:
         assert settings["files.watcherExclude"] == {
             "projects/local/**": True,
             "projects/remote/**": True,
+            "projects/remote/nested/**": True,
         }

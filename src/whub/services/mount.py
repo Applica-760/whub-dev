@@ -61,7 +61,7 @@ def select_targets(
     auto_only: bool = False,
 ) -> list[tuple[Project, RemoteResource]]:
     if name is not None:
-        # 名指しは明示された意図なのでmountフラグを無視する
+        # 名指しは明示された意図なのでauto_mountを無視する
         project = manifest.resolve_project(name)
         if project is None:
             raise ServiceError(f"unknown project: {name}")
@@ -72,7 +72,7 @@ def select_targets(
         (project, project.resource)
         for project in manifest.projects
         if isinstance(project.resource, RemoteResource)
-        and (not auto_only or project.resource.mount)
+        and (not auto_only or project.resource._resolved_host.auto_mount)
     ]
 
 

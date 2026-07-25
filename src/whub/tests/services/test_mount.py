@@ -8,8 +8,8 @@
 5. 既mounted → skip
 6. stale → sshfsを起動せずSTALEを返す
 7. sshfs未インストール → ServiceError
-8. 名指し → mount=falseでもmount対象になる
-9. 無引数はmount=falseを除外し、include_allで含める
+8. 名指し → auto_mount=falseのhostでもmount対象になる
+9. 無引数はauto_mount=falseのhostを除外し、include_allで含める
 10. 名指しが未知projectならServiceError
 11. unmountはhost単位で一度だけ行い、workspace symlinkとmountpointを削除する
 12. unmountはmountが作ったlink以外（実体・別を指すsymlink）に触れない
@@ -48,7 +48,14 @@ from whub.services.mount import (
     select_targets,
     unmount_targets,
 )
-from whub.tests.helpers import manifest
+from whub.models import Manifest
+from whub.tests.helpers import manifest, manifest_data
+
+
+def _manifest_without_auto_mount() -> Manifest:
+    data = manifest_data()
+    data["hosts"]["home"]["auto_mount"] = False
+    return Manifest.model_validate(data)
 
 
 @pytest.fixture(autouse=True)
@@ -236,23 +243,24 @@ class TestMountSpec:
             with pytest.raises(ServiceError, match="sshfs not found"):
                 mount_targets(m, None)
 
-    def test_select_targets_by_name_ignores_mount_flag(self):
+    def test_select_targets_by_name_ignores_auto_mount(self):
         # ケース8
-        m = manifest()
+        m = _manifest_without_auto_mount()
         targets = select_targets(m, "nested")
 
         assert len(targets) == 1
         assert targets[0][0].name == "nested"
 
-    def test_select_targets_all_includes_mount_false(self):
+    def test_select_targets_all_includes_hosts_without_auto_mount(self):
         # ケース9
-        m = manifest()
+        m = _manifest_without_auto_mount()
         targets_auto = select_targets(m, None, auto_only=True)
         targets_all = select_targets(m, None, auto_only=False)
 
-        assert len(targets_all) > len(targets_auto)
-        assert "nested" in {target[0].name for target in targets_all}
-        assert "nested" not in {target[0].name for target in targets_auto}
+        assert targets_auto == []
+        assert {target[0].name for target in targets_all} == {"remote", "nested"}
+        # auto_mountが既定(true)のhostは無引数でも対象になる
+        assert len(select_targets(manifest(), None, auto_only=True)) == 2
 
     def test_select_targets_rejects_unknown_project(self):
         # ケース10
