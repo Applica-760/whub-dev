@@ -16,6 +16,8 @@ type TaskDependencyGraphProps = {
   onSelectTask?: (taskId: string) => void;
 };
 
+const GRAPH_PADDING = 24;
+
 export function buildTaskGraphElements(
   tasks: TaskGraphItem[],
 ): ElementDefinition[] {
@@ -203,7 +205,7 @@ export function TaskDependencyGraph({
           name: "fcose",
           nodeDimensionsIncludeLabels: true,
           nodeRepulsion: 6500,
-          padding: 24,
+          padding: GRAPH_PADDING,
         } as LayoutOptions,
         wheelSensitivity: 0.2,
       });
@@ -212,7 +214,22 @@ export function TaskDependencyGraph({
           onSelectTask(event.target.id());
         });
       }
-      destroy = () => graph.destroy();
+
+      // cytoscapeはwindow resizeしか拾わないため、列の折りたたみによる幅変化を自前で追従する
+      const observer = new ResizeObserver(([entry]) => {
+        const { width, height: observedHeight } = entry.contentRect;
+        if (width === 0 || observedHeight === 0) {
+          return;
+        }
+        graph.resize();
+        graph.fit(undefined, GRAPH_PADDING);
+      });
+      observer.observe(containerRef.current);
+
+      destroy = () => {
+        observer.disconnect();
+        graph.destroy();
+      };
     }
 
     void render();

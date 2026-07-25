@@ -61,14 +61,18 @@ plan:
     acceptance: []
     steps:
     - description: TaskDependencyGraph.tsxにResizeObserverを追加し、container幅変化時にcy.resize()とfitを実行して折りたたみ後もグラフが正しく収まるようにする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: vitestで折りたたみトグルの状態遷移とlocalStorage永続化を検証するテストを追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: ResizeObserverでcy.resize()+fit(GRAPH_PADDING)を実行。0x0時はfitのズーム計算が壊れるためskipガードを入れた。テストはOverviewSideとuseOverviewCollapseのharnessでdata-collapse-left/right遷移・localStorage
+          payload・mount維持・壊れた保存値のfallbackを検証。npm run test 16 passed
+      deleted: false
     deleted: false
   - title: 検証
     acceptance: []
