@@ -76,6 +76,8 @@ class TestCdSpec:
 
         assert error.value.code == 23
         run.assert_called_once()
+        # mount_rootと合成した絶対pathへcdする
+        assert "cd /srv/remote" in " ".join(run.call_args[0][0])
         assert output.value == _TERMINAL_RECOVERY
         assert output.flushed
 

@@ -99,11 +99,11 @@ plan:
       skip_reason: null
       deleted: false
     - description: docs/operations/releace.mdに従いrelease build・verify・applyを実施する。releaseフローはmanifestを読まないためmanifest移行前に完了させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: ~/.whub/manifest.yamlを新スキーマへ移行する。remote 4件のpathをmount_root相対へ書き換え、esn-lab-runのmount:falseをsupercomputerのauto_mount:falseへ移す。extra=forbidのためapply直後の手編集で切り替える
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: '実地検証: whub lsが13 projectを解決し、whub mountでsshfs 1本・mount table 1件の集約が維持され、workspace
@@ -123,6 +123,16 @@ plan:
         検証: 旧release 0.1.0+g4f7158eaのwhub unmountでhome-server mountを解除(supercomputerはmount無しでskip)。解除後、mount
           tableのfuse-tエントリ0件、sshfsプロセス0件、~/.whub/runtime/mounts配下0件、remote 3件(esn-lab・IL・private)のworkspace
           symlinkが撤去され、local symlinkは維持されていることを確認。TASK-055で問題となった旧mountpointディレクトリの残骸は無し
+      deleted: false
+    - value:
+        検証: release 0.1.0+gf6c537eaをbuild・verify(sha 9c767989...)・apply。currentが0.1.0+gf6c537eaへ切替わり、~/.local/bin/whubがcommit
+          f6c537eaを返すことを確認。build前提のclean worktreeを満たすためTask YAML 2件を先にcommit(f6c537e)
+      deleted: false
+    - value:
+        実装・検証: ~/.whub/manifest.yamlを新スキーマへ移行。remote 4件のpathをmount_root相対へ(esn-lab,
+          ESN-LAB/esn-lab, LAplust/IL, private)、esn-lab-runのmount:falseをsupercomputerのauto_mount:falseへ移設。移行前は新releaseがpath
+          must be relative 4件とmount extra_forbidden 1件で拒否することを確認し、移行後はwhub lsが13 projectを解決。なお当該shellのVIRTUAL_ENVが旧release
+          venvを指すためPATH上のwhub/wflowは旧実装のままで、manifest移行後は~/.local/bin配下を明示しないとextra_forbiddenで失敗する
       deleted: false
     deleted: false
 approvals:
