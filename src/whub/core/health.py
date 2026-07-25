@@ -165,17 +165,22 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
     )
 
 
+def aggregated_link_source(resource: RemoteResource, host_mountpoint: Path) -> Path:
+    """Return the path inside the shared host mount a workspace path links to."""
+    mount_root = resource._resolved_host.mount_root
+    if mount_root is None:
+        raise ValueError("aggregated mount requires host.mount_root")
+    relative_path = PurePosixPath(normpath(resource.path)).relative_to(mount_root)
+    return host_mountpoint / Path(relative_path)
+
+
 def inspect_aggregated_mount(
     resource: RemoteResource,
     host_mountpoint: Path,
     host_volname: str,
 ) -> ResourceHealth:
     """Combine a workspace symlink check with its shared host mount health."""
-    mount_root = resource._resolved_host.mount_root
-    if mount_root is None:
-        raise ValueError("aggregated mount requires host.mount_root")
-    relative_path = PurePosixPath(normpath(resource.path)).relative_to(mount_root)
-    source = host_mountpoint / Path(relative_path)
+    source = aggregated_link_source(resource, host_mountpoint)
     target = resource._resolved_workspace_path
 
     if not target.is_symlink():

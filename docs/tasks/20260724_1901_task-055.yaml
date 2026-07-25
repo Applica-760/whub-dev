@@ -140,15 +140,20 @@ plan:
       skip_reason: null
       deleted: false
     - description: 'status追随: _fetch_remote_infoのmount列を合成healthへ切替え、mount_logへhost単位stage(project欄はhost名で記録)を追加+テスト'
-      state: pending
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: mount orchestrationをservices/mount.pyへ移し、commands/mount.pyをClick入出力・結果表示に限定する。target
+        grouping・sshfs・symlink・cleanup・mount logをServiceへ集約しテストする
+      state: done
       skip_reason: null
       deleted: false
     - description: vscode除外の影響確認(workspace_pathは不変のため変更不要かを確認し結果をlogへ記録)とREADMEのmount説明更新
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 全体回帰(pytest・Ruff・frontend typecheck)を通し、検証済み成果をcommitする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -182,6 +187,28 @@ plan:
           volname)のみを公開し、host固有の薄いwrapperを削除。pytest 44 passed、Ruff check/format check、git
           diff --check成功。'
       deleted: false
+    - value:
+        review対応: 'P1: services/status.pyでmount_rootかつmount=trueのremote resourceをinspect_aggregated_mountへ切替え。正常なshared
+          host mountをunmountedと誤表示しない。mount=falseとlegacy hostは個別inspect_mountを維持。pytest
+          src/whub/tests/services/test_status.py (7 passed)、Ruff check/format check、git
+          diff --check成功。'
+      deleted: false
+    - value:
+        実装・検証: mount orchestrationをservices/mount.pyへ集約。select_targets・target grouping・sshfs・symlink修復・cleanup・mount
+          logをServiceへ移し、MountResult(name/status, ok property)を返す。commands/mount.pyはClick定義・render_table・exit
+          code判定のみ(367行→57行)。sshfs未検出はServiceError→ClickException(session.pyの_invoke規約に合わせる)。core/health.pyにaggregated_link_sourceを切り出し、_shared_sourceとinspect_aggregated_mountのmount_root相対path算出の二重実装を解消。テストはオーケストレーション16ケースをtests/services/test_mount.pyへ移設し、commands側はCLI境界5ケースに限定。pytest
+          430 passed、対象Ruff check/format check、git diff --check成功。
+      deleted: false
+    - value:
+        確認・実装: vscode除外は変更不要と確認。_excluded_pathsはmanifestのworkspace_pathを使い、host集約でworkspace_pathは不変(mountpoint→symlinkに変わるだけ)のため<workspace_path>/**の除外はそのまま有効。実mountpointは~/.whub/runtime/mounts/host-<id>で、workspace_root=の外にあるためVS
+          Codeの索引対象外。READMEはhost.mount_rootによるhost単位集約の方針・manifest例・unmountのproject引数廃止(whub
+          unmount [--force])を反映。
+      deleted: false
+    - value:
+        検証: '全体回帰: pytest 430 passed、frontend typecheck (tsc -b) 成功、git diff --check成功。CLI疎通としてwhub
+          mount --help・whub unmount --helpを確認し、unmountのPROJECT引数廃止を実機で確認。ruff check/formatはPhase
+          3変更ファイル(services/mount.py・commands/mount.py・core/health.py・両test_mount.py)で全て成功。リポジトリ全体のruffは未変更ファイル(wflow/commands/task.py、services/release.py等12件)に既存指摘が残るが、いずれもHEAD時点から存在し本Taskの変更範囲外。'
+      deleted: false
     deleted: false
   - title: 実地検証とrelease反映
     acceptance: []
@@ -210,9 +237,11 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: 共有host mountではproject別unmountを提供せず、引数なしで全remote host mountを解除する方針を反映するため
 - reason: remote resourceの探索範囲とコマンド実行場所を定め、sshfs越しの不要なメタデータ往復と出力を抑える運用規則を追加するため
+- reason: ユーザー承認済みのCommands層からService層へのmount orchestration分離をPhase 3成果として明示するため
 cancellation: null
 result: null
