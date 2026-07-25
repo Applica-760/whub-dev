@@ -1,4 +1,4 @@
-"""whub fetch — fetch a remote file into the workspace downloads directory."""
+"""whub get — get a remote file into the workspace downloads directory."""
 
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ from whub.models import RemoteResource
 @click.command()
 @click.argument("path", type=click.Path())
 @click.pass_context
-def fetch(ctx: click.Context, path: str) -> None:
-    """Fetch a remote file by workspace-relative PATH or <project>:<path> ref."""
+def get(ctx: click.Context, path: str) -> None:
+    """Get a remote file by workspace-relative PATH or <project>:<path> ref."""
     m = get_manifest(ctx)
     try:
         project, resource, rel = resolve_resource_path(m, path)
@@ -57,4 +57,4 @@ def fetch(ctx: click.Context, path: str) -> None:
         hashlib.sha256(dest.read_bytes()).hexdigest(),
         datetime.now(timezone.utc).isoformat(),
     )
-    click.echo(f"  fetch {project.name}: {dest}")
+    click.echo(f"  get {project.name}: {dest}")

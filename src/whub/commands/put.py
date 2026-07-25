@@ -1,4 +1,4 @@
-"""whub push — push a fetched file back to the remote resource."""
+"""whub put — put a fetched file back to the remote resource."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from whub.models import RemoteResource
 @click.command()
 @click.argument("local_name")
 @click.pass_context
-def push(ctx: click.Context, local_name: str) -> None:
-    """Push a fetched LOCAL_NAME back to the remote resource."""
+def put(ctx: click.Context, local_name: str) -> None:
+    """Put a fetched LOCAL_NAME back to the remote resource."""
     downloads = current_context().downloads_dir
     local_path = downloads / local_name
     if not local_path.is_file():
@@ -28,7 +28,7 @@ def push(ctx: click.Context, local_name: str) -> None:
     record = get_download_record(downloads, local_name)
     if record is None:
         raise click.ClickException(
-            f"no fetch metadata for {local_name}; only fetched files can be pushed"
+            f"no fetch metadata for {local_name}; only files from whub get can be put"
         )
 
     m = get_manifest(ctx)
@@ -43,7 +43,7 @@ def push(ctx: click.Context, local_name: str) -> None:
     if current_hash != record.sha256:
         raise click.ClickException(
             "remote file has changed or is unreadable since last fetch; "
-            "fetch again to get the latest version"
+            "run whub get again to take the latest version"
         )
 
     content = local_path.read_text()
@@ -55,4 +55,4 @@ def push(ctx: click.Context, local_name: str) -> None:
 
     new_hash = hashlib.sha256(local_path.read_bytes()).hexdigest()
     update_download_hash(downloads, local_name, new_hash, datetime.now(timezone.utc).isoformat())
-    click.echo(f"  push {project.name}: {local_name} -> {rel}")
+    click.echo(f"  put {project.name}: {local_name} -> {rel}")

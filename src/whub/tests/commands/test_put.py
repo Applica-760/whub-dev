@@ -1,7 +1,7 @@
-"""`whub push`コマンドのCLI振る舞いテスト。
+"""`whub put`コマンドのCLI振る舞いテスト。
 
 検証するケース:
-1. fetchメタのあるファイルをpushし、remoteへアトミック書き込み+メタ更新
+1. fetchメタのあるファイルをputし、remoteへアトミック書き込み+メタ更新
 2. downloads内にファイルがない場合はエラー
 3. fetchメタがないファイルはエラー
 4. remote hashがbaseline hashと一致しない場合はlost updateエラー
@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
-from whub.commands.push import push
+from whub.commands.put import put
 from whub.core.download_meta import load_download_meta, record_download
 from whub.tests.helpers import manifest
 
@@ -36,7 +36,7 @@ def _setup_downloads(tmp_path: Path, content: str = "edited content") -> Path:
     return downloads
 
 
-def _run_push(
+def _run_put(
     tmp_path: Path,
     local_name: str = "file.csv",
     remote_hash: str | None = None,
@@ -55,25 +55,25 @@ def _run_push(
 
     context = MagicMock(downloads_dir=downloads)
     with (
-        patch("whub.commands.push.get_manifest", return_value=m),
-        patch("whub.commands.push.current_context", return_value=context),
-        patch("whub.commands.push.remote_file_hash", return_value=remote_hash),
+        patch("whub.commands.put.get_manifest", return_value=m),
+        patch("whub.commands.put.current_context", return_value=context),
+        patch("whub.commands.put.remote_file_hash", return_value=remote_hash),
         patch(
-            "whub.commands.push.remote_write_file",
+            "whub.commands.put.remote_write_file",
             return_value=CompletedProcess([], write_returncode, "", write_stderr),
         ) as mock_write,
     ):
-        result = CliRunner().invoke(push, [local_name], catch_exceptions=False)
+        result = CliRunner().invoke(put, [local_name], catch_exceptions=False)
     return result, mock_write, downloads
 
 
-class TestPushSpec:
-    def test_pushes_fetched_file(self, tmp_path: Path) -> None:
+class TestPutSpec:
+    def test_puts_fetched_file(self, tmp_path: Path) -> None:
         # ケース1
-        result, mock_write, downloads = _run_push(tmp_path)
+        result, mock_write, downloads = _run_put(tmp_path)
 
         assert result.exit_code == 0
-        assert "push" in result.output
+        assert "put" in result.output
         mock_write.assert_called_once()
         call_args = mock_write.call_args
         assert "data/file.csv" in call_args[0][1]
@@ -86,8 +86,8 @@ class TestPushSpec:
         downloads = tmp_path / "downloads"
         downloads.mkdir()
         context = MagicMock(downloads_dir=downloads)
-        with patch("whub.commands.push.current_context", return_value=context):
-            result = CliRunner().invoke(push, ["nonexistent.csv"])
+        with patch("whub.commands.put.current_context", return_value=context):
+            result = CliRunner().invoke(put, ["nonexistent.csv"])
 
         assert result.exit_code != 0
         assert "file not found" in result.output
@@ -98,15 +98,15 @@ class TestPushSpec:
         downloads.mkdir()
         (downloads / "orphan.csv").write_text("data")
         context = MagicMock(downloads_dir=downloads)
-        with patch("whub.commands.push.current_context", return_value=context):
-            result = CliRunner().invoke(push, ["orphan.csv"])
+        with patch("whub.commands.put.current_context", return_value=context):
+            result = CliRunner().invoke(put, ["orphan.csv"])
 
         assert result.exit_code != 0
         assert "no fetch metadata" in result.output
 
     def test_lost_update_detection(self, tmp_path: Path) -> None:
         # ケース4
-        result, _mock_write, _downloads = _run_push(
+        result, _mock_write, _downloads = _run_put(
             tmp_path, remote_hash="different_hash"
         )
 
@@ -119,18 +119,18 @@ class TestPushSpec:
         downloads = _setup_downloads(tmp_path)
         context = MagicMock(downloads_dir=downloads)
         with (
-            patch("whub.commands.push.get_manifest", return_value=m),
-            patch("whub.commands.push.current_context", return_value=context),
-            patch("whub.commands.push.remote_file_hash", return_value=None),
+            patch("whub.commands.put.get_manifest", return_value=m),
+            patch("whub.commands.put.current_context", return_value=context),
+            patch("whub.commands.put.remote_file_hash", return_value=None),
         ):
-            result = CliRunner().invoke(push, ["file.csv"], catch_exceptions=False)
+            result = CliRunner().invoke(put, ["file.csv"], catch_exceptions=False)
 
         assert result.exit_code != 0
         assert "changed or is unreadable" in result.output
 
     def test_remote_write_failure_errors(self, tmp_path: Path) -> None:
         # ケース6
-        result, _mock_write, _downloads = _run_push(
+        result, _mock_write, _downloads = _run_put(
             tmp_path, write_returncode=1, write_stderr="permission denied"
         )
 

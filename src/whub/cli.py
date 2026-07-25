@@ -9,9 +9,9 @@ from whub.commands.app import app
 from whub.commands.backlog import backlog
 from whub.commands.cd import cd, shell_init
 from whub.commands.codegraph import codegraph
-from whub.commands.fetch import fetch
+from whub.commands.get import get
 from whub.commands.init import init
-from whub.commands.push import push
+from whub.commands.put import put
 from whub.commands.knowledge import knowledge
 from whub.commands.link import link
 from whub.commands.ls import ls
@@ -72,8 +72,8 @@ main.add_command(release)
 main.add_command(cd)
 main.add_command(run)
 main.add_command(session)
-main.add_command(fetch)
-main.add_command(push)
+main.add_command(get)
+main.add_command(put)
 main.add_command(init)
 main.add_command(knowledge)
 main.add_command(status)

@@ -1,4 +1,4 @@
-"""`whub fetch`コマンドのCLI振る舞いテスト。
+"""`whub get`コマンドのCLI振る舞いテスト。
 
 検証するケース:
 1. workspace相対パスからscp実行、downloads/へ保存
@@ -20,12 +20,12 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
-from whub.commands.fetch import fetch
+from whub.commands.get import get
 from whub.core.download_meta import load_download_meta
 from whub.tests.helpers import manifest
 
 
-def _run_fetch(tmp_path, path: str, returncode: int = 0):
+def _run_get(tmp_path, path: str, returncode: int = 0):
     m = manifest()
     downloads = tmp_path / "downloads"
 
@@ -38,23 +38,23 @@ def _run_fetch(tmp_path, path: str, returncode: int = 0):
     mock_run = MagicMock(side_effect=side_effect)
     context = MagicMock(downloads_dir=downloads)
     with (
-        patch("whub.commands.fetch.get_manifest", return_value=m),
-        patch("whub.commands.fetch.current_context", return_value=context),
-        patch("whub.commands.fetch.subprocess.run", mock_run),
+        patch("whub.commands.get.get_manifest", return_value=m),
+        patch("whub.commands.get.current_context", return_value=context),
+        patch("whub.commands.get.subprocess.run", mock_run),
     ):
-        result = CliRunner().invoke(fetch, [path], catch_exceptions=False)
+        result = CliRunner().invoke(get, [path], catch_exceptions=False)
     return result, mock_run, downloads
 
 
-class TestFetchSpec:
-    def test_fetches_remote_file(self, tmp_path):
+class TestGetSpec:
+    def test_gets_remote_file(self, tmp_path):
         # ケース1
-        result, mock_run, _downloads = _run_fetch(
+        result, mock_run, _downloads = _run_get(
             tmp_path, "projects/remote/data/file.csv"
         )
 
         assert result.exit_code == 0
-        assert "fetch" in result.output
+        assert "get" in result.output
         cmd = mock_run.call_args[0][0]
         assert cmd[0] == "scp"
         # mount_rootと合成した絶対pathへresource内相対パスを繋ぐ
@@ -63,8 +63,8 @@ class TestFetchSpec:
     def test_local_resource_errors(self):
         # ケース2
         m = manifest()
-        with patch("whub.commands.fetch.get_manifest", return_value=m):
-            result = CliRunner().invoke(fetch, ["projects/local/file.txt"])
+        with patch("whub.commands.get.get_manifest", return_value=m):
+            result = CliRunner().invoke(get, ["projects/local/file.txt"])
 
         assert result.exit_code == 1
         assert "not a remote resource" in result.output
@@ -72,23 +72,23 @@ class TestFetchSpec:
     def test_resource_root_path_errors(self):
         # ケース3
         m = manifest()
-        with patch("whub.commands.fetch.get_manifest", return_value=m):
-            result = CliRunner().invoke(fetch, ["projects/remote"])
+        with patch("whub.commands.get.get_manifest", return_value=m):
+            result = CliRunner().invoke(get, ["projects/remote"])
 
         assert result.exit_code != 0
         assert "must point to a file" in result.output
 
     def test_scp_exit_code_propagation(self, tmp_path):
         # ケース4
-        result, _mock_run, _downloads = _run_fetch(
+        result, _mock_run, _downloads = _run_get(
             tmp_path, "projects/remote/data/file.csv", returncode=23
         )
 
         assert result.exit_code == 23
 
-    def test_fetches_remote_file_by_ref(self, tmp_path):
+    def test_gets_remote_file_by_ref(self, tmp_path):
         # ケース5
-        result, mock_run, _downloads = _run_fetch(tmp_path, "remote:data/file.csv")
+        result, mock_run, _downloads = _run_get(tmp_path, "remote:data/file.csv")
 
         assert result.exit_code == 0
         cmd = mock_run.call_args[0][0]
@@ -96,7 +96,7 @@ class TestFetchSpec:
 
     def test_records_download_metadata_on_success(self, tmp_path):
         # ケース6
-        result, _mock_run, downloads = _run_fetch(
+        result, _mock_run, downloads = _run_get(
             tmp_path, "projects/remote/data/file.csv"
         )
 
