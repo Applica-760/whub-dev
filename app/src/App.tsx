@@ -5,7 +5,9 @@ import { NavLink, Route, Routes, useLocation } from "react-router";
 import { ColorSchemeToggle } from "./components/ColorSchemeToggle";
 import { InboxPage } from "./features/inbox/InboxPage";
 import { KnowledgePage } from "./features/knowledge/KnowledgePage";
+import { OverviewCollapseToggles } from "./features/overview/OverviewCollapseToggles";
 import { OverviewPage } from "./features/overview/OverviewPage";
+import { useOverviewCollapse } from "./features/overview/useOverviewCollapse";
 import { ResourceStatusPage } from "./features/status/ResourceStatusPage";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { TasksPage } from "./features/tasks/TasksPage";
@@ -35,8 +37,10 @@ type NavigationItem = {
   isActive?: (pathname: string) => boolean;
 };
 
+const OVERVIEW_PATH = "/";
+
 const navigation: NavigationItem[] = [
-  { label: "Overview", to: "/" },
+  { label: "Overview", to: OVERVIEW_PATH },
   { label: "Task", to: TASKS_PATH, isActive: isTasksRoute },
   { label: "Backlog", to: "/backlog" },
   { label: "Knowledge", to: "/knowledge" },
@@ -48,6 +52,7 @@ const navigation: NavigationItem[] = [
 
 export function App() {
   const location = useLocation();
+  const { collapsed, toggle } = useOverviewCollapse();
 
   return (
     <AppShell header={{ height: 47 }} padding={0}>
@@ -76,7 +81,15 @@ export function App() {
               );
             })}
           </div>
-          <ColorSchemeToggle />
+          <div className="whub-header-actions">
+            {location.pathname === OVERVIEW_PATH && (
+              <OverviewCollapseToggles
+                collapsed={collapsed}
+                onToggle={toggle}
+              />
+            )}
+            <ColorSchemeToggle />
+          </div>
         </Group>
       </AppShell.Header>
 
@@ -89,7 +102,10 @@ export function App() {
           }
         >
           <Routes>
-            <Route element={<OverviewPage />} path="/" />
+            <Route
+              element={<OverviewPage collapsed={collapsed} />}
+              path={OVERVIEW_PATH}
+            />
             <Route element={<BacklogPage />} path="/backlog" />
             <Route element={<KnowledgePage />} path="/knowledge" />
             <Route element={<VaultPage />} path="/vault" />

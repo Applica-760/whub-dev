@@ -1,24 +1,17 @@
 .overview-frame {
-  --overview-rail: 2rem;
-  --overview-toggle-row: 1.625rem;
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 1rem;
 }
 
-.overview-frame[data-collapse-left="true"] {
-  grid-template-columns: var(--overview-rail) minmax(0, 1fr) minmax(0, 1fr);
-}
-
+.overview-frame[data-collapse-left="true"],
 .overview-frame[data-collapse-right="true"] {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--overview-rail);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .overview-frame[data-collapse-left="true"][data-collapse-right="true"] {
-  grid-template-columns: var(--overview-rail) minmax(0, 1fr) var(
-      --overview-rail
-    );
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .overview-wide {
@@ -26,9 +19,7 @@
   min-width: 0;
 }
 
-.overview-column,
-.overview-side,
-.overview-side-body {
+.overview-column {
   align-self: start;
   display: flex;
   flex-direction: column;
@@ -36,25 +27,6 @@
   min-width: 0;
 }
 
-/* 中央列をサイド列のトグル行と同じ高さから開始させ、3列の頭を揃える */
-.overview-column {
-  padding-top: calc(var(--overview-toggle-row) + 1rem);
-}
-
-.overview-side-toggle-row {
-  align-items: center;
-  display: flex;
-  height: var(--overview-toggle-row);
-}
-
-.overview-side[data-side="left"] .overview-side-toggle-row {
-  justify-content: flex-end;
-}
-
-.overview-side[data-collapsed="true"] .overview-side-toggle-row {
-  justify-content: center;
-}
-
-.overview-side[data-collapsed="true"] .overview-side-body {
+.overview-column[data-collapsed="true"] {
   display: none;
 }

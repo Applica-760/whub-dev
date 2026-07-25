@@ -79,23 +79,54 @@ plan:
     steps:
     - description: npm run typecheck / npm run test / npm run build / uv run pytest
         を実行して全て成功させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: whub app devで実画面を開き、左右それぞれの折りたたみ・両側折りたたみ・reload後の状態復元・折りたたみ後のTask
         graph表示を確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Split View相当の狭幅で改行が実際に改善しているかを確認する
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        field_test: ユーザーがdev server(127.0.0.1:8712)で実画面を確認し折りたたみ・展開の動作自体はOKと判定。あわせてトグルの位置をrail内からheaderのライト/ダークトグルと同じ位置(VSCode風)へ寄せる指示を受けた
+      deleted: false
+    deleted: false
+  - title: トグルをheaderへ移設
+    acceptance: []
+    steps:
+    - description: OverviewCollapseToggles.tsxを追加し、折りたたみトグル2つをheaderのColorSchemeToggle隣へ配置する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: App.tsxでuseOverviewCollapseを保持し、Overviewルート時のみトグルを表示してcollapsedをOverviewPageへ渡す
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: overview.cssのrail・トグル行・中央列padding-topを撤去し、折りたたみ側はdisplay:noneで列自体を消して2列・1列へ詰める
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: テストをheader配置のトグル前提へ更新し、typecheck・test・buildとpytestを通す
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: トグル2つをheaderの.whub-header-actions内へ移しColorSchemeToggleと同位置に並べた。stateはApp.tsxが保持しOverviewルート時のみトグルを表示。ColorSchemeToggleのmargin-left:autoはwrapperへ移設。折りたたみ側はdisplay:noneで列自体を消し3列->2列->1列へ詰まる。npm
+          run typecheck成功、npm run test 16 passed、npm run build成功、uv run pytest 434
+          passed
+      deleted: false
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: トグルの配置をrailからheaderへ移す指示を受けたため計画へPhaseを追加する
 cancellation: null
 result: null

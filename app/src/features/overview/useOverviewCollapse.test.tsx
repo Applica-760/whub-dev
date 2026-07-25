@@ -2,6 +2,7 @@ import { MantineProvider } from "@mantine/core";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { OverviewCollapseToggles } from "./OverviewCollapseToggles";
 import { OverviewFrame, OverviewSide } from "./OverviewFrame";
 import {
   OVERVIEW_COLLAPSE_KEY,
@@ -25,26 +26,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// headerのトグルとOverview本体が同じstateを共有する実配置を再現する
 function Harness() {
   const { collapsed, toggle } = useOverviewCollapse();
 
   return (
-    <OverviewFrame collapsed={collapsed}>
-      <OverviewSide
-        collapsed={collapsed.left}
-        onToggle={() => toggle("left")}
-        side="left"
-      >
-        <div>左の中身</div>
-      </OverviewSide>
-      <OverviewSide
-        collapsed={collapsed.right}
-        onToggle={() => toggle("right")}
-        side="right"
-      >
-        <div>右の中身</div>
-      </OverviewSide>
-    </OverviewFrame>
+    <>
+      <OverviewCollapseToggles collapsed={collapsed} onToggle={toggle} />
+      <OverviewFrame collapsed={collapsed}>
+        <OverviewSide collapsed={collapsed.left} side="left">
+          <div>左の中身</div>
+        </OverviewSide>
+        <OverviewSide collapsed={collapsed.right} side="right">
+          <div>右の中身</div>
+        </OverviewSide>
+      </OverviewFrame>
+    </>
   );
 }
 
@@ -64,6 +61,14 @@ function frame() {
   return element;
 }
 
+function side(name: string) {
+  const element = document.querySelector(`[data-side="${name}"]`);
+  if (!element) {
+    throw new Error(`${name}サイドが描画されていない`);
+  }
+  return element;
+}
+
 describe("useOverviewCollapse", () => {
   it("片側だけ折りたたみ、状態をlocalStorageへ永続化する", () => {
     renderHarness();
@@ -75,6 +80,8 @@ describe("useOverviewCollapse", () => {
 
     expect(frame().getAttribute("data-collapse-left")).toBe("true");
     expect(frame().getAttribute("data-collapse-right")).toBe("false");
+    expect(side("left").getAttribute("data-collapsed")).toBe("true");
+    expect(side("right").getAttribute("data-collapsed")).toBe("false");
     expect(localStorage.getItem(OVERVIEW_COLLAPSE_KEY)).toBe(
       '{"left":true,"right":false}',
     );

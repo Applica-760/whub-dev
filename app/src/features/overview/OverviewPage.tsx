@@ -14,23 +14,22 @@ import {
   OverviewSide,
   OverviewWide,
 } from "./OverviewFrame";
-import { useOverviewCollapse } from "./useOverviewCollapse";
+import type { OverviewCollapseState } from "./useOverviewCollapse";
 
-export function OverviewPage() {
+type OverviewPageProps = {
+  collapsed: OverviewCollapseState;
+};
+
+export function OverviewPage({ collapsed }: OverviewPageProps) {
   const todoController = useTodoWidgets();
   const projectSelection = useProjectSelection();
-  const { collapsed, toggle } = useOverviewCollapse();
 
   return (
     <OverviewFrame collapsed={collapsed}>
       <OverviewWide>
         <ProjectTabsWidget {...projectSelection} />
       </OverviewWide>
-      <OverviewSide
-        collapsed={collapsed.left}
-        onToggle={() => toggle("left")}
-        side="left"
-      >
+      <OverviewSide collapsed={collapsed.left} side="left">
         <TodoFormWidget controller={todoController} />
         <InboxWidget />
         <ResourceStatusWidget />
@@ -47,11 +46,7 @@ export function OverviewPage() {
           showAllLink
         />
       </OverviewColumn>
-      <OverviewSide
-        collapsed={collapsed.right}
-        onToggle={() => toggle("right")}
-        side="right"
-      >
+      <OverviewSide collapsed={collapsed.right} side="right">
         <BacklogWidget project={projectSelection.selectedProject} />
       </OverviewSide>
     </OverviewFrame>

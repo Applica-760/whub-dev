@@ -14,7 +14,6 @@ export function ColorSchemeToggle() {
   return (
     <ActionIcon
       aria-label={label}
-      className="whub-color-scheme-toggle"
       onClick={() => setColorScheme(nextColorScheme)}
       title={label}
       variant="subtle"

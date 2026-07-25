@@ -37,9 +37,12 @@ textarea {
   gap: 2px;
 }
 
-.whub-color-scheme-toggle {
+.whub-header-actions {
+  align-items: center;
   align-self: center;
+  display: flex;
   flex-shrink: 0;
+  gap: 2px;
   margin-left: auto;
 }
 
