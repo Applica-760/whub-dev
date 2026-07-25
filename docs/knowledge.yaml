@@ -123,9 +123,6 @@ definitions:
     name: vault
     definition: 固有記述・知識・派生文書を集約するprivateな貯蔵庫repository。Whubのoperation管理fileはcontextの.whubが所有し、移行期間中だけ旧Stable向け複製を保持する
     ref: docs/ADR/0008-tool-data-plane-separation.md
-  whub_fetch:
-    name: whub fetch
-    definition: remoteのfileを現在のWhub contextにある.whub/downloadsへ取得するcommand
   whub_link:
     name: whub link
     definition: symlink resourceをworkspace rootへ接続するコマンド
@@ -133,6 +130,12 @@ definitions:
     name: whub codegraph
     definition: manifestでcodegraphが有効なProject resourceのCodeGraph indexをlocalまたはremoteで初期化するコマンド
     ref: src/whub/commands/codegraph.py
+  whub_get:
+    name: whub get
+    definition: remoteのfileを現在のWhub contextにある.whub/downloadsへ取得するcommand
+  whub_put:
+    name: whub put
+    definition: whub getで取得したdownloads配下のfileを取得元のremote fileへ書き戻すcommand
 relations:
 - subject: def:project
   predicate: has_resource
@@ -176,8 +179,6 @@ policies:
     statement: remote resourceの編集・コード確認・project横断のコンテキスト参照はmountで行う
   remote_execution_by_workload:
     statement: remote resourceの走査系・長時間処理はremote側で実行し、ワンショットはrun、作業セッションはcdのtmuxを使う
-  fetch_large_remote_files:
-    statement: remote resourceの大容量ファイルをMacBookで確認する場合はfetchで逐次取得する
   separate_remote_reference_and_execution:
     statement: remote resourceでは参照をmount、実行をrunまたはcdに分離し、SSHFSのレイテンシ弱点と双方向同期の競合を避ける
   unstructured_work_in_backlog:
@@ -220,6 +221,8 @@ policies:
   session_observation_is_not_cancellation:
     statement: tmux attach・detachとlogs --followは観測操作としてworkload lifecycleから分離し、観測切断を停止操作に使わない。停止は対象processへ明示し、完了判定はdescriptorへ永続化されたpaneの終了code・signalで行う。
     ref: src/whub/assets/session/launcher.py
+  get_large_remote_files:
+    statement: remote resourceの大容量ファイルをMacBookで確認する場合はgetで逐次取得する
 constraints:
   common_cli_delegates_resource_dispatch:
     statement: local・remote共通のwhub操作は同じCLI interfaceで提供し、command callbackはresource種別の分岐をtargetまたはserviceへ委譲する
@@ -326,8 +329,6 @@ constraints:
     statement: whub knowledgeはProject未指定時にwhub-devを対象とし、他Projectは--projectで単数指定する
   task_yaml_location:
     statement: Task YAMLの標準配置は各Projectのrepository root相対docs/tasksとし、wflow taskはProject未指定時にwhub-devを対象、--projectで対象Project、各一覧commandのTASK_DIR引数で標準配置を上書きする
-  fetch_destination:
-    statement: whub fetchはworkspace root相対パスからresourceを解決し、現在のWhub contextのdownloads直下へ単一fileを同名上書きで保存する
   workspace_root_is_not_project:
     statement: workspace rootはmanifest Projectでもresourceでもなく、固定user contextが指定するProject
       resourceの投影先とする
@@ -350,4 +351,6 @@ constraints:
     statement: mountはhost単位に集約する。host.mount_rootは必須で、hostごとに1本のsshfsを~/.whub/runtime/mounts/host-<id>へ張り、各resourceのworkspace_pathはそのmount内へのsymlinkとする。resource単位の個別mountは廃止した。resourceのpathはmount_rootからの相対で表し、絶対pathの前置を各resourceへ重複させず、mount_rootの変更を単一の変更点にする
   mount_selection_rules:
     statement: whub mountの無引数実行はhost.auto_mountがtrueのhostだけを対象にし、名指し・全件指定ではauto_mountを無視する。sshfsの単位がhostである以上、mountの可否もhost単位で決めresource側にmount設定は持たせない
+  get_destination:
+    statement: whub getはworkspace root相対パスからresourceを解決し、現在のWhub contextのdownloads直下へ単一fileを同名上書きで保存する
 exceptions: {}
