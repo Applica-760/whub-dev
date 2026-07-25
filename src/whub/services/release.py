@@ -35,9 +35,32 @@ class ReleaseApplyError(ServiceError):
 _ROLLUP_NATIVE_DEPENDENCY = re.compile(r"@rollup/rollup-[a-z0-9-]+")
 
 
-def _run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+_INHERITED_INTERPRETER_VARS = ("PYTHONPATH", "VIRTUAL_ENV")
+
+
+def _isolated_env() -> dict[str, str]:
+    """Drop the caller's interpreter overrides so a venv resolves its own packages."""
+    return {
+        key: value
+        for key, value in os.environ.items()
+        if key not in _INHERITED_INTERPRETER_VARS
+    }
+
+
+def _run(
+    command: list[str],
+    *,
+    cwd: Path,
+    isolated: bool = False,
+) -> subprocess.CompletedProcess[str]:
     try:
-        result = subprocess.run(command, cwd=cwd, capture_output=True, text=True)
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            env=_isolated_env() if isolated else None,
+        )
     except OSError as error:
         raise ReleaseBuildError(f"failed to run {' '.join(command)}: {error}") from error
     if result.returncode != 0:
@@ -241,14 +264,25 @@ def verify_release(
         release = _verified_release_info(wheel_path, release_id)
         wheel_sha256 = _wheel_sha256(wheel_path)
         venv = staging / "venv"
-        _run(["uv", "venv", "--clear", "--no-project", str(venv)], cwd=staging)
+        # 検証はwheel由来の実装だけを見る。呼び出し側のPYTHONPATH/VIRTUAL_ENVは遮断する
+        _run(
+            ["uv", "venv", "--clear", "--no-project", str(venv)],
+            cwd=staging,
+            isolated=True,
+        )
         python = venv / "bin" / "python"
-        _run(["uv", "pip", "install", "--python", str(python), str(wheel_path)], cwd=staging)
+        _run(
+            ["uv", "pip", "install", "--python", str(python), str(wheel_path)],
+            cwd=staging,
+            isolated=True,
+        )
         whub = venv / "bin" / "whub"
-        version = _run([str(whub), "--version"], cwd=staging).stdout.strip()
+        version = _run(
+            [str(whub), "--version"], cwd=staging, isolated=True
+        ).stdout.strip()
         if version != f"whub, version {release.display}":
             raise ReleaseVerifyError("staging whub version does not match release")
-        _run([str(venv / "bin" / "wflow"), "--help"], cwd=staging)
+        _run([str(venv / "bin" / "wflow"), "--help"], cwd=staging, isolated=True)
         release_json.write_text(
             json.dumps(
                 {
@@ -346,12 +380,18 @@ def _install_release_venv(release_path: Path) -> None:
     if len(wheels) != 1:
         raise ReleaseApplyError(f"expected one wheel in {release_path / 'artifact'}")
     venv = release_path / "venv"
-    _run(["uv", "venv", "--clear", "--no-project", str(venv)], cwd=release_path)
+    # 配置後のvenvもwheel由来の実装だけで成立させる
+    _run(
+        ["uv", "venv", "--clear", "--no-project", str(venv)],
+        cwd=release_path,
+        isolated=True,
+    )
     _run(
         ["uv", "pip", "install", "--python", str(venv / "bin" / "python"), str(wheels[0])],
         cwd=release_path,
+        isolated=True,
     )
-    _run([str(venv / "bin" / "whub"), "--version"], cwd=release_path)
+    _run([str(venv / "bin" / "whub"), "--version"], cwd=release_path, isolated=True)
 
 
 def apply_release(

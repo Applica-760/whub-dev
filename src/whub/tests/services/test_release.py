@@ -101,8 +101,8 @@ def test_build_stages_wheel_and_removes_generated_metadata(
     context = _context(tmp_path)
     calls: list[list[str]] = []
 
-    def run(command, *, cwd, capture_output, text):
-        del capture_output, text
+    def run(command, *, cwd, capture_output, text, env=None):
+        del capture_output, text, env
         calls.append(command)
         if command[:3] == ["git", "status", "--porcelain"]:
             return _result(command)
@@ -130,8 +130,8 @@ def test_build_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> No
     context = _context(tmp_path)
     calls: list[list[str]] = []
 
-    def run(command, *, cwd, capture_output, text):
-        del cwd, capture_output, text
+    def run(command, *, cwd, capture_output, text, env=None):
+        del cwd, capture_output, text, env
         calls.append(command)
         if command[:3] == ["git", "status", "--porcelain"]:
             return _result(command)
@@ -156,8 +156,8 @@ def test_build_recovers_rollup_native_dependency_once(monkeypatch, tmp_path: Pat
     calls: list[list[str]] = []
     build_attempts = 0
 
-    def run(command, *, cwd, capture_output, text):
-        del cwd, capture_output, text
+    def run(command, *, cwd, capture_output, text, env=None):
+        del cwd, capture_output, text, env
         nonlocal build_attempts
         calls.append(command)
         if command[:3] == ["git", "status", "--porcelain"]:
@@ -193,8 +193,8 @@ def test_verify_records_wheel_hash_after_staging_smoke_test(monkeypatch, tmp_pat
     wheel = _wheel(context, release_id)
     calls: list[list[str]] = []
 
-    def run(command, *, cwd, capture_output, text):
-        del cwd, capture_output, text
+    def run(command, *, cwd, capture_output, text, env=None):
+        del cwd, capture_output, text, env
         calls.append(command)
         if command[:3] == ["uv", "venv", "--clear"]:
             venv = Path(command[-1])
@@ -221,14 +221,50 @@ def test_verify_records_wheel_hash_after_staging_smoke_test(monkeypatch, tmp_pat
     assert [str(wheel.parents[1] / "venv" / "bin" / "wflow"), "--help"] in calls
 
 
+def test_verify_isolates_staging_venv_from_caller_interpreter_vars(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """検証はwheel由来の実装だけを見る。呼び出し側のPYTHONPATHを継承しない。"""
+    context = _context(tmp_path)
+    release_id = "0.1.0+gaaaaaaaa"
+    _wheel(context, release_id)
+    monkeypatch.setenv("PYTHONPATH", "/checkout/src")
+    monkeypatch.setenv("VIRTUAL_ENV", "/other/venv")
+    envs: list[dict[str, str] | None] = []
+
+    def run(command, *, cwd, capture_output, text, env=None):
+        del cwd, capture_output, text
+        envs.append(env)
+        if command[:3] == ["uv", "venv", "--clear"]:
+            venv = Path(command[-1])
+            (venv / "bin").mkdir(parents=True)
+            for executable in ("python", "whub", "wflow"):
+                (venv / "bin" / executable).touch()
+        if command[-1] == "--version":
+            return _result(command, stdout="whub, version 0.1.0 (commit " + "a" * 40 + ")\n")
+        return _result(command)
+
+    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+
+    verify_release(release_id, context=context)
+
+    assert envs and all(env is not None for env in envs)
+    for env in envs:
+        assert "PYTHONPATH" not in env
+        assert "VIRTUAL_ENV" not in env
+        # 遮断するのは解釈系の上書きだけで、他の環境変数は保つ
+        assert env["PATH"] == os.environ["PATH"]
+
+
 def test_verify_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> None:
     context = _context(tmp_path)
     release_id = "0.1.0+gaaaaaaaa"
     _wheel(context, release_id, valid_webapp=False)
     calls: list[list[str]] = []
 
-    def run(command, *, cwd, capture_output, text):
-        del cwd, capture_output, text
+    def run(command, *, cwd, capture_output, text, env=None):
+        del cwd, capture_output, text, env
         calls.append(command)
         return _result(command)
 
@@ -246,8 +282,8 @@ def test_apply_moves_verified_release_and_switches_current(monkeypatch, tmp_path
     staging = _verified_staging(context, release_id)
     calls: list[list[str]] = []
 
-    def run(command, *, cwd, capture_output, text):
-        del cwd, capture_output, text
+    def run(command, *, cwd, capture_output, text, env=None):
+        del cwd, capture_output, text, env
         calls.append(command)
         return _result(command)
 
@@ -280,8 +316,8 @@ def test_apply_failure_restores_current_and_staging(monkeypatch, tmp_path: Path)
     old_release = (context.releases_dir / "current").resolve()
     calls: list[list[str]] = []
 
-    def run(command, *, cwd, capture_output, text):
-        del cwd, capture_output, text
+    def run(command, *, cwd, capture_output, text, env=None):
+        del cwd, capture_output, text, env
         calls.append(command)
         if command == [
             str(context.releases_dir / release_id / "venv" / "bin" / "whub"),

@@ -38,6 +38,7 @@ PYTHONPATH="$source/src" uv run --project "$source" python -m whub release apply
 - wheelに`whub/webapp/dist/index.html`とassets、`whub`・`wflow`のentry pointが含まれることを確認する。
 - staging内にvenvを作成し、`uv pip install --python <venv>/bin/python <wheel>`で非editable installする。
 - staging venvの絶対パスで`whub --version`と`wflow --help`を実行し、release-idと一致することを確認する。
+- staging venvの実行は`PYTHONPATH`・`VIRTUAL_ENV`を遮断した環境で行う。呼び出し側の`PYTHONPATH`を継承すると、wheelではなく開発checkoutのsrcを検証してしまう。applyでのvenv再作成も同様に遮断する。
 - 成功時にwheel hashと検証結果を含む`release.json`をstagingへ記録する。失敗時は`current`を変更しない。
 - verify失敗時は旧currentの`whub app`を再起動する。
 
