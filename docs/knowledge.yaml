@@ -345,4 +345,10 @@ constraints:
   mount_cleanup_denied_only:
     statement: 自動force unmount(cleanup)は即時権限拒否(denied, Operation not permitted)の検出時に限り、timeoutでは決してunmountしない。wflow・project
       content解決の事前probeもdenied時のみ停止しtimeout時は続行する
+  mount_host_aggregation:
+    statement: mountはhost単位に集約する。host.mount_rootは必須で、hostごとに1本のsshfsを~/.whub/runtime/mounts/host-<id>へ張り、各resourceのworkspace_pathはそのmount内へのsymlinkとする。resource単位の個別mountは廃止した。resourceのpathはmount
+      flagに関わらず所属hostのmount_root配下でなければならない
+  mount_unmount_removes_workspace_links:
+    statement: unmountはhost mountを解除し、mountが作成したworkspace symlinkと空になった親ディレクトリを撤去してdangling
+      symlinkを残さない。削除対象はリンク先がhost mount内の想定pathと一致するものに限り、実体や無関係なsymlinkには触れない。ディレクトリ削除は事前に空を確認したものだけを対象とする
 exceptions: {}

@@ -1,7 +1,5 @@
 # whub固有コンテキスト
 
-whub CLIやデータモデルを変更する前に、必ず`whub knowledge query <対象>`で関連Knowledgeを確認すること。
-運用フロー・Skillの判断基準・inbox/backlog/todoの関係を変更する前に、必ず`whub knowledge query <対象>`で関連Knowledgeを確認すること。
 Knowledgeの追加・削除は`whub knowledge add`・`whub knowledge rm`を使い、`docs/knowledge.yaml`を直接編集しないこと。
 
 # 概要

@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-055
-  state: in_progress
+  state: completed
   title: Remote mountの安定性改善
   objective: remote mountを開発基盤として維持しつつ、遅延を障害と誤判定して発生する自動unmountとフラッピングを解消し、常用時の不要な消費電力を抑える
   approach:
@@ -241,26 +241,26 @@ plan:
       skip_reason: null
       deleted: false
     - description: docs/operations/releace.mdに従いrelease build・verify・applyを実施する。releaseフローはmanifestを読まないため、manifest更新前に完了させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: ~/.whub/manifest.yamlの両hostへmount_rootを追加する(home-server=,
         supercomputer=)。esn-lab-runはmount:falseを維持し引数指定時のみmount対象とする。extra=forbidのためapply直後の手編集で切り替える
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: omen実環境でwhub mount→status→wflowが自動unmountなしで成功すること、mount.jsonlのslow記録とcleanup非発生、tccutil
         resetによるdenied→cleanup経路、常駐接続(ssh・sshfs)がhostあたり1組へ集約されることを観測する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: mount判定契約(レイテンシ非依存・cleanup denied限定)とhost集約契約をKnowledgeへ記録する。Knowledge廃止までの暫定記録として扱う
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: remote resourceの扱いと探索コマンドの制約(探索は対象project directory以下へ限定、横断検索・大量走査はmount上で行わずwhub
         runでremote host上に実行)をworkspace-hub/AGENTS.mdへ記載し、whub-dev/AGENTS.mdのKnowledge参照規約(冒頭2行)を削除する。READMEとの整合を確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -292,6 +292,42 @@ plan:
           run whub mount)になるだけなので可視性は失われない。削除対象は_links_toでmountが作ったlinkと確認できたものに限定し、実体や別を指すsymlinkには触れない。親ディレクトリはmountのmkdir(parents=True)と対称にworkspace_pathの階層数を上限として空のものだけ畳む。rmdirは例外任せにせず_remove_if_emptyでiterdirによる空確認を明示的に行い、mount側の3箇所とsymlink側で共通利用。pytest
           432 passed、対象Ruff check/format check、git diff --check成功。'
       deleted: false
+    - value:
+        検証: release 0.1.0+g4f7158eaをbuild・verify・apply。初回verifyは0.1.0+gb6189c0eで失敗し、原因はreleace.mdが規定するPYTHONPATH=$source/srcを_runが子へ継承し、staging
+          venvのwhubがwheelではなく開発checkoutをimportしていたこと(whub --versionがsource checkout表示になる)。verifyがwheelを検証していない欠陥として_runにisolatedを追加しPYTHONPATH・VIRTUAL_ENVを遮断、verify
+          4箇所とapplyの_install_release_venv 3箇所へ適用しreleace.mdへ明記(commit 4f7158ea)。修正後はverify成功(sha
+          0472fe1b...)、apply後にcurrent→0.1.0+g4f7158ea、~/.local/bin/whubがcommit 4f7158eaを返すことを確認。旧staging
+          0.1.0+gb6189c0eは破棄。なお当該shellのVIRTUAL_ENVが旧release venvを指すためPATH上のwhubは旧実装のままで、以降の実地検証は~/.local/bin/whubを明示して行う。
+      deleted: false
+    - value:
+        実装・検証: ~/.whub/manifest.yamlの両hostへmount_rootを追加(home-server=,
+          supercomputer=)。新releaseのwhub lsが13 project全てを解決し、全remote
+          resourceのpath包含validationが成立することを確認。esn-lab-runはmount:false・status:falseを維持し名指し時のみmount対象。なおPATH上のwhub/wflowはこのshellのVIRTUAL_ENVが旧release
+          venvを指すため旧実装のままで、manifest更新後は~/.local/bin配下を明示しないとextra_forbiddenで失敗する。
+      deleted: false
+    - value:
+        実地検証: 'release 0.1.0+g4f7158eaで再mount。接続集約を実測: sshfs 3本→1本(PID 79193, を1本でmount)、mount
+          table 3件→1件(fuse-t:/whub-host-home-server)、hostへのESTABLISHED TCP 1本。ServerAliveInterval=60がTASK-052以来初めて適用された。workspace_path
+          3件はruntime/mounts/host-home-server配下へのsymlinkとなり、symlink越しにdocs/issues実体まで読める。whub
+          statusは全remote mount=ok/state=okでexit 0、wflow task --project la-il lsがTask
+          5件を解決し実行後もsshfs 1本・mount table 1件が生存(自動unmountなし)。mount logはprecheck/sshfs/post_mount_probeの3段すべてok、cleanup
+          0件(既存cleanup 4件はいずれも修正前の0b2c82d4・fe9b56df由来)。whub mount再実行はskipで冪等。slowは今回のレイテンシでは発生せず未観測。'
+      deleted: false
+    - value:
+        未実施: 004-009のうちtccutil resetによるdenied→cleanup経路の実地確認はユーザー判断でskip。macOSのプライバシー設定を実際にリセットし再許可対応が必要になるため。denied分岐はPhase
+          2でprobe_directory_readableのOperation not permitted判定として単体テスト済みであり、実地観測は次に権限問題が発生した時点へ繰り延べる。
+      deleted: false
+    - value:
+        実装: host集約契約をKnowledgeへ2件登録。con:mount_host_aggregation(host.mount_root必須、hostごとに1本のsshfsをruntime/mounts/host-<id>へ、workspace_pathはmount内へのsymlink、resource単位の個別mountは廃止、pathはmount
+          flag問わずmount_root配下)とcon:mount_unmount_removes_workspace_links(unmountはmountが作ったsymlinkと空の親を撤去しdangling
+          symlinkを残さない、削除対象は想定linkに限定、ディレクトリ削除は事前に空を確認)。レイテンシ非依存とcleanup denied限定の2件はPhase
+          1で登録済みのため据え置き。Knowledgeは廃止予定のため暫定記録として扱う。
+      deleted: false
+    - value:
+        実装・検証: workspace-hub/AGENTS.mdへ# remote resourceの扱いを新設(参照はmount・実行はwhub run/cd、探索は対象project
+          directory以下へ限定、workspace root全体へのfind/rg/globは禁止、横断検索はwhub runでremote host上に実行、mountはhost単位集約でworkspace_pathはsymlink・unmountで撤去、mount列のslowは正常系でstale/unreadableのみ対処)。hub側は全Project全セッションに常時ロードされるため運用規則のみを置き、mount判定契約はwhub-dev側の関心としてKnowledgeに残した。whub-dev/AGENTS.mdからKnowledge参照規約の冒頭2行(変更前に必ずquery)を削除し、直接編集禁止の1行は維持。READMEとの整合を確認(mount_root必須・host単位集約・unmountのsymlink撤去が一致)。pytest
+          433 passed、変更ファイルのRuff check、frontend typecheck(tsc -b)成功。
+      deleted: false
     deleted: false
 approvals:
 - actor: user
@@ -299,7 +335,33 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - probe完走のtimeout超過をslow(正常系)として扱う実装をPhase 2で導入し、core/health 25ケース・mount service
+    22ケースで検証。whub statusはslowをexit 0対象外とする。実地では今回のレイテンシでslowが発生せず未再現のため、根拠は単体テストと契約実装に限る
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - denied(Operation not permitted)の即時失敗のみunreadableと判定しcleanupする経路をtest_mount_readability_failure_unmounts_and_reportsとprobe_directory_readableのdenied判定で検証。tccutil
+    resetによる実地確認はユーザー判断でskipしたため、根拠は単体テストに限る
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - wflow iter_task_pathsとresolve_project_content_rootをdenied/errorのみ停止・timeout続行へ変更(Phase
+    2)。実地でwflow task --project la-il lsがmount越しにTask 5件を解決し、実行後もsshfs 1本・mount table
+    1件が生存して自動unmountは発生しなかった
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - 再mount後の実測でsshfsプロセス3本→1本(PID 79193)、mount table 3件→1件(fuse-t:/whub-host-home-server)、hostへのESTABLISHED
+    TCP 1本。go-nfsv4はPhase 1の観測どおり独立常駐せずsshfsプロセス内蔵のため、指標はsshfsプロセス数とTCP接続数で代替した
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - pytest 433 passed、変更ファイルのRuff check、frontend typecheck(tsc -b)成功。release 0.1.0+g4f7158eaをbuild・verify(sha
+    0472fe1b...)・applyし、currentの切替と~/.local/bin/whubがcommit 4f7158eaを返すことを確認
 change_requests:
 - reason: 共有host mountではproject別unmountを提供せず、引数なしで全remote host mountを解除する方針を反映するため
 - reason: remote resourceの探索範囲とコマンド実行場所を定め、sshfs越しの不要なメタデータ往復と出力を抑える運用規則を追加するため
@@ -308,4 +370,7 @@ change_requests:
     3の重複Step(003-002/003-003)を整理し、Phase 4へコード削除・manifest更新・切替順序のStepを追加、004-004の記録先をKnowledgeからhub
     AGENTS.mdへ変更する。
 cancellation: null
-result: null
+result:
+  summary: mount健全性判定をレイテンシ非依存の契約へ是正し、遅延を障害と誤判定する自動unmountを解消。併せてmountをhost単位へ集約し、host.mount_root必須・resource単位個別mountの廃止・workspace_pathのsymlink化・unmount時のsymlink撤去まで一本化した。omen実測でsshfs
+    3本→1本、mount table 3件→1件、TCP接続1本へ集約され、ServerAliveInterval=60が初適用。mount orchestrationはservices/mount.pyへ移しcommandsをClick入出力へ限定。release
+    verifyがPYTHONPATH継承でwheelでなく開発checkoutを検証していた欠陥も修正した。
