@@ -27,6 +27,7 @@ from whub.models import ManifestError
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.status import ResourceStatus
+from whub.services.task import ProjectTasks
 from whub.services.vault import VaultNode
 from whub.tests.helpers import knowledge, manifest
 from whub.webapp.server import create_app
@@ -227,6 +228,45 @@ def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
     assert detail_response.status_code == 200
     assert detail_response.json() == document.model_dump()
     mock_load.assert_called_once_with(m, "local", "TASK-003")
+
+
+def test_all_tasks_endpoint_returns_per_project_results(client: TestClient) -> None:
+    summary = TaskSummary(
+        path="20260715_task.yaml",
+        id="TASK-001",
+        title="Task view",
+        state="draft",
+        blocked_by=[],
+        ready=True,
+    )
+    m = manifest()
+    results = (
+        ProjectTasks(project="local", tasks=(summary,)),
+        ProjectTasks(project="empty", tasks=()),
+        ProjectTasks(project="remote", error="project resource is not available"),
+    )
+    with (
+        patch("whub.webapp.routers.tasks.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.tasks.list_all_project_tasks",
+            return_value=results,
+        ) as mock_list_all,
+    ):
+        response = client.get("/api/tasks/all")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "projects": [
+            {"project": "local", "tasks": [summary.model_dump()], "error": None},
+            {"project": "empty", "tasks": [], "error": None},
+            {
+                "project": "remote",
+                "tasks": [],
+                "error": "project resource is not available",
+            },
+        ],
+    }
+    mock_list_all.assert_called_once_with(m)
 
 
 def test_task_flow_graph_endpoint_returns_service_result(client: TestClient) -> None:

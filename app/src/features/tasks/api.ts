@@ -1,5 +1,6 @@
 import { requestJson } from "../../api/client";
 import type {
+  AllTasksResponse,
   TaskGraphResponse,
   TaskResponse,
   TasksResponse,
@@ -13,6 +14,10 @@ export async function listTasks(
   project?: string | null,
 ): Promise<TasksResponse> {
   return requestJson<TasksResponse>(withProject("/api/tasks", project));
+}
+
+export async function listAllTasks(): Promise<AllTasksResponse> {
+  return requestJson<AllTasksResponse>("/api/tasks/all");
 }
 
 export async function getTask(

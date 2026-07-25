@@ -61,22 +61,28 @@ plan:
     acceptance: []
     steps:
     - description: 全ProjectのTaskをProject名付きで返す集約エンドポイントを追加し、Project単位でエラーを隔離して部分成功を返す
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: openapi.jsonと生成schemaを更新し、集約エンドポイントの型をフロントへ反映する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 集約エンドポイントのテストを追加し、Task未保持Projectと取得失敗Projectを含む部分成功を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 全Project横断のTask取得hookを追加し、Project単位のエラーを保持したままTask一覧を返す
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: services/task.pyへdataclass ProjectTasksとlist_all_project_tasksを追加し、ServiceErrorとOSErrorをProject単位で捕捉して部分成功を返す。routerは/api/tasks/allを/{task_id}より前に宣言してPathパラメータへの吸収を回避。openapi.jsonはapp/.gitignore対象の生成物のためnpm
+          run generate:typesでschema.d.tsのみ更新。フロントはlistAllTasksとuseAllTasksを追加しproject付きへ平坦化、projectErrorsで失敗Projectを保持。実manifestで12
+          Project/64 Task/error無しを確認。uv run pytest 436 passed、npm test 7 files/19
+          passed、typecheck成功
+      deleted: false
     deleted: false
   - title: 依存グラフのProject横断描画
     acceptance: []

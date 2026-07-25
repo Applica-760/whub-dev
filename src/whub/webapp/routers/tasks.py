@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from whub.models import load_manifest
 from whub.services.task import (
+    list_all_project_tasks,
     list_project_tasks,
     load_project_task,
     render_project_task_flow,
@@ -24,9 +25,34 @@ class TaskGraphResponse(BaseModel):
     mermaid: str
 
 
+class ProjectTasksResponse(BaseModel):
+    project: str
+    tasks: list[TaskSummary]
+    error: str | None = None
+
+
+class AllTasksResponse(BaseModel):
+    projects: list[ProjectTasksResponse]
+
+
 @router.get("", response_model=TaskListResponse)
 def get_tasks(project: str = "whub-dev") -> TaskListResponse:
     return TaskListResponse(tasks=list_project_tasks(load_manifest(), project))
+
+
+# "/all"は"/{task_id}"より前に宣言してPathパラメータへ吸われないようにする
+@router.get("/all", response_model=AllTasksResponse)
+def get_all_tasks() -> AllTasksResponse:
+    return AllTasksResponse(
+        projects=[
+            ProjectTasksResponse(
+                project=item.project,
+                tasks=list(item.tasks),
+                error=item.error,
+            )
+            for item in list_all_project_tasks(load_manifest())
+        ],
+    )
 
 
 @router.get("/{task_id}", response_model=TaskDocument)

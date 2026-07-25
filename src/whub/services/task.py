@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from whub.models import Manifest
@@ -42,6 +43,28 @@ def list_project_tasks(
         return list_tasks(task_root)
     except WflowError as error:
         raise ServiceError(str(error)) from error
+
+
+@dataclass(frozen=True)
+class ProjectTasks:
+    """One Project's Task summaries, or the error that prevented reading them."""
+
+    project: str
+    tasks: tuple[TaskSummary, ...] = ()
+    error: str | None = None
+
+
+def list_all_project_tasks(manifest: Manifest) -> tuple[ProjectTasks, ...]:
+    """Return every Project's Task summaries, isolating per-Project failures."""
+    results: list[ProjectTasks] = []
+    for project in manifest.projects:
+        try:
+            tasks = list_project_tasks(manifest, project.name)
+        except (ServiceError, OSError) as error:
+            results.append(ProjectTasks(project=project.name, error=str(error)))
+            continue
+        results.append(ProjectTasks(project=project.name, tasks=tasks))
+    return tuple(results)
 
 
 def load_project_task(

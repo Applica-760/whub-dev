@@ -10,6 +10,7 @@ import yaml
 from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.task import (
+    list_all_project_tasks,
     list_project_tasks,
     load_project_task,
     render_project_task_flow,
@@ -69,6 +70,30 @@ def test_distinguishes_missing_tasks_from_unavailable_resource(
         list_project_tasks(loaded_manifest, "remote")
     with pytest.raises(ServiceError, match="project has no resource: no-resource"):
         list_project_tasks(loaded_manifest, "no-resource")
+
+
+def test_lists_all_projects_and_isolates_failing_projects(tmp_path: Path) -> None:
+    data = manifest_data()
+    local_root = tmp_path / "local-source"
+    data["projects"][0]["resource"]["source"] = str(local_root)
+    _write_task(local_root, "TASK-001", "Local")
+    loaded_manifest = Manifest.model_validate(data)
+
+    results = {item.project: item for item in list_all_project_tasks(loaded_manifest)}
+
+    assert [item.project for item in list_all_project_tasks(loaded_manifest)] == [
+        project.name for project in loaded_manifest.projects
+    ]
+    assert results["local"].error is None
+    assert [task.title for task in results["local"].tasks] == ["Local"]
+    # 1つのProjectが読めなくても他Projectの結果は失われない
+    assert results["remote"].tasks == ()
+    assert "project resource is not available: remote" in (
+        results["remote"].error or ""
+    )
+    assert "project has no resource: no-resource" in (
+        results["no-resource"].error or ""
+    )
 
 
 def test_resolves_task_root_and_rejects_non_directory(
