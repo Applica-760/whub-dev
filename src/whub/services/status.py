@@ -8,11 +8,17 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from whub.core.health import HealthState, inspect_mount, inspect_symlink
+from whub.core.health import (
+    HealthState,
+    inspect_aggregated_mount,
+    inspect_mount,
+    inspect_symlink,
+)
 from whub.core.remote import run_ssh_command
 from whub.core.target import collect_targets
 from whub.core.tmux import session_name
 from whub.models import Host, Manifest, Project, RemoteResource, SymlinkResource
+from whub.services.mount import host_mountpoint, host_volume_name
 
 
 @dataclass(frozen=True)
@@ -107,7 +113,14 @@ def _fetch_remote_info(
     project: Project,
     probe: tuple[str, str, str] | None,
 ) -> ResourceStatus:
-    mount = inspect_mount(resource, project.name).state
+    if resource.mount and resource._resolved_host.mount_root is not None:
+        mount = inspect_aggregated_mount(
+            resource,
+            host_mountpoint(resource.host),
+            host_volume_name(resource.host),
+        ).state
+    else:
+        mount = inspect_mount(resource, project.name).state
     if probe is None:
         return ResourceStatus(project.name, "unreachable", resource.type, mount=mount)
 

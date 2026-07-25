@@ -66,6 +66,30 @@ def test_marks_unreachable_remote_and_preserves_mount_state() -> None:
     assert remote.mount == "stale"
 
 
+def test_uses_aggregated_health_for_shared_host_mounts() -> None:
+    m = manifest()
+    m.hosts["home"].mount_root = "/srv"
+    with (
+        patch("whub.services.status.inspect_symlink", _symlink_ok),
+        patch(
+            "whub.services.status.inspect_aggregated_mount",
+            return_value=ResourceHealth("slow"),
+        ) as aggregated,
+        patch("whub.services.status.inspect_mount", _mount_ok),
+        patch(
+            "whub.services.status._probe_host",
+            return_value={0: ("ok", "0", "-"), 1: ("ok", "0", "-")},
+        ),
+    ):
+        statuses = collect_resource_status(m)
+
+    remote = next(item for item in statuses if item.project == "remote")
+    nested = next(item for item in statuses if item.project == "nested")
+    assert remote.mount == "slow"
+    assert nested.mount == "ok"
+    aggregated.assert_called_once()
+
+
 def test_parse_probe_accepts_valid_lines_and_ignores_invalid_lines() -> None:
     parsed = _parse_probe("R0 ok 3 on\nbogus line\n\nR1 missing ?\n")
 
