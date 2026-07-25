@@ -1,0 +1,18 @@
+schema_version: 1
+task:
+  id: TASK-056
+  state: draft
+  title: remote resourceのmanifestフィールド設計見直し
+  objective: host集約mountの実地運用結果を踏まえ、remote resourceがmanifestへ持つべきフィールドを再設計し、path表現の重複とmount設定への依存を整理する
+  approach:
+  - TASK-055 Phase 4の実地観測(集約mountの接続数・health表示・mount:false resourceの例外挙動)を入力とし、path絶対表現の維持/_resolved_path導入による相対記法許容/その他案をトレードオフ比較して決定する。現状pathはcd・run・fetch・push・codegraph・backlog・session・statusの11箇所でリモート絶対パスとして消費され、mount_root関連は3箇所のみである事実を前提に置く
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
