@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-058
-  state: in_progress
+  state: completed
   title: fetch/pushをget/putへ改名
   objective: downloads隔離領域への単一file転送という実態にCLI表面の命名を合わせ、gitのfetch/pullとの混同とfetch/pushの非対称を解消する
   approach:
@@ -76,12 +76,12 @@ plan:
       skip_reason: null
       deleted: true
     - description: docs/operations/releace.mdに従いrelease build・verify・applyを実施する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: '実地検証: remote projectのprivateへ検証用の一時mdを新規作成し、whub getで取得→ローカル編集→whub
         putで書き戻し→remote側の内容一致を確認する。whub fetch・whub pushが解決されないことも確認し、remoteとlocalの検証産物(downloads実体・.whub-meta.json含む)を後始末する'
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: '実地検証: remoteへ検証用の一時mdを新規作成し、whub getで取得→ローカル編集→whub putで書き戻し→remote側の内容一致を確認する。whub
@@ -89,11 +89,35 @@ plan:
       state: pending
       skip_reason: null
       deleted: true
-    log: []
+    log:
+    - value:
+        field_test: 'private remoteで往復検証: 一時md作成→whub get→ローカル編集→whub put→remote側sha256
+          97bb01bcが一致。whub fetch・whub pushはNo such commandで解決されないことを確認。remoteの一時mdとlocalのdownloads実体・.whub-meta.jsonを削除済み'
+      deleted: false
     deleted: false
 approvals:
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - whub --help(release 0.1.0+g9b09f63f)にget・putが表示され、whub fetch・whub pushはNo such
+    commandで失敗
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - private remoteで一時md作成→whub get→編集→whub put→remote sha256 97bb01bc一致。remote一時md・downloads実体・.whub-meta.jsonを削除し産物なし
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - Knowledge def:whub_get・def:whub_put・pol:get_large_remote_files・con:get_destinationへ改名/追加、READMEコマンド一覧にwhub
+    get・whub put追加、workspace-hub/AGENTS.mdにwhub get・whub putの行を追加
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - pytest 434 passed、ruff check clean、frontend typecheck成功、release 0.1.0+g9b09f63fをbuild・verify・apply済み
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: whub fetch/pushをget/putへ改名。command module・関数名・help文言・テスト・Knowledge(slug含む)・README・workspace-hub/AGENTS.mdを追随させ、release
+    0.1.0+g9b09f63fをapply。private remoteでget→編集→putの往復一致を実地確認し、検証産物は後始末済み
