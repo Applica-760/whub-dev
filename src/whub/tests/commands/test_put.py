@@ -32,7 +32,13 @@ def _setup_downloads(tmp_path: Path, content: str = "edited content") -> Path:
     local = downloads / "file.csv"
     local.write_text(content)
     original_hash = hashlib.sha256(b"remote content").hexdigest()
-    record_download(downloads, "file.csv", "remote:data/file.csv", original_hash, "2026-01-01T00:00:00+00:00")
+    record_download(
+        downloads,
+        "file.csv",
+        "remote:data/file.csv",
+        original_hash,
+        "2026-01-01T00:00:00+00:00",
+    )
     return downloads
 
 
@@ -79,7 +85,9 @@ class TestPutSpec:
         assert "data/file.csv" in call_args[0][1]
         assert call_args[0][2] == "edited content"
         records = load_download_meta(downloads)
-        assert records["file.csv"].sha256 == hashlib.sha256(b"edited content").hexdigest()
+        assert (
+            records["file.csv"].sha256 == hashlib.sha256(b"edited content").hexdigest()
+        )
 
     def test_file_not_in_downloads_errors(self, tmp_path: Path) -> None:
         # ケース2

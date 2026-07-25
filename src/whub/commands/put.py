@@ -54,5 +54,7 @@ def put(ctx: click.Context, local_name: str) -> None:
         )
 
     new_hash = hashlib.sha256(local_path.read_bytes()).hexdigest()
-    update_download_hash(downloads, local_name, new_hash, datetime.now(timezone.utc).isoformat())
+    update_download_hash(
+        downloads, local_name, new_hash, datetime.now(timezone.utc).isoformat()
+    )
     click.echo(f"  put {project.name}: {local_name} -> {rel}")

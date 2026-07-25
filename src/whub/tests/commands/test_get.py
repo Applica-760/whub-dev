@@ -104,4 +104,6 @@ class TestGetSpec:
         records = load_download_meta(downloads)
         record = records["file.csv"]
         assert record.ref == "remote:data/file.csv"
-        assert record.sha256 == __import__("hashlib").sha256(b"remote content").hexdigest()
+        assert (
+            record.sha256 == __import__("hashlib").sha256(b"remote content").hexdigest()
+        )
