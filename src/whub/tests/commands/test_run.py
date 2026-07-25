@@ -39,6 +39,8 @@ class TestRunSpec:
         assert cmd[0] == "ssh"
         assert any("home.example.com" in arg for arg in cmd)
         assert "ls -la" in " ".join(cmd)
+        # mount_rootと合成した絶対pathでcdする
+        assert "cd /srv/remote" in " ".join(cmd)
 
     def test_local_resource_errors(self):
         # ケース2

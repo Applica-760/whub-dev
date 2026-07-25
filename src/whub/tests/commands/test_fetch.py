@@ -57,6 +57,8 @@ class TestFetchSpec:
         assert "fetch" in result.output
         cmd = mock_run.call_args[0][0]
         assert cmd[0] == "scp"
+        # mount_rootと合成した絶対pathへresource内相対パスを繋ぐ
+        assert any("/srv/remote/data/file.csv" in arg for arg in cmd)
 
     def test_local_resource_errors(self):
         # ケース2

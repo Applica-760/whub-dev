@@ -4,7 +4,6 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from pathlib import PurePosixPath
 from posixpath import normpath
 from typing import Literal
 from whub.models import RemoteResource, SymlinkResource
@@ -158,20 +157,13 @@ def inspect_mountpoint(mountpoint: Path, volname: str) -> ResourceHealth:
     return ResourceHealth("ok")
 
 
-def aggregated_link_source(resource: RemoteResource, host_mountpoint: Path) -> Path:
-    """Return the path inside the shared host mount a workspace path links to."""
-    mount_root = resource._resolved_host.mount_root
-    relative_path = PurePosixPath(normpath(resource.path)).relative_to(mount_root)
-    return host_mountpoint / Path(relative_path)
-
-
 def inspect_aggregated_mount(
     resource: RemoteResource,
     host_mountpoint: Path,
     host_volname: str,
 ) -> ResourceHealth:
     """Combine a workspace symlink check with its shared host mount health."""
-    source = aggregated_link_source(resource, host_mountpoint)
+    source = host_mountpoint / resource.path
     target = resource._resolved_workspace_path
 
     if not target.is_symlink():

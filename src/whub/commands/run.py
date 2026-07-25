@@ -42,7 +42,7 @@ def run(
     except TargetError as error:
         raise click.ClickException(str(error)) from error
     host = resource._resolved_host
-    remote_command = build_remote_exec_command(resource.path, command)
+    remote_command = build_remote_exec_command(resource.remote_path, command)
     ssh_command = build_ssh_command(host, remote_command, tty=tty)
     result = subprocess.run(ssh_command)
     ctx.exit(result.returncode)

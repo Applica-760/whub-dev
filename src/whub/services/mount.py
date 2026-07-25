@@ -13,11 +13,7 @@ from posixpath import normpath
 from urllib.parse import quote
 
 from whub.core.context import current_context
-from whub.core.health import (
-    ResourceHealth,
-    aggregated_link_source,
-    inspect_mountpoint,
-)
+from whub.core.health import ResourceHealth, inspect_mountpoint
 from whub.core.mount_log import safe_option_names, write_mount_log
 from whub.core.remote import build_sshfs_command
 from whub.models import Manifest, Project, RemoteResource
@@ -114,7 +110,7 @@ def _ensure_shared_links(
 ) -> str | None:
     for _, resource in targets:
         target = resource._resolved_workspace_path
-        source = aggregated_link_source(resource, mountpoint)
+        source = mountpoint / resource.path
         if target.is_symlink():
             if _links_to(target, source):
                 continue
@@ -134,7 +130,7 @@ def _remove_shared_links(
     for _, resource in targets:
         target = resource._resolved_workspace_path
         # mountが作ったlinkだけを消す。実体や無関係なsymlinkには触れない
-        if not _links_to(target, aggregated_link_source(resource, mountpoint)):
+        if not _links_to(target, mountpoint / resource.path):
             continue
         with contextlib.suppress(OSError):
             target.unlink()

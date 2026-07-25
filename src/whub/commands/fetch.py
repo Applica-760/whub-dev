@@ -43,7 +43,9 @@ def fetch(ctx: click.Context, path: str) -> None:
     local_name = resolve_local_name(downloads, ref, PurePosixPath(rel).name)
     dest = downloads / local_name
     result = subprocess.run(
-        build_scp_command(resource._resolved_host, f"{resource.path}/{rel}", dest),
+        build_scp_command(
+            resource._resolved_host, f"{resource.remote_path}/{rel}", dest
+        ),
     )
     if result.returncode != 0:
         ctx.exit(result.returncode)

@@ -54,7 +54,7 @@ def _remote_resource(mountpoint: Path) -> RemoteResource:
     resource = RemoteResource(
         type="remote",
         host="home",
-        path="/srv/remote",
+        path="remote",
         workspace_path="projects/remote",
     )
     resource._resolved_workspace_path = mountpoint

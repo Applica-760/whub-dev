@@ -47,7 +47,7 @@ def _init_remote_codegraph(resource: RemoteResource, project: Project) -> None:
         run_ssh_command(
             resource._resolved_host,
             f'source "$HOME/.nvm/nvm.sh" 2>/dev/null;'
-            f" codegraph init {shlex.quote(resource.path)}",
+            f" codegraph init {shlex.quote(resource.remote_path)}",
             timeout=60,
             check=True,
         )

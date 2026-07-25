@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-056
-  state: draft
+  state: in_progress
   title: remote resourceのmanifestフィールド設計見直し
   objective: host集約mountの実地運用結果を踏まえ、remote resourceがmanifestへ持つべきフィールドを再設計し、path表現の重複とmount設定への依存を整理する
   approach:
@@ -10,8 +10,91 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: manifestのremote resourceがmount_root前置を持たず、mount_root変更が単一点で完結する
+  - id: ACC-002
+    statement: 無引数whub mountの対象がhost.auto_mountで決まり、resource側のmount flagが存在しない
+  - id: ACC-003
+    statement: path消費11箇所が従来と同一のremote絶対pathを生成し、実機のrun・fetch・cd・status・backlog・sessionが動作する
+  - id: ACC-004
+    statement: 全回帰が成功し、releaseがbuild・verify・applyされ、移行後のwhub lsが13 projectを解決する
+  phases:
+  - title: pathのmount_root相対化
+    acceptance: []
+    steps:
+    - description: RemoteResource.pathをmount_root相対必須へ変更し(絶対path・~・..を拒否)、所属hostのmount_rootと合成したremote絶対pathを返すアクセサを追加する。mount_root包含validationを廃止しモデルテストを追随させる
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: path消費11箇所(status・session×3・backlog・cd×2・push・run・codegraph・fetch)を合成アクセサへ切替え、core/health.aggregated_link_sourceのrelative_to算出をpath直接利用へ簡素化する。既存と同一のremote絶対pathが生成されることをテストする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 全体回帰(pytest・対象Ruff check/format・frontend typecheck)を通し、検証済み成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        実装・検証: RemoteResource.pathをmount_root相対へ変更。既存の_check_workspace_pathをRelativePathへ汎用化してworkspace_pathと共有し、path専用validatorとmount_root包含validationを削除。remote_path
+          propertyでmount_rootと合成する。tests/helpersのremote pathを相対化。pytest src/whub/tests/models/test_manifest.py
+          9 passed
+      deleted: false
+    - value:
+        実装・検証: path消費11箇所(status・session×3・backlog・cd×2・push・run・codegraph・fetch)をresource.remote_pathへ切替え。core/health.aggregated_link_sourceはmount_root相対化で本体がmountpoint
+          / resource.pathの1行になったため関数ごと削除し呼び出し3箇所へインライン化、PurePosixPath importとservices/mountからhealthへのimportを1本削減。test_healthのfixtureとhelpersを相対pathへ追随させ、run・fetch・codegraphのテストへ合成後の絶対path
+          assertを追加。pytest 433 passed
+      deleted: false
+    deleted: false
+  - title: mount制御のhost単位化
+    acceptance: []
+    steps:
+    - description: Host.auto_mount(bool, default true)を追加し、RemoteResource.mountを廃止する。resource側にlink
+        flagは持たせない+モデルテスト
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: services/mount.select_targetsの無引数選択をhost.auto_mount基準へ変更し、名指し・--allの既存挙動を維持する。commands/vscodeの除外判定をmount
+        flag非依存(全remote resource一律除外)へ変更する+テスト
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 全体回帰(pytest・対象Ruff check/format・frontend typecheck)を通し、検証済み成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: ドキュメント・移行・実地検証
+    acceptance: []
+    steps:
+    - description: READMEのmanifest構造(path=mount_root相対、host.auto_mount、mount flag廃止)とKnowledgeのmount_host_aggregation・mount_selection_rulesを新スキーマへ更新する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 旧releaseでwhub unmountを実行し、mount tableとsshfsプロセスが残らないことを確認する。manifest移行前に旧schemaで操作可能な状態で実施する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: docs/operations/releace.mdに従いrelease build・verify・applyを実施する。releaseフローはmanifestを読まないためmanifest移行前に完了させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: ~/.whub/manifest.yamlを新スキーマへ移行する。remote 4件のpathをmount_root相対へ書き換え、esn-lab-runのmount:falseをsupercomputerのauto_mount:falseへ移す。extra=forbidのためapply直後の手編集で切り替える
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: '実地検証: whub lsが13 projectを解決し、whub mountでsshfs 1本・mount table 1件の集約が維持され、workspace
+        symlinkの向き先が正しいこと、status・run・fetch・cdが従来と同一のremote絶対pathで動作することを確認する'
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null

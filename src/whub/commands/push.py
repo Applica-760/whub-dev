@@ -38,7 +38,7 @@ def push(ctx: click.Context, local_name: str) -> None:
     except TargetError as error:
         raise click.ClickException(str(error)) from error
 
-    remote_path = f"{resource.path}/{rel}"
+    remote_path = f"{resource.remote_path}/{rel}"
     current_hash = remote_file_hash(resource._resolved_host, remote_path)
     if current_hash != record.sha256:
         raise click.ClickException(

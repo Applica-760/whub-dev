@@ -55,23 +55,23 @@ class BaseResource(SchemaModel):
     status: bool = True
 
 
-def _check_workspace_path(value: str) -> str:
+def _check_relative_path(value: str) -> str:
     path = Path(value)
     if path.is_absolute():
-        raise ValueError("workspace_path must be relative")
-    # Attachment paths must stay inside the workspace root without resolving symlinks.
+        raise ValueError("path must be relative")
+    # Attachment paths must stay inside their root without resolving symlinks.
     if ".." in path.parts:
-        raise ValueError("workspace_path must not escape workspace root")
+        raise ValueError("path must not escape its root")
     return value
 
 
-WorkspacePath = Annotated[str, AfterValidator(_check_workspace_path)]
+RelativePath = Annotated[str, AfterValidator(_check_relative_path)]
 
 
 # ── Local ─────────────────────────────────────────────────────────────────────────────────
 class SymlinkResource(BaseResource):
     type: Literal["symlink"]
-    workspace_path: WorkspacePath
+    workspace_path: RelativePath
     source: str
     _resolved_workspace_path: Path = PrivateAttr()
 
@@ -87,18 +87,17 @@ class SymlinkResource(BaseResource):
 class RemoteResource(BaseResource):
     type: Literal["remote"]
     host: str
-    path: str
-    workspace_path: WorkspacePath
+    # mount_rootの前置を各resourceへ重複させないため相対で持つ
+    path: RelativePath
+    workspace_path: RelativePath
     mount: bool = True
     _resolved_host: Host = PrivateAttr()
     _resolved_workspace_path: Path = PrivateAttr()
 
-    @field_validator("path")
-    @classmethod
-    def _validate_path(cls, value: str) -> str:
-        if value.startswith("~") or not PurePosixPath(value).is_absolute():
-            raise ValueError("remote path must be an absolute path without '~'")
-        return value
+    @property
+    def remote_path(self) -> str:
+        """Absolute path on the remote host, composed from the host mount_root."""
+        return str(PurePosixPath(self._resolved_host.mount_root) / self.path)
 
 
 # ── Project ─────────────────────────────────────────────────────────────────────────────────
@@ -148,16 +147,7 @@ class Manifest(SchemaModel):
                     f"project '{project.name}' references unknown host "
                     f"'{resource.host}'"
                 )
-            host = self.hosts[resource.host]
-            # mount: falseも名指しmountの対象になりうるため、全remote resourceを検査する
-            try:
-                PurePosixPath(normpath(resource.path)).relative_to(host.mount_root)
-            except ValueError as error:
-                raise ValueError(
-                    f"project '{project.name}' remote path must be under "
-                    f"host '{resource.host}' mount_root"
-                ) from error
-            resource._resolved_host = host
+            resource._resolved_host = self.hosts[resource.host]
             resource._resolved_workspace_path = root / resource.workspace_path
         return self
 

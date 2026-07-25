@@ -43,7 +43,7 @@ def _append_remote_backlog(
     memo: str,
 ) -> None:
     host = resource._resolved_host
-    root = resource.path
+    root = resource.remote_path
     docs = f"{root}/docs"
     path = f"{docs}/backlog.md"
 

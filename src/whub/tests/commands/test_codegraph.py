@@ -128,7 +128,7 @@ def test_remote_init_uses_ssh() -> None:
 
     assert result.exit_code == 0
     assert "codegraph init" in run.call_args.args[1]
-    assert project.resource.path in run.call_args.args[1]
+    assert project.resource.remote_path in run.call_args.args[1]
     assert "init    remote (CodeGraph)" in result.output
 
 

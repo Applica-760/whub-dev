@@ -202,7 +202,7 @@ def _validate_run_id(run_id: str) -> str:
 def _python(
     resource: RemoteResource, script: str, *args: str, input: str | None = None
 ) -> str:
-    command = shlex.join(("python3", "-c", script, resource.path, *args))
+    command = shlex.join(("python3", "-c", script, resource.remote_path, *args))
     try:
         result = run_ssh_command(
             resource._resolved_host, command, input=input, check=True
@@ -301,9 +301,7 @@ def read_session_logs(
         raise ServiceError(f"ambiguous pane name: {pane}")
     output = []
     for item in selected:
-        command = (
-            f"cd {shlex.quote(resource.path)} && cat {shlex.quote(item.transcript)}"
-        )
+        command = f"cd {shlex.quote(resource.remote_path)} && cat {shlex.quote(item.transcript)}"
         result = run_ssh_command(resource._resolved_host, command)
         output.append(f"== {item.window_name} {item.pane_id} ==\n{result.stdout}")
     return "".join(output)
@@ -321,5 +319,5 @@ def build_follow_logs_command(
     ]
     if len(candidates) != 1:
         raise ServiceError("logs --follow requires one unambiguous pane")
-    remote = f"cd {shlex.quote(resource.path)} && exec tail -n 20 -F {shlex.quote(candidates[0].transcript)}"
+    remote = f"cd {shlex.quote(resource.remote_path)} && exec tail -n 20 -F {shlex.quote(candidates[0].transcript)}"
     return build_ssh_command(resource._resolved_host, remote)

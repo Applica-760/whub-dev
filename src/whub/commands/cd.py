@@ -56,9 +56,11 @@ def _cd_remote(resource: RemoteResource, data: tuple[str, bool]) -> None:
     project, plain = data
     host = resource._resolved_host
     if plain:
-        remote_command = f"cd {shlex.quote(resource.path)} && exec $SHELL -l"
+        remote_command = f"cd {shlex.quote(resource.remote_path)} && exec $SHELL -l"
     else:
-        remote_command = build_shell_command(session_name(project), resource.path)
+        remote_command = build_shell_command(
+            session_name(project), resource.remote_path
+        )
     cmd = build_ssh_command(host, remote_command, tty=True)
     if not sys.stdout.isatty():
         sys.exit(EXIT_SSH)

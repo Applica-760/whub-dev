@@ -29,7 +29,7 @@ def manifest_data() -> dict:
                 "resource": {
                     "type": "remote",
                     "host": "home",
-                    "path": "/srv/remote",
+                    "path": "remote",
                     "workspace_path": "projects/remote",
                 },
             },
@@ -38,7 +38,7 @@ def manifest_data() -> dict:
                 "resource": {
                     "type": "remote",
                     "host": "home",
-                    "path": "/srv/remote/nested",
+                    "path": "remote/nested",
                     "workspace_path": "projects/remote/nested",
                     "mount": False,
                 },

@@ -3,13 +3,13 @@
 検証するケース:
 1. `project`は`name`だけで成立し、`resource`なしを許容する。
 2. `symlink` resourceは相対`workspace_path`と絶対`source`を要求する。
-3. `remote` resourceは相対`workspace_path`、絶対`path`、既知の`host`を要求する。
+3. `remote` resourceは相対`workspace_path`、`mount_root`相対の`path`、既知の`host`を要求する。
 4. `project.name`の重複を拒否する。
 5. `resource.workspace_path`の重複を拒否する。
 6. legacy形式や未知フィールドを拒否する。
 7. validation後、resourceの解決済み属性を設定する。
 8. `load_manifest()`はmanifest欠落・YAML不正・schema不正を`ManifestError`にする。
-9. hostの`mount_root`は絶対pathを要求し、mount対象remote resourceをその配下に制限する。
+9. hostの`mount_root`は絶対pathを要求し、`remote_path`はそこからの相対`path`で合成される。
 
 検証しないケース:
 1. Pydanticの全エラーメッセージ本文の完全一致。
@@ -65,7 +65,7 @@ class TestManifestSpec:
             with pytest.raises(ValidationError):
                 Manifest.model_validate(invalid)
 
-    def test_remote_resource_requires_safe_workspace_path_absolute_path_and_known_host(
+    def test_remote_resource_requires_safe_relative_paths_and_known_host(
         self,
     ) -> None:
         # ケース3
@@ -77,8 +77,8 @@ class TestManifestSpec:
         for field, value in (
             ("workspace_path", "/absolute"),
             ("workspace_path", "../outside"),
-            ("path", "relative/path"),
-            ("path", "~/path"),
+            ("path", "/absolute"),
+            ("path", "../outside"),
             ("host", "missing"),
         ):
             invalid = copy.deepcopy(data)
@@ -86,13 +86,20 @@ class TestManifestSpec:
             with pytest.raises(ValidationError):
                 Manifest.model_validate(invalid)
 
-    def test_mount_root_is_required_and_contains_every_remote_path(self) -> None:
+    def test_mount_root_is_required_and_composes_remote_path(self) -> None:
         # ケース9
         data = manifest_data()
         data["hosts"]["home"]["mount_root"] = "/srv/remote"
 
         manifest = Manifest.model_validate(data)
         assert manifest.hosts["home"].mount_root == "/srv/remote"
+        # mount_rootの変更だけで全remote resourceの絶対pathが追随する
+        assert manifest.resolve_project("remote").resource.remote_path == (
+            "/srv/remote/remote"
+        )
+        assert manifest.resolve_project("nested").resource.remote_path == (
+            "/srv/remote/remote/nested"
+        )
 
         missing = copy.deepcopy(data)
         del missing["hosts"]["home"]["mount_root"]
@@ -104,14 +111,6 @@ class TestManifestSpec:
             invalid["hosts"]["home"]["mount_root"] = value
             with pytest.raises(ValidationError):
                 Manifest.model_validate(invalid)
-
-        # mount: falseも名指しmountの対象になりうるため包含検査から除外しない
-        for index in (1, 2):
-            for path in ("/srv/remote-other", "/srv/remote/../outside"):
-                invalid = copy.deepcopy(data)
-                invalid["projects"][index]["resource"]["path"] = path
-                with pytest.raises(ValidationError, match="mount_root"):
-                    Manifest.model_validate(invalid)
 
     def test_duplicate_project_names_are_rejected(self) -> None:
         # ケース4

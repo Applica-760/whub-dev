@@ -89,7 +89,7 @@ def _probe_host(
     items: list[tuple[RemoteResource, Project]],
 ) -> dict[int, tuple[str, str, str]] | None:
     script = "; ".join(
-        _probe_line(index, resource.path, session_name(project.name))
+        _probe_line(index, resource.remote_path, session_name(project.name))
         for index, (resource, project) in enumerate(items)
     )
     try:
