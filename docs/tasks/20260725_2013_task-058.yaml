@@ -1,0 +1,69 @@
+schema_version: 1
+task:
+  id: TASK-058
+  state: draft
+  title: fetch/pushをget/putへ改名
+  objective: downloads隔離領域への単一file転送という実態にCLI表面の命名を合わせ、gitのfetch/pullとの混同とfetch/pushの非対称を解消する
+  approach:
+  - sftpの語彙に合わせてcommand名とmodule fileを改名する。.whub-meta.jsonのfetched_at等の永続化スキーマと、statusの_fetch_local_info等の無関係な内部名は表面の分かりやすさに寄与しないため据え置く。互換aliasは単独利用かつrelease差し替え運用のため設けない。改名と併せて、READMEのコマンド一覧に欠落しているfetch/pushの行を新名称で補う
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: whub getとwhub putがCLIに存在し、whub fetchとwhub pushは解決されない
+  - id: ACC-002
+    statement: 実機でdownloads/への取得とremoteへの書き戻しが従来どおり動作し、検証産物が残らない
+  - id: ACC-003
+    statement: Knowledge・README・workspace-hub/AGENTS.mdが新名称で整合する
+  - id: ACC-004
+    statement: 全回帰が成功し、releaseがbuild・verify・applyされている
+  phases:
+  - title: command改名
+    acceptance: []
+    steps:
+    - description: commands/fetch.pyをget.py、push.pyをput.pyへgit mvし、command関数名とhelp文言をget/putへ変更する。cli.pyのimportとadd_commandを追随させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: tests/commands/test_fetch.pyをtest_get.py、test_push.pyをtest_put.pyへgit
+        mvし、CLI呼び出し・docstring・テスト名を新名称へ追随させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 全体回帰(pytest・対象Ruff check/format・frontend typecheck)を通し、検証済み成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: ドキュメント・release反映と実地検証
+    acceptance: []
+    steps:
+    - description: Knowledge 3件(def:whub_fetch・pol:fetch_large_remote_files・con:fetch_destination)を新名称へ置換し、定義が存在しないwhub
+        putのDefinitionを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: READMEのコマンド一覧へwhub get・whub putの行を追加し、downloads隔離領域への単一file転送でworkspaceには反映しないことを明記する。workspace-hub/AGENTS.mdのresource操作一覧をgetへ更新する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: docs/operations/releace.mdに従いrelease build・verify・applyを実施する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: '実地検証: remoteへ検証用の一時mdを新規作成し、whub getで取得→ローカル編集→whub putで書き戻し→remote側の内容一致を確認する。whub
+        fetch・whub pushが解決されないことも確認し、remoteとlocalの検証産物(downloads実体・.whub-meta.json含む)を後始末する'
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
