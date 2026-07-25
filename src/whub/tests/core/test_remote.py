@@ -2,10 +2,10 @@
 
 検証するケース:
 1. `ssh_target()`は`user@hostname`、展開済みidentity path、portを返す。
-2. `build_remote_exec_command()`はworkdirへ`cd`してから引数列をquoteして`exec`する。
+2. `build_remote_exec_command()`はPATH preludeに続けてworkdirへ`cd`し、引数列をquoteして`exec`する。
 3. `build_ssh_command()`はidentity/port/target/remote commandを含む基本SSH argvを作る。
 4. `build_ssh_command()`は`tty`、`batch_mode`、`connect_timeout`を必要時だけ追加する。
-5. `run_ssh_command()`はSSH argvと実行オプションを`subprocess.run()`へ渡す。
+5. `run_ssh_command()`はPATH preludeを付けたSSH argvと実行オプションを`subprocess.run()`へ渡す。
 6. `build_sshfs_command()`はremote path、mountpoint、identity/port、`-s`、mount optionsを含む。
 7. `build_scp_command()`はBatchMode/ConnectTimeout、identity、大文字`-P` port、local destを含む。
 8. `build_scp_command()`はremote path中のglob文字をescapeする。
@@ -46,6 +46,7 @@ from whub.core.remote import (
     run_rsync_command,
     run_ssh_command,
     ssh_target,
+    with_path_prelude,
 )
 
 
@@ -77,9 +78,9 @@ class TestRemoteSpec:
             ("python", "-c", "print('hello world')"),
         )
 
-        assert (
-            command
-            == "cd '/srv/project path' && exec python -c 'print('\"'\"'hello world'\"'\"')'"
+        assert command == (
+            'export PATH="$HOME/.local/bin:$PATH"; '
+            "cd '/srv/project path' && exec python -c 'print('\"'\"'hello world'\"'\"')'"
         )
 
     def test_build_ssh_command_builds_basic_argv(self) -> None:
@@ -137,7 +138,7 @@ class TestRemoteSpec:
         assert result is completed
         assert execute.call_args.args[0] == build_ssh_command(
             _host(),
-            "cat > file",
+            'export PATH="$HOME/.local/bin:$PATH"; cat > file',
             tty=True,
             batch_mode=True,
             connect_timeout=5,
@@ -273,7 +274,7 @@ class TestRemoteSpec:
         assert result == digest
         assert execute.call_args.args[0] == build_ssh_command(
             _host(),
-            build_remote_hash_command("/srv/remote/out.nc"),
+            with_path_prelude(build_remote_hash_command("/srv/remote/out.nc")),
             batch_mode=True,
             connect_timeout=5,
         )
@@ -313,7 +314,7 @@ class TestRemoteSpec:
         assert result is completed
         assert execute.call_args.args[0] == build_ssh_command(
             _host(),
-            build_remote_write_command("/srv/remote/out.nc"),
+            with_path_prelude(build_remote_write_command("/srv/remote/out.nc")),
             batch_mode=True,
             connect_timeout=5,
         )

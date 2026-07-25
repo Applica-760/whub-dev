@@ -8,11 +8,21 @@ from pathlib import Path
 from whub.models import Host
 
 
+# 非対話SSHのPATHに~/.local/binが含まれないため、規約として先頭へ付与する
+PATH_PRELUDE = 'export PATH="$HOME/.local/bin:$PATH"; '
+
+
+def with_path_prelude(command: str) -> str:
+    return f"{PATH_PRELUDE}{command}"
+
+
 def build_remote_exec_command(
     working_directory: str,
     arguments: tuple[str, ...],
 ) -> str:
-    return f"cd {shlex.quote(working_directory)} && exec {shlex.join(arguments)}"
+    return with_path_prelude(
+        f"cd {shlex.quote(working_directory)} && exec {shlex.join(arguments)}"
+    )
 
 
 def ssh_target(host: Host) -> tuple[str, str, int]:
@@ -62,7 +72,7 @@ def run_ssh_command(
     return subprocess.run(
         build_ssh_command(
             host,
-            remote_command,
+            with_path_prelude(remote_command),
             tty=tty,
             batch_mode=batch_mode,
             connect_timeout=connect_timeout,

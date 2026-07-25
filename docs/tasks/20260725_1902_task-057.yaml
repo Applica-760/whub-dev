@@ -1,13 +1,18 @@
 schema_version: 1
 task:
   id: TASK-057
-  state: draft
+  state: in_progress
   title: whub runのremote実行PATH解決
   objective: 非対話SSHのPATHに~/.local/binが含まれず、remote hostへ導入済みのツール(wflow・codegraph等)がwhub
     runから解決できない状態を解消し、remote実行の前提を決定的にする
   approach:
-  - 第一候補はbuild_remote_exec_commandで$HOME/.local/binをPATH先頭へ付与する規約ベース。rcファイルのsourceは実行結果がrc内容に依存し非決定的になるため採らない(bash
-    -lcでも解決しないことを実測済み)。whub codegraphが内部に持つnvm preludeは、PATHを通す方向へ倒したうえで除去する。host個別に設定したい要求が出た場合のみHostフィールド化を検討し、その判断はTASK-056へ委ねる
+  - PATH解決は規約ベースで行い、rcファイルのsourceは実行結果がrc内容に依存するため採らない(bash -lcでも解決しないことを実測済み)。付与箇所はcore/remoteのprelude
+    1箇所へ集約し、build_remote_exec_command(whub run)と内部run_ssh_command系の双方で共有する。login shellがrcを読むcd・tmux経路は対象外
+  - 対象はhome-serverのみとする。esn-lab-run(supercomputer)は本Taskの想定外とし、セットアップもドキュメントもhost差を扱わない
+  - home-serverのlogin shellはbashであることを実測したため、sh -cラップは行わずログインシェル任せの現状を維持する
+  - codegraphはnpm-shim(#!/usr/bin/env node)であり、PATH前置きだけではsystem node v18を拾うため、home-serverへnvm
+    node v22.22.3をpinしたwrapperを手動配置してから、whub codegraphのnvm preludeを除去する。ホスト側の初期セットアップはwhubの責務としない
+  - 全文検索はhome-serverにrgが無いためgrep -rnを正とし、rgのリモート導入は行わない
   depends_on: []
   interruption_task_id: null
   interruption_reason: null
@@ -19,32 +24,73 @@ plan:
     acceptance: []
     steps:
     - description: 非対話SSHのPATHと、remote hostで解決できるツールを実測し、事実と改修案を分離して記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        調査: 'home-serverの非対話SSH実測: PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+          で ~/.local/bin を含まない。login shellは/bin/bash。~/.local/bin配下にwflow(uv venv起動shim)・uv・uvx・codex等が存在するがPATH外のため
+          command -v wflow は解決しない'
+      deleted: false
+    - value:
+        調査: 'codegraphは ~/.nvm/versions/node/v22.22.3/bin/codegraph のみに存在し、実体は @colbymchenry/codegraph
+          の npm-shim.js。shebangが #!/usr/bin/env node のため、PATHへ~/.local/binを足すだけではsystem
+          nodeを拾う。system nodeは/usr/bin/node v18.19.1でnvm側(v22.22.3)と乖離があり、単純symlinkでは不十分'
+      deleted: false
+    - value:
+        調査: rgは未導入(command -v rg 解決不可)、grepは/usr/bin/grepに存在。全文検索はgrep -rnを正とする根拠とした
+      deleted: false
+    - value:
+        改修案: PATH付与はcore/remoteのprelude 1箇所へ集約しbuild_remote_exec_commandとrun_ssh_commandで共有する。codegraphはnvm
+          node v22.22.3をpinしたwrapperを~/.local/binへ手動配置してからnvm preludeを除去する
+      deleted: false
     deleted: false
   - title: PATH解決の実装
     acceptance: []
     steps:
-    - description: build_remote_exec_commandへ$HOME/.local/binのPATH付与を実装し、exec・終了コード素通しの既存挙動を壊さないことをテストする
-      state: pending
+    - description: core/remoteへPATH prelude(export PATH=$HOME/.local/bin:$PATH)を追加し、build_remote_exec_commandとrun_ssh_commandの双方へ適用する。cd・tmuxのlogin
+        shell経路は対象外とし、exec・終了コード素通し・quoteの既存挙動が変わらないことをテストする
+      state: done
       skip_reason: null
       deleted: false
     - description: whub codegraphのnvm prelude(source $HOME/.nvm/nvm.sh)を除去し、PATH解決へ一本化してテストする
       state: pending
       skip_reason: null
+      deleted: true
+    log:
+    - value:
+        実装: core/remoteへPATH_PRELUDE(export PATH="$HOME/.local/bin:$PATH"; )とwith_path_preludeを追加し、build_remote_exec_command(whub
+          run)とrun_ssh_command(codegraph init・session・backlog・status・hash・write)の双方へ適用。cd・tmuxのlogin
+          shell経路(build_ssh_command直呼び)は対象外のまま
       deleted: false
-    log: []
+    - value:
+        検証: pytest 434 passed。test_remoteのケース2・5をprelude込みの期待値へ更新し、hash・write系はwith_path_preludeで期待値を組み立てる形へ追随。ruff
+          checkは変更2ファイル成功
+      deleted: false
+    - value:
+        実地検証: 開発版CLIでwhub run esn-lab which wflow が 
+          を返す(改修前はPATH外で解決不可)。wflow本体も起動を確認。sh -c exit 42 で終了コード42が素通し。whub statusはremote
+          3件ともstate=okでgit差分取得も従来通り
+      deleted: false
+    - value:
+        既存問題: test_remote.pyのケース14(build_remote_write_command)がruff formatの指摘対象だが、HEAD(eb2e9122)でも同じ指摘が出る本Task範囲外として据え置いた
+      deleted: false
     deleted: false
-  - title: ホスト配置とドキュメント
+  - title: ホスト配置・呼び出し統一・ドキュメント
     acceptance: []
     steps:
-    - description: home-serverの~/.local/binへcodegraphのsymlinkを配置し、nvmのnodeバージョン更新でリンクが切れる運用上の注意を記録する
+    - description: home-serverの~/.local/binへcodegraph起動wrapper(nvmのnode v22.22.3を絶対pathで起動)を手動配置し、whub
+        run経由でPATHのみから解決できることを実測する。system node v18を拾わせない意図と、node更新時にwrapperの修正が必要である運用注意を記録する
       state: pending
       skip_reason: null
       deleted: false
-    - description: 全文検索手段を決定する(rgをremoteへ導入するか、grep -rnを正とするか)
+    - description: whub codegraphのnvm prelude(source $HOME/.nvm/nvm.sh)を除去しPATH解決へ一本化する。remote初期化がwrapper経由で成功することを実測し、テストを追随させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: workspace-hub/AGENTS.mdの探索コマンド例示を実機確認済みの形へ修正する。全文検索はgrep -rnを正とし、codegraph呼び出しからnvm
+        source前置きを削除する
       state: pending
       skip_reason: null
       deleted: false
@@ -52,14 +98,15 @@ plan:
         wflowが解決することを含めて検証する
       state: pending
       skip_reason: null
-      deleted: false
+      deleted: true
     - description: 全体回帰(pytest・Ruff)を通し、検証済み成果をcommitする
       state: pending
       skip_reason: null
       deleted: false
     log: []
     deleted: false
-approvals: []
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
