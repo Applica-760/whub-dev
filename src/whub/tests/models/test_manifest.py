@@ -9,6 +9,7 @@
 6. legacy形式や未知フィールドを拒否する。
 7. validation後、resourceの解決済み属性を設定する。
 8. `load_manifest()`はmanifest欠落・YAML不正・schema不正を`ManifestError`にする。
+9. hostの`mount_root`は絶対pathを要求し、mount対象remote resourceをその配下に制限する。
 
 検証しないケース:
 1. Pydanticの全エラーメッセージ本文の完全一致。
@@ -84,6 +85,32 @@ class TestManifestSpec:
             invalid["projects"][1]["resource"][field] = value
             with pytest.raises(ValidationError):
                 Manifest.model_validate(invalid)
+
+    def test_mount_root_requires_absolute_path_and_contains_auto_mounts(self) -> None:
+        # ケース9
+        data = manifest_data()
+        data["hosts"]["home"]["mount_root"] = "/srv/remote"
+
+        manifest = Manifest.model_validate(data)
+        assert manifest.hosts["home"].mount_root == "/srv/remote"
+
+        for value in ("relative/path", "~/remote"):
+            invalid = copy.deepcopy(data)
+            invalid["hosts"]["home"]["mount_root"] = value
+            with pytest.raises(ValidationError):
+                Manifest.model_validate(invalid)
+
+        for path in ("/srv/remote-other", "/srv/remote/../outside"):
+            invalid = copy.deepcopy(data)
+            invalid["projects"][1]["resource"]["path"] = path
+            with pytest.raises(ValidationError, match="mount_root"):
+                Manifest.model_validate(invalid)
+
+        excluded = copy.deepcopy(data)
+        excluded["projects"][2]["resource"]["path"] = "/outside"
+        assert isinstance(
+            Manifest.model_validate(excluded).projects[2].resource, RemoteResource
+        )
 
     def test_duplicate_project_names_are_rejected(self) -> None:
         # ケース4

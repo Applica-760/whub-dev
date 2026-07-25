@@ -4,6 +4,8 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from pathlib import PurePosixPath
+from posixpath import normpath
 from typing import Literal
 from whub.models import RemoteResource, SymlinkResource
 
@@ -92,8 +94,8 @@ def _read_mount_table() -> str | None:
     return result.stdout
 
 
-def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth:
-    mountpoint = resource._resolved_workspace_path
+def inspect_mountpoint(mountpoint: Path, volname: str) -> ResourceHealth:
+    """Inspect one sshfs mountpoint using its expected volume name."""
     table = _read_mount_table()
     # テーブルを読めない＝状態不明。unmountがskipしないようstale扱い（fail-safe）
     if table is None:
@@ -107,7 +109,7 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
         return ResourceHealth("unmounted", str(mountpoint), "run `whub mount`")
     try:
         process = subprocess.run(
-            ["pgrep", "-f", f"volname=whub-{project_name}"],
+            ["pgrep", "-f", f"volname={volname}"],
             capture_output=True,
             timeout=3,
         )
@@ -118,7 +120,7 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
     if process.returncode != 0:
         return ResourceHealth(
             "stale",
-            f"sshfs process missing: whub-{project_name}",
+            f"sshfs process missing: {volname}",
             "run `whub unmount --force`, then `whub mount`",
         )
     try:
@@ -153,4 +155,62 @@ def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth
             probe.detail,
             "run `whub unmount --force`, then `whub mount`",
         )
+    return ResourceHealth("ok")
+
+
+def inspect_mount(resource: RemoteResource, project_name: str) -> ResourceHealth:
+    return inspect_mountpoint(
+        resource._resolved_workspace_path,
+        f"whub-{project_name}",
+    )
+
+
+def inspect_aggregated_mount(
+    resource: RemoteResource,
+    host_mountpoint: Path,
+    host_volname: str,
+) -> ResourceHealth:
+    """Combine a workspace symlink check with its shared host mount health."""
+    mount_root = resource._resolved_host.mount_root
+    if mount_root is None:
+        raise ValueError("aggregated mount requires host.mount_root")
+    relative_path = PurePosixPath(normpath(resource.path)).relative_to(mount_root)
+    source = host_mountpoint / Path(relative_path)
+    target = resource._resolved_workspace_path
+
+    if not target.is_symlink():
+        if target.exists():
+            return ResourceHealth("unexpected", str(target))
+        return ResourceHealth("missing", str(target), "run `whub mount`")
+    try:
+        linked = target.readlink()
+    except OSError as error:
+        return ResourceHealth("broken", str(error), "run `whub mount`")
+    actual = linked if linked.is_absolute() else target.parent / linked
+    if Path(normpath(str(actual))) != source:
+        return ResourceHealth("wrong-target", str(actual), "run `whub mount`")
+
+    host_health = inspect_mountpoint(host_mountpoint, host_volname)
+    if host_health.state != "ok":
+        return host_health
+    try:
+        result = subprocess.run(
+            ["stat", str(target)],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+    except subprocess.TimeoutExpired:
+        return ResourceHealth("slow", f"stat exceeded 3s: {target}")
+    except OSError as error:
+        return ResourceHealth("broken", str(error), "run `whub mount`")
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"stat failed: exit {result.returncode}"
+        if "operation not permitted" in detail.lower():
+            return ResourceHealth(
+                "unreadable",
+                detail,
+                "allow Network Volumes access for this app, then remount",
+            )
+        return ResourceHealth("broken", detail, "run `whub mount`")
     return ResourceHealth("ok")

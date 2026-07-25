@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 from collections import Counter
-from typing import Annotated, Literal
 from pathlib import Path
 from pathlib import PurePosixPath
+from posixpath import normpath
+from typing import Annotated, Literal
 import yaml
 from pydantic import (
     AfterValidator,
@@ -33,6 +34,16 @@ class Host(SchemaModel):
     user: str
     port: int = 22
     identity_file: str
+    mount_root: str | None = None
+
+    @field_validator("mount_root")
+    @classmethod
+    def _validate_mount_root(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if value.startswith("~") or not PurePosixPath(value).is_absolute():
+            raise ValueError("mount_root must be an absolute path without '~'")
+        return normpath(value)
 
 
 class GitInfo(SchemaModel):
@@ -139,7 +150,16 @@ class Manifest(SchemaModel):
                     f"project '{project.name}' references unknown host "
                     f"'{resource.host}'"
                 )
-            resource._resolved_host = self.hosts[resource.host]
+            host = self.hosts[resource.host]
+            if host.mount_root is not None and resource.mount:
+                try:
+                    PurePosixPath(normpath(resource.path)).relative_to(host.mount_root)
+                except ValueError as error:
+                    raise ValueError(
+                        f"project '{project.name}' remote path must be under "
+                        f"host '{resource.host}' mount_root"
+                    ) from error
+            resource._resolved_host = host
             resource._resolved_workspace_path = root / resource.workspace_path
         return self
 

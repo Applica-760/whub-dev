@@ -28,6 +28,7 @@ import pytest
 from click.testing import CliRunner
 
 from whub.commands.mount import (
+    _mount_host,
     _mount_one,
     _select_targets,
     mount,
@@ -44,6 +45,70 @@ def _disable_mount_log():
 
 
 class TestMountSpec:
+    def test_mounts_host_once_and_links_workspace_paths(self, tmp_path):
+        m = manifest()
+        project = m.resolve_project("remote")
+        resource = project.resource
+        resource._resolved_host.mount_root = "/srv"
+        resource._resolved_workspace_path = tmp_path / "workspace" / "remote"
+        host_mountpoint = tmp_path / "runtime" / "mounts" / "home"
+        with (
+            patch("whub.commands.mount.get_manifest", return_value=m),
+            patch(
+                "whub.commands.mount.inspect_host_mount",
+                side_effect=[ResourceHealth("unmounted"), ResourceHealth("ok")],
+            ),
+            patch(
+                "whub.commands.mount.host_mountpoint",
+                return_value=host_mountpoint,
+            ),
+            patch(
+                "whub.commands.mount.build_sshfs_command",
+                return_value=["sshfs"],
+            ) as build,
+            patch(
+                "whub.commands.mount.subprocess.run",
+                return_value=CompletedProcess([], 0),
+            ),
+            patch(
+                "whub.commands.mount.shutil.which", return_value="/usr/local/bin/sshfs"
+            ),
+        ):
+            result = CliRunner().invoke(mount, ["remote"], catch_exceptions=False)
+
+        assert result.exit_code == 0
+        assert "mount" in result.output
+        assert (
+            resource._resolved_workspace_path.readlink() == host_mountpoint / "remote"
+        )
+        assert build.call_args.args[1] == "/srv"
+
+    def test_repairs_wrong_workspace_symlink_for_healthy_host(self, tmp_path):
+        m = manifest()
+        project = m.resolve_project("remote")
+        resource = project.resource
+        resource._resolved_host.mount_root = "/srv"
+        resource._resolved_workspace_path = tmp_path / "workspace" / "remote"
+        resource._resolved_workspace_path.parent.mkdir(parents=True)
+        resource._resolved_workspace_path.symlink_to(tmp_path / "wrong")
+        host_mountpoint = tmp_path / "runtime" / "mounts" / "home"
+        with (
+            patch(
+                "whub.commands.mount.inspect_host_mount",
+                return_value=ResourceHealth("ok"),
+            ),
+            patch(
+                "whub.commands.mount.host_mountpoint",
+                return_value=host_mountpoint,
+            ),
+        ):
+            status = _mount_host("home", [(project, resource)])
+
+        assert status == "skip"
+        assert (
+            resource._resolved_workspace_path.readlink() == host_mountpoint / "remote"
+        )
+
     def test_mounts_remote_resource(self, tmp_path):
         # ケース1
         m = manifest()
@@ -133,6 +198,7 @@ class TestMountSpec:
     def test_unmounts_remote_resource(self):
         # ケース7
         m = manifest()
+        m.projects = [project for project in m.projects if project.name != "nested"]
         health_seq = [ResourceHealth("ok"), ResourceHealth("unmounted")]
         mock_run = MagicMock(return_value=CompletedProcess([], 0))
         with (
@@ -140,14 +206,51 @@ class TestMountSpec:
             patch("whub.commands.mount.inspect_mount", side_effect=health_seq),
             patch("whub.commands.mount.subprocess.run", mock_run),
         ):
-            result = CliRunner().invoke(unmount, ["remote"], catch_exceptions=False)
+            result = CliRunner().invoke(unmount, [], catch_exceptions=False)
 
         assert result.exit_code == 0
         assert "unmount" in result.output
 
+    def test_unmounts_shared_host_once_and_keeps_workspace_symlink(self, tmp_path):
+        m = manifest()
+        m.projects = [project for project in m.projects if project.name != "nested"]
+        project = m.resolve_project("remote")
+        resource = project.resource
+        resource._resolved_host.mount_root = "/srv"
+        host_mountpoint = tmp_path / "runtime" / "mounts" / "home"
+        host_mountpoint.mkdir(parents=True)
+        resource._resolved_workspace_path = tmp_path / "workspace" / "remote"
+        resource._resolved_workspace_path.parent.mkdir(parents=True)
+        resource._resolved_workspace_path.symlink_to(host_mountpoint / "remote")
+        mock_run = MagicMock(return_value=CompletedProcess([], 0))
+        with (
+            patch("whub.commands.mount.get_manifest", return_value=m),
+            patch(
+                "whub.commands.mount.inspect_host_mount",
+                side_effect=[ResourceHealth("ok"), ResourceHealth("unmounted")],
+            ),
+            patch(
+                "whub.commands.mount.host_mountpoint",
+                return_value=host_mountpoint,
+            ),
+            patch("whub.commands.mount.subprocess.run", mock_run),
+        ):
+            result = CliRunner().invoke(unmount, [], catch_exceptions=False)
+
+        assert result.exit_code == 0
+        assert "unmount" in result.output
+        mock_run.assert_called_once_with(
+            ["umount", str(host_mountpoint)],
+            capture_output=True,
+            text=True,
+        )
+        assert resource._resolved_workspace_path.is_symlink()
+        assert not host_mountpoint.exists()
+
     def test_force_unmounts_stale_resource(self):
         # ケース10
         m = manifest()
+        m.projects = [project for project in m.projects if project.name != "nested"]
         remote = m.resolve_project("remote").resource
         health_seq = [ResourceHealth("stale"), ResourceHealth("unmounted")]
         mock_run = MagicMock(return_value=CompletedProcess([], 0))
@@ -156,9 +259,7 @@ class TestMountSpec:
             patch("whub.commands.mount.inspect_mount", side_effect=health_seq),
             patch("whub.commands.mount.subprocess.run", mock_run),
         ):
-            result = CliRunner().invoke(
-                unmount, ["remote", "--force"], catch_exceptions=False
-            )
+            result = CliRunner().invoke(unmount, ["--force"], catch_exceptions=False)
 
         assert result.exit_code == 0
         assert "unmount" in result.output

@@ -76,7 +76,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: statusとwebappのslow表示(exit 0維持)を実装してテストし、検証済み成果をcommitする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -90,24 +90,98 @@ plan:
     - value:
         実装: wflow iter_task_pathsとresolve_project_content_rootはdenied/errorのみ停止しtimeoutは続行。遅延中のwflow誤停止を解消
       deleted: false
+    - value:
+        検証: 全410 pytest、対象Ruff check/format、frontend typecheck、frontend 13テスト成功。OpenAPI生成schemaへslowを反映しcommit
+      deleted: false
+    - value:
+        環境障害: 検証中、dev venvの.pthにUF_HIDDENが非決定的に再付与されPython siteがスキップしimport whubが失敗(pytestは別経路で成功)。app/のnpm
+          run generate:typesで再現。回避はchflags nohiddenまたはPYTHONPATH=src。openapi生成はPYTHONPATH=srcで実施。付与元特定は本Task外
+      deleted: false
+    - value:
+        環境障害: frontendテストで既知のRollup native optional dependency欠損が再発し、TASK-053確立の復旧手順どおりnpm
+          ciで復旧後13テスト成功
+      deleted: false
     deleted: false
   - title: host単位mount集約
     acceptance: []
     steps:
-    - description: Host.mount_rootをmanifestスキーマへ追加し、mount対象resourceのpath包含バリデーションとテストを実装する
-      state: pending
+    - description: 'manifestスキーマ拡張: Host.mount_root(Optional)を追加し、mount_root定義hostのmount=true
+        remote resourceにpath包含validationを実装。mount_root未定義hostは従来の個別mountを維持(後方互換)+モデルテスト'
+      state: done
       skip_reason: null
       deleted: false
     - description: mount/unmountをhost単位化して~/.whub/runtime/mounts/<host>を実体mountpointとし、各workspace_pathをmount内へのsymlinkとして管理するhealth合成(symlink+host
         mount)とテストを実装する
       state: pending
       skip_reason: null
-      deleted: false
+      deleted: true
     - description: status・vscode除外・mount_logをhost単位mountへ追随させてテストし、検証済み成果をcommitする
       state: pending
       skip_reason: null
+      deleted: true
+    - description: 'core/health: inspect_host_mount新設(mount table・volname=whub-host-<host>のprocess生存・stat・readdir
+        probeをレイテンシ非依存契約で判定)+単体テスト'
+      state: done
+      skip_reason: null
       deleted: false
-    log: []
+    - description: '集約resourceのhealth合成: workspace_path symlink検査(欠落・broken・wrong-target)とhost
+        mount健全性を合成し、resource単位のmount列表示用healthを返す関数+単体テスト'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 'mount実装: mount_root定義hostをhost単位で~/.whub/runtime/mounts/<host>へsshfs(volname=whub-host-<host>)し、対象resourceのworkspace_path
+        symlinkを作成・修復。post-mount probeはslow成功・denied cleanupの契約に従う+テスト'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 'unmount実装: project引数を廃止し、引数なしで全remote host mountを解除。unmount後のsymlink・mountpointの後始末とunmounted検知(broken
+        symlink→recovery案内)+テスト'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 'status追随: _fetch_remote_infoのmount列を合成healthへ切替え、mount_logへhost単位stage(project欄はhost名で記録)を追加+テスト'
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: vscode除外の影響確認(workspace_pathは不変のため変更不要かを確認し結果をlogへ記録)とREADMEのmount説明更新
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 全体回帰(pytest・Ruff・frontend typecheck)を通し、検証済み成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        実装・検証: Host.mount_root(Optional)とmount=true remote resourceの正規化済みpath包含validationを追加。mount_root未定義とmount=falseは従来互換。pytest
+          9 passed、Ruff check/format check、git diff --check成功。
+      deleted: false
+    - value:
+        実装・検証: inspect_host_mountを追加し、host専用volname(whub-host-<host>)でmount table・process・stat・readdirを既存契約どおり判定する共通化を実施。pytest
+          src/whub/tests/core/test_health.py (21 passed)、Ruff check/format check、git
+          diff --check成功。
+      deleted: false
+    - value:
+        実装・検証: inspect_aggregated_mountを追加。workspace symlinkのmissing/unexpected/wrong-targetを検査し、正しいsymlinkはhost
+          healthと合成。host unmountedはunmounted、共有先欠落はbroken、resource stat timeoutはslow。pytest
+          src/whub/tests/core/test_health.py (25 passed)、Ruff check/format check、git
+          diff --check成功。
+      deleted: false
+    - value:
+        実装・検証: mount_root hostはruntime/mounts/<host>へsshfsを1回起動し、対象workspace_pathを配下へのsymlinkとして作成・修復。通常ファイル/dirは上書きせず失敗。mount_root未定義またはmount=falseは既存個別mountを維持。pytest
+          src/whub/tests/commands/test_mount.py (16 passed)、Ruff check/format check、git
+          diff --check成功。
+      deleted: false
+    - value:
+        実装・検証: unmountはproject引数を廃止し全remote resourceへ適用。mount_root hostは一度だけunmountし、workspace
+          symlinkを残してruntime mountpointを削除。pytest src/whub/tests/commands/test_mount.py
+          (17 passed)、Ruff check/format check、git diff --check成功。
+      deleted: false
+    - value:
+        review対応: 'P2: host keyをruntime pathへ直接連結しない。services/mount.pyのhost_mount_idでpercent-encodingした安全識別子をmountpoint・volnameに使用。Coreはinspect_mountpoint(mountpoint,
+          volname)のみを公開し、host固有の薄いwrapperを削除。pytest 44 passed、Ruff check/format check、git
+          diff --check成功。'
+      deleted: false
     deleted: false
   - title: 実地検証とrelease反映
     acceptance: []
@@ -125,11 +199,20 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
+    - description: remote resourceの探索は対象project directory以下へ限定し、find・rg等はwhub run
+        <project>でremote host上に実行させる運用規則をKnowledgeへ登録し、README等の利用案内との整合を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
     log: []
     deleted: false
 approvals:
 - actor: user
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: 共有host mountではproject別unmountを提供せず、引数なしで全remote host mountを解除する方針を反映するため
+- reason: remote resourceの探索範囲とコマンド実行場所を定め、sshfs越しの不要なメタデータ往復と出力を抑える運用規則を追加するため
 cancellation: null
 result: null

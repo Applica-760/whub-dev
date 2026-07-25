@@ -14,6 +14,7 @@
 11. `inspect_mount()`はmount tableにmountpointがあり、sshfsプロセスと`stat`が成功なら`ok`を返す。
 12. `inspect_mount()`はsshfsプロセス不在・検査失敗なら`stale`を返す。
 13. `inspect_mount()`は`stat` timeout/OSError/CalledProcessErrorなら`stale`を返す。
+14. `inspect_mountpoint()`は指定volnameで既存の遅延非障害契約を適用する。
 
 検証しないケース:
 1. 実mount tableのOSごとの差異。
@@ -30,8 +31,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 import whub.core.health as health_module
-from whub.core.health import _read_mount_table, inspect_mount, inspect_symlink
-from whub.models import RemoteResource, SymlinkResource
+from whub.core.health import (
+    _read_mount_table,
+    inspect_aggregated_mount,
+    inspect_mount,
+    inspect_mountpoint,
+    inspect_symlink,
+)
+from whub.models import Host, RemoteResource, SymlinkResource
 
 
 def _symlink_resource(source: Path, target: Path) -> SymlinkResource:
@@ -52,6 +59,17 @@ def _remote_resource(mountpoint: Path) -> RemoteResource:
         workspace_path="projects/remote",
     )
     resource._resolved_workspace_path = mountpoint
+    return resource
+
+
+def _aggregated_resource(workspace_path: Path) -> RemoteResource:
+    resource = _remote_resource(workspace_path)
+    resource._resolved_host = Host(
+        hostname="home.example.com",
+        user="takumi",
+        identity_file="~/.ssh/id_home",
+        mount_root="/srv",
+    )
     return resource
 
 
@@ -358,3 +376,149 @@ class TestMountHealthSpec:
         assert health.state == "stale"
         assert health.detail == "Input/output error"
         assert "unmount --force" in health.recovery
+
+
+class TestHostMountHealthSpec:
+    def test_host_mount_uses_host_volume_name(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            mountpoint = Path(tmp) / "home"
+            table = f"server:/srv on {mountpoint} (macfuse)\n"
+            with (
+                patch.object(health_module, "_read_mount_table", return_value=table),
+                patch.object(
+                    health_module.subprocess,
+                    "run",
+                    side_effect=[
+                        subprocess.CompletedProcess(["pgrep"], 0, "", ""),
+                        subprocess.CompletedProcess(["stat"], 0, "", ""),
+                        subprocess.CompletedProcess(["ls"], 0, "", ""),
+                    ],
+                ) as run,
+            ):
+                health = inspect_mountpoint(mountpoint, "whub-host-home")
+
+        assert health.state == "ok"
+        assert run.call_args_list[0].args[0] == [
+            "pgrep",
+            "-f",
+            "volname=whub-host-home",
+        ]
+
+    def test_host_mount_absent_from_table_reports_unmounted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            mountpoint = Path(tmp) / "home"
+            with patch.object(
+                health_module,
+                "_read_mount_table",
+                return_value="/dev/disk1 on /other/path (apfs, local)\n",
+            ):
+                health = inspect_mountpoint(mountpoint, "whub-host-home")
+
+        assert health.state == "unmounted"
+
+    def test_host_mount_stat_timeout_reports_slow(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            mountpoint = Path(tmp) / "home"
+            table = f"server:/srv on {mountpoint} (macfuse)\n"
+            with (
+                patch.object(health_module, "_read_mount_table", return_value=table),
+                patch.object(
+                    health_module.subprocess,
+                    "run",
+                    side_effect=[
+                        subprocess.CompletedProcess(["pgrep"], 0, "", ""),
+                        subprocess.TimeoutExpired(["stat"], 3),
+                    ],
+                ),
+            ):
+                health = inspect_mountpoint(mountpoint, "whub-host-home")
+
+        assert health.state == "slow"
+
+
+class TestAggregatedMountHealthSpec:
+    def test_correct_symlink_and_healthy_host_reports_ok(self, tmp_path) -> None:
+        host_mountpoint = tmp_path / "runtime" / "home"
+        source = host_mountpoint / "remote"
+        target = tmp_path / "workspace" / "remote"
+        target.parent.mkdir(parents=True)
+        target.symlink_to(source)
+        with (
+            patch.object(
+                health_module,
+                "inspect_mountpoint",
+                return_value=health_module.ResourceHealth("ok"),
+            ),
+            patch.object(
+                health_module.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess(["stat"], 0, "", ""),
+            ),
+        ):
+            health = inspect_aggregated_mount(
+                _aggregated_resource(target),
+                host_mountpoint,
+                "whub-host-home",
+            )
+
+        assert health.state == "ok"
+
+    def test_wrong_workspace_symlink_reports_wrong_target(self, tmp_path) -> None:
+        host_mountpoint = tmp_path / "runtime" / "home"
+        target = tmp_path / "workspace" / "remote"
+        target.parent.mkdir(parents=True)
+        target.symlink_to(tmp_path / "wrong")
+        with patch.object(health_module, "inspect_mountpoint") as host_health:
+            health = inspect_aggregated_mount(
+                _aggregated_resource(target),
+                host_mountpoint,
+                "whub-host-home",
+            )
+
+        assert health.state == "wrong-target"
+        host_health.assert_not_called()
+
+    def test_unmounted_host_overrides_correct_broken_symlink(self, tmp_path) -> None:
+        host_mountpoint = tmp_path / "runtime" / "home"
+        target = tmp_path / "workspace" / "remote"
+        target.parent.mkdir(parents=True)
+        target.symlink_to(host_mountpoint / "remote")
+        with patch.object(
+            health_module,
+            "inspect_mountpoint",
+            return_value=health_module.ResourceHealth("unmounted"),
+        ):
+            health = inspect_aggregated_mount(
+                _aggregated_resource(target),
+                host_mountpoint,
+                "whub-host-home",
+            )
+
+        assert health.state == "unmounted"
+
+    def test_missing_shared_target_reports_broken(self, tmp_path) -> None:
+        host_mountpoint = tmp_path / "runtime" / "home"
+        target = tmp_path / "workspace" / "remote"
+        target.parent.mkdir(parents=True)
+        target.symlink_to(host_mountpoint / "remote")
+        with (
+            patch.object(
+                health_module,
+                "inspect_mountpoint",
+                return_value=health_module.ResourceHealth("ok"),
+            ),
+            patch.object(
+                health_module.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess(
+                    ["stat"], 1, "", "No such file or directory"
+                ),
+            ),
+        ):
+            health = inspect_aggregated_mount(
+                _aggregated_resource(target),
+                host_mountpoint,
+                "whub-host-home",
+            )
+
+        assert health.state == "broken"
