@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-057
-  state: in_progress
+  state: completed
   title: whub runのremote実行PATH解決
   objective: 非対話SSHのPATHに~/.local/binが含まれず、remote hostへ導入済みのツール(wflow・codegraph等)がwhub
     runから解決できない状態を解消し、remote実行の前提を決定的にする
@@ -105,7 +105,7 @@ plan:
       deleted: false
     - description: docs/operations/releace.mdに従いrelease build --source・verify・applyを実施し、PATH上のwhubでwhub
         run <project> codegraph explore が解決することを確認する(buildはclean worktreeが前提のため003-005のcommit後に実施)
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -162,6 +162,18 @@ plan:
     - value:
         既存問題: test_codegraph.pyのruff format指摘(run_ssh_のwith句改行)は本変更で触れていない箇所で、TASK-056でもHEAD時点から存在する範囲外として記録済みのため据え置いた
       deleted: false
+    - value:
+        実装: release 0.1.0+g24b73b35をbuild --source(開発checkout)・verify(sha 79f26f09...)・applyし、currentを切替え。buildのclean
+          worktree前提を満たすため、未追跡だったTASK-058 draftのYAMLを先にcommit(24b73b3)
+      deleted: false
+    - value:
+        実地検証: ~/.local/bin/whubがcommit 24b73b35を返し、whub run esn-lab codegraph explore
+          train が8 symbolsを応答、whub run esn-lab which wflow が 
+          を返す。AGENTS.mdに記載した形がPATH上のwhubで成立することを確認
+      deleted: false
+    - value:
+        既知の環境事情: 作業中shellのPATHは旧release venv(0.1.0+gf6c537ea/venv/bin)が~/.local/binより前に載るため、当該shellのwhubは旧実装のまま。新shellまたは~/.local/bin/whub明示で新releaseが使われる(TASK-056でも同事象を記録)
+      deleted: false
     deleted: false
 approvals:
 - actor: user
@@ -174,4 +186,9 @@ change_requests:
 - reason: PATH上のrelease版whubはPATH preludeを含まず、AGENTS.mdへ記載した探索コマンドがapplyまで実効にならないため、release
     build・verify・applyと実効確認の工程を追加する
 cancellation: null
-result: null
+result:
+  summary: 非対話SSHのPATHに~/.local/binが無い問題を、core/remoteのPATH prelude 1箇所へ集約して解消した。build_remote_exec_command(whub
+    run)とrun_ssh_command(codegraph init・session・backlog・status等)が共有し、cd・tmuxのlogin
+    shell経路は対象外。home-serverへcodegraphのsymlinkを配置し、whub codegraphのnvm preludeを除去してPATH解決へ一本化。AGENTS.mdの探索例をgrep
+    -rnとcodegraph直呼びへ更新し、release 0.1.0+g24b73b35をapplyしてPATH上のwhubで実効を確認した。pytest
+    434 passed。副次的にremote索引のスキーマ破損をcodegraph indexで再構築した
