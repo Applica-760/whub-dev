@@ -269,8 +269,6 @@ constraints:
     statement: whub statusは接続状態・ヘルスチェック・git差分確認に責務を絞る
   status_targets_enabled_resources:
     statement: whub statusはstatusが有効な全resourceを対象にする
-  mount_selection_rules:
-    statement: whub mountは無引数でmountが有効なresourceだけを対象にし、名指し・全件指定ではmount設定を無視する
   backlog_path:
     statement: whub backlogは各projectのdocs/backlog.mdへ未整理メモを追記する
   app_pid_management:
@@ -345,10 +343,11 @@ constraints:
   mount_cleanup_denied_only:
     statement: 自動force unmount(cleanup)は即時権限拒否(denied, Operation not permitted)の検出時に限り、timeoutでは決してunmountしない。wflow・project
       content解決の事前probeもdenied時のみ停止しtimeout時は続行する
-  mount_host_aggregation:
-    statement: mountはhost単位に集約する。host.mount_rootは必須で、hostごとに1本のsshfsを~/.whub/runtime/mounts/host-<id>へ張り、各resourceのworkspace_pathはそのmount内へのsymlinkとする。resource単位の個別mountは廃止した。resourceのpathはmount
-      flagに関わらず所属hostのmount_root配下でなければならない
   mount_unmount_removes_workspace_links:
     statement: unmountはhost mountを解除し、mountが作成したworkspace symlinkと空になった親ディレクトリを撤去してdangling
       symlinkを残さない。削除対象はリンク先がhost mount内の想定pathと一致するものに限り、実体や無関係なsymlinkには触れない。ディレクトリ削除は事前に空を確認したものだけを対象とする
+  mount_host_aggregation:
+    statement: mountはhost単位に集約する。host.mount_rootは必須で、hostごとに1本のsshfsを~/.whub/runtime/mounts/host-<id>へ張り、各resourceのworkspace_pathはそのmount内へのsymlinkとする。resource単位の個別mountは廃止した。resourceのpathはmount_rootからの相対で表し、絶対pathの前置を各resourceへ重複させず、mount_rootの変更を単一の変更点にする
+  mount_selection_rules:
+    statement: whub mountの無引数実行はhost.auto_mountがtrueのhostだけを対象にし、名指し・全件指定ではauto_mountを無視する。sshfsの単位がhostである以上、mountの可否もhost単位で決めresource側にmount設定は持たせない
 exceptions: {}

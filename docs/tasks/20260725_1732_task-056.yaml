@@ -67,7 +67,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: 全体回帰(pytest・対象Ruff check/format・frontend typecheck)を通し、検証済み成果をcommitする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -82,12 +82,16 @@ plan:
           mount --allのhelp文言をauto_mount基準へ更新。test_mountのケース8・9をauto_mount契約へ書き換え(_manifest_without_auto_mountを追加)、test_vscodeの期待値へnestedを追加。pytest
           434 passed
       deleted: false
+    - value:
+        検証: '全体回帰: pytest 434 passed、frontend typecheck (tsc -b) 成功、git diff --check成功、Phase
+          2変更9ファイルのruff check/format check成功。commit d6f77fc'
+      deleted: false
     deleted: false
   - title: ドキュメント・移行・実地検証
     acceptance: []
     steps:
     - description: READMEのmanifest構造(path=mount_root相対、host.auto_mount、mount flag廃止)とKnowledgeのmount_host_aggregation・mount_selection_rulesを新スキーマへ更新する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 旧releaseでwhub unmountを実行し、mount tableとsshfsプロセスが残らないことを確認する。manifest移行前に旧schemaで操作可能な状態で実施する
@@ -107,7 +111,14 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        実装: READMEの方針・コマンド一覧・manifest構造を新スキーマへ更新(path=mount_root相対、host.auto_mount、resource側mount設定の廃止)。Knowledgeはcon:mount_host_aggregationへpath相対表現を、con:mount_selection_rulesへauto_mount基準を反映(rm→addで置換、Relationからの参照なし)。docs/specsとworkspace-hub/AGENTS.mdはmanifest
+          schemaに言及しておらず影響なしと確認
+      deleted: false
+    - value:
+        既存問題: whub knowledge checkがcon:operation_release_is_immutable_unitのref src/whub/release.py欠落で失敗する。HEAD(d6f77fc)でも同じ失敗を確認しており本Task範囲外。実体はcore/release.pyとservices/release.pyへ分割済み
+      deleted: false
     deleted: false
 approvals:
 - actor: user
