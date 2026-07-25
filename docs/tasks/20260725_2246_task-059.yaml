@@ -1,0 +1,97 @@
+schema_version: 1
+task:
+  id: TASK-059
+  state: in_progress
+  title: Overviewの左右サイド列を折りたたみ可能にする
+  objective: Overviewの3列固定レイアウトで、狭画面やSplit View時に各列が1/3幅へ圧縮され激しく改行される問題を、左右サイド列の手動折りたたみで解消する
+  approach:
+  - grid-template-columnsをdata属性で切替え、折りたたんだ側は細いレール列に置換してトグルのみ残す。折りたたみ状態は@mantine/hooksのuseLocalStorageで永続化する。responsiveな自動縮退は今回のスコープ外とする
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 折りたたみstateと永続化
+    acceptance: []
+    steps:
+    - description: useOverviewCollapse.tsを追加し、@mantine/hooksのuseLocalStorageでleft/rightの折りたたみ状態をkey
+        whub.overview.collapsedへ永続化する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 折りたたみ状態がSSR/初期描画で未定義にならないよう既定値false(両側展開)を保証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: useLocalStorageはgetInitialValueInEffect既定trueで初回描画がdefaultValueになるためfalseを指定。deserializeはparse失敗時に生文字列を返す仕様のためnormalizeで両側展開へ寄せた。npm
+          run typecheck成功
+      deleted: false
+    deleted: false
+  - title: レール付きgridと折りたたみUI
+    acceptance: []
+    steps:
+    - description: overview.cssに--overview-rail幅を定義し、.overview-frameのdata-collapse-left/data-collapse-rightに応じてgrid-template-columnsを4パターン切替する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: OverviewFrame.tsxにOverviewSideを追加し、展開時は列ヘッダーの折りたたみActionIcon、折りたたみ時はレール内の展開ActionIconをレンダリングする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: OverviewPage.tsxの左右OverviewColumnをOverviewSideへ置換し、中央列と最上部wide行は現状維持とする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: aria-expandedとaria-labelをトグルへ付与し、折りたたみ側のwidgetをdisplay:noneで描画対象から外す
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: サイド列にトグル行を持たせるとサイドと中央の頭が42pxずれるため--overview-toggle-row varで.overview-columnへ同じ高さのpadding-topを与えて3列の頭を揃えた。折りたたみ側はconditional
+          renderではなくdisplay:noneとし、BacklogWidgetのmemo入力途中の値と取得済みデータが消えないようにした。npm
+          run typecheck成功、npm run test 13 passed
+      deleted: false
+    deleted: false
+  - title: 幅変化へのcytoscape追従
+    acceptance: []
+    steps:
+    - description: TaskDependencyGraph.tsxにResizeObserverを追加し、container幅変化時にcy.resize()とfitを実行して折りたたみ後もグラフが正しく収まるようにする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: vitestで折りたたみトグルの状態遷移とlocalStorage永続化を検証するテストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: npm run typecheck / npm run test / npm run build / uv run pytest
+        を実行して全て成功させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whub app devで実画面を開き、左右それぞれの折りたたみ・両側折りたたみ・reload後の状態復元・折りたたみ後のTask
+        graph表示を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Split View相当の狭幅で改行が実際に改善しているかを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

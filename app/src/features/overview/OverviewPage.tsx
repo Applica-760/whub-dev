@@ -8,22 +8,33 @@ import { TaskWidget } from "../tasks/TaskWidget";
 import { TodoFormWidget } from "../todos/TodoFormWidget";
 import { TodoPendingWidget } from "../todos/TodoPendingWidget";
 import { useTodoWidgets } from "../todos/useTodoWidgets";
-import { OverviewColumn, OverviewFrame, OverviewWide } from "./OverviewFrame";
+import {
+  OverviewColumn,
+  OverviewFrame,
+  OverviewSide,
+  OverviewWide,
+} from "./OverviewFrame";
+import { useOverviewCollapse } from "./useOverviewCollapse";
 
 export function OverviewPage() {
   const todoController = useTodoWidgets();
   const projectSelection = useProjectSelection();
+  const { collapsed, toggle } = useOverviewCollapse();
 
   return (
-    <OverviewFrame>
+    <OverviewFrame collapsed={collapsed}>
       <OverviewWide>
         <ProjectTabsWidget {...projectSelection} />
       </OverviewWide>
-      <OverviewColumn>
+      <OverviewSide
+        collapsed={collapsed.left}
+        onToggle={() => toggle("left")}
+        side="left"
+      >
         <TodoFormWidget controller={todoController} />
         <InboxWidget />
         <ResourceStatusWidget />
-      </OverviewColumn>
+      </OverviewSide>
       <OverviewColumn>
         <TodoPendingWidget controller={todoController} showAllLink />
         <TaskDependencyGraphWidget
@@ -36,9 +47,13 @@ export function OverviewPage() {
           showAllLink
         />
       </OverviewColumn>
-      <OverviewColumn>
+      <OverviewSide
+        collapsed={collapsed.right}
+        onToggle={() => toggle("right")}
+        side="right"
+      >
         <BacklogWidget project={projectSelection.selectedProject} />
-      </OverviewColumn>
+      </OverviewSide>
     </OverviewFrame>
   );
 }
