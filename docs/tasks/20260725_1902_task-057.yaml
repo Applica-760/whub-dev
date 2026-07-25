@@ -1,0 +1,66 @@
+schema_version: 1
+task:
+  id: TASK-057
+  state: draft
+  title: whub runのremote実行PATH解決
+  objective: 非対話SSHのPATHに~/.local/binが含まれず、remote hostへ導入済みのツール(wflow・codegraph等)がwhub
+    runから解決できない状態を解消し、remote実行の前提を決定的にする
+  approach:
+  - 第一候補はbuild_remote_exec_commandで$HOME/.local/binをPATH先頭へ付与する規約ベース。rcファイルのsourceは実行結果がrc内容に依存し非決定的になるため採らない(bash
+    -lcでも解決しないことを実測済み)。whub codegraphが内部に持つnvm preludeは、PATHを通す方向へ倒したうえで除去する。host個別に設定したい要求が出た場合のみHostフィールド化を検討し、その判断はTASK-056へ委ねる
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 事前調査
+    acceptance: []
+    steps:
+    - description: 非対話SSHのPATHと、remote hostで解決できるツールを実測し、事実と改修案を分離して記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: PATH解決の実装
+    acceptance: []
+    steps:
+    - description: build_remote_exec_commandへ$HOME/.local/binのPATH付与を実装し、exec・終了コード素通しの既存挙動を壊さないことをテストする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whub codegraphのnvm prelude(source $HOME/.nvm/nvm.sh)を除去し、PATH解決へ一本化してテストする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: ホスト配置とドキュメント
+    acceptance: []
+    steps:
+    - description: home-serverの~/.local/binへcodegraphのsymlinkを配置し、nvmのnodeバージョン更新でリンクが切れる運用上の注意を記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 全文検索手段を決定する(rgをremoteへ導入するか、grep -rnを正とするか)
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: workspace-hub/AGENTS.mdの探索コマンド例示を実機で動作確認した形へ修正し、whub run <project>
+        wflowが解決することを含めて検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 全体回帰(pytest・Ruff)を通し、検証済み成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
