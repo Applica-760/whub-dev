@@ -250,10 +250,32 @@ plan:
     acceptance: []
     steps:
     - description: appのテストとビルドを実行し、Overview・TasksPage・TaskDetailPageの回帰がないことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 必要に応じてuv run pytestを実行し、Python側を含む既存機能への回帰がないことを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verify: npm run typecheck成功、npm test 10 files/26 passed、npm run build成功(dist出力)。uv
+          run pytest 436 passed。TaskDetailPageはTaskDetailWidget・TaskFlowGraphWidgetの構成のまま既存testが通り回帰なし
+      deleted: false
+    deleted: false
+  - title: operation releaseの適用
+    acceptance: []
+    steps:
+    - description: docs/operations/releace.mdに従い、cleanな開発checkoutを--sourceへ明示してwhub
+        release buildを実行する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 生成されたrelease-idでwhub release verifyを実行し、wheelのdist・entry point・versionを検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: whub release applyでcurrentを切り替え、~/.local/bin/whubで新releaseが起動していることを確認する
       state: pending
       skip_reason: null
       deleted: false
