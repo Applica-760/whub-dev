@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-031
-  state: in_progress
+  state: completed
   title: Whub Overview横断残タスクリストと詳細表示
   objective: Overviewに全Project横断の残タスクリストを置き、行選択でページ遷移せずOverview内に選択TaskのフローとStep詳細を表示する。依存グラフは単一Project表示を維持する
   approach:
@@ -268,26 +268,63 @@ plan:
     steps:
     - description: docs/operations/releace.mdに従い、cleanな開発checkoutを--sourceへ明示してwhub
         release buildを実行する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 生成されたrelease-idでwhub release verifyを実行し、wheelのdist・entry point・versionを検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: whub release applyでcurrentを切り替え、~/.local/bin/whubで新releaseが起動していることを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verify: release-id 0.1.0+g91c37e31をbuild・verify・applyで適用。~/.local/bin/whub
+          --versionがcommit 91c37e31を返し、127.0.0.1:8710が200かつ/api/healthがokを返すことを確認
+      deleted: false
     deleted: false
 approvals:
 - actor: user
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - 'OverviewPage.test.tsx: 依存グラフのノード選択でもURL遷移せず表示Taskを切り替える。location=/のままTask ID:
+    TASK-031が描画される'
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - 'TasksPage.test.tsx: ノード選択でlocationが/tasks/whub-dev/TASK-031へ遷移する'
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - TaskDetailPage.test.tsx・TaskDetailWidget.test.tsxが既存のまま通過。TaskDetailPageはTaskFlowGraphWidget
+    + TaskDetailWidget構成でURL・一覧へ戻る導線を維持
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - 'AllTasksWidget.test.tsx: readyまたはin_progressのTaskだけをProject別に並べる。completedは非表示、whub-dev・vaultの見出しを確認'
+- acceptance: ACC-006
+  status: passed
+  evidence:
+  - 'OverviewPage.test.tsx: 横断リストの選択でタスク確認Widgetへ切り替え、URL遷移しない。location=/のままProject:
+    vault / Task ID: TASK-001を描画'
+- acceptance: ACC-007
+  status: passed
+  evidence:
+  - 'AllTasksWidget.test.tsx: 取得失敗Projectを警告として示し、他Projectの行は描画し続ける'
+- acceptance: ACC-008
+  status: passed
+  evidence:
+  - TaskDependencyGraphWidgetはuseTasks(project)の単一Project分のみを渡す。commit 949b8b32の横断描画はrevert済みで、OverviewPage.test.tsxのタブ切替testが/api/tasks?project=vaultへの追従を確認
 change_requests:
 - reason: Task依存グラフを全Project横断描画へ拡張する方針が決まったため、集約API・複合ID・Project単位クラスタ配置のPhaseを追加する
 - reason: Project間の依存が存在せず混在グラフは各Projectの独立DAGが並ぶだけで依存構造の情報が増えないため、横断はリストで行い依存グラフは単一Project表示を維持する方針へ変更する
 cancellation: null
-result: null
+result:
+  summary: 依存グラフはProjectタブ切替の単一Project表示へ戻し、Overviewには全Project横断の残タスクリストと選択Task確認Widget(TaskFlowGraph
+    + TaskDetail)を追加した。release 0.1.0+g91c37e31として適用済み
