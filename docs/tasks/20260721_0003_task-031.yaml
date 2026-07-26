@@ -146,7 +146,7 @@ plan:
     acceptance: []
     steps:
     - description: OverviewPageで選択Taskを(project, taskId)として管理し、ProjectタブのProject切替では選択を解除しない
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 横断残タスクWidgetをOverviewへ配置し、Backlog列の先頭へ選択TaskのTaskFlowGraphWidgetとTaskDetailWidgetを置く
@@ -154,22 +154,30 @@ plan:
       skip_reason: null
       deleted: true
     - description: OverviewのTaskWidget(overviewOnly)を横断残タスクWidgetへ置換し、Backlog列の先頭へ選択TaskのTaskFlowGraphWidgetとTaskDetailWidgetを置く
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Overviewの依存グラフは選択中Projectのみを描画し、ノード選択ではURL遷移せずOverview内の表示Taskを切り替える
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Task未選択時はリストからの選択案内を表示する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: リスト選択・グラフ選択・Projectタブ切替時の挙動と、TasksPageが従来どおり個別詳細へ遷移することをテストする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: OverviewPageで選択Taskを(project, taskId)のstateで保持し、Projectタブとは独立させた。中央列のTaskWidget(overviewOnly)をAllTasksWidgetへ置換。右のBacklog列先頭へTaskFlowGraphWidget(選択時のみ)とTaskDetailWidgetを配置し、未選択時はリストまたはグラフからTaskを選択してくださいを表示。依存グラフへonSelectTaskを渡し選択Projectのみ描画・URL遷移なしで表示Taskを切替。OverviewPage.test.tsxでリスト選択・グラフ選択・タブ切替を、TasksPage.test.tsxで従来どおりの個別詳細遷移を検証
+      deleted: false
+    - value:
+        verify: TasksPageのグラフ選択testが単体では通るのに全体実行で/tasks/whub-dev/へ落ちる不安定さを検出。useTasksはproject未解決時にloading=falseかつtasks=[]を返すため、graph
+          mockが空配列で先に描画されクリックが空IDを渡していた。mockをtaskごとのnodeへ変え、TASK-031のnode出現を待ってからクリックする形にして解消。npm
+          test 10 files/26 passedを3回連続で確認
+      deleted: false
     deleted: false
   - title: 依存グラフのProject横断描画
     acceptance: []
