@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-061
-  state: in_progress
+  state: completed
   title: remote Task読み取りのmount走査からremote実行への切り替え
   objective: remote projectのTask読み取りをmount越しのfile走査からremote host上での一括取得へ切り替え、file数に比例する遅延を取り除く
   approach:
@@ -175,7 +175,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: docs/operations/releace.mdに従いwhub release build・verify・applyを実行し、稼働中appで改善を確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -202,10 +202,23 @@ plan:
         verify: 'uv run pytest 441 passed。app: npm run typecheck成功、npm test 10 files/27
           passed、npm run build成功'
       deleted: false
+    - value:
+        implementation: ssh接続失敗の終了コード255をcore/remote.pyのSSH_CONNECTION_FAILUREへ集約し、services/task.pyとstatus.pyの裸の255を置換。RemoteUnreachableErrorはServiceError契約とProject名入りメッセージを持つためservice層に残した(coreがservices/errorsへ依存すると層が逆転する)
+      deleted: false
+    - value:
+        verify: release 0.1.0+g44876c7bをbuild・verify・applyで適用。~/.local/bin/whubがcommit
+          44876c7bを返す。稼働中app(8710)の実測は/api/tasks/all 1.79s -> 0.77s、la-il 1.585s ->
+          0.26s、whub-dev 0.058s -> 0.056s、la-il詳細0.25s・graph 0.23s。esn-lab 0.22s・private
+          0.27sはTask YAMLが0件のため定数のssh handshake分だけ悪化しているが、Task 1件でmount側が約194ms/fileを払い始めるため逆転する
+      deleted: false
     deleted: false
 approvals:
 - actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: remote projectのTask読み取りをmount走査からremote host上でのtar生成＋ssh 1往復取得へ切り替え、稼働中appで/api/tasks/all
+    1.79s -> 0.77s、la-il 1.585s -> 0.26sへ短縮。mountは1 fileあたり約194msかかりfile数に線形だが、ssh側はhandshake
+    0.19s + 実作業0.05sのほぼ定数で、Task YAML 1件前後が損益分岐。副次的にremote到達不可時のhost単位接続失敗の使い回しで15.21s
+    -> 5.18s、ssh接続失敗の終了コードをcore/remote.pyへ集約。release 0.1.0+g44876c7bとして適用済み
