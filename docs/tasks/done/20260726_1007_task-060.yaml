@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-060
-  state: in_progress
+  state: completed
   title: Task読み込みの高速化とタスクリスト・グラフの表示調整
   objective: Task詳細の表示遅延を解消し、横断タスクリストの区切り線と依存グラフのノード文字サイズを整える
   approach:
@@ -109,7 +109,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: docs/operations/releace.mdに従いwhub release build・verify・applyを実行し、~/.local/bin/whubと起動中appで新releaseを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -117,10 +117,17 @@ plan:
         verify: npm run typecheck成功、npm test 10 files/27 passed、npm run build成功、uv
           run pytest 438 passed
       deleted: false
+    - value:
+        verify: release 0.1.0+g2fd268fdをbuild・verify・applyで適用。~/.local/bin/whubがcommit
+          2fd268fdを返し、稼働中appの実測は/api/tasks/{id} 32ms・/api/tasks 60ms・/graph 26ms(いずれも適用前は約275ms)。/api/tasks/allは1.75sで、内訳はremote
+          projectのla-ilが単独1.59sを占めYAML解析ではなくmount I/Oが支配的
+      deleted: false
     deleted: false
 approvals:
 - actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: Task YAML解析をlibyaml loaderへ切り替え、ID照合を全文パースから軽量抽出へ置換してTask詳細の取得を約275ms->32msへ短縮。横断リストの区切り線をProject間のみへ移し、依存グラフのnode文字を14pxへ縮小。release
+    0.1.0+g2fd268fdとして適用済み
