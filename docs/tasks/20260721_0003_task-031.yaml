@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-031
-  state: draft
+  state: in_progress
   title: Whub Overview横断残タスクリストと詳細表示
   objective: Overviewに全Project横断の残タスクリストを置き、行選択でページ遷移せずOverview内に選択TaskのフローとStep詳細を表示する。依存グラフは単一Project表示を維持する
   approach:
@@ -89,18 +89,24 @@ plan:
     steps:
     - description: commit 949b8b32のTaskDependencyGraph.tsx・TaskDependencyGraph.test.ts・TaskDependencyGraphWidget.tsxをrevertし、複合ID・compound
         parent・Project混在描画を取り除く
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: TaskDependencyGraphWidgetへ任意のonSelectTaskを追加し、指定時は自身のprojectと選択taskIdをコールバックし、未指定時は従来どおりtaskDetailPathへ遷移させる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: npm run typecheckとnpm testで依存グラフの回帰がないことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: commit 949b8b32のコード3ファイルをgit checkout 949b8b32^で復元し、複合ID・compound
+          parent・Project混在描画を撤去。TaskDependencyGraphWidgetへ任意onSelectTaskを追加し、指定時は(project,
+          taskId)をコールバック、未指定時はtaskDetailPathへ遷移。npm run typecheck成功、npm test 7 files/19
+          passed
+      deleted: false
     deleted: false
   - title: 全Project横断の残タスクリストWidget
     acceptance: []
@@ -135,6 +141,10 @@ plan:
       skip_reason: null
       deleted: false
     - description: 横断残タスクWidgetをOverviewへ配置し、Backlog列の先頭へ選択TaskのTaskFlowGraphWidgetとTaskDetailWidgetを置く
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: OverviewのTaskWidget(overviewOnly)を横断残タスクWidgetへ置換し、Backlog列の先頭へ選択TaskのTaskFlowGraphWidgetとTaskDetailWidgetを置く
       state: pending
       skip_reason: null
       deleted: false
@@ -233,6 +243,7 @@ plan:
     log: []
     deleted: false
 approvals:
+- actor: user
 - actor: user
 - actor: user
 acceptance_results: []

@@ -4,7 +4,6 @@ import type { ElementDefinition, LayoutOptions } from "cytoscape";
 
 export type TaskGraphItem = {
   id?: string | null;
-  project: string;
   title?: string | null;
   state?: string | null;
   depends_on?: string[];
@@ -14,15 +13,10 @@ export type TaskGraphItem = {
 type TaskDependencyGraphProps = {
   tasks: TaskGraphItem[];
   height?: number;
-  onSelectTask?: (project: string, taskId: string) => void;
+  onSelectTask?: (taskId: string) => void;
 };
 
 const GRAPH_PADDING = 24;
-
-// Task IDはProject内で採番されるため、Projectを冠してnode idの衝突を防ぐ
-function nodeId(project: string, taskId: string): string {
-  return `${project}/${taskId}`;
-}
 
 export function buildTaskGraphElements(
   tasks: TaskGraphItem[],
@@ -30,109 +24,83 @@ export function buildTaskGraphElements(
   const identifiedTasks = tasks.filter(
     (task): task is TaskGraphItem & { id: string } => Boolean(task.id),
   );
-  const tasksByNodeId = new Map(
-    identifiedTasks.map((task) => [nodeId(task.project, task.id), task]),
-  );
-  const interruptingNodeIds = new Map<string, string[]>();
+  const tasksById = new Map(identifiedTasks.map((task) => [task.id, task]));
+  const interruptingTasks = new Map<string, string[]>();
   identifiedTasks.forEach((task) => {
     if (task.interruption_source_task_id != null) {
-      const sourceNodeId = nodeId(
-        task.project,
-        task.interruption_source_task_id,
-      );
-      const sources = interruptingNodeIds.get(sourceNodeId) ?? [];
-      sources.push(nodeId(task.project, task.id));
-      interruptingNodeIds.set(sourceNodeId, sources);
+      const sources =
+        interruptingTasks.get(task.interruption_source_task_id) ?? [];
+      sources.push(task.id);
+      interruptingTasks.set(task.interruption_source_task_id, sources);
     }
   });
 
-  const visibleNodeIds = new Set(
+  const visibleIds = new Set(
     identifiedTasks
       .filter(
         (task) => task.state !== "completed" && task.state !== "cancelled",
       )
-      .map((task) => nodeId(task.project, task.id)),
+      .map((task) => task.id),
   );
-  const pending = [...visibleNodeIds];
+  const pending = [...visibleIds];
   while (pending.length > 0) {
-    const currentNodeId = pending.pop();
-    if (currentNodeId == null) {
+    const taskId = pending.pop();
+    if (taskId == null) {
       continue;
     }
-    const task = tasksByNodeId.get(currentNodeId);
-    // 依存も割り込みも同一Project内でのみ解決し、Project跨ぎの誤結線を防ぐ
-    const upstreamNodeIds = [
-      ...(task ? (task.depends_on ?? []) : []).map((dependency) =>
-        nodeId(task?.project ?? "", dependency),
-      ),
-      ...(interruptingNodeIds.get(currentNodeId) ?? []),
+    const task = tasksById.get(taskId);
+    const upstreamIds = [
+      ...(task?.depends_on ?? []),
+      ...(interruptingTasks.get(taskId) ?? []),
     ];
-    upstreamNodeIds.forEach((upstreamNodeId) => {
-      if (
-        tasksByNodeId.has(upstreamNodeId) &&
-        !visibleNodeIds.has(upstreamNodeId)
-      ) {
-        visibleNodeIds.add(upstreamNodeId);
-        pending.push(upstreamNodeId);
+    upstreamIds.forEach((upstreamId) => {
+      if (tasksById.has(upstreamId) && !visibleIds.has(upstreamId)) {
+        visibleIds.add(upstreamId);
+        pending.push(upstreamId);
       }
     });
   }
 
   const visibleTasks = identifiedTasks.filter((task) =>
-    visibleNodeIds.has(nodeId(task.project, task.id)),
+    visibleIds.has(task.id),
   );
-  const visibleProjects = [...new Set(visibleTasks.map((task) => task.project))];
+  const taskIds = new Set(visibleTasks.map((task) => task.id));
 
   return [
-    ...visibleProjects.map((project) => ({
-      data: { id: project },
-      classes: "project",
-    })),
     ...visibleTasks.map((task) => ({
       data: {
-        id: nodeId(task.project, task.id),
-        label: `${task.project}:${task.id}\n${task.title ?? task.id}`,
-        parent: task.project,
-        project: task.project,
-        taskId: task.id,
+        id: task.id,
+        label: `${task.id}\n${task.title ?? task.id}`,
       },
       classes: task.state ?? "invalid",
     })),
     ...visibleTasks.flatMap((task) =>
       (task.depends_on ?? [])
-        .map((dependency) => nodeId(task.project, dependency))
-        .filter((dependencyNodeId) => visibleNodeIds.has(dependencyNodeId))
-        .map((dependencyNodeId) => ({
+        .filter((dependency) => taskIds.has(dependency))
+        .map((dependency) => ({
           data: {
-            id: `dependency-${dependencyNodeId}-${nodeId(task.project, task.id)}`,
-            source: dependencyNodeId,
-            target: nodeId(task.project, task.id),
+            id: `dependency-${dependency}-${task.id}`,
+            source: dependency,
+            target: task.id,
           },
         })),
     ),
-    ...visibleTasks.flatMap((task) => {
-      if (task.interruption_source_task_id == null) {
-        return [];
-      }
-      const sourceNodeId = nodeId(
-        task.project,
-        task.interruption_source_task_id,
-      );
-      if (!visibleNodeIds.has(sourceNodeId)) {
-        return [];
-      }
-      return [
-        {
-          data: {
-            id: `interrupt-${sourceNodeId}-${nodeId(task.project, task.id)}`,
-            source: nodeId(task.project, task.id),
-            target: sourceNodeId,
-            label: "interrupt",
-          },
-          classes: "interrupt",
-        },
-      ];
-    }),
+    ...visibleTasks.flatMap((task) =>
+      task.interruption_source_task_id != null &&
+      taskIds.has(task.interruption_source_task_id)
+        ? [
+            {
+              data: {
+                id: `interrupt-${task.interruption_source_task_id}-${task.id}`,
+                source: task.id,
+                target: task.interruption_source_task_id,
+                label: "interrupt",
+              },
+              classes: "interrupt",
+            },
+          ]
+        : [],
+    ),
   ];
 }
 
@@ -166,8 +134,7 @@ export function TaskDependencyGraph({
         elements,
         style: [
           {
-            // Project枠が固定寸法へ潰れないよう、Taskノードだけに寸法を与える
-            selector: "node:childless",
+            selector: "node",
             style: {
               "background-color": "#f8f9fa",
               "border-color": "#868e96",
@@ -210,18 +177,6 @@ export function TaskDependencyGraph({
             },
           },
           {
-            // Project枠は薄い枠だけにし、Project名はTaskノードのラベルで示す
-            selector: ":parent",
-            style: {
-              "background-opacity": 0,
-              "border-color": "#dee2e6",
-              "border-width": 1,
-              label: "",
-              padding: "16px",
-              shape: "round-rectangle",
-            },
-          },
-          {
             selector: "edge",
             style: {
               "curve-style": "bezier",
@@ -256,11 +211,7 @@ export function TaskDependencyGraph({
       });
       if (onSelectTask) {
         graph.on("tap", "node", (event) => {
-          const { project, taskId } = event.target.data();
-          // Project枠のノードは選択対象にしない
-          if (project && taskId) {
-            onSelectTask(project, taskId);
-          }
+          onSelectTask(event.target.id());
         });
       }
 

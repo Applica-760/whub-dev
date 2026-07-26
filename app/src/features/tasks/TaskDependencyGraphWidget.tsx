@@ -1,5 +1,5 @@
 import { Alert, Box, Text } from "@mantine/core";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router";
 
 import { TaskDependencyGraph } from "../../components/TaskDependencyGraph";
@@ -10,23 +10,28 @@ import { useTasks } from "./useTasks";
 type TaskDependencyGraphWidgetProps = {
   project: string | null;
   height?: number;
+  onSelectTask?: (project: string, taskId: string) => void;
 };
 
 export function TaskDependencyGraphWidget({
   project,
   height,
+  onSelectTask,
 }: TaskDependencyGraphWidgetProps) {
   const { tasks, loading, error } = useTasks(project);
   const navigate = useNavigate();
   const handleSelectTask = useCallback(
-    (selectedProject: string, taskId: string) => {
-      void navigate(taskDetailPath(selectedProject, taskId));
+    (taskId: string) => {
+      if (!project) {
+        return;
+      }
+      if (onSelectTask) {
+        onSelectTask(project, taskId);
+        return;
+      }
+      void navigate(taskDetailPath(project, taskId));
     },
-    [navigate],
-  );
-  const graphTasks = useMemo(
-    () => tasks.map((task) => ({ ...task, project: project ?? "" })),
-    [project, tasks],
+    [navigate, onSelectTask, project],
   );
 
   return (
@@ -50,7 +55,7 @@ export function TaskDependencyGraphWidget({
           <TaskDependencyGraph
             height={height}
             onSelectTask={handleSelectTask}
-            tasks={graphTasks}
+            tasks={tasks}
           />
         )}
       </Box>
