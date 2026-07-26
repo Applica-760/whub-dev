@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-050
-  state: in_progress
+  state: completed
   title: Project Knowledgeを規範管理として再設計する
   objective: Project固有の規範を人間とAgentが低負担かつ正確に参照できるよう、Knowledgeの責務・schema・段階的取得・evidenceとの分担を再設計する
   approach:
@@ -92,13 +92,18 @@ plan:
       skip_reason: null
       deleted: false
     - description: 変更範囲のfocused test、全体回帰、静的な参照検索を実行し、独立した成果をcommitする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - value:
         reachability: python -m whub --helpにknowledge commandがなく、FastAPIに/api/knowledge
           routeがないこと、新規4文書の存在を確認した。
+      deleted: false
+    - value:
+        verification: CLI・Web API focused test 101件、Python全体回帰411件、frontend typecheck、frontend
+          test 23件、静的参照検索、git diff --checkが成功。commit 25af0fa。release 0.1.0+g25af0fa4をbuild・verify・applyし、~/.local/bin/whubでKnowledge
+          command不在を確認。
       deleted: false
     deleted: false
   - title: Knowledgeの必要性を判断する
@@ -170,10 +175,28 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - FOCUSの現役定義・規約・制約と参照を除外済み。
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - 現行実装と代表場面を比較し、ADR-0013にKnowledge廃止の採用理由を記録。
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - mandatory queryを削除し、確定情報をREADME、reference、architecture、operations、development、ADRへ移行。
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - CLI・API・Web UIを削除し、focused 101件、全体411件、frontend 23件、release適用で確認。
 change_requests:
 - reason: Knowledge再設計とVault運用再編はProject・SSOT・検証単位が独立するため、ユーザー指示によりTASK-050からVault固有scopeを分離する
 - reason: ユーザー承認に基づき、Knowledge維持・再設計から完全廃止と標準的なドキュメント構成への移行へ変更する
 - reason: Phase番号の繰上げで旧方針が残ったため、承認済みの廃止計画へ整合させる
 cancellation: null
-result: null
+result:
+  summary: Knowledge subsystemを完全廃止し、標準ドキュメント構成へ移行。CLI・API・Web UIを削除し、全検証とoperation
+    release適用を完了。
