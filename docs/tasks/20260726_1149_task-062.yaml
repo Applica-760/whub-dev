@@ -1,0 +1,24 @@
+schema_version: 1
+task:
+  id: TASK-062
+  state: draft
+  title: 長期自動実行を見据えたworktree基盤の設計を確定する
+  objective: 無人・長時間のAgent実行を前提に、whub開発をworktreeで並列化するためのTask記録の一意性・実行ハーネス・停止条件の方針を確定し、実装可能な後続Taskへ分割する
+  approach:
+  - TASK-034の検討メモを引き継ぎ、開発と運用のディレクトリ分離(TASK-039〜042)および固定releaseによる実行で既に解消された論点と、未解決のまま残る論点を分離してから設計する
+  - worktreeを単純な別checkoutとして扱うとdocs/tasks等の運用データがbranchごとに分岐し、Task一覧の一意性とdepends_onの解決が失われるため、control
+    plane(コードはworktree、Task操作とAgent sessionの入口はoperation rootへ集約)の採否を最初に決める
+  - 無人実行にはworktree分離だけでは足りず、headless実行の起動・run管理・停止条件・完了判定が必要である。run_id・状態・transcript・終了codeを扱う既存のwhub
+    sessionの枠組みを流用可能か判定する
+  - 無人で流せるTaskはapprove_plan済みかつacceptanceを自動判定できるものに限られるため、対象Taskの受け入れ条件と対象外の判定基準を明示し、設計判断を含むTaskは無人化の対象としない
+  - 本Taskは方針確定と後続Taskへの分割までを対象とし、worktree基盤およびハーネスの実装は含めない
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
