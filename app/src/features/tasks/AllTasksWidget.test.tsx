@@ -88,6 +88,33 @@ describe("AllTasksWidget", () => {
     expect(screen.getByText("vault")).toBeTruthy();
   });
 
+  it("区切り線をProject間だけに置き、同一Project内のTask間には置かない", async () => {
+    stubTasks([
+      {
+        project: "whub-dev",
+        error: null,
+        tasks: [
+          { id: "TASK-031", path: "a.yaml", title: "A", state: "in_progress" },
+          { id: "TASK-032", path: "b.yaml", title: "B", ready: true },
+        ],
+      },
+      {
+        project: "vault",
+        error: null,
+        tasks: [
+          { id: "TASK-001", path: "c.yaml", title: "C", ready: true },
+          { id: "TASK-002", path: "d.yaml", title: "D", ready: true },
+        ],
+      },
+    ]);
+
+    const { container } = renderWidget(<AllTasksWidget onSelectTask={vi.fn()} />);
+
+    expect(await screen.findByText("031: A")).toBeTruthy();
+    // 2 Project・計4 Taskで、区切り線はProject境界の1本だけになる
+    expect(container.querySelectorAll(".mantine-Divider-root")).toHaveLength(1);
+  });
+
   it("行を選択すると(project, taskId)を通知し、選択中の行を区別する", async () => {
     stubTasks([
       {

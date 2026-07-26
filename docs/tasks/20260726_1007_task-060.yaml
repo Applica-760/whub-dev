@@ -72,40 +72,51 @@ plan:
     acceptance: []
     steps:
     - description: AllTasksWidgetの同一Project内Task行から区切り線を外す
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Projectグループ間にだけ区切り線を入れ、最後のグループの後には入れない
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 区切り線の位置をテストで検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: AllTasksWidgetのGroupedListRowをwithDivider={false}にし、Projectグループの先頭(groupIndex
+          > 0)へDividerを置いた。最後のグループの後には入らない。2 Project計4 Taskで区切り線が1本だけになることをtestで固定
+      deleted: false
     deleted: false
   - title: 依存グラフのノード文字サイズ調整
     acceptance: []
     steps:
     - description: TaskDependencyGraphのnodeへfont-size 14pxを指定し、既定16pxより僅かに小さくする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: TaskDependencyGraphのnode styleへfont-size 14を追加し、cytoscape既定の16pxより僅かに小さくした
+      deleted: false
     deleted: false
   - title: 統合検証とrelease適用
     acceptance: []
     steps:
     - description: npm run typecheck・npm test・npm run build・uv run pytestで回帰がないことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: docs/operations/releace.mdに従いwhub release build・verify・applyを実行し、~/.local/bin/whubと起動中appで新releaseを確認する
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verify: npm run typecheck成功、npm test 10 files/27 passed、npm run build成功、uv
+          run pytest 438 passed
+      deleted: false
     deleted: false
 approvals:
 - actor: user

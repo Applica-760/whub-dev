@@ -1,4 +1,4 @@
-import { Alert, Anchor, Badge, Box, Stack, Text } from "@mantine/core";
+import { Alert, Anchor, Badge, Box, Divider, Stack, Text } from "@mantine/core";
 import { useMemo } from "react";
 import { NavLink } from "react-router";
 
@@ -96,12 +96,14 @@ export function AllTasksWidget({
               着手中・着手可能なTaskはありません
             </Text>
           ) : (
-            groups.map((group) => (
+            groups.map((group, groupIndex) => (
               <Stack gap={4} key={group.project}>
+                {/* 区切り線はProject間だけに置き、同一Project内のTask行は続けて見せる */}
+                {groupIndex > 0 && <Divider />}
                 <Text c="dimmed" fw={600} px="md" size="sm">
                   {group.project}
                 </Text>
-                {group.tasks.map((task, index) => (
+                {group.tasks.map((task) => (
                   <GroupedListRow
                     key={`${task.project}/${task.id}`}
                     onClick={() => onSelectTask(task.project, task.id)}
@@ -123,7 +125,7 @@ export function AllTasksWidget({
                         ? `${task.id.replace(/^TASK-/, "")}: ${task.title}`
                         : task.id.replace(/^TASK-/, "")
                     }
-                    withDivider={index < group.tasks.length - 1}
+                    withDivider={false}
                   />
                 ))}
               </Stack>

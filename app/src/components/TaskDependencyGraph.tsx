@@ -140,6 +140,7 @@ export function TaskDependencyGraph({
               "border-color": "#868e96",
               "border-width": 2,
               color: "#212529",
+              "font-size": 14,
               height: "96px",
               label: "data(label)",
               "line-height": 1.35,
