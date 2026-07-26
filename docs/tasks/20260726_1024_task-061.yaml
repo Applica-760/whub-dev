@@ -33,6 +33,10 @@ plan:
     - description: 棚卸し結果から実装範囲を確定し、1 Taskに収まらない場合は分割方針をユーザーへ提示する
       state: pending
       skip_reason: null
+      deleted: true
+    - description: 棚卸し結果から実装範囲を確定し、対象経路が増える場合は本TaskへPhaseを追加して扱う
+      state: pending
+      skip_reason: null
       deleted: false
     log: []
     deleted: false

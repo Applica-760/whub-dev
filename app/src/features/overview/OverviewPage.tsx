@@ -58,17 +58,17 @@ export function OverviewPage({ collapsed }: OverviewPageProps) {
         />
       </OverviewColumn>
       <OverviewSide collapsed={collapsed.right} side="right">
+        <TaskDetailWidget
+          emptyMessage="リストまたはグラフからTaskを選択してください"
+          project={selectedTask?.project}
+          taskId={selectedTask?.taskId}
+        />
         {selectedTask && (
           <TaskFlowGraphWidget
             project={selectedTask.project}
             taskId={selectedTask.taskId}
           />
         )}
-        <TaskDetailWidget
-          emptyMessage="リストまたはグラフからTaskを選択してください"
-          project={selectedTask?.project}
-          taskId={selectedTask?.taskId}
-        />
         <BacklogWidget project={projectSelection.selectedProject} />
       </OverviewSide>
     </OverviewFrame>
