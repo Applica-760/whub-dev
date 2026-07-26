@@ -1,0 +1,119 @@
+schema_version: 1
+task:
+  id: TASK-061
+  state: draft
+  title: remote resource読み取りのmount走査からremote実行への全面見直し
+  objective: remote projectの読み取りをmount越しのファイル走査からremote host上での実行へ切り替え、ファイル数に比例する遅延を取り除く
+  approach:
+  - mount経由で内容を読む全経路を棚卸しし、実測コストとremote実行での置換可否を判定する
+  - ssh接続を多重化し、1往復で必要な内容をまとめて取得する共通基盤を用意する
+  - backlogの既存remote分岐を先例として、Task・knowledge等の読み取り経路へ適用する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: mount依存経路の棚卸しとコスト実測
+    acceptance: []
+    steps:
+    - description: project contentをmount経由で読む全経路(task・knowledge・backlog・status・vault・session・inbox)を棚卸しし、read対象とファイル数の想定を整理する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 各経路をremote projectで実測し、mount越しの所要時間とファイル数への比例性を記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 経路ごとにremote実行へ置換可能か、mount越しでなければ成立しない要件があるかを判定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 棚卸し結果から実装範囲を確定し、1 Taskに収まらない場合は分割方針をユーザーへ提示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: remote読み取り共通基盤の整備
+    acceptance: []
+    steps:
+    - description: core/remote.pyのssh呼び出しへControlMaster・ControlPersistを導入し、往復ごとのハンドシェイクを解消する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 1往復で複数ファイルの内容をまとめて取得し、path単位へ復元できる転送形式を定める
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: resolve_project_content_rootのlocal・remote判定を、読み取り実装の分岐点として共通化する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 接続失敗・remote path不在・部分的な読み取り失敗の扱いを既存のServiceError契約に揃える
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 共通基盤のテストを追加し、多重化の有無に関わらず同じ結果を返すことを固定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Task読み取りのremote実行化
+    acceptance: []
+    steps:
+    - description: list_project_tasksとload_project_taskを、remote projectでは1往復のremote実行で内容を取得する実装へ切り替える
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 取得内容の解析はローカルで行い、local projectとremote projectでTaskSummary・TaskDocumentが一致することを保証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: remote projectでの/api/tasks/allとTask詳細の所要時間を修正前後で実測する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: その他の読み取り経路への適用
+    acceptance: []
+    steps:
+    - description: 棚卸しでremote実行へ置換すると判定した残りの経路へ同じ実装を適用する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: backlogの既存remote分岐を共通基盤へ寄せ、ssh往復回数を削減する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: AGENTS.mdのremote resource運用方針と実装の対応が崩れていないか確認し、必要なら更新する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 統合検証とrelease適用
+    acceptance: []
+    steps:
+    - description: remoteが到達できない状態でも、local projectの機能とProject単位のエラー隔離が従来どおり動くことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv run pytestとappのテスト・ビルドで回帰がないことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: docs/operations/releace.mdに従いwhub release build・verify・applyを実行し、稼働中appで所要時間の改善を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
