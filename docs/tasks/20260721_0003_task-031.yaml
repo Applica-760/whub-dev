@@ -112,26 +112,35 @@ plan:
     acceptance: []
     steps:
     - description: useAllTasksを使い、readyまたはin_progressのTaskだけをProject別グループで並べる横断残タスクWidgetを追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 各行にProject名・Task ID・title・stateを表示し、選択中の行を視覚的に区別する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: projectErrorsがあるProjectは取得失敗を警告として示し、他Projectの行は描画し続ける
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 行選択で(project, taskId)を親へ通知し、URL遷移はしない
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Widgetの表示・フィルタ・選択通知・Project単位の部分失敗のテストを追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: 'AllTasksWidgetを追加。useAllTasksからready||in_progressかつid有りのTaskのみを抽出し、APIのProject順を保ってProject別グループへ並べる。行はGroupedListRowでtitle=<ID>:
+          <title>・rightSectionにstate badge・selectedでaria-pressed。Project名はグループ見出しへ1回だけ出し、行ごとの重複表示は避けた。projectErrorsはyellow
+          Alertで警告し他Projectの行は描画継続。stateColorはtaskState.tsへ切り出しTaskWidgetと共有。テストはfilter/グループ/選択通知/部分失敗の3件。npm
+          run typecheck成功、npm test 8 files/22 passed'
+      deleted: false
+    - value:
+        verify: vitest configにglobals未指定でRTLの自動cleanupが登録されず、同一fileの前testのDOMが残って選択行の判定が誤ることを実測で検出。AllTasksWidget.test.tsxのafterEachへ明示cleanup()を追加して解消
+      deleted: false
     deleted: false
   - title: Overview配線と選択Task連携
     acceptance: []

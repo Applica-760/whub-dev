@@ -3,6 +3,7 @@ import { NavLink } from "react-router";
 
 import { WidgetFrame } from "../../components/WidgetFrame";
 import { taskDetailPath } from "./routes";
+import { stateColor } from "./taskState";
 import { useTasks } from "./useTasks";
 
 type TaskWidgetProps = {
@@ -10,16 +11,6 @@ type TaskWidgetProps = {
   overviewOnly?: boolean;
   showAllLink?: boolean;
 };
-
-function stateColor(state: string | null | undefined): string {
-  if (state === "completed") {
-    return "green";
-  }
-  if (state === "in_progress") {
-    return "blue";
-  }
-  return "gray";
-}
 
 function listStateOrder(state: string | null | undefined): number {
   return { in_progress: 0, draft: 1, completed: 2 }[state ?? ""] ?? 3;
