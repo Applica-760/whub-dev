@@ -75,23 +75,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/knowledge/{project}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Knowledge */
-        get: operations["get_knowledge_api_knowledge__project__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/inbox": {
         parameters: {
             query?: never;
@@ -326,94 +309,6 @@ export interface components {
         InboxResponse: {
             /** Filename */
             filename: string;
-        };
-        /** Knowledge */
-        Knowledge: {
-            /**
-             * Schema Version
-             * @constant
-             */
-            schema_version: 4;
-            /** Definitions */
-            definitions: {
-                [key: string]: components["schemas"]["KnowledgeDefinition"];
-            };
-            /** Relations */
-            relations: components["schemas"]["KnowledgeRelation"][];
-            /** Policies */
-            policies: {
-                [key: string]: components["schemas"]["KnowledgePolicy"];
-            };
-            /** Constraints */
-            constraints: {
-                [key: string]: components["schemas"]["KnowledgeConstraint"];
-            };
-            /** Exceptions */
-            exceptions: {
-                [key: string]: components["schemas"]["KnowledgeException"];
-            };
-        };
-        /**
-         * KnowledgeConstraint
-         * @description データ・実装・CLIが必ず満たす性質を表すCONエントリ。
-         */
-        KnowledgeConstraint: {
-            /** Statement */
-            statement: string;
-            /** Ref */
-            ref?: string | null;
-        };
-        /**
-         * KnowledgeDefinition
-         * @description 用語が何であるかを表すDEFエントリ。
-         */
-        KnowledgeDefinition: {
-            /** Name */
-            name: string;
-            /** Definition */
-            definition: string;
-            /** Ref */
-            ref?: string | null;
-        };
-        /**
-         * KnowledgeException
-         * @description PolicyまたはConstraintの例外を表すEXCエントリ。
-         */
-        KnowledgeException: {
-            /** Exception To */
-            exception_to: string;
-            /** Condition */
-            condition: string;
-            /** Statement */
-            statement: string;
-            /** Ref */
-            ref?: string | null;
-        };
-        /**
-         * KnowledgePolicy
-         * @description 人間・Agentがどう運用するかを表すPOLエントリ。
-         */
-        KnowledgePolicy: {
-            /** Statement */
-            statement: string;
-            /** Ref */
-            ref?: string | null;
-        };
-        /**
-         * KnowledgeRelation
-         * @description 用語同士の関係を表すRELエントリ。
-         */
-        KnowledgeRelation: {
-            /** Subject */
-            subject: string;
-            /** Predicate */
-            predicate: string;
-            /** Object */
-            object: string;
-            /** Cardinality */
-            cardinality?: string | null;
-            /** Ref */
-            ref?: string | null;
         };
         /** PhaseLog */
         PhaseLog: {
@@ -882,37 +777,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_knowledge_api_knowledge__project__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Knowledge"];
                 };
             };
             /** @description Validation Error */

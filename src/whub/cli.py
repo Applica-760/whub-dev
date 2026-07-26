@@ -12,7 +12,6 @@ from whub.commands.codegraph import codegraph
 from whub.commands.get import get
 from whub.commands.init import init
 from whub.commands.put import put
-from whub.commands.knowledge import knowledge
 from whub.commands.link import link
 from whub.commands.ls import ls
 from whub.commands.mount import mount, unmount
@@ -75,7 +74,6 @@ main.add_command(session)
 main.add_command(get)
 main.add_command(put)
 main.add_command(init)
-main.add_command(knowledge)
 main.add_command(status)
 main.add_command(codegraph)
 main.add_command(shell_init)

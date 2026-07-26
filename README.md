@@ -5,7 +5,6 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 
 ## 方針
 
-- 用語・CLI設計・運用規則は `docs/knowledge.yaml` を正とする
 - `~/.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
 - `~/.whub/` にconfig・manifest・todo・downloads・releases・runtimeを集約する
 - ローカル`resource`はsymlink、リモート`resource`はsshfs mount（参照・編集）とSSH（実行）で操作する
@@ -14,6 +13,15 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 - 無引数mountの対象可否はsshfsの単位に合わせて`host.auto_mount`で決める。`resource`側にmount設定は持たせない
 - Agentはworkspace rootから起動し、Project固有作業の前に対象rootの`AGENTS.md`を読む
 - `whub codegraph`で`codegraph: true`な対象`resource`のCodeGraphを初期化
+
+## Documentation
+
+- [CLI reference](docs/reference/cli.md)
+- [Manifest reference](docs/reference/manifest.md)
+- [Architecture overview](docs/architecture/overview.md)
+- [Development conventions](docs/development/conventions.md)
+- [Architecture decisions](docs/ADR/)
+- [Operations](docs/operations/)
 
 ## セットアップ
 
@@ -89,34 +97,3 @@ PYTHONPATH="$source/src" uv run --project "$source" python -m whub release apply
 ## Remote GUI session
 
 予約・command handoff・状態確認・削除の手順は[Remote GUI session](docs/operations/session.md)に従う。
-
-## `~/.whub/manifest.yaml` の構造
-
-```yaml
-version: "2"
-
-hosts:
-  host-name:
-    hostname: "..."
-    user: "..."
-    identity_file: "~/.ssh/id_rsa"
-    mount_root: /remote   # 必須: host単位mountの起点。配下のresourceを1本のsshfsへ集約
-    auto_mount: false     # 任意: 無引数mountの対象から除外（既定はtrue）
-
-projects:
-  - name: whub-dev
-    resource:
-      type: symlink
-      workspace_path: whub-dev
-      source: /path/to/whub
-      codegraph: true
-
-  - name: remote-project
-    resource:
-      type: remote
-      host: host-name
-      path: sub/dir  # 必須: host.mount_rootからの相対。絶対pathは受け付けない
-      workspace_path: projects/remote-project  # ツリー上の参照先（必須）。host mount内へのsymlinkになる
-      status: false  # 任意: statusの対象から除外
-      codegraph: true
-```

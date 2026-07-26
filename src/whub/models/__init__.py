@@ -1,15 +1,5 @@
 """whub models — re-exports for convenient access."""
 
-from whub.models.knowledge import (
-    Knowledge,
-    KnowledgeConstraint,
-    KnowledgeDefinition,
-    KnowledgeError,
-    KnowledgeException,
-    KnowledgePolicy,
-    KnowledgeRelation,
-    load_knowledge,
-)
 from whub.models.manifest import (
     BaseResource,
     GitInfo,
@@ -30,13 +20,6 @@ __all__ = [
     "BaseResource",
     "GitInfo",
     "Host",
-    "Knowledge",
-    "KnowledgeConstraint",
-    "KnowledgeDefinition",
-    "KnowledgeError",
-    "KnowledgeException",
-    "KnowledgePolicy",
-    "KnowledgeRelation",
     "Manifest",
     "ManifestError",
     "PRIORITY_EMOJI",
@@ -50,7 +33,6 @@ __all__ = [
     "Todo",
     "Todos",
     "load_manifest",
-    "load_knowledge",
     "load_todos",
     "project_names",
     "save_todos",

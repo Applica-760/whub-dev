@@ -1,10 +1,7 @@
-# whub固有コンテキスト
-
-Knowledgeの追加・削除は`whub knowledge add`・`whub knowledge rm`を使い、`docs/knowledge.yaml`を直接編集しないこと。
-
 ## 参照先
 
-- コマンド一覧・セットアップ・`manifest.yaml`の構造は`README.md`
+- コマンド一覧・セットアップは`README.md`、詳細は`docs/reference/`
+- 実装構造・開発規約は`docs/architecture/`と`docs/development/`
 - Remote GUI sessionの運用は`docs/operations/session.md`
 
 ## Operation release

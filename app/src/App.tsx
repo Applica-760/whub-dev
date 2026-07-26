@@ -4,7 +4,6 @@ import { NavLink, Route, Routes, useLocation } from "react-router";
 
 import { ColorSchemeToggle } from "./components/ColorSchemeToggle";
 import { InboxPage } from "./features/inbox/InboxPage";
-import { KnowledgePage } from "./features/knowledge/KnowledgePage";
 import { OverviewCollapseToggles } from "./features/overview/OverviewCollapseToggles";
 import { OverviewPage } from "./features/overview/OverviewPage";
 import { useOverviewCollapse } from "./features/overview/useOverviewCollapse";
@@ -43,7 +42,6 @@ const navigation: NavigationItem[] = [
   { label: "Overview", to: OVERVIEW_PATH },
   { label: "Task", to: TASKS_PATH, isActive: isTasksRoute },
   { label: "Backlog", to: "/backlog" },
-  { label: "Knowledge", to: "/knowledge" },
   { label: "Vault", to: "/vault" },
   { label: "Todo", to: "/todos" },
   { label: "Inbox", to: "/inbox" },
@@ -107,7 +105,6 @@ export function App() {
               path={OVERVIEW_PATH}
             />
             <Route element={<BacklogPage />} path="/backlog" />
-            <Route element={<KnowledgePage />} path="/knowledge" />
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
             <Route element={<TasksPage />} path="/tasks" />

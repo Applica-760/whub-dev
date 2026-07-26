@@ -49,6 +49,58 @@ plan:
       queryはwhub-dev AGENTSの2条件とrefile Skillの2箇所にあり、同内容はREADME・ADR・実装・testにも重複する。FOCUSの陳腐化は手動複製の鮮度問題を実証した。'
     - 代表場面を、実装変更前の不変条件確認、用語・責務・設計理由の確認、運用フロー判断、未知コード領域の調査、過去意思決定の確認に確定。評価基準を、正確性、情報到達までの手間、鮮度、更新重複、検証可能性、発見性、移行時の情報損失に確定し、ユーザー合意を得た。
     deleted: false
+  - title: 移行対象と文書責務を確定する
+    acceptance: []
+    steps:
+    - description: Knowledge YAMLの有効な事実・規約を棚卸しし、README・reference・architecture・ADR・operations・developmentへの移行先を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: README、docs/reference、docs/architecture、docs/developmentを作成または更新し、既存ADR・operationsとの責務境界を明記する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        inventory: docs/knowledge.yamlの126件を確認。CLI・manifest・基本概念はREADME/reference、設計制約はarchitecture/development、release・GUI
+          sessionはoperations、Task運用はREADMEへ配置する。Knowledge自身とそのCLI規約は移行しない。
+      deleted: false
+    - value:
+        mapping: 移行先をREADME、docs/reference、docs/architecture、docs/development、既存docs/ADR・docs/operationsへ確定。
+      deleted: false
+    - value:
+        documents: docs/reference/cli.md、docs/reference/manifest.md、docs/architecture/overview.md、docs/development/conventions.mdを追加し、READMEとAGENTS.mdを新しい参照先へ更新した。
+      deleted: false
+    deleted: false
+  - title: Knowledge機能を完全廃止する
+    acceptance: []
+    steps:
+    - description: Knowledge YAML、CLI、モデル、サービス、Web API/UI、関連テストと現役参照を削除し、互換レイヤーを残さない
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        removal: Knowledge YAML、CLI、モデル、service、Web API/UI、frontend型・テスト、現役参照を削除。ADR-0013で廃止と文書構成を記録した。
+      deleted: false
+    deleted: false
+  - title: 移行結果を検証する
+    acceptance: []
+    steps:
+    - description: CLI運用規約と実装制約の代表場面で新しい文書構成への到達性を確認し、ドキュメントリンクを検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 変更範囲のfocused test、全体回帰、静的な参照検索を実行し、独立した成果をcommitする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        reachability: python -m whub --helpにknowledge commandがなく、FastAPIに/api/knowledge
+          routeがないこと、新規4文書の存在を確認した。
+      deleted: false
+    deleted: false
   - title: Knowledgeの必要性を判断する
     acceptance: []
     steps:
@@ -74,7 +126,7 @@ plan:
     - 'schema方向の追加合意: 規約は原子的に分ける案に同意しつつ、context圧迫を避ける段階的参照も候補とする。Project相対pathとの対応付けは有用で、applies_toを任意fieldとして採用。短いrationaleをKnowledge内に持ち、長い経緯はADRへ逃がす。汎用Relationは廃止し、applies_to・evidence・exception_to・adr等の用途別参照へ置換する。'
     - '現在の確定方針を統合: KnowledgeはProject-localな規範の正本（法律文書）として維持し、testは実装保証のevidenceとする。規約は原子的に保持し、対象pathが決まった時点で概要、必要な規約本文・例外、evidence・ADRの順に段階的参照できる設計とする。applies_toは任意fieldとし、Project相対glob（例:
       src/whub/commands/**）を許容する。同一対象に該当する複数規約は加算適用し、打ち消し・逸脱はexception_toでのみ明示する。各規約にmust・should・mayの強度fieldを持たせる。汎用Relationは用途別参照へ置換し、短いrationaleはKnowledge、長い経緯はADR、検証ケースはtest冒頭列挙、非自明な適用理由は実装内の単行commentに置く。'
-    deleted: false
+    deleted: true
   - title: 入力・整理・昇格フローを再設計する
     acceptance: []
     steps:
@@ -112,12 +164,16 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
 approvals:
+- actor: user
+- actor: user
 - actor: user
 - actor: user
 acceptance_results: []
 change_requests:
 - reason: Knowledge再設計とVault運用再編はProject・SSOT・検証単位が独立するため、ユーザー指示によりTASK-050からVault固有scopeを分離する
+- reason: ユーザー承認に基づき、Knowledge維持・再設計から完全廃止と標準的なドキュメント構成への移行へ変更する
+- reason: Phase番号の繰上げで旧方針が残ったため、承認済みの廃止計画へ整合させる
 cancellation: null
 result: null

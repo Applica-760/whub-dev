@@ -1,6 +1,6 @@
 # ADR-0010: Knowledgeエントリの分類
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0013
 - **Date:** 2026-07-13
 
 ## Context

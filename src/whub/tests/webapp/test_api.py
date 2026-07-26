@@ -11,7 +11,6 @@
 8. ServiceError系とManifestErrorをHTTPエラーへ変換する。
 9. resource statusがserviceの結果を返す。
 10. vaultのツリー取得・ノート取得がserviceを呼ぶ。
-11. Knowledge取得がserviceを呼び、未配置を404へ変換する。
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ from whub.services.errors import NotFoundError, ServiceError
 from whub.services.status import ResourceStatus
 from whub.services.task import ProjectTasks
 from whub.services.vault import VaultNode
-from whub.tests.helpers import knowledge, manifest
+from whub.tests.helpers import manifest
 from whub.webapp.server import create_app
 from whub.wflow.models.task import TaskDocument, TaskSummary
 
@@ -375,42 +374,6 @@ def test_vault_endpoints_use_services(client: TestClient) -> None:
     assert note_response.status_code == 200
     assert note_response.json() == {"path": "mind/idea.md", "content": "# idea\n"}
     mock_read.assert_called_once_with(m, "mind/idea.md")
-
-
-def test_get_knowledge_uses_service_and_maps_missing_to_404(
-    client: TestClient,
-) -> None:
-    # ケース11
-    m = manifest()
-    with (
-        patch("whub.webapp.routers.knowledge.load_manifest", return_value=m),
-        patch(
-            "whub.webapp.routers.knowledge.load_project_knowledge",
-            return_value=knowledge(),
-        ) as mock_load,
-    ):
-        response = client.get("/api/knowledge/local")
-
-    assert response.status_code == 200
-    assert response.json()["definitions"]["whub"]["name"] == "whub"
-    assert response.json()["relations"][0]["predicate"] == "manages"
-    assert (
-        response.json()["constraints"]["reject_unknown_fields"]["statement"]
-        == "未知フィールドを拒否する"
-    )
-    mock_load.assert_called_once_with(m, "local")
-
-    with (
-        patch("whub.webapp.routers.knowledge.load_manifest", return_value=m),
-        patch(
-            "whub.webapp.routers.knowledge.load_project_knowledge",
-            side_effect=NotFoundError("knowledge file not found"),
-        ),
-    ):
-        missing_response = client.get("/api/knowledge/local")
-
-    assert missing_response.status_code == 404
-    assert missing_response.json() == {"detail": "knowledge file not found"}
 
 
 def test_service_errors_are_mapped_to_http_responses(client: TestClient) -> None:

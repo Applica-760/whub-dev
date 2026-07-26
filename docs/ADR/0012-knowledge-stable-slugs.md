@@ -1,6 +1,6 @@
 # ADR-0012: Knowledgeの安定slug参照
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0013
 - **Date:** 2026-07-20
 - **Supersedes:** ADR-0011
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from whub.models import Knowledge, Manifest
+from whub.models import Manifest
 
 
 def manifest_data() -> dict:
@@ -49,45 +49,3 @@ def manifest_data() -> dict:
 
 def manifest() -> Manifest:
     return Manifest.model_validate(manifest_data())
-
-
-def knowledge_data() -> dict:
-    return {
-        "schema_version": 4,
-        "definitions": {
-            "whub": {
-                "name": "whub",
-                "definition": "localとremoteを統合管理するCLI",
-            },
-            "project": {
-                "name": "project",
-                "definition": "管理対象のプロジェクト",
-                "ref": "docs/knowledge.yaml",
-            },
-        },
-        "relations": [
-            {
-                "subject": "def:whub",
-                "predicate": "manages",
-                "object": "def:project",
-                "cardinality": "1..*",
-            },
-        ],
-        "policies": {
-            "knowledge_is_ssot": {"statement": "Knowledge YAMLをSSOTとする"},
-        },
-        "constraints": {
-            "reject_unknown_fields": {"statement": "未知フィールドを拒否する"},
-        },
-        "exceptions": {
-            "legacy_document_transition": {
-                "exception_to": "con:reject_unknown_fields",
-                "condition": "移行期間中",
-                "statement": "旧文書への導線を残せる",
-            },
-        },
-    }
-
-
-def knowledge() -> Knowledge:
-    return Knowledge.model_validate(knowledge_data())
