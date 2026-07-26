@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from datetime import datetime
 import os
 from pathlib import Path
+import re
 import tempfile
 
 import yaml
@@ -17,11 +18,17 @@ from whub.wflow.models.task import TASK_ID_PATTERN, TaskDocument, TaskHeader
 from whub.wflow.services.errors import WflowError
 
 
+# yaml.safe_loadは純Python実装固定のため、libyaml版があれば明示的に使う
+_SAFE_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 def load_task(path: Path) -> TaskDocument:
     if is_apple_double(path):
         raise WflowError(f"AppleDouble metadata is not a Task YAML: {path}")
     try:
-        return TaskDocument.model_validate(yaml.safe_load(path.read_text()))
+        return TaskDocument.model_validate(
+            yaml.load(path.read_text(), Loader=_SAFE_LOADER)
+        )
     except (OSError, UnicodeError, yaml.YAMLError, ValidationError) as error:
         raise WflowError(f"failed to load task YAML: {path}: {error}") from error
 
@@ -40,8 +47,6 @@ def iter_task_paths(root: Path) -> Iterator[Path]:
 
 
 def resolve_task_reference(reference: str, root: Path = Path("docs/tasks")) -> Path:
-    import re
-
     task_id = (
         reference
         if re.fullmatch(TASK_ID_PATTERN, reference)
@@ -65,7 +70,20 @@ def resolve_task_reference(reference: str, root: Path = Path("docs/tasks")) -> P
     return matches[0]
 
 
+# TaskDocumentでTASK-IDを持つid keyはtask headerだけで、常にtop-level直下へ書き出される。
+# ID照合のために全fileをYAML解析すると1件の解決に全件分のコストがかかるため、この行だけを拾う
+_TASK_ID_LINE = re.compile(r"^  id: (TASK-[0-9]+)$", re.MULTILINE)
+
+
 def _task_id(path: Path) -> str | None:
+    try:
+        text = path.read_text()
+    except (OSError, UnicodeError):
+        return None
+    ids = _TASK_ID_LINE.findall(text)
+    if len(ids) == 1:
+        return ids[0]
+    # 引用符付きやindent違いなど想定外の整形は、従来どおり全文解析で判定する
     try:
         return load_task(path).task.id
     except WflowError:

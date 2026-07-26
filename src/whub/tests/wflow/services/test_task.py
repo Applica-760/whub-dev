@@ -506,6 +506,24 @@ def test_resolves_task_ids_and_rejects_missing_or_ambiguous_ids(tmp_path: Path) 
         resolve_task_reference("TASK-001", tmp_path)
 
 
+def test_resolves_task_ids_written_with_unexpected_formatting(tmp_path: Path) -> None:
+    # ID照合の高速pathが外れる整形でも、全文解析へ落ちて解決できる
+    text = yaml.safe_dump(_task_data(), allow_unicode=True, sort_keys=False)
+    quoted_path = tmp_path / "quoted.yaml"
+    quoted_path.write_text(text.replace("  id: TASK-001", "  id: 'TASK-001'"))
+
+    assert resolve_task_reference("TASK-001", tmp_path) == quoted_path
+
+
+def test_task_loading_does_not_depend_on_the_yaml_loader(tmp_path: Path) -> None:
+    path = tmp_path / "task.yaml"
+    _write_task(tmp_path, path.name, _task_data())
+
+    assert load_task(path) == TaskDocument.model_validate(
+        yaml.load(path.read_text(), Loader=yaml.SafeLoader)
+    )
+
+
 def test_rejects_unreadable_task_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -1,0 +1,115 @@
+schema_version: 1
+task:
+  id: TASK-060
+  state: in_progress
+  title: Task読み込みの高速化とタスクリスト・グラフの表示調整
+  objective: Task詳細の表示遅延を解消し、横断タスクリストの区切り線と依存グラフのノード文字サイズを整える
+  approach:
+  - YAML解析をlibyaml版loaderへ切り替えて根本のパーサコストを削る
+  - 区切り線はProject間のみに置き、同一Project内のTask間からは外す
+  - 依存グラフのnode font-sizeを既定16pxから僅かに小さくする
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Task YAML解析の高速化
+    acceptance: []
+    steps:
+    - description: load_taskのYAML解析をlibyaml版CSafeLoaderへ切り替え、未導入環境ではSafeLoaderへ落とす
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 既存のtask読み込みテストが通ることと、loader選択が両環境で同じ結果を返すことを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: /api/tasks/{id}・/api/tasks・/api/tasks/{id}/graph・/api/tasks/allの応答時間を修正前後で実測し、改善を記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: load_taskのyaml.safe_loadを、libyaml版CSafeLoaderがあればそれを使うyaml.loadへ置換。getattr(yaml,
+          CSafeLoader, yaml.SafeLoader)で未導入環境はSafeLoaderへ落ちる。loader選択が結果を変えないことをtest_task_loading_does_not_depend_on_the_yaml_loaderで固定
+      deleted: false
+    - value:
+        verify: yaml解析53file 237ms -> 25.3msで結果は完全一致。開発checkoutのserverを8799で立てて旧release(8710)と比較し、/api/tasks/{id}
+          276ms -> 46ms、/api/tasks 308ms -> 55ms、/graph 272ms -> 23ms。uv run pytest
+          438 passed
+      deleted: false
+    deleted: false
+  - title: Task ID解決の走査コスト削減
+    acceptance: []
+    steps:
+    - description: resolve_task_referenceのID照合を、全文パースから軽量な正規表現抽出へ置き換える
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 正規表現のヒットが1件でないファイルだけ従来のload_taskへフォールバックし、挙動を現行と等価に保つ
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: file名がtask-NNN規約に従わないTaskの解決と、同一IDが重複した場合のambiguityエラーをテストで固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: '_task_idをread_text + ^  id: (TASK-[0-9]+)$の抽出へ置換。TASK-IDを持つid
+          keyはtask headerだけでtop-level直下に書き出されるため一意に特定できる。ヒットが1件でないfileのみ従来のload_taskへフォールバックし、引用符付きやindent違いでも解決できる。reはfunction内importからmodule
+          levelへ移した。既存testが規約違反file名(first.yaml/duplicate.yaml)と重複IDのambiguityを既に固定しており、加えてtest_resolves_task_ids_written_with_unexpected_formattingでフォールバックを検証'
+      deleted: false
+    - value:
+        verify: resolve_task_reference 246ms -> 8.1ms、load_project_task 262ms -> 16.2ms。実manifest
+          12 Project 65 fileで軽量抽出とfull parseのID一致を事前確認し不一致0・正規表現ミス0。規約違反file名のTASK-009・TASK-002も解決できることを実データで確認。uv
+          run pytest 438 passed
+      deleted: false
+    deleted: false
+  - title: タスクリストの区切り線をProject間へ移す
+    acceptance: []
+    steps:
+    - description: AllTasksWidgetの同一Project内Task行から区切り線を外す
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Projectグループ間にだけ区切り線を入れ、最後のグループの後には入れない
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 区切り線の位置をテストで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 依存グラフのノード文字サイズ調整
+    acceptance: []
+    steps:
+    - description: TaskDependencyGraphのnodeへfont-size 14pxを指定し、既定16pxより僅かに小さくする
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 統合検証とrelease適用
+    acceptance: []
+    steps:
+    - description: npm run typecheck・npm test・npm run build・uv run pytestで回帰がないことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: docs/operations/releace.mdに従いwhub release build・verify・applyを実行し、~/.local/bin/whubと起動中appで新releaseを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
