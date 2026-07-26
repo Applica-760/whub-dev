@@ -1,13 +1,13 @@
 schema_version: 1
 task:
   id: TASK-061
-  state: draft
-  title: remote resource読み取りのmount走査からremote実行への全面見直し
-  objective: remote projectの読み取りをmount越しのファイル走査からremote host上での実行へ切り替え、ファイル数に比例する遅延を取り除く
+  state: in_progress
+  title: remote Task読み取りのmount走査からremote実行への切り替え
+  objective: remote projectのTask読み取りをmount越しのfile走査からremote host上での一括取得へ切り替え、file数に比例する遅延を取り除く
   approach:
-  - mount経由で内容を読む全経路を棚卸しし、実測コストとremote実行での置換可否を判定する
-  - ssh接続を多重化し、1往復で必要な内容をまとめて取得する共通基盤を用意する
-  - backlogの既存remote分岐を先例として、Task・knowledge等の読み取り経路へ適用する
+  - docs/tasks配下をtarで1往復取得し、ローカル展開したrootへ既存の解析処理をそのまま適用する
+  - local・remoteの分岐はservices/task.pyのtask root解決へ閉じ、CLIとwflow解析層は変更しない
+  - ssh失敗時はmountへfallbackせず、Project単位のエラー隔離で扱う
   depends_on: []
   interruption_task_id: null
   interruption_reason: null
@@ -39,7 +39,7 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: remote読み取り共通基盤の整備
     acceptance: []
     steps:
@@ -64,7 +64,7 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: Task読み取りのremote実行化
     acceptance: []
     steps:
@@ -81,7 +81,7 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: その他の読み取り経路への適用
     acceptance: []
     steps:
@@ -98,7 +98,7 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: 統合検証とrelease適用
     acceptance: []
     steps:
@@ -115,8 +115,73 @@ plan:
       skip_reason: null
       deleted: false
     log: []
+    deleted: true
+  - title: remote一括取得によるTask読み取りの高速化
+    acceptance: []
+    steps:
+    - description: core/remote.pyへbinary stdoutのssh実行を追加し、remote path配下を1往復でtar取得する関数を用意する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: services/task.pyのtask root解決をlocal・remoteで分岐させ、remoteは取得したtarをtemp
+        dirへ展開したrootを返す
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: remote経路でmountを参照せず、probe_directory_readableを経由しないことを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ssh失敗・remote path不在・tar展開失敗をServiceErrorへ揃え、list_all_project_tasksのProject単位隔離を維持する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: localとremoteで同じTaskSummary・TaskDocumentを返すことをテストで固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: core/remote.pyへrun_ssh_command_bytes(stdout非decode)とbuild_remote_tar_command(root配下をtar
+          streamでstdoutへ出す。root不在はcd失敗で非0終了、対象dir不在は空出力で正常終了)を追加
+      deleted: false
+    - value:
+        verify: 実hostでtar取得を確認。la-il rc=0 0.260s 163840bytes 15file、esn-lab 0.212s
+          15file、private 0.234s 0byte(docs/tasks不在)。mount経由のbaselineはla-il 1.585s
+      deleted: false
+    - value:
+        implementation: services/task.pyへcontextmanager project_task_rootを追加。localはresolve_project_task_root、remoteはTemporaryDirectoryへtarを展開したrootをyieldし、対象なしはNoneで表す。list_project_tasks・load_project_taskをこれ経由へ切替え、wflowの解析層は無変更
+      deleted: false
+    - value:
+        verify: test_task.pyをADR-0009の合意ケース1-7へ改訂。remoteはrun_ssh_command_bytesをmockしtar
+          bytesを与える。mount pathが存在しないまま一覧・詳細が読めることでmount非参照を固定し、同一内容でlocalとremoteのTaskSummary・TaskDocumentが一致することを比較で固定。uv
+          run pytest src/whub/tests/services/test_task.py src/whub/tests/core/test_remote.py
+          26 passed
+      deleted: false
     deleted: false
-approvals: []
+  - title: 実測と統合検証・release適用
+    acceptance: []
+    steps:
+    - description: remote projectでの/api/tasks/all・/api/tasks・Task詳細の所要時間を修正前後で実測する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: remoteが到達できない状態でも、local projectの機能とProject単位のエラー隔離が従来どおり動くことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv run pytestとappのテスト・ビルドで回帰がないことを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: docs/operations/releace.mdに従いwhub release build・verify・applyを実行し、稼働中appで改善を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null

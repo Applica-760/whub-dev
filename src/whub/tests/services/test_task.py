@@ -1,8 +1,22 @@
-"""Project-scoped Task service tests."""
+"""Project-scoped Task service tests.
+
+検証するケース:
+1. local Projectのtask一覧・詳細と、task不在・resource未整備の区別
+2. remote Projectがmountを参照せず、ssh 1往復で得たtarの展開結果から一覧・詳細を返す
+3. 同一内容ならlocalとremoteでTaskSummary・TaskDocumentが一致する
+4. remoteのdocs/tasks不在は一覧が空になり、詳細はNotFoundErrorになる
+5. ssh失敗とtar展開失敗のServiceErrorが、Project単位で隔離される
+6. local task rootがdirectoryでない場合のServiceError
+7. resourceを持たないProjectのServiceError
+"""
 
 from __future__ import annotations
 
+import io
 from pathlib import Path
+from subprocess import CompletedProcess
+import tarfile
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -39,66 +53,121 @@ def _write_task(root: Path, task_id: str, title: str) -> None:
     )
 
 
-def test_lists_tasks_from_local_and_remote_projects(
-    tmp_path: Path,
-) -> None:
+def _tar_bytes(root: Path) -> bytes:
+    """root/docs/tasksを、remote hostのtar出力と同じ相対path構成で固める。"""
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w") as archive:
+        archive.add(root / "docs" / "tasks", arcname="docs/tasks")
+    return buffer.getvalue()
+
+
+def _ssh_result(
+    stdout: bytes = b"",
+    returncode: int = 0,
+    stderr: bytes = b"",
+) -> CompletedProcess[bytes]:
+    return CompletedProcess([], returncode, stdout=stdout, stderr=stderr)
+
+
+def test_lists_tasks_from_local_and_remote_projects(tmp_path: Path) -> None:
+    # ケース1, ケース2
     data = manifest_data()
     local_root = tmp_path / "local-source"
     data["projects"][0]["resource"]["source"] = str(local_root)
     _write_task(local_root, "TASK-001", "Local")
-    _write_task(tmp_path / "projects" / "remote", "TASK-001", "Remote")
+    remote_source = tmp_path / "remote-source"
+    _write_task(remote_source, "TASK-001", "Remote")
     loaded_manifest = Manifest.model_validate(data)
 
     assert list_project_tasks(loaded_manifest, "local")[0].title == "Local"
-    assert list_project_tasks(loaded_manifest, "remote")[0].title == "Remote"
+
+    # remoteのmount pathが存在しなくても読める＝mountを参照していない
+    assert not (tmp_path / "projects" / "remote").exists()
+    with patch(
+        "whub.services.task.run_ssh_command_bytes",
+        return_value=_ssh_result(stdout=_tar_bytes(remote_source)),
+    ) as mock_ssh:
+        assert list_project_tasks(loaded_manifest, "remote")[0].title == "Remote"
+
+    assert mock_ssh.call_count == 1
+    command = mock_ssh.call_args.args[1]
+    assert "tar cf - -- docs/tasks" in command
 
 
-def test_distinguishes_missing_tasks_from_unavailable_resource(
-    tmp_path: Path,
-) -> None:
+def test_local_and_remote_return_the_same_task_records(tmp_path: Path) -> None:
+    # ケース3
     data = manifest_data()
     local_root = tmp_path / "local-source"
-    local_root.mkdir()
     data["projects"][0]["resource"]["source"] = str(local_root)
+    _write_task(local_root, "TASK-001", "Shared")
     loaded_manifest = Manifest.model_validate(data)
 
-    assert list_project_tasks(loaded_manifest, "local") == ()
-    with pytest.raises(
-        ServiceError,
-        match="project resource is not available: remote",
+    with patch(
+        "whub.services.task.run_ssh_command_bytes",
+        return_value=_ssh_result(stdout=_tar_bytes(local_root)),
     ):
-        list_project_tasks(loaded_manifest, "remote")
-    with pytest.raises(ServiceError, match="project has no resource: no-resource"):
-        list_project_tasks(loaded_manifest, "no-resource")
+        assert list_project_tasks(loaded_manifest, "remote") == list_project_tasks(
+            loaded_manifest,
+            "local",
+        )
+        assert load_project_task(
+            loaded_manifest,
+            "remote",
+            "TASK-001",
+        ) == load_project_task(loaded_manifest, "local", "TASK-001")
 
 
-def test_lists_all_projects_and_isolates_failing_projects(tmp_path: Path) -> None:
+def test_missing_remote_task_directory_yields_empty_result(tmp_path: Path) -> None:
+    # ケース4
+    loaded_manifest = Manifest.model_validate(manifest_data())
+
+    with patch(
+        "whub.services.task.run_ssh_command_bytes",
+        return_value=_ssh_result(),
+    ):
+        assert list_project_tasks(loaded_manifest, "remote") == ()
+        with pytest.raises(NotFoundError, match="task not found: remote/TASK-001"):
+            load_project_task(loaded_manifest, "remote", "TASK-001")
+
+
+def test_reports_remote_read_failures_and_isolates_projects(tmp_path: Path) -> None:
+    # ケース5
     data = manifest_data()
     local_root = tmp_path / "local-source"
     data["projects"][0]["resource"]["source"] = str(local_root)
     _write_task(local_root, "TASK-001", "Local")
     loaded_manifest = Manifest.model_validate(data)
 
-    results = {item.project: item for item in list_all_project_tasks(loaded_manifest)}
+    with patch(
+        "whub.services.task.run_ssh_command_bytes",
+        return_value=_ssh_result(returncode=1, stderr=b"No such file or directory\n"),
+    ):
+        with pytest.raises(
+            ServiceError,
+            match="remote task read failed: remote: No such file or directory",
+        ):
+            list_project_tasks(loaded_manifest, "remote")
 
-    assert [item.project for item in list_all_project_tasks(loaded_manifest)] == [
-        project.name for project in loaded_manifest.projects
-    ]
-    assert results["local"].error is None
-    assert [task.title for task in results["local"].tasks] == ["Local"]
+        results = {
+            item.project: item for item in list_all_project_tasks(loaded_manifest)
+        }
+
     # 1つのProjectが読めなくても他Projectの結果は失われない
+    assert [task.title for task in results["local"].tasks] == ["Local"]
+    assert results["local"].error is None
     assert results["remote"].tasks == ()
-    assert "project resource is not available: remote" in (
-        results["remote"].error or ""
-    )
-    assert "project has no resource: no-resource" in (
-        results["no-resource"].error or ""
-    )
+    assert "remote task read failed: remote" in (results["remote"].error or "")
+
+    with patch(
+        "whub.services.task.run_ssh_command_bytes",
+        return_value=_ssh_result(stdout=b"not a tar archive"),
+    ):
+        with pytest.raises(ServiceError, match="remote task read failed: remote"):
+            list_project_tasks(loaded_manifest, "remote")
 
 
-def test_resolves_task_root_and_rejects_non_directory(
-    tmp_path: Path,
-) -> None:
+def test_resolves_task_root_and_rejects_non_directory(tmp_path: Path) -> None:
+    # ケース6
     data = manifest_data()
     local_root = tmp_path / "local-source"
     local_root.mkdir()
@@ -119,7 +188,21 @@ def test_resolves_task_root_and_rejects_non_directory(
         resolve_project_task_root(loaded_manifest, "local")
 
 
+def test_distinguishes_missing_tasks_from_unavailable_resource(tmp_path: Path) -> None:
+    # ケース1, ケース7
+    data = manifest_data()
+    local_root = tmp_path / "local-source"
+    local_root.mkdir()
+    data["projects"][0]["resource"]["source"] = str(local_root)
+    loaded_manifest = Manifest.model_validate(data)
+
+    assert list_project_tasks(loaded_manifest, "local") == ()
+    with pytest.raises(ServiceError, match="project has no resource: no-resource"):
+        list_project_tasks(loaded_manifest, "no-resource")
+
+
 def test_loads_and_renders_one_project_task(tmp_path: Path) -> None:
+    # ケース1
     data = manifest_data()
     local_root = tmp_path / "local-source"
     data["projects"][0]["resource"]["source"] = str(local_root)

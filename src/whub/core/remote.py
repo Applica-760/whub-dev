@@ -85,6 +85,27 @@ def run_ssh_command(
     )
 
 
+def run_ssh_command_bytes(
+    host: Host,
+    remote_command: str,
+    *,
+    timeout: int | None = None,
+    batch_mode: bool = False,
+    connect_timeout: int | None = None,
+) -> subprocess.CompletedProcess[bytes]:
+    """stdoutをdecodeせず受け取る。tar等のbinary streamを取得するときに使う。"""
+    return subprocess.run(
+        build_ssh_command(
+            host,
+            with_path_prelude(remote_command),
+            batch_mode=batch_mode,
+            connect_timeout=connect_timeout,
+        ),
+        capture_output=True,
+        timeout=timeout,
+    )
+
+
 def build_sshfs_command(
     host: Host,
     remote_path: str,
@@ -166,6 +187,20 @@ def remote_write_file(
         batch_mode=True,
         connect_timeout=5,
         timeout=timeout,
+    )
+
+
+def build_remote_tar_command(root: str, relative_path: str) -> str:
+    """root配下のrelative_pathをtar streamでstdoutへ出すコマンドを返す。
+
+    rootが無ければcdが失敗して非0終了する。relative_pathが無い場合は
+    「対象なし」であり異常ではないため、空出力のまま正常終了させる。
+    """
+    quoted_root = shlex.quote(root)
+    quoted_relative = shlex.quote(relative_path)
+    return (
+        f"cd {quoted_root} && "
+        f"if test -d {quoted_relative}; then tar cf - -- {quoted_relative}; fi"
     )
 
 
