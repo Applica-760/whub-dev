@@ -163,22 +163,45 @@ plan:
     acceptance: []
     steps:
     - description: remote projectでの/api/tasks/all・/api/tasks・Task詳細の所要時間を修正前後で実測する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: remoteが到達できない状態でも、local projectの機能とProject単位のエラー隔離が従来どおり動くことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: uv run pytestとappのテスト・ビルドで回帰がないことを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: docs/operations/releace.mdに従いwhub release build・verify・applyを実行し、稼働中appで改善を確認する
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verify: 修正前(release 0.1.0+g531a41a4, port 8710) -> 修正後(開発checkout API server,
+          port 8799)。/api/tasks/all 1.79s -> 0.76s、la-il 1.585s -> 0.235s、esn-lab
+          0.026s -> 0.218s、private 0.011s -> 0.151s、whub-dev 0.058s -> 0.056s。ssh
+          handshake単体は0.19s/回で残コストの大半を占める。remote 3 Projectは全て同一host
+      deleted: false
+    - value:
+        verify: 'remote到達不可(hostname=203.0.113.1)でlist_all_project_tasksを実行。local
+          9 Projectは全て正常に返り、remote 3 ProjectのみServiceError(remote task read failed:
+          <project>: ssh: connect to host ...)でProject単位の隔離は維持。ただし全体で15.21sを要し、ConnectTimeout=5sが同一host分だけ直列に積み上がる'
+      deleted: false
+    - value:
+        implementation: RemoteUnreachableError(ssh returncode 255・TimeoutExpired)を追加し、list_all_project_tasksが1呼び出し内でhost単位の接続失敗を使い回すようにした。errorメッセージはProject名ごとに組み立て直す
+      deleted: false
+    - value:
+        verify: remote到達不可時のlist_all_project_tasksが15.21s -> 5.18sへ短縮。local 9 Projectは正常に返り、remote
+          3 Projectは各自の名前入りerrorで隔離。正常時はall 0.81s・la-il 0.220s(8 tasks)・esn-lab 0.218s・private
+          0.184sで劣化なし
+      deleted: false
+    - value:
+        verify: 'uv run pytest 441 passed。app: npm run typecheck成功、npm test 10 files/27
+          passed、npm run build成功'
+      deleted: false
     deleted: false
 approvals:
 - actor: user

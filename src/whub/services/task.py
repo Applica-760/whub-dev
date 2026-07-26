@@ -36,6 +36,18 @@ TASKS_RELATIVE_PATH = Path("docs/tasks")
 REMOTE_FETCH_TIMEOUT = 30
 
 
+def _remote_read_error(project: str, detail: str) -> str:
+    return f"remote task read failed: {project}: {detail}"
+
+
+class RemoteUnreachableError(ServiceError):
+    """remote hostへ接続できずTaskを読めなかったことを表す。"""
+
+    def __init__(self, project: str, detail: str) -> None:
+        super().__init__(_remote_read_error(project, detail))
+        self.detail = detail
+
+
 def resolve_project_task_root(manifest: Manifest, project: str) -> Path:
     """Resolve a local Project's standard Task directory."""
     task_root = resolve_project_content_root(manifest, project) / TASKS_RELATIVE_PATH
@@ -61,9 +73,11 @@ def _fetch_remote_task_root(
             connect_timeout=5,
             timeout=REMOTE_FETCH_TIMEOUT,
         )
+    except subprocess.TimeoutExpired as error:
+        raise RemoteUnreachableError(project, format_process_error(error)) from error
     except (OSError, subprocess.SubprocessError) as error:
         raise ServiceError(
-            f"remote task read failed: {project}: {format_process_error(error)}"
+            _remote_read_error(project, format_process_error(error))
         ) from error
 
     if result.returncode != 0:
@@ -71,7 +85,10 @@ def _fetch_remote_task_root(
             result.stderr.decode(errors="replace").strip()
             or f"exit status {result.returncode}"
         )
-        raise ServiceError(f"remote task read failed: {project}: {detail}")
+        # sshは自身の接続・認証失敗を255で返す。remote commandの失敗とは区別する
+        if result.returncode == 255:
+            raise RemoteUnreachableError(project, detail)
+        raise ServiceError(_remote_read_error(project, detail))
     if not result.stdout:
         return None
 
@@ -79,7 +96,7 @@ def _fetch_remote_task_root(
         with tarfile.open(fileobj=io.BytesIO(result.stdout)) as archive:
             archive.extractall(destination, filter="data")
     except (tarfile.TarError, OSError) as error:
-        raise ServiceError(f"remote task read failed: {project}: {error}") from error
+        raise ServiceError(_remote_read_error(project, str(error))) from error
     return destination / TASKS_RELATIVE_PATH
 
 
@@ -125,9 +142,22 @@ class ProjectTasks:
 def list_all_project_tasks(manifest: Manifest) -> tuple[ProjectTasks, ...]:
     """Return every Project's Task summaries, isolating per-Project failures."""
     results: list[ProjectTasks] = []
+    # 到達できないhostへ毎回ConnectTimeoutを払わないよう、この呼び出し内で結果を使い回す
+    unreachable: dict[str, str] = {}
     for project in manifest.projects:
+        resource = project.resource
+        host = resource.host if isinstance(resource, RemoteResource) else None
+        if host is not None and host in unreachable:
+            error_message = _remote_read_error(project.name, unreachable[host])
+            results.append(ProjectTasks(project=project.name, error=error_message))
+            continue
         try:
             tasks = list_project_tasks(manifest, project.name)
+        except RemoteUnreachableError as error:
+            if host is not None:
+                unreachable[host] = error.detail
+            results.append(ProjectTasks(project=project.name, error=str(error)))
+            continue
         except (ServiceError, OSError) as error:
             results.append(ProjectTasks(project=project.name, error=str(error)))
             continue

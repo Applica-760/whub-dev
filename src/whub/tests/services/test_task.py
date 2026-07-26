@@ -8,6 +8,7 @@
 5. ssh失敗とtar展開失敗のServiceErrorが、Project単位で隔離される
 6. local task rootがdirectoryでない場合のServiceError
 7. resourceを持たないProjectのServiceError
+8. 同一hostの接続失敗は1回だけ試行し、同じhostの残りProjectは再接続せず同じ理由で失敗する
 """
 
 from __future__ import annotations
@@ -141,7 +142,7 @@ def test_reports_remote_read_failures_and_isolates_projects(tmp_path: Path) -> N
     with patch(
         "whub.services.task.run_ssh_command_bytes",
         return_value=_ssh_result(returncode=1, stderr=b"No such file or directory\n"),
-    ):
+    ) as mock_ssh:
         with pytest.raises(
             ServiceError,
             match="remote task read failed: remote: No such file or directory",
@@ -151,6 +152,9 @@ def test_reports_remote_read_failures_and_isolates_projects(tmp_path: Path) -> N
         results = {
             item.project: item for item in list_all_project_tasks(loaded_manifest)
         }
+
+    # 接続失敗でないerrorは使い回さず、remoteとnestedの双方を試行する
+    assert mock_ssh.call_count == 3
 
     # 1つのProjectが読めなくても他Projectの結果は失われない
     assert [task.title for task in results["local"].tasks] == ["Local"]
@@ -164,6 +168,31 @@ def test_reports_remote_read_failures_and_isolates_projects(tmp_path: Path) -> N
     ):
         with pytest.raises(ServiceError, match="remote task read failed: remote"):
             list_project_tasks(loaded_manifest, "remote")
+
+
+def test_reuses_one_connection_failure_for_the_same_host(tmp_path: Path) -> None:
+    # ケース8
+    data = manifest_data()
+    local_root = tmp_path / "local-source"
+    data["projects"][0]["resource"]["source"] = str(local_root)
+    _write_task(local_root, "TASK-001", "Local")
+    loaded_manifest = Manifest.model_validate(data)
+    unreachable = b"ssh: connect to host home.example.com port 2222: Host is down\n"
+
+    with patch(
+        "whub.services.task.run_ssh_command_bytes",
+        return_value=_ssh_result(returncode=255, stderr=unreachable),
+    ) as mock_ssh:
+        results = {
+            item.project: item for item in list_all_project_tasks(loaded_manifest)
+        }
+
+    # 同一hostのremote・nestedに対して接続試行は1回だけ
+    assert mock_ssh.call_count == 1
+    detail = unreachable.decode().strip()
+    assert results["remote"].error == f"remote task read failed: remote: {detail}"
+    assert results["nested"].error == f"remote task read failed: nested: {detail}"
+    assert [task.title for task in results["local"].tasks] == ["Local"]
 
 
 def test_resolves_task_root_and_rejects_non_directory(tmp_path: Path) -> None:
