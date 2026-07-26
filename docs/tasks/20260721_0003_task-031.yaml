@@ -88,30 +88,39 @@ plan:
     acceptance: []
     steps:
     - description: TaskGraphItemにprojectを追加し、node idを<project>/<task_id>へ複合化してProject間のID衝突を解消する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: depends_onとinterruption_source_task_idを同一Project内でのみ解決し、Project跨ぎの誤結線を防ぐ
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: ノードラベルを<project>:TASK-NNN形式へ変更し、Project名を各ノード上に表示する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Project単位のcompound parentノードを導入し、fcoseでProjectごとにノードが寄って配置されるようにする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: compound parentを薄い枠のみのスタイルにし、既存のstate別background・borderの表現を維持する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: buildTaskGraphElementsの複合ID・Project内依存解決・compound親生成のテストを追加する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: node idを<project>/<task_id>へ複合化し、depends_onとinterruption_source_task_idを同一Project内でのみ解決。ラベルは<project>:TASK-NNN前置。Projectごとのcompound
+          parentを追加しclasses=projectで薄い枠のみ。onSelectTaskは(project, taskId)を渡し、data.taskIdが無い親ノードのtapは無視する。
+      deleted: false
+    - value:
+        verify: 基底nodeルールがcompound parentにも適用され親が220x96へ潰れる問題を実測で検出し、セレクタをnode:childlessへ変更。修正後は親が子を包み622x298になることを確認。fcoseのcompound
+          crashはheadlessでstyleEnabled既定falseにより全ノード1x1になる固有事象で、styleEnabled:trueでは3
+          Project/8ノードのレイアウトが完走しProject枠の重なりも無し。npm test 22 passed、typecheck成功
+      deleted: false
     deleted: false
   - title: Overview横断表示と選択Task連携
     acceptance: []
