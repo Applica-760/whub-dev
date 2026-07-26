@@ -11,6 +11,9 @@ from whub.models import Host
 # 非対話SSHのPATHに~/.local/binが含まれないため、規約として先頭へ付与する
 PATH_PRELUDE = 'export PATH="$HOME/.local/bin:$PATH"; '
 
+# sshは接続・認証など自身の失敗をこの終了コードで返すため、remote commandの失敗と区別できる
+SSH_CONNECTION_FAILURE = 255
+
 
 def with_path_prelude(command: str) -> str:
     return f"{PATH_PRELUDE}{command}"

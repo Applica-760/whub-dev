@@ -11,7 +11,11 @@ import subprocess
 import tarfile
 import tempfile
 
-from whub.core.remote import build_remote_tar_command, run_ssh_command_bytes
+from whub.core.remote import (
+    SSH_CONNECTION_FAILURE,
+    build_remote_tar_command,
+    run_ssh_command_bytes,
+)
 from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.project_content import (
@@ -85,8 +89,7 @@ def _fetch_remote_task_root(
             result.stderr.decode(errors="replace").strip()
             or f"exit status {result.returncode}"
         )
-        # sshは自身の接続・認証失敗を255で返す。remote commandの失敗とは区別する
-        if result.returncode == 255:
+        if result.returncode == SSH_CONNECTION_FAILURE:
             raise RemoteUnreachableError(project, detail)
         raise ServiceError(_remote_read_error(project, detail))
     if not result.stdout:

@@ -13,7 +13,7 @@ from whub.core.health import (
     inspect_aggregated_mount,
     inspect_symlink,
 )
-from whub.core.remote import run_ssh_command
+from whub.core.remote import SSH_CONNECTION_FAILURE, run_ssh_command
 from whub.core.target import collect_targets
 from whub.core.tmux import session_name
 from whub.models import Host, Manifest, Project, RemoteResource, SymlinkResource
@@ -102,7 +102,7 @@ def _probe_host(
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
-    if result.returncode == 255:
+    if result.returncode == SSH_CONNECTION_FAILURE:
         return None
     return _parse_probe(result.stdout)
 
