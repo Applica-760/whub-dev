@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-067
-  state: in_progress
+  state: completed
   title: whub remote コマンド群を導入する
   objective: whub remote コマンド群を導入する。
   approach: []
@@ -81,14 +81,18 @@ plan:
     acceptance: []
     steps:
     - description: 運用文書に従い、clean な開発 checkout を明示して release build、verify、apply を順に実行する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: apply後、~/.local/bin/whub で remote CLI の動作を確認する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        release: 0.1.0+ga2d68f57 を verify・applyし、~/.local/bin/whub remote --helpで
+          run、mount、unmount、get、put、sessionを確認。
+      deleted: false
     deleted: false
 approvals:
 - actor: user
@@ -101,4 +105,5 @@ change_requests:
 - reason: Phase 4の確認StepがPhase 1へ誤って追加されたため、正しいPhaseへ移す
 - reason: 確定したハブ名 cli.py を計画へ反映し、Phase完了記録を正しい形式にするため
 cancellation: null
-result: null
+result:
+  summary: remoteコマンドをremote groupへ集約し、全テスト・release適用後CLI確認を完了。
