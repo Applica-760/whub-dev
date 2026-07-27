@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-066
-  state: in_progress
+  state: completed
   title: リモート mount 上の AppleDouble 副作用を緩和する
   objective: AppleDouble の sidecar を VS Code の表示から除外し、macOS 側で SSHFS を再帰走査せずリモートホスト上で安全に
     cleanup できる運用または機能を整備する。
@@ -70,14 +70,19 @@ plan:
     acceptance: []
     steps:
     - description: 直接管理する VS Code 設定と cleanup の一覧・--apply・形式検証・リモート実行を検証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        検証: pytest 425件、asset・CLI・wheel同梱のfocused test、ruffが成功。release 0.1.0+gcc5ad72aをbuild・verify・applyし、~/.local/bin/whubでesn-labを一覧した結果、AppleDouble形式を検証済みの3件を検出。--applyでその3件を削除し、再一覧は0件を確認。
+      deleted: false
     deleted: false
 approvals:
 - actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: VS CodeではAppleDouble sidecarを直接非表示にし、whub vscodeを廃止した。リモートcleanupはAppleDouble形式を検証して一覧し、--apply指定時だけremote
+    host上で削除する。release適用後にesn-labの3件を削除し、再一覧が空であることを確認した。
