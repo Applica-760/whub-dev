@@ -16,7 +16,6 @@ from whub.commands.remote.cli import remote
 from whub.commands.release import release
 from whub.commands.status import status
 from whub.commands.todo import todo
-from whub.commands.vscode import vscode
 from whub.core.context import PathError
 from whub.core import release as release_metadata
 
@@ -71,4 +70,3 @@ main.add_command(shell_init)
 main.add_command(todo)
 main.add_command(backlog)
 main.add_command(app)
-main.add_command(vscode)
