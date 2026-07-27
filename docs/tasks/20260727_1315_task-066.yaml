@@ -37,10 +37,17 @@ plan:
     steps:
     - description: whub remote cleanup-appledouble <PROJECT> の一覧既定・--apply による明示削除、AppleDouble
         形式検証、リモートホストだけで探索・削除する境界を設計する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        design: whub remote cleanup-appledouble PROJECT is remote-only; lists verified
+          relative paths by default and deletes only with --apply. The remote scanner
+          recurses beneath the project root without following symlinks or descending
+          into .git, uses the shared AppleDouble prefix constant for candidate selection,
+          and requires magic 00051607 before output or deletion.
+      deleted: false
     deleted: false
   - title: リモート cleanup を実装する
     acceptance: []
