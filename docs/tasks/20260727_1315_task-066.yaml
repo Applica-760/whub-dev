@@ -54,10 +54,17 @@ plan:
     steps:
     - description: 一覧と --apply を分離した whub remote cleanup-appledouble を実装し、SSHFS mount
         を macOS 側から再帰走査しないことを保証する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        implementation: Added whub remote cleanup-appledouble backed by a packaged
+          remote Python asset. It lists validated AppleDouble sidecars by default
+          and deletes only with --apply; scanning occurs over SSH below the remote
+          Project root, skips .git and symlinks, and validates magic 00051607 before
+          deletion.
+      deleted: false
     deleted: false
   - title: 動作を検証する
     acceptance: []

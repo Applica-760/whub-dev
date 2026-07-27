@@ -46,6 +46,7 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub remote unmount [--force]` | 全hostのマウントを解除し`workspace_path`のsymlinkも撤去（staleマウントは`--force`で強制解除） |
 | `whub cd <PROJECT>` | localならパス移動、remoteならtmuxセッションへSSH接続（`--plain`で素シェル） |
 | `whub remote run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
+| `whub remote cleanup-appledouble <PROJECT> [--apply]` | remote host上で検証済みAppleDouble sidecarを一覧表示し、`--apply`時だけ削除 |
 | `whub remote session <COMMAND>` | remote GUI sessionの予約・command handoff・状態確認・ログ取得・削除 |
 | `whub remote get <PATH>` | remoteの単一fileをworkspace rootの`remote_files/`へ取得 |
 | `whub remote put <LOCAL_NAME>` | `whub remote get`した`remote_files/`配下のfileを取得元のremote fileへ書き戻す |

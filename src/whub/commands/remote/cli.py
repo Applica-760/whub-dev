@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import click
 
+from whub.commands.remote.cleanup_appledouble import cleanup_appledouble
 from whub.commands.remote.mount import mount, unmount
 from whub.commands.remote.run import run
 from whub.commands.remote.session import session
@@ -22,3 +23,4 @@ remote.add_command(get)
 remote.add_command(put)
 remote.add_command(rm)
 remote.add_command(session)
+remote.add_command(cleanup_appledouble)
