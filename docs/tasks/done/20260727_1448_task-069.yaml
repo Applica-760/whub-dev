@@ -1,0 +1,80 @@
+schema_version: 1
+task:
+  id: TASK-069
+  state: completed
+  title: workspace-hub文書メタドキュメントを整備する
+  objective: hubに集約する各Projectの文書を作成・更新するための共通規約とお手本をroot docsに置き、.agents/docsから参照を移す。文書種別の責務とADRの記録要件を維持する
+  approach:
+  - docs/documentation.mdを全Projectに共通する文書規約の正本とし、Project固有の知識は各Project内の文書を正本とする
+  - README、reference、architecture、development、operations、ADRの役割を維持し、ADRには決定・背景・採用理由・実際に検討した主要な不採用案と理由・結果を記録する
+  - workspace-hub自身のGit管理は既存.gitignoreに従う付随手続きとし、この文書規約の対象に含めない
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: docs/documentation.mdが全Project向けの文書規約として、Project固有知識の配置と正本の一意性を定めている
+  - id: ACC-002
+    statement: README、reference、architecture、development、operations、ADRの役割とADRの記載要件が維持されている
+  - id: ACC-003
+    statement: .agents/docsは存在せず、AGENTS.mdからdocs/documentation.mdへ到達できる
+  phases:
+  - title: 文書運用の責務を定義する
+    acceptance: []
+    steps:
+    - description: 旧共通文書規約、現在のdocs/documentation.md、whub-devの標準文書構成を比較し、全Project向け規約としての対象範囲と正本を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        scope: 旧規約、whub-devの分類、esn-labのcommands・operationsを比較し、全Project向け規約として対象範囲と正本を確定
+      deleted: false
+    deleted: false
+  - title: メタドキュメントを整備する
+    acceptance: []
+    steps:
+    - description: docs/documentation.mdに、Project固有知識の配置、正本の一意性、README・reference・architecture・development・operations・ADRの役割、ADRの記載要件を維持する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        document: docs/documentation.mdに責務、標準分類、ADR必須項目、用途に応じた分類選択の基準を記載
+      deleted: false
+    deleted: false
+  - title: 参照経路を検証する
+    acceptance: []
+    steps:
+    - description: .agents/docsを廃止し、AGENTS.mdの参照をroot docsへ更新して、旧規約の内容継承、参照導線、重複の解消を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: AGENTS.mdから新文書への参照、旧文書の不在、文書分類とADR要件をrgで確認
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - docs/documentation.mdのdocument規約と責務節
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - 文書の役割節とADR必須項目
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - AGENTS.mdの参照とtest ! -e .agents/docs/documentation.md
+change_requests:
+- reason: docs/documentation.mdはworkspace-hub運用ではなく、hubに集約する各Projectの文書作成規約・お手本であるため。Git管理は付随手続きとして切り離す
+cancellation: null
+result:
+  summary: 全Project向け文書規約をroot docsへ移設し、文書分類・ADR要件・作成基準を維持した。AGENTS.mdの参照を更新し、旧.agents/docs文書を廃止した。
