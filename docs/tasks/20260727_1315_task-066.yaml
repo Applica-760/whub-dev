@@ -1,0 +1,60 @@
+schema_version: 1
+task:
+  id: TASK-066
+  state: draft
+  title: リモート mount 上の AppleDouble 副作用を緩和する
+  objective: AppleDouble の sidecar を VS Code の表示から除外し、macOS 側で SSHFS を再帰走査せずリモートホスト上で安全に
+    cleanup できる運用または機能を整備する。
+  approach:
+  - VS Code の AppleDouble 除外設定を、既存のユーザー設定を壊さない形で whub vscode CLI に組み込む。
+  - cleanup の探索と削除は whub run または同等の SSH 経路でリモート側へ委譲し、macOS から mount を繰り返し走査しない。
+  - 削除対象は AppleDouble 形式を検証し、dry-run を既定として明示適用時だけ削除する。
+  depends_on:
+  - TASK-065
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: VS Code で sidecar を隠す
+    acceptance: []
+    steps:
+    - description: whub vscode の設定更新契約を確認し、既存のユーザー設定を保持したまま AppleDouble sidecar の表示除外を追加する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 安全な cleanup を設計する
+    acceptance: []
+    steps:
+    - description: cleanup の実行形態、既定 dry-run、AppleDouble 形式検証、リモートホストだけで探索・削除する境界を設計する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: リモート cleanup を実装する
+    acceptance: []
+    steps:
+    - description: 選定した cleanup の導線を実装し、SSHFS mount を macOS 側から再帰走査しないことを保証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 動作を検証する
+    acceptance: []
+    steps:
+    - description: VS Code 設定統合と cleanup の dry-run・明示適用・形式検証・リモート実行を検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

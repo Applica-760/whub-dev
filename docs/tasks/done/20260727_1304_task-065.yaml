@@ -1,0 +1,71 @@
+schema_version: 1
+task:
+  id: TASK-065
+  state: completed
+  title: Investigate AppleDouble file recurrence on Linux mounts
+  objective: Identify why macOS ._* files recur across all symlink resources mounted
+    on the linux-desktop remote host, and define a root-cause remedy.
+  approach:
+  - Trace the mount command, compare it with the prior AppleDouble fix, and validate
+    the active runtime configuration.
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Trace active mount path
+    acceptance: []
+    steps:
+    - description: Identify the active mount command and its AppleDouble-related options.
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: Current build_sshfs_command still passes noappledouble, noapplexattr,
+          and defer_permissions; source inspection confirmed the options remain in
+          place.
+      deleted: false
+    deleted: false
+  - title: Compare prior remediation
+    acceptance: []
+    steps:
+    - description: Compare the current implementation and release history with the
+        prior AppleDouble remediation.
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: 'TASK-029 reproduced the behavior under macOS 26.5.2 and sshfs-fuse-t:
+          the options are accepted but do not suppress provenance-driven AppleDouble
+          files.'
+      deleted: false
+    deleted: false
+  - title: Validate root cause
+    acceptance: []
+    steps:
+    - description: Validate the effective Linux-host configuration and determine the
+        recurrence mechanism.
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: Remote resources were stale, so no new write experiment was run.
+          Existing direct evidence establishes macOS/fuse-t creation of com.apple.provenance
+          as the recurrence mechanism; the current release retains consumer-side AppleDouble
+          exclusion.
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: Confirmed recurrence is the known sshfs-fuse-t provenance/AppleDouble behavior,
+    not a missing mount option. Current mitigation ignores sidecars during task discovery;
+    mount-side generation cannot be suppressed by the tested options.

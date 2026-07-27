@@ -1,0 +1,87 @@
+schema_version: 1
+task:
+  id: TASK-067
+  state: in_progress
+  title: whub remote コマンド群を導入する
+  objective: whub remote コマンド群を導入する。
+  approach: []
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: CLI構造の再編
+    acceptance: []
+    steps:
+    - description: apply後、~/.local/bin/whub で remote CLI の動作を確認する。
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: commands/remote と services/remote を作成し、対象モジュールを移設する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: remote_cli.py に run、mount、unmount、get、put、session を登録し、top-level
+        cli.py は remote group のみを登録する。旧 top-level コマンドは削除する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: get と put は commands/remote/transfer.py に集約し、公開CLIは whub remote
+        get/put を維持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: 移設後の import・モック対象を更新し、remote CLI と各コマンドの既存振る舞いをテストする。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv run pytest と whub remote --help を実行し、旧 top-level コマンドが公開されないことを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: ドキュメント更新
+    acceptance: []
+    steps:
+    - description: README、CLI リファレンス、session 運用文書、workspace AGENTS.md のコマンド例を whub
+        remote 配下へ更新する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 更新後の文書参照と CLI help を照合する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Release
+    acceptance: []
+    steps:
+    - description: 運用文書に従い、clean な開発 checkout を明示して release build、verify、apply を順に実行する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: apply後、~/.local/bin/whub で remote CLI の動作を確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: ユーザー指定により、ドキュメント更新後のrelease実行Phaseを追加するため
+- reason: Phase 4の確認StepがPhase 1へ誤って追加されたため、正しいPhaseへ移す
+cancellation: null
+result: null

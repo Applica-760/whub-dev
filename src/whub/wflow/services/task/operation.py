@@ -77,12 +77,17 @@ def parse_phase_logs(logs: tuple[str, ...]) -> tuple[dict[str, object], ...]:
         try:
             item = json.loads(value)
         except json.JSONDecodeError as error:
-            raise WflowError(f"phase log must be JSON: {error.msg}") from error
+            raise WflowError(
+                "phase log must be JSON, for example "
+                "--log '{\"finding\":\"確認結果\"}': "
+                f"{error.msg}"
+            ) from error
         try:
             entry = PhaseLog.model_validate({"value": item})
         except ValidationError as error:
             raise WflowError(
-                "phase log must be one non-empty string key-value pair"
+                "phase log must be one non-empty string key-value pair, for example "
+                "--log '{\"finding\":\"確認結果\"}'"
             ) from error
         parsed.append(entry.model_dump(mode="python"))
     return tuple(parsed)

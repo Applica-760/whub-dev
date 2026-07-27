@@ -55,6 +55,15 @@ def test_task_command_group_is_available() -> None:
     assert "apply" not in result.output
 
 
+@pytest.mark.parametrize("command", ["log", "log-update", "done", "skip"])
+def test_task_log_options_explain_json_contract(command: str) -> None:
+    result = CliRunner().invoke(main, ["task", command, "--help"])
+
+    assert result.exit_code == 0
+    assert "JSON object with one non-empty string key-value pair." in result.output
+    assert '--log \'{"finding":"確認結果"}\'' in result.output
+
+
 def test_task_check_accepts_a_task_path() -> None:
     # ケース3
     result = CliRunner().invoke(main, ["task", "check", str(_TASK_PATH)])

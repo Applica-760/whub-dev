@@ -1,0 +1,43 @@
+schema_version: 1
+task:
+  id: TASK-063
+  state: completed
+  title: 共通ドキュメント規約を追加する
+  objective: 全Projectで参照するドキュメント規約の正本をworkspace共通領域に設ける
+  approach:
+  - TASK-050のProject-local原則を維持し、横断的なAgent運用規約として.agentsに配置する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 共通規約を定義する
+    acceptance: []
+    steps:
+    - description: TASK-050の確定方針を読み、横断規約とProject固有規約の責務境界を明記する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: root AGENTS.mdから参照する .agents/docs/documentation.md を一ファイルずつ追加・更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 参照先の存在、リンクの正しさ、差分を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: .agents/docs/documentation.md と AGENTS.md の存在、および AGENTS.md
+          の参照を確認。workspace root は Git repository ではないため git diff --check は適用不能。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: 共通ドキュメント規約を.agents/docs/documentation.mdに追加し、root AGENTS.mdから参照した。

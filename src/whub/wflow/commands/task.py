@@ -43,6 +43,11 @@ from whub.wflow.services import (
     write_task,
 )
 
+_PHASE_LOG_HELP = (
+    "JSON object with one non-empty string key-value pair. "
+    "Example: --log '{\"finding\":\"確認結果\"}'"
+)
+
 
 @click.group()
 @click.option(
@@ -576,7 +581,7 @@ def accept(
     "logs",
     multiple=True,
     required=True,
-    help="JSON object with one string key-value pair appended to the Phase log.",
+    help=f"{_PHASE_LOG_HELP} Appends to the Phase log.",
 )
 def log(task_ref: str, phase_ref: str, logs: tuple[str, ...]) -> None:
     """Append lines to one Phase log without changing Task progress."""
@@ -595,7 +600,12 @@ def log(task_ref: str, phase_ref: str, logs: tuple[str, ...]) -> None:
 @click.argument("task_ref")
 @click.argument("phase_ref")
 @click.argument("log_ref")
-@click.option("--log", "log", required=True, help="Replacement JSON Log value.")
+@click.option(
+    "--log",
+    "log",
+    required=True,
+    help=f"{_PHASE_LOG_HELP} Replaces the selected Phase log entry.",
+)
 def log_update(task_ref: str, phase_ref: str, log_ref: str, log: str) -> None:
     """Replace one active structured Phase Log entry."""
     try:
@@ -651,7 +661,7 @@ def log_restore(task_ref: str, phase_ref: str, log_ref: str) -> None:
     "--log",
     "logs",
     multiple=True,
-    help="Record a Phase log; required when this completes a Phase.",
+    help=f"{_PHASE_LOG_HELP} Required when this completes a Phase.",
 )
 def done(
     task_ref: str,
@@ -681,7 +691,7 @@ def done(
     "--log",
     "logs",
     multiple=True,
-    help="Record a Phase log; required when this completes a Phase.",
+    help=f"{_PHASE_LOG_HELP} Required when this completes a Phase.",
 )
 def skip(
     task_ref: str,

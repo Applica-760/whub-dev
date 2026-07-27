@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-016
-  state: draft
+  state: cancelled
   title: 認知リズムSkillを導入し日本語ドキュメント執筆に適用する
   objective: 説明的文書(vaultノート・docs・解説応答)の日本語を、認知モードの単調さを避けたリズムのある文章にするため、鹿野桂一郎氏のcognitive-rhythm-writing
     Skillをworkspace-hubへ導入する
@@ -68,5 +68,7 @@ plan:
 approvals: []
 acceptance_results: []
 change_requests: []
-cancellation: null
+cancellation:
+  reason: Task 064で計画した薄いブログで進める方針へ切り替えたため
+  actor: user
 result: null
