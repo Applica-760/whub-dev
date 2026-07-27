@@ -37,5 +37,5 @@ projects:
 - Resourceはtop-levelではなく、対応するProjectの `resource` 配下に定義する。
 - 全Resourceに `workspace_path` が必要である。
 - remoteの `path` はhostの `mount_root` からの相対pathであり、絶対pathは指定しない。
-- `auto_mount` は無引数 `whub mount` の対象をhost単位で制御する。
+- `auto_mount` は無引数 `whub remote mount` の対象をhost単位で制御する。
 - `status: false` は `whub status` の対象から除外する。

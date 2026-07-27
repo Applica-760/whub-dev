@@ -16,7 +16,7 @@ workspace root自体はProjectでもResourceでもない。`WhubContext` が `~/
 
 ## Remote access
 
-参照・編集はmount、実行は `whub run` または `whub cd` に分離する。hostごとに一つのsshfs mountを `~/.whub/runtime/mounts/` に持ち、Resourceのworkspace pathはその配下へのsymlinkとする。
+参照・編集は `whub remote mount`、実行は `whub remote run` または `whub cd` に分離する。hostごとに一つのsshfs mountを `~/.whub/runtime/mounts/` に持ち、Resourceのworkspace pathはその配下へのsymlinkとする。
 
 mountの健全性はmount table、sshfs process、即時エラーで判断する。遅延timeoutは `slow` として正常扱いにし、timeoutを理由に自動unmountしない。
 

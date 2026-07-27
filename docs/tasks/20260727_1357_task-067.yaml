@@ -64,14 +64,18 @@ plan:
     steps:
     - description: README、CLI リファレンス、session 運用文書、workspace AGENTS.md のコマンド例を whub
         remote 配下へ更新する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 更新後の文書参照と CLI help を照合する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        documentation: README、CLI reference、manifest reference、session運用、architecture、workspace
+          AGENTS.mdを whub remote 表記へ更新し、現行文書に旧表記がないことを確認。
+      deleted: false
     deleted: false
   - title: Release
     acceptance: []
