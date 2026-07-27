@@ -17,7 +17,7 @@ from whub.core.remote import SSH_CONNECTION_FAILURE, run_ssh_command
 from whub.core.target import collect_targets
 from whub.core.tmux import session_name
 from whub.models import Host, Manifest, Project, RemoteResource, SymlinkResource
-from whub.services.mount import host_mountpoint, host_volume_name
+from whub.services.remote.mount import host_mountpoint, host_volume_name
 
 
 @dataclass(frozen=True)

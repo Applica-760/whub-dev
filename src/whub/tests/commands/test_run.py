@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
-from whub.commands.run import run
+from whub.commands.remote.run import run
 from whub.tests.helpers import manifest
 
 
@@ -27,8 +27,8 @@ class TestRunSpec:
         m = manifest()
         mock_run = MagicMock(return_value=CompletedProcess([], 0))
         with (
-            patch("whub.commands.run.get_manifest", return_value=m),
-            patch("whub.commands.run.subprocess.run", mock_run),
+            patch("whub.commands.remote.run.get_manifest", return_value=m),
+            patch("whub.commands.remote.run.subprocess.run", mock_run),
         ):
             result = CliRunner().invoke(
                 run, ["remote", "ls", "-la"], catch_exceptions=False
@@ -45,7 +45,7 @@ class TestRunSpec:
     def test_local_resource_errors(self):
         # ケース2
         m = manifest()
-        with patch("whub.commands.run.get_manifest", return_value=m):
+        with patch("whub.commands.remote.run.get_manifest", return_value=m):
             result = CliRunner().invoke(run, ["local", "ls"])
 
         assert result.exit_code == 1
@@ -56,8 +56,8 @@ class TestRunSpec:
         m = manifest()
         mock_run = MagicMock(return_value=CompletedProcess([], 0))
         with (
-            patch("whub.commands.run.get_manifest", return_value=m),
-            patch("whub.commands.run.subprocess.run", mock_run),
+            patch("whub.commands.remote.run.get_manifest", return_value=m),
+            patch("whub.commands.remote.run.subprocess.run", mock_run),
         ):
             CliRunner().invoke(run, ["--tty", "remote", "htop"], catch_exceptions=False)
 
@@ -69,8 +69,8 @@ class TestRunSpec:
         m = manifest()
         mock_run = MagicMock(return_value=CompletedProcess([], 42))
         with (
-            patch("whub.commands.run.get_manifest", return_value=m),
-            patch("whub.commands.run.subprocess.run", mock_run),
+            patch("whub.commands.remote.run.get_manifest", return_value=m),
+            patch("whub.commands.remote.run.subprocess.run", mock_run),
         ):
             result = CliRunner().invoke(run, ["remote", "false"])
 

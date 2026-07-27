@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
-from whub.commands.put import put
+from whub.commands.remote.transfer import put
 from whub.core.download_meta import load_download_meta, record_download
 from whub.tests.helpers import manifest
 
@@ -61,11 +61,11 @@ def _run_put(
 
     context = MagicMock(downloads_dir=downloads)
     with (
-        patch("whub.commands.put.get_manifest", return_value=m),
-        patch("whub.commands.put.current_context", return_value=context),
-        patch("whub.commands.put.remote_file_hash", return_value=remote_hash),
+        patch("whub.commands.remote.transfer.get_manifest", return_value=m),
+        patch("whub.commands.remote.transfer.current_context", return_value=context),
+        patch("whub.commands.remote.transfer.remote_file_hash", return_value=remote_hash),
         patch(
-            "whub.commands.put.remote_write_file",
+            "whub.commands.remote.transfer.remote_write_file",
             return_value=CompletedProcess([], write_returncode, "", write_stderr),
         ) as mock_write,
     ):
@@ -94,7 +94,7 @@ class TestPutSpec:
         downloads = tmp_path / "downloads"
         downloads.mkdir()
         context = MagicMock(downloads_dir=downloads)
-        with patch("whub.commands.put.current_context", return_value=context):
+        with patch("whub.commands.remote.transfer.current_context", return_value=context):
             result = CliRunner().invoke(put, ["nonexistent.csv"])
 
         assert result.exit_code != 0
@@ -106,7 +106,7 @@ class TestPutSpec:
         downloads.mkdir()
         (downloads / "orphan.csv").write_text("data")
         context = MagicMock(downloads_dir=downloads)
-        with patch("whub.commands.put.current_context", return_value=context):
+        with patch("whub.commands.remote.transfer.current_context", return_value=context):
             result = CliRunner().invoke(put, ["orphan.csv"])
 
         assert result.exit_code != 0
@@ -127,9 +127,9 @@ class TestPutSpec:
         downloads = _setup_downloads(tmp_path)
         context = MagicMock(downloads_dir=downloads)
         with (
-            patch("whub.commands.put.get_manifest", return_value=m),
-            patch("whub.commands.put.current_context", return_value=context),
-            patch("whub.commands.put.remote_file_hash", return_value=None),
+            patch("whub.commands.remote.transfer.get_manifest", return_value=m),
+            patch("whub.commands.remote.transfer.current_context", return_value=context),
+            patch("whub.commands.remote.transfer.remote_file_hash", return_value=None),
         ):
             result = CliRunner().invoke(put, ["file.csv"], catch_exceptions=False)
 

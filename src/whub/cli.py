@@ -9,15 +9,11 @@ from whub.commands.app import app
 from whub.commands.backlog import backlog
 from whub.commands.cd import cd, shell_init
 from whub.commands.codegraph import codegraph
-from whub.commands.get import get
 from whub.commands.init import init
-from whub.commands.put import put
 from whub.commands.link import link
 from whub.commands.ls import ls
-from whub.commands.mount import mount, unmount
+from whub.commands.remote.cli import remote
 from whub.commands.release import release
-from whub.commands.run import run
-from whub.commands.session import session
 from whub.commands.status import status
 from whub.commands.todo import todo
 from whub.commands.vscode import vscode
@@ -65,14 +61,9 @@ def main() -> None:
 
 main.add_command(link)
 main.add_command(ls)
-main.add_command(mount)
-main.add_command(unmount)
 main.add_command(release)
 main.add_command(cd)
-main.add_command(run)
-main.add_command(session)
-main.add_command(get)
-main.add_command(put)
+main.add_command(remote)
 main.add_command(init)
 main.add_command(status)
 main.add_command(codegraph)

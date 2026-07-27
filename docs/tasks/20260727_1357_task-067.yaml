@@ -20,20 +20,28 @@ plan:
       skip_reason: null
       deleted: true
     - description: commands/remote と services/remote を作成し、対象モジュールを移設する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: remote_cli.py に run、mount、unmount、get、put、session を登録し、top-level
         cli.py は remote group のみを登録する。旧 top-level コマンドは削除する。
-      state: pending
+      state: done
       skip_reason: null
-      deleted: false
+      deleted: true
     - description: get と put は commands/remote/transfer.py に集約し、公開CLIは whub remote
         get/put を維持する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    - description: cli.py に run、mount、unmount、get、put、session を登録し、top-level cli.py
+        は remote group のみを登録する。旧 top-level コマンドは削除する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: commands/remote と services/remote へ移設し、remote/cli.py のみをtop-levelへ登録した。旧モジュール参照は本番コードに残っていない。
+      deleted: false
     deleted: false
   - title: 検証
     acceptance: []
@@ -79,9 +87,11 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: ユーザー指定により、ドキュメント更新後のrelease実行Phaseを追加するため
 - reason: Phase 4の確認StepがPhase 1へ誤って追加されたため、正しいPhaseへ移す
+- reason: 確定したハブ名 cli.py を計画へ反映し、Phase完了記録を正しい形式にするため
 cancellation: null
 result: null

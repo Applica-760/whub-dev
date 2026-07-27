@@ -11,7 +11,7 @@ import yaml
 from whub.commands import get_manifest
 from whub.models import project_names
 from whub.services.errors import ServiceError
-from whub.services.session import (
+from whub.services.remote.session import (
     build_follow_logs_command,
     clean_session,
     get_session,

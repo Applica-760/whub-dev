@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
-from whub.commands.get import get
+from whub.commands.remote.transfer import get
 from whub.core.download_meta import load_download_meta
 from whub.tests.helpers import manifest
 
@@ -38,9 +38,9 @@ def _run_get(tmp_path, path: str, returncode: int = 0):
     mock_run = MagicMock(side_effect=side_effect)
     context = MagicMock(downloads_dir=downloads)
     with (
-        patch("whub.commands.get.get_manifest", return_value=m),
-        patch("whub.commands.get.current_context", return_value=context),
-        patch("whub.commands.get.subprocess.run", mock_run),
+        patch("whub.commands.remote.transfer.get_manifest", return_value=m),
+        patch("whub.commands.remote.transfer.current_context", return_value=context),
+        patch("whub.commands.remote.transfer.subprocess.run", mock_run),
     ):
         result = CliRunner().invoke(get, [path], catch_exceptions=False)
     return result, mock_run, downloads
@@ -63,7 +63,7 @@ class TestGetSpec:
     def test_local_resource_errors(self):
         # ケース2
         m = manifest()
-        with patch("whub.commands.get.get_manifest", return_value=m):
+        with patch("whub.commands.remote.transfer.get_manifest", return_value=m):
             result = CliRunner().invoke(get, ["projects/local/file.txt"])
 
         assert result.exit_code == 1
@@ -72,7 +72,7 @@ class TestGetSpec:
     def test_resource_root_path_errors(self):
         # ケース3
         m = manifest()
-        with patch("whub.commands.get.get_manifest", return_value=m):
+        with patch("whub.commands.remote.transfer.get_manifest", return_value=m):
             result = CliRunner().invoke(get, ["projects/remote"])
 
         assert result.exit_code != 0

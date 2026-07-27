@@ -7,7 +7,7 @@ import click
 from whub.commands import get_manifest
 from whub.models import project_names
 from whub.services.errors import ServiceError
-from whub.services.mount import MountResult, mount_targets, unmount_targets
+from whub.services.remote.mount import MountResult, mount_targets, unmount_targets
 from whub.utils.render import render_table
 
 
