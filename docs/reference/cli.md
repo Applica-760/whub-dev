@@ -27,12 +27,14 @@ whub backlog <TEXT> [--project PROJECT]
 whub codegraph
 whub remote get <PATH>
 whub remote put <LOCAL_NAME>
+whub remote rm <LOCAL_NAME>
 whub shell-init [--shell zsh]
 ```
 
 - `backlog` はProjectの `docs/backlog.md` に未整理メモを追記する。
 - `codegraph` はmanifestで有効化したResourceだけを初期化する。
-- `remote get` はremoteの単一fileを `~/.whub/downloads` へ取得し、`remote put` はその取得元へ書き戻す。
+- `remote get` はremoteの単一fileをworkspace rootの `remote_files/` へ取得し、`remote put` はその取得元へ書き戻す。
+- `remote rm` は管理済みの `remote_files/` 配下fileと対応メタデータを削除する。`whub remote get` で取得していないfileは削除しない。
 
 ## Web appとRemote GUI session
 

@@ -2,7 +2,7 @@
 
 検証するケース:
 1. fetchメタのあるファイルをputし、remoteへアトミック書き込み+メタ更新
-2. downloads内にファイルがない場合はエラー
+2. remote_files内にファイルがない場合はエラー
 3. fetchメタがないファイルはエラー
 4. remote hashがbaseline hashと一致しない場合はlost updateエラー
 5. remote hashの取得に失敗した場合はエラー
@@ -22,24 +22,24 @@ from unittest.mock import MagicMock, patch
 from click.testing import CliRunner
 
 from whub.commands.remote.transfer import put
-from whub.core.download_meta import load_download_meta, record_download
+from whub.core.remote_files_meta import load_remote_files_meta, record_remote_file
 from whub.tests.helpers import manifest
 
 
-def _setup_downloads(tmp_path: Path, content: str = "edited content") -> Path:
-    downloads = tmp_path / "downloads"
-    downloads.mkdir()
-    local = downloads / "file.csv"
+def _setup_remote_files(tmp_path: Path, content: str = "edited content") -> Path:
+    remote_files = tmp_path / "remote_files"
+    remote_files.mkdir()
+    local = remote_files / "file.csv"
     local.write_text(content)
     original_hash = hashlib.sha256(b"remote content").hexdigest()
-    record_download(
-        downloads,
+    record_remote_file(
+        remote_files,
         "file.csv",
         "remote:data/file.csv",
         original_hash,
         "2026-01-01T00:00:00+00:00",
     )
-    return downloads
+    return remote_files
 
 
 def _run_put(
@@ -52,14 +52,14 @@ def _run_put(
 ) -> tuple:
     m = manifest()
     if setup:
-        downloads = _setup_downloads(tmp_path)
+        remote_files = _setup_remote_files(tmp_path)
     else:
-        downloads = tmp_path / "downloads"
+        remote_files = tmp_path / "remote_files"
 
     if remote_hash is None:
         remote_hash = hashlib.sha256(b"remote content").hexdigest()
 
-    context = MagicMock(downloads_dir=downloads)
+    context = MagicMock(remote_files_dir=remote_files)
     with (
         patch("whub.commands.remote.transfer.get_manifest", return_value=m),
         patch("whub.commands.remote.transfer.current_context", return_value=context),
@@ -70,13 +70,13 @@ def _run_put(
         ) as mock_write,
     ):
         result = CliRunner().invoke(put, [local_name], catch_exceptions=False)
-    return result, mock_write, downloads
+    return result, mock_write, remote_files
 
 
 class TestPutSpec:
     def test_puts_fetched_file(self, tmp_path: Path) -> None:
         # ケース1
-        result, mock_write, downloads = _run_put(tmp_path)
+        result, mock_write, remote_files = _run_put(tmp_path)
 
         assert result.exit_code == 0
         assert "put" in result.output
@@ -84,16 +84,16 @@ class TestPutSpec:
         call_args = mock_write.call_args
         assert "data/file.csv" in call_args[0][1]
         assert call_args[0][2] == "edited content"
-        records = load_download_meta(downloads)
+        records = load_remote_files_meta(remote_files)
         assert (
             records["file.csv"].sha256 == hashlib.sha256(b"edited content").hexdigest()
         )
 
-    def test_file_not_in_downloads_errors(self, tmp_path: Path) -> None:
+    def test_file_not_in_remote_files_errors(self, tmp_path: Path) -> None:
         # ケース2
-        downloads = tmp_path / "downloads"
-        downloads.mkdir()
-        context = MagicMock(downloads_dir=downloads)
+        remote_files = tmp_path / "remote_files"
+        remote_files.mkdir()
+        context = MagicMock(remote_files_dir=remote_files)
         with patch("whub.commands.remote.transfer.current_context", return_value=context):
             result = CliRunner().invoke(put, ["nonexistent.csv"])
 
@@ -102,10 +102,10 @@ class TestPutSpec:
 
     def test_no_fetch_metadata_errors(self, tmp_path: Path) -> None:
         # ケース3
-        downloads = tmp_path / "downloads"
-        downloads.mkdir()
-        (downloads / "orphan.csv").write_text("data")
-        context = MagicMock(downloads_dir=downloads)
+        remote_files = tmp_path / "remote_files"
+        remote_files.mkdir()
+        (remote_files / "orphan.csv").write_text("data")
+        context = MagicMock(remote_files_dir=remote_files)
         with patch("whub.commands.remote.transfer.current_context", return_value=context):
             result = CliRunner().invoke(put, ["orphan.csv"])
 
@@ -124,8 +124,8 @@ class TestPutSpec:
     def test_remote_hash_failure_errors(self, tmp_path: Path) -> None:
         # ケース5
         m = manifest()
-        downloads = _setup_downloads(tmp_path)
-        context = MagicMock(downloads_dir=downloads)
+        remote_files = _setup_remote_files(tmp_path)
+        context = MagicMock(remote_files_dir=remote_files)
         with (
             patch("whub.commands.remote.transfer.get_manifest", return_value=m),
             patch("whub.commands.remote.transfer.current_context", return_value=context),

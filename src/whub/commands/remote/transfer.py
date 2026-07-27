@@ -11,11 +11,12 @@ import click
 
 from whub.commands import get_manifest
 from whub.core.context import current_context
-from whub.core.download_meta import (
-    get_download_record,
-    record_download,
-    resolve_local_name,
-    update_download_hash,
+from whub.core.remote_files_meta import (
+    get_remote_file_record,
+    record_remote_file,
+    remove_remote_file_record,
+    resolve_remote_file_name,
+    update_remote_file_hash,
 )
 from whub.core.remote import (
     build_scp_command,
@@ -47,10 +48,10 @@ def get(ctx: click.Context, path: str) -> None:
         )
 
     ref = f"{project.name}:{rel}"
-    downloads = current_context().downloads_dir
-    downloads.mkdir(parents=True, exist_ok=True)
-    local_name = resolve_local_name(downloads, ref, PurePosixPath(rel).name)
-    dest = downloads / local_name
+    remote_files = current_context().remote_files_dir
+    remote_files.mkdir(parents=True, exist_ok=True)
+    local_name = resolve_remote_file_name(remote_files, ref, PurePosixPath(rel).name)
+    dest = remote_files / local_name
     result = subprocess.run(
         build_scp_command(
             resource._resolved_host, f"{resource.remote_path}/{rel}", dest
@@ -59,8 +60,8 @@ def get(ctx: click.Context, path: str) -> None:
     if result.returncode != 0:
         ctx.exit(result.returncode)
 
-    record_download(
-        downloads,
+    record_remote_file(
+        remote_files,
         local_name,
         ref,
         hashlib.sha256(dest.read_bytes()).hexdigest(),
@@ -74,12 +75,12 @@ def get(ctx: click.Context, path: str) -> None:
 @click.pass_context
 def put(ctx: click.Context, local_name: str) -> None:
     """Put a fetched LOCAL_NAME back to the remote resource."""
-    downloads = current_context().downloads_dir
-    local_path = downloads / local_name
+    remote_files = current_context().remote_files_dir
+    local_path = remote_files / local_name
     if not local_path.is_file():
-        raise click.ClickException(f"file not found in downloads: {local_name}")
+        raise click.ClickException(f"file not found in remote_files: {local_name}")
 
-    record = get_download_record(downloads, local_name)
+    record = get_remote_file_record(remote_files, local_name)
     if record is None:
         raise click.ClickException(
             f"no fetch metadata for {local_name}; only files from whub get can be put"
@@ -108,7 +109,29 @@ def put(ctx: click.Context, local_name: str) -> None:
         )
 
     new_hash = hashlib.sha256(local_path.read_bytes()).hexdigest()
-    update_download_hash(
-        downloads, local_name, new_hash, datetime.now(timezone.utc).isoformat()
+    update_remote_file_hash(
+        remote_files, local_name, new_hash, datetime.now(timezone.utc).isoformat()
     )
     click.echo(f"  put {project.name}: {local_name} -> {rel}")
+
+
+@click.command(name="rm")
+@click.argument("local_name")
+def rm(local_name: str) -> None:
+    """Remove a fetched LOCAL_NAME and its metadata record."""
+    if PurePosixPath(local_name).name != local_name:
+        raise click.ClickException(f"LOCAL_NAME must be a file name: {local_name}")
+
+    remote_files = current_context().remote_files_dir
+    if get_remote_file_record(remote_files, local_name) is None:
+        raise click.ClickException(
+            f"no fetch metadata for {local_name}; only files from whub get can be removed"
+        )
+
+    local_path = remote_files / local_name
+    if local_path.exists() and not local_path.is_file():
+        raise click.ClickException(f"not a file in remote_files: {local_name}")
+    if local_path.exists():
+        local_path.unlink()
+    remove_remote_file_record(remote_files, local_name)
+    click.echo(f"  rm {local_name}")

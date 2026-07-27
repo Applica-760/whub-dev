@@ -7,7 +7,7 @@ import click
 from whub.commands.remote.mount import mount, unmount
 from whub.commands.remote.run import run
 from whub.commands.remote.session import session
-from whub.commands.remote.transfer import get, put
+from whub.commands.remote.transfer import get, put, rm
 
 
 @click.group()
@@ -20,4 +20,5 @@ remote.add_command(mount)
 remote.add_command(unmount)
 remote.add_command(get)
 remote.add_command(put)
+remote.add_command(rm)
 remote.add_command(session)

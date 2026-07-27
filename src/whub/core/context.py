@@ -61,8 +61,8 @@ class WhubContext:
         return self.directory / "todos.yaml"
 
     @property
-    def downloads_dir(self) -> Path:
-        return self.workspace_root / "downloads"
+    def remote_files_dir(self) -> Path:
+        return self.workspace_root / "remote_files"
 
     @property
     def releases_dir(self) -> Path:

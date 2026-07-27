@@ -1,0 +1,82 @@
+schema_version: 1
+task:
+  id: TASK-068
+  state: completed
+  title: whub remote の get・put・rm を統合する
+  objective: whub remote の get・put・rm を統合する。
+  approach: []
+  depends_on:
+  - TASK-067
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 保存先の移行
+    acceptance: []
+    steps:
+    - description: 保存先を workspace_root/remote_files に変更し、既存 workspace_root/downloads
+        を同一 workspace 内で移行する。旧 ~/.whub/downloads の記述を利用文書から除去する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 管理済みファイルの削除
+    acceptance: []
+    steps:
+    - description: whub remote rm <LOCAL_NAME> を追加する。管理済みファイルだけを削除し、対応するメタデータエントリを削除する。最後のエントリならメタデータJSONも削除し、未登録ファイルはエラーで停止する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: remote rmを追加。管理済みfileだけを削除し、空のメタJSONも削除する。未登録fileはエラーで停止することをテスト済み。
+      deleted: false
+    deleted: false
+  - title: 文書化と検証
+    acceptance: []
+    steps:
+    - description: get・put・rm、メタデータ、保存先移行をテストし、README・CLIリファレンス・アーキテクチャ文書を更新する。uv
+        run pytest で対象テストと全体テストを検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 保存先の即時切替
+    acceptance: []
+    steps:
+    - description: 保存先を workspace_root/remote_files に即時切替する。既存 workspace_root/downloads
+        は自動移行せず、ユーザーが手動で移行する。旧 ~/.whub/downloads の記述を利用文書から除去する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 保存先をworkspace rootのremote_filesへ即時切替。downloadsの自動移行は実装せず、現行文書記述を除去した。
+      deleted: false
+    deleted: false
+  - title: 文書化と検証
+    acceptance: []
+    steps:
+    - description: get・put・rm、メタデータ、保存先即時切替をテストし、README・CLIリファレンス・アーキテクチャ文書を更新する。uv
+        run pytest で対象テストと全体テストを検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 対象32件と全体421件のuv run pytestが成功。PYTHONPATH=srcでremote CLI helpを確認し、rmが登録済み。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: 自動移行を廃止し、remote_filesへの即時切替と手動移行へ方針変更
+cancellation: null
+result:
+  summary: remote_filesへの即時切替、管理済みfileとメタデータを削除するremote rm、remote_files_metaへの改名を実装し、対象32件・全体421件のテストで検証した。

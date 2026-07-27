@@ -4,7 +4,7 @@
 
 `manifest.yaml` はProject、Resource、hostの単一定義源である。ResourceはProjectの配下にあり、全Resourceがworkspace上の `workspace_path` を持つ。local Resourceは `source`、remote Resourceはhostの `mount_root` からの相対 `path` で実体を表す。
 
-workspace root自体はProjectでもResourceでもない。`WhubContext` が `~/.whub` のconfig、manifest、todo、downloads、runtime、releaseを一元的に扱い、consumerは保存場所を直接組み立てない。
+workspace root自体はProjectでもResourceでもない。`WhubContext` が `~/.whub` のconfig、manifest、todo、runtime、releaseと、workspace rootの`remote_files`を一元的に扱い、consumerは保存場所を直接組み立てない。
 
 ## Execution boundaries
 

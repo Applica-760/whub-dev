@@ -6,7 +6,8 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 ## 方針
 
 - `~/.whub/manifest.yaml` が `project`、`resource`、接続情報の単一定義源
-- `~/.whub/` にconfig・manifest・todo・downloads・releases・runtimeを集約する
+- `~/.whub/` にconfig・manifest・todo・releases・runtimeを集約する
+- `remote get` したfileとそのメタデータはworkspace rootの`remote_files/`に置く
 - ローカル`resource`はsymlink、リモート`resource`はsshfs mount（参照・編集）とSSH（実行）で操作する
 - mountはhost単位に集約する。`host.mount_root`を`~/.whub/runtime/mounts/`配下へsshfsで1本だけ接続し、各`workspace_path`はそのmount内へのsymlinkとして張る
 - `resource`の`path`は所属`host`の`mount_root`からの相対で表す。絶対pathの前置を各`resource`へ重複させず、`mount_root`の変更が単一の変更点になる
@@ -46,8 +47,9 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub cd <PROJECT>` | localならパス移動、remoteならtmuxセッションへSSH接続（`--plain`で素シェル） |
 | `whub remote run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
 | `whub remote session <COMMAND>` | remote GUI sessionの予約・command handoff・状態確認・ログ取得・削除 |
-| `whub remote get <PATH>` | remoteの単一fileをcontextの`downloads`直下へ取得（workspaceには反映しない） |
-| `whub remote put <LOCAL_NAME>` | `whub remote get`した`downloads`配下のfileを取得元のremote fileへ書き戻す |
+| `whub remote get <PATH>` | remoteの単一fileをworkspace rootの`remote_files/`へ取得 |
+| `whub remote put <LOCAL_NAME>` | `whub remote get`した`remote_files/`配下のfileを取得元のremote fileへ書き戻す |
+| `whub remote rm <LOCAL_NAME>` | 管理済みの`remote_files/`配下fileと対応メタデータを削除 |
 | `whub todo` | `project`横断の単発アクションを管理 |
 | `whub backlog <TEXT> [--project PROJECT]` | projectのbacklog末尾の未整理メモへ追記（既定は`whub-dev`） |
 | `whub codegraph` | `codegraph: true`な`resource`のCodeGraphを初期化 |
