@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
-from whub.commands.session import session
+from whub.commands.remote.session import session
 from whub.models import SessionDescriptor
 from whub.services.errors import ServiceError
 from whub.tests.helpers import manifest
@@ -23,9 +23,9 @@ def descriptor(state: str = "pending") -> SessionDescriptor:
 
 def test_reserve_prints_run_and_gui_command() -> None:
     with (
-        patch("whub.commands.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.remote.session.get_manifest", return_value=manifest()),
         patch(
-            "whub.commands.session.reserve_session",
+            "whub.commands.remote.session.reserve_session",
             return_value="TASK-030-r001",
         ),
     ):
@@ -37,8 +37,8 @@ def test_reserve_prints_run_and_gui_command() -> None:
 
 def test_ls_renders_run_state() -> None:
     with (
-        patch("whub.commands.session.get_manifest", return_value=manifest()),
-        patch("whub.commands.session.list_sessions", return_value=[descriptor()]),
+        patch("whub.commands.remote.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.remote.session.list_sessions", return_value=[descriptor()]),
     ):
         result = CliRunner().invoke(session, ["ls", "remote"])
     assert result.exit_code == 0
@@ -48,8 +48,8 @@ def test_ls_renders_run_state() -> None:
 
 def test_clean_calls_run_scoped_cleanup() -> None:
     with (
-        patch("whub.commands.session.get_manifest", return_value=manifest()),
-        patch("whub.commands.session.clean_session") as clean,
+        patch("whub.commands.remote.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.remote.session.clean_session") as clean,
     ):
         result = CliRunner().invoke(session, ["clean", "remote", "TASK-030-r001"])
     assert result.exit_code == 0
@@ -59,9 +59,9 @@ def test_clean_calls_run_scoped_cleanup() -> None:
 
 def test_clean_reports_running_run_rejection() -> None:
     with (
-        patch("whub.commands.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.remote.session.get_manifest", return_value=manifest()),
         patch(
-            "whub.commands.session.clean_session",
+            "whub.commands.remote.session.clean_session",
             side_effect=ServiceError("run is still running: TASK-030-r001"),
         ),
     ):
@@ -73,8 +73,8 @@ def test_clean_reports_running_run_rejection() -> None:
 def test_handoff_reads_command_from_stdin() -> None:
     command = 'PATH="$PWD/.venv/bin:$PATH" uv run python probe.py\n'
     with (
-        patch("whub.commands.session.get_manifest", return_value=manifest()),
-        patch("whub.commands.session.write_session_handoff") as handoff,
+        patch("whub.commands.remote.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.remote.session.write_session_handoff") as handoff,
     ):
         result = CliRunner().invoke(
             session,
@@ -98,8 +98,8 @@ def test_handoff_reads_command_from_stdin() -> None:
 
 def test_handoff_rejects_empty_stdin() -> None:
     with (
-        patch("whub.commands.session.get_manifest", return_value=manifest()),
-        patch("whub.commands.session.write_session_handoff") as handoff,
+        patch("whub.commands.remote.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.remote.session.write_session_handoff") as handoff,
     ):
         result = CliRunner().invoke(
             session,
@@ -114,8 +114,8 @@ def test_handoff_rejects_empty_stdin() -> None:
 
 def test_handoff_rejects_multiline_purpose() -> None:
     with (
-        patch("whub.commands.session.get_manifest", return_value=manifest()),
-        patch("whub.commands.session.write_session_handoff") as handoff,
+        patch("whub.commands.remote.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.remote.session.write_session_handoff") as handoff,
     ):
         result = CliRunner().invoke(
             session,
@@ -132,9 +132,9 @@ def test_logs_follow_streams_lines_and_strips_ansi() -> None:
     process = MagicMock()
     process.stdout = iter(["\x1b[31mlive line\x1b[0m\n"])
     with (
-        patch("whub.commands.session.get_manifest", return_value=manifest()),
-        patch("whub.commands.session.build_follow_logs_command", return_value=["ssh"]),
-        patch("whub.commands.session.subprocess.Popen", return_value=process),
+        patch("whub.commands.remote.session.get_manifest", return_value=manifest()),
+        patch("whub.commands.remote.session.build_follow_logs_command", return_value=["ssh"]),
+        patch("whub.commands.remote.session.subprocess.Popen", return_value=process),
     ):
         result = CliRunner().invoke(
             session,

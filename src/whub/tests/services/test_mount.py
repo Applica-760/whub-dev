@@ -39,7 +39,7 @@ import pytest
 from whub.core.context import WhubContext
 from whub.core.health import ResourceHealth
 from whub.services.errors import ServiceError
-from whub.services.mount import (
+from whub.services.remote.mount import (
     _mount_host,
     host_mount_id,
     host_mountpoint,
@@ -60,13 +60,13 @@ def _manifest_without_auto_mount() -> Manifest:
 
 @pytest.fixture(autouse=True)
 def _disable_mount_log():
-    with patch("whub.services.mount.write_mount_log"):
+    with patch("whub.services.remote.mount.write_mount_log"):
         yield
 
 
 @pytest.fixture
 def _sshfs_installed():
-    with patch("whub.services.mount.shutil.which", return_value="/usr/bin/sshfs"):
+    with patch("whub.services.remote.mount.shutil.which", return_value="/usr/bin/sshfs"):
         yield
 
 
@@ -89,7 +89,7 @@ class TestHostIdentifiers:
 
     def test_host_mountpoint_stays_under_runtime_mounts(self, tmp_path) -> None:
         context = WhubContext(tmp_path)
-        with patch("whub.services.mount.current_context", return_value=context):
+        with patch("whub.services.remote.mount.current_context", return_value=context):
             mountpoint = host_mountpoint("../../outside")
 
         assert mountpoint == (
@@ -108,16 +108,16 @@ class TestMountSpec:
         mountpoint = tmp_path / "runtime" / "mounts" / "home"
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 side_effect=[ResourceHealth("unmounted"), ResourceHealth("ok")],
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
             patch(
-                "whub.services.mount.build_sshfs_command",
+                "whub.services.remote.mount.build_sshfs_command",
                 return_value=["sshfs"],
             ) as build,
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 0),
             ),
         ):
@@ -137,15 +137,15 @@ class TestMountSpec:
         mountpoint = tmp_path / "runtime" / "mounts" / "home"
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 side_effect=[ResourceHealth("unmounted"), ResourceHealth("ok")],
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
             patch(
-                "whub.services.mount.build_sshfs_command", return_value=["sshfs"]
+                "whub.services.remote.mount.build_sshfs_command", return_value=["sshfs"]
             ) as build,
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 0),
             ) as run,
         ):
@@ -170,10 +170,10 @@ class TestMountSpec:
         mountpoint = tmp_path / "runtime" / "mounts" / "home"
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 return_value=ResourceHealth("ok"),
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
         ):
             status = _mount_host("home", [(project, resource)])
 
@@ -190,10 +190,10 @@ class TestMountSpec:
         mountpoint = tmp_path / "runtime" / "mounts" / "home"
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 return_value=ResourceHealth("ok"),
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
         ):
             status = _mount_host("home", [(project, resource)])
 
@@ -207,11 +207,11 @@ class TestMountSpec:
         _relocate(m, "remote", tmp_path / "workspace")
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 return_value=ResourceHealth("ok"),
             ),
             patch(
-                "whub.services.mount.host_mountpoint",
+                "whub.services.remote.mount.host_mountpoint",
                 return_value=tmp_path / "runtime" / "mounts" / "home",
             ),
         ):
@@ -225,10 +225,10 @@ class TestMountSpec:
         mock_run = MagicMock()
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 return_value=ResourceHealth("stale"),
             ),
-            patch("whub.services.mount.subprocess.run", mock_run),
+            patch("whub.services.remote.mount.subprocess.run", mock_run),
         ):
             results = mount_targets(m, "remote")
 
@@ -239,7 +239,7 @@ class TestMountSpec:
     def test_sshfs_not_found_errors(self):
         # ケース7
         m = manifest()
-        with patch("whub.services.mount.shutil.which", return_value=None):
+        with patch("whub.services.remote.mount.shutil.which", return_value=None):
             with pytest.raises(ServiceError, match="sshfs not found"):
                 mount_targets(m, None)
 
@@ -280,11 +280,11 @@ class TestMountSpec:
         mock_run = MagicMock(return_value=CompletedProcess([], 0))
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 side_effect=[ResourceHealth("ok"), ResourceHealth("unmounted")],
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
-            patch("whub.services.mount.subprocess.run", mock_run),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.subprocess.run", mock_run),
         ):
             results = unmount_targets(m)
 
@@ -314,12 +314,12 @@ class TestMountSpec:
         nested._resolved_workspace_path.symlink_to(tmp_path / "elsewhere")
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 side_effect=[ResourceHealth("ok"), ResourceHealth("unmounted")],
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 0),
             ),
         ):
@@ -341,12 +341,12 @@ class TestMountSpec:
         (parent / "unrelated").write_text("keep me\n")
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 side_effect=[ResourceHealth("ok"), ResourceHealth("unmounted")],
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 0),
             ),
         ):
@@ -363,11 +363,11 @@ class TestMountSpec:
         mock_run = MagicMock(return_value=CompletedProcess([], 0))
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 side_effect=[ResourceHealth("stale"), ResourceHealth("unmounted")],
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
-            patch("whub.services.mount.subprocess.run", mock_run),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.subprocess.run", mock_run),
         ):
             results = unmount_targets(m, force=True)
 
@@ -385,13 +385,13 @@ class TestMountSpec:
         mountpoint = tmp_path / "mnt"
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 return_value=ResourceHealth("unmounted"),
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
-            patch("whub.services.mount.build_sshfs_command", return_value=["sshfs"]),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.build_sshfs_command", return_value=["sshfs"]),
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 1, "", "failed"),
             ),
         ):
@@ -408,13 +408,13 @@ class TestMountSpec:
         mountpoint.mkdir()
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 return_value=ResourceHealth("unmounted"),
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
-            patch("whub.services.mount.build_sshfs_command", return_value=["sshfs"]),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.build_sshfs_command", return_value=["sshfs"]),
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 1, "", "failed"),
             ),
         ):
@@ -437,15 +437,15 @@ class TestMountSpec:
             ),
         ]
         with (
-            patch("whub.services.mount.inspect_host_mount", side_effect=health_seq),
-            patch("whub.services.mount.host_mountpoint", return_value=mountpoint),
-            patch("whub.services.mount.build_sshfs_command", return_value=["sshfs"]),
+            patch("whub.services.remote.mount.inspect_host_mount", side_effect=health_seq),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
+            patch("whub.services.remote.mount.build_sshfs_command", return_value=["sshfs"]),
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 0),
             ),
             patch(
-                "whub.services.mount._unmount_host", return_value="unmount"
+                "whub.services.remote.mount._unmount_host", return_value="unmount"
             ) as cleanup,
         ):
             targets = [(project, project.resource)]
@@ -464,14 +464,14 @@ class TestMountSpec:
         mock_run = MagicMock()
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 return_value=ResourceHealth("slow", "directory listing exceeded 3s"),
             ),
             patch(
-                "whub.services.mount.host_mountpoint",
+                "whub.services.remote.mount.host_mountpoint",
                 return_value=tmp_path / "runtime" / "mounts" / "home",
             ),
-            patch("whub.services.mount.subprocess.run", mock_run),
+            patch("whub.services.remote.mount.subprocess.run", mock_run),
         ):
             results = mount_targets(m, "remote")
 
@@ -488,17 +488,17 @@ class TestMountSpec:
             ResourceHealth("slow", "directory listing exceeded 3s"),
         ]
         with (
-            patch("whub.services.mount.inspect_host_mount", side_effect=health_seq),
+            patch("whub.services.remote.mount.inspect_host_mount", side_effect=health_seq),
             patch(
-                "whub.services.mount.host_mountpoint",
+                "whub.services.remote.mount.host_mountpoint",
                 return_value=tmp_path / "runtime" / "mounts" / "home",
             ),
-            patch("whub.services.mount.build_sshfs_command", return_value=["sshfs"]),
+            patch("whub.services.remote.mount.build_sshfs_command", return_value=["sshfs"]),
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 0),
             ),
-            patch("whub.services.mount._unmount_host") as cleanup,
+            patch("whub.services.remote.mount._unmount_host") as cleanup,
         ):
             status = _mount_host("home", [(project, project.resource)])
 
@@ -512,16 +512,16 @@ class TestMountSpec:
         secret = "user@host:/private/path IdentityFile=/Users/private/key"
         with (
             patch(
-                "whub.services.mount.inspect_host_mount",
+                "whub.services.remote.mount.inspect_host_mount",
                 return_value=ResourceHealth("unmounted"),
             ),
-            patch("whub.services.mount.host_mountpoint", return_value=tmp_path / "mnt"),
-            patch("whub.services.mount.build_sshfs_command", return_value=["sshfs"]),
+            patch("whub.services.remote.mount.host_mountpoint", return_value=tmp_path / "mnt"),
+            patch("whub.services.remote.mount.build_sshfs_command", return_value=["sshfs"]),
             patch(
-                "whub.services.mount.subprocess.run",
+                "whub.services.remote.mount.subprocess.run",
                 return_value=CompletedProcess([], 1, "", secret),
             ),
-            patch("whub.services.mount.write_mount_log") as write_log,
+            patch("whub.services.remote.mount.write_mount_log") as write_log,
         ):
             _mount_host("home", [(project, project.resource)])
 

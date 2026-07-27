@@ -17,9 +17,9 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from whub.commands.mount import mount, unmount
+from whub.commands.remote.mount import mount, unmount
 from whub.services.errors import ServiceError
-from whub.services.mount import MountResult
+from whub.services.remote.mount import MountResult
 from whub.tests.helpers import manifest
 
 
@@ -28,9 +28,9 @@ class TestMountCommandSpec:
         # ケース1
         m = manifest()
         with (
-            patch("whub.commands.mount.get_manifest", return_value=m),
+            patch("whub.commands.remote.mount.get_manifest", return_value=m),
             patch(
-                "whub.commands.mount.mount_targets",
+                "whub.commands.remote.mount.mount_targets",
                 return_value=[MountResult("remote", "mount")],
             ) as service,
         ):
@@ -45,9 +45,9 @@ class TestMountCommandSpec:
         # ケース2
         m = manifest()
         with (
-            patch("whub.commands.mount.get_manifest", return_value=m),
+            patch("whub.commands.remote.mount.get_manifest", return_value=m),
             patch(
-                "whub.commands.mount.unmount_targets",
+                "whub.commands.remote.mount.unmount_targets",
                 return_value=[MountResult("remote", "unmount")],
             ) as service,
         ):
@@ -61,9 +61,9 @@ class TestMountCommandSpec:
         # ケース3
         m = manifest()
         with (
-            patch("whub.commands.mount.get_manifest", return_value=m),
+            patch("whub.commands.remote.mount.get_manifest", return_value=m),
             patch(
-                "whub.commands.mount.mount_targets",
+                "whub.commands.remote.mount.mount_targets",
                 return_value=[MountResult("remote", "FAIL: broken")],
             ),
         ):
@@ -76,8 +76,8 @@ class TestMountCommandSpec:
         # ケース4
         m = manifest()
         with (
-            patch("whub.commands.mount.get_manifest", return_value=m),
-            patch("whub.commands.mount.mount_targets", return_value=[]),
+            patch("whub.commands.remote.mount.get_manifest", return_value=m),
+            patch("whub.commands.remote.mount.mount_targets", return_value=[]),
         ):
             result = CliRunner().invoke(mount, [], catch_exceptions=False)
 
@@ -88,9 +88,9 @@ class TestMountCommandSpec:
         # ケース5
         m = manifest()
         with (
-            patch("whub.commands.mount.get_manifest", return_value=m),
+            patch("whub.commands.remote.mount.get_manifest", return_value=m),
             patch(
-                "whub.commands.mount.mount_targets",
+                "whub.commands.remote.mount.mount_targets",
                 side_effect=ServiceError("sshfs not found"),
             ),
         ):

@@ -47,14 +47,17 @@ plan:
     acceptance: []
     steps:
     - description: 移設後の import・モック対象を更新し、remote CLI と各コマンドの既存振る舞いをテストする。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: uv run pytest と whub remote --help を実行し、旧 top-level コマンドが公開されないことを確認する。
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: 全417テストとremote CLIグループテスト2件が成功し、旧top-level runが利用不可であることを確認。
+      deleted: false
     deleted: false
   - title: ドキュメント更新
     acceptance: []
