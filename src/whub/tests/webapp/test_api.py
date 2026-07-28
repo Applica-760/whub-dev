@@ -8,9 +8,10 @@
 5. backlogの読取・追記がserviceを呼ぶ。
 6. 空白だけのbacklog memoを拒否する。
 7. inbox投函が作成ファイル名を返す。
-8. ServiceError系とManifestErrorをHTTPエラーへ変換する。
-9. resource statusがserviceの結果を返す。
-10. vaultのツリー取得・ノート取得がserviceを呼ぶ。
+8. Daily追記が相対パスを返す。
+9. ServiceError系とManifestErrorをHTTPエラーへ変換する。
+10. resource statusがserviceの結果を返す。
+11. vaultのツリー取得・ノート取得がserviceを呼ぶ。
 """
 
 from __future__ import annotations
@@ -176,6 +177,29 @@ def test_create_inbox_returns_created_filename(client: TestClient) -> None:
     assert response.status_code == 201
     assert response.json() == {"filename": "20260710_1630_note.md"}
     mock_create.assert_called_once_with(m, "note", "body")
+
+
+def test_create_daily_entry_returns_relative_path(client: TestClient) -> None:
+    m = manifest()
+    path = Path("/tmp/vault/daily/2026-07-28.md")
+    with (
+        patch("whub.webapp.routers.daily.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.daily.append_daily_entry",
+            return_value=path,
+        ) as mock_append,
+    ):
+        response = client.post("/api/daily", json={"body": "body", "energy": 4})
+
+    assert response.status_code == 201
+    assert response.json() == {"path": "daily/2026-07-28.md"}
+    mock_append.assert_called_once_with(m, "body", 4)
+
+
+def test_create_daily_entry_rejects_out_of_range_energy(client: TestClient) -> None:
+    response = client.post("/api/daily", json={"body": "body", "energy": 6})
+
+    assert response.status_code == 422
 
 
 def test_task_endpoints_return_task_query_results(client: TestClient) -> None:

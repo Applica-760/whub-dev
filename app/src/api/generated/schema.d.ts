@@ -75,6 +75,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Daily Entry */
+        post: operations["create_daily_entry_api_daily_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/inbox": {
         parameters: {
             query?: never;
@@ -278,6 +295,13 @@ export interface components {
             /** Memo */
             memo: string;
         };
+        /** CreateDailyEntryRequest */
+        CreateDailyEntryRequest: {
+            /** Body */
+            body: string;
+            /** Energy */
+            energy?: number | null;
+        };
         /** CreateInboxRequest */
         CreateInboxRequest: {
             /** Title */
@@ -299,6 +323,11 @@ export interface components {
             priority: "red" | "yellow" | "blue" | "none";
             /** Due Date */
             due_date?: string | null;
+        };
+        /** DailyEntryResponse */
+        DailyEntryResponse: {
+            /** Path */
+            path: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -777,6 +806,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_daily_entry_api_daily_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDailyEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyEntryResponse"];
                 };
             };
             /** @description Validation Error */

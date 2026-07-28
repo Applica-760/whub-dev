@@ -2,14 +2,14 @@ schema_version: 1
 task:
   id: TASK-032
   state: in_progress
-  title: 任意タイミングのDaily追記をInbox Widgetへ統合
-  objective: 感じた時点の思考・感情を日末まで記憶せず低負担で残せるよう、Overviewの既存Inbox Widgetから当日のvault/dailyへ時刻付き生ログを追記できるようにする
+  title: 任意時刻のDaily追記と元気度記録をInbox Widgetへ統合
+  objective: 感じた時点の思考・感情を日末まで記憶せず低負担で残せるよう、Overviewの既存Inbox Widgetからvault/dailyへ時刻付き生ログと任意の元気度を追記できるようにする
   approach:
-  - Daily入力は強制通知や定時要求を行わず、利用者が任意タイミングで本文だけを送信する
-  - 実行時のローカル日時からvault/daily/YYYY-MM-DD.mdを決定し、HH:MMの時刻見出しと入力本文を既存内容を壊さず追記する
+  - DailyはInboxと独立した時系列の生ログとして扱い、利用者が任意タイミングで本文だけを送信する
+  - '実行時のローカル日時からvault/daily/YYYY-MM-DD.mdを決定し、tags: [Daily]のfrontmatterを持つ新規ファイルへHH:MM見出しと入力本文を追記する'
+  - 元気度は任意の単一指標1〜5で記録し、未記録を許容する
   - InboxとDailyは保存契約が異なるためservice/APIを分離し、UIフォームとWidgetFrameだけを共通化する
-  - OverviewではWidgetFrameを増やさず、Inbox/Daily切替を配置してモード別の入力状態・検証・結果表示を保持する
-  - Agentic分析・日次要約・活動量スコア・明示的な日付変更・CLI入力は本Taskの対象外とし、蓄積後の別Taskで検討する
+  - Agentic分析・日次要約・活動量スコア・明示的な日付変更・CLI入力は本Taskの対象外とする
   depends_on: []
   interruption_task_id: null
   interruption_reason: null
@@ -32,6 +32,10 @@ plan:
     statement: Agentic分析・日次要約・活動量スコア・明示的な日付変更・CLI入力が本Taskへ混入していない
   - id: ACC-008
     statement: backend/frontend testsとfrontend buildが成功し、実画面でOverviewの占有面積増加がないことを確認できる
+  - id: ACC-009
+    statement: DailyはInboxと独立した直接入力を受け付け、時系列の生ログとしてvault/dailyに保存される
+  - id: ACC-010
+    statement: Dailyモードは任意の元気度1〜5を保存でき、未記録の投稿と既存Dailyを破壊せず扱える
   phases:
   - title: Daily追記の保存契約とAPIを実装する
     acceptance: []
@@ -53,7 +57,7 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: Inbox/Daily切替を単一WidgetFrameへ統合する
     acceptance: []
     steps:
@@ -74,7 +78,7 @@ plan:
       skip_reason: null
       deleted: false
     log: []
-    deleted: false
+    deleted: true
   - title: 運用境界を記録して総合検証する
     acceptance: []
     steps:
@@ -91,10 +95,92 @@ plan:
       skip_reason: null
       deleted: false
     log: []
+    deleted: true
+  - title: Dailyの保存・運用契約を確定する
+    acceptance: []
+    steps:
+    - description: vault運用文書にDailyの独立入力、対象内容、Inbox/refileとの境界を記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: '新規Dailyのtags: [Daily] frontmatter、HH:MM見出し、元気度1〜5の固定表記を仕様化する'
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: vault/docs/operations/workflow.mdにDaily直接入力、tags frontmatter、HH:MM見出し、任意の元気度N/5を明記した
+      deleted: false
+    deleted: false
+  - title: Daily追記serviceとAPIを実装する
+    acceptance: []
+    steps:
+    - description: vault/daily/YYYY-MM-DD.mdをローカル日時から解決し、空白本文を拒否して既存内容を失わず追記するserviceを実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 任意の元気度1〜5を記録し、未記録時は元気度行を出力しない保存契約を実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: POST /api/dailyを追加してserverへ登録し、OpenAPI由来のfrontend型を再生成する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: POST /api/dailyを登録し、npm run generate:typesでOpenAPI型を更新。service・API・OpenAPI
+          test 24件が成功
+      deleted: false
+    deleted: false
+  - title: 保存契約を自動検証する
+    acceptance: []
+    steps:
+    - description: 新規作成・既存追記・同日複数投稿・日付境界・本文保持・元気度有無・vault未配置をservice/API testで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: OverviewのInbox/Daily切替を実装する
+    acceptance: []
+    steps:
+    - description: 既存Inbox入力を共通フォームとモード別状態へ整理する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 単一WidgetFrame内にInbox/Daily切替を配置し、Dailyでは本文と任意の星1〜5選択だけを表示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 下書き、validation、送信状態、成功・失敗表示をモード別に保持し、Inboxの既存投函動作を維持する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 両モードの入力・送信・切替・エラーをcomponent testで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 運用境界と総合検証を完了する
+    acceptance: []
+    steps:
+    - description: 実画面で複数行・連続投稿・元気度有無・Overview占有面積を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: uv run pytest、npm test、npm run typecheck、npm run buildを実行する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: vault/dailyを独立した新規入力先として運用文書へ明文化し、新規Dailyのfrontmatter契約を追加するため
 cancellation: null
 result: null
