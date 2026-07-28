@@ -15,6 +15,10 @@ export function DailyForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  function handleEnergyChange(value: number) {
+    setEnergy((current) => (current === value ? null : value));
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!body.trim()) {
@@ -48,34 +52,24 @@ export function DailyForm() {
             aria-label="Dailyログの本文"
             autosize
             disabled={submitting}
-            label="いま感じたこと"
+            label="How are you feeling?"
             minRows={8}
             onChange={(event) => setBody(event.currentTarget.value)}
             required
             value={body}
             withAsterisk={false}
           />
-          <Stack gap={4}>
-            <Text size="sm">元気度（任意）</Text>
-            <Group gap="sm">
-              <Rating
-                count={5}
-                getSymbolLabel={(value) => `元気度 ${value}`}
-                onChange={setEnergy}
-                readOnly={submitting}
-                value={energy ?? 0}
-              />
-              <Button
-                disabled={submitting || energy === null}
-                onClick={() => setEnergy(null)}
-                size="compact-xs"
-                type="button"
-                variant="subtle"
-              >
-                未記録
-              </Button>
-            </Group>
-          </Stack>
+          <Group gap="sm">
+            <Text size="sm">Satisfaction</Text>
+            <Rating
+              color="blue"
+              count={5}
+              getSymbolLabel={(value) => `Satisfaction ${value}`}
+              onChange={handleEnergyChange}
+              readOnly={submitting}
+              value={energy ?? 0}
+            />
+          </Group>
           <Button loading={submitting} type="submit">
             記録
           </Button>

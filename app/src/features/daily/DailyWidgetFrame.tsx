@@ -9,7 +9,7 @@ import { DailyForm } from "./DailyForm";
 type Mode = "inbox" | "daily";
 
 export function DailyWidgetFrame() {
-  const [mode, setMode] = useState<Mode>("inbox");
+  const [mode, setMode] = useState<Mode>("daily");
 
   return (
     <WidgetFrame

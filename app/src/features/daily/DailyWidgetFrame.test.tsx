@@ -39,11 +39,15 @@ describe("DailyWidgetFrame", () => {
   it("InboxとDailyの下書きを切替後も保持する", () => {
     renderWidget();
 
+    expect(screen.getByRole("button", { name: "Daily" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Inbox" }));
     fireEvent.change(screen.getByLabelText("Inboxノートのタイトル"), {
       target: { value: "inbox title" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Daily" }));
-    fireEvent.change(screen.getByLabelText("Dailyログの本文"), {
+    fireEvent.change(screen.getByLabelText("How are you feeling?"), {
       target: { value: "daily body" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Inbox" }));
@@ -53,7 +57,7 @@ describe("DailyWidgetFrame", () => {
     ).toBe("inbox title");
     fireEvent.click(screen.getByRole("button", { name: "Daily" }));
     expect(
-      (screen.getByLabelText("Dailyログの本文") as HTMLTextAreaElement).value,
+      (screen.getByLabelText("How are you feeling?") as HTMLTextAreaElement).value,
     ).toBe("daily body");
     expect(screen.getByRole("button", { name: "Daily" }).getAttribute("aria-pressed")).toBe(
       "true",
@@ -66,10 +70,10 @@ describe("DailyWidgetFrame", () => {
     renderWidget();
 
     fireEvent.click(screen.getByRole("button", { name: "Daily" }));
-    fireEvent.change(screen.getByLabelText("Dailyログの本文"), {
+    fireEvent.change(screen.getByLabelText("How are you feeling?"), {
       target: { value: "今日は元気" },
     });
-    const energyInput = screen.getByLabelText("元気度 4");
+    const energyInput = screen.getByLabelText("Satisfaction 4");
     const energyLabel = document.querySelector(
       `label[for="${energyInput.id}"]`,
     );
@@ -84,6 +88,33 @@ describe("DailyWidgetFrame", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body: "今日は元気", energy: 4 }),
+    });
+  });
+
+  it("同じSatisfaction星を再選択すると未記録へ戻す", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({ path: "daily/2026-07-28.md" }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderWidget();
+
+    fireEvent.change(screen.getByLabelText("How are you feeling?"), {
+      target: { value: "body" },
+    });
+    const energyInput = screen.getByLabelText("Satisfaction 3");
+    const energyLabel = document.querySelector(
+      `label[for="${energyInput.id}"]`,
+    );
+    if (energyLabel === null) {
+      throw new Error("energy label is missing");
+    }
+    fireEvent.click(energyLabel);
+    fireEvent.click(energyLabel);
+    fireEvent.click(screen.getByRole("button", { name: "記録" }));
+
+    await screen.findByText("daily/2026-07-28.md");
+    expect(fetchMock).toHaveBeenCalledWith("/api/daily", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: "body", energy: null }),
     });
   });
 });
