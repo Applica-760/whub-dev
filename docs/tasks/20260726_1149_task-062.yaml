@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-062
-  state: draft
+  state: in_progress
   title: 長期自動実行を見据えたworktree基盤の設計を確定する
   objective: 無人・長時間のAgent実行を前提に、whub開発をworktreeで並列化するためのTask記録の一意性・実行ハーネス・停止条件の方針を確定し、実装可能な後続Taskへ分割する
   approach:
@@ -16,9 +16,110 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: ゴールと制約を定義する
+    acceptance: []
+    steps:
+    - description: 長期ゴール、対象外、移行方針を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: 単一利用者向けの段階移行、1 Task = 1 worktree = 1 Agent session、Mac主・スマホ部分操作を固定した。
+      deleted: false
+    deleted: false
+  - title: 全体の契約と要件を設計する
+    acceptance: []
+    steps:
+    - description: browser terminal、Agent adapter、監督画面、権限、Git操作、スマホ利用の責務・識別子・操作境界を定義し、開発文書へ記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: 定式化前の要求をdocs/development/agent-workspace/requirements.mdへ記録し、以降の契約判断の根拠を固定した。
+      deleted: false
+    - value:
+        decision: Task YAML、worktree登録、Agent session、権限要求はoperation rootへ集約し、既存Projectを親、worktreeを子として扱う。
+      deleted: false
+    - value:
+        decision: 1 Task = 1 worktree = 1 tmux sessionとし、ブラウザ再接続とAgent再起動では同一対応を維持する。
+      deleted: false
+    - value:
+        decision: tmux sessionの編集権は常に一つに限定し、スマホは初期段階で閲覧または通知のみとする。
+      deleted: false
+    - value:
+        decision: sessionはexecution_state、attention_state、detail_stateで扱い、attentionは未確認の通知として実行状態から分離する。
+      deleted: false
+    - value:
+        deferred: 権限境界と権限プロファイルは高コストなため後続Taskで扱う。現時点では要求のみを保持する。
+      deleted: false
+    - value:
+        decision: MVPはMac上のlocalhost利用に限定する。スマホ接続・通知・外部到達性は後続Taskで扱い、独立文書は作成しない。
+      deleted: false
+    - value:
+        finding: 候補一覧へAgent実行ハーネス、Agent lifecycle hooks、Agentロールと権限プロファイルを追加し、Git/PR/mergeは後者に従う導線として位置付けた。
+      deleted: false
+    - value:
+        result: 要求、control plane、一意対応、session編集権、session状態をdocs/development/agent-workspaceへ記録し、権限詳細とスマホ接続は後続Taskへ明示的に残した。
+      deleted: false
+    deleted: false
+  - title: 並列化基盤を設計する
+    acceptance: []
+    steps:
+    - description: 全体契約から導かれるworktree、Task、Agent sessionの対応とcontrol planeの境界を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 並列化基盤を設計する
+    acceptance: []
+    steps:
+    - description: worktree、Task、Agent sessionの対応とcontrol planeの境界を確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 後続Taskを設計する
+    acceptance: []
+    steps:
+    - description: 候補を実装可能なTaskへ分解し、必要最小限の依存と将来判断を整理する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: '候補をA: 並列実行、B: Agent対話・監督、C: 段階的移行へ再編し、状態・依頼文・通知でAgentに呼ばれる体験を優先原則として記録した。'
+      deleted: false
+    deleted: false
+  - title: 直近Taskを起票する
+    acceptance: []
+    steps:
+    - description: 最初に着手するworktree基盤Taskをdraftとして起票する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 設計成果を検証する
+    acceptance: []
+    steps:
+    - description: Task workflowと候補一覧の整合性を確認し、後続Taskへ渡す判断を記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: worktreeの詳細設計より前に、browser terminal、cockpit、権限、Git操作が必要とする契約とデータ関係を確定する工程を追加するため
 cancellation: null
 result: null
