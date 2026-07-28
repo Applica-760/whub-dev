@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-062
-  state: in_progress
+  state: completed
   title: 長期自動実行を見据えたworktree基盤の設計を確定する
   objective: 無人・長時間のAgent実行を前提に、whub開発をworktreeで並列化するためのTask記録の一意性・実行ハーネス・停止条件の方針を確定し、実装可能な後続Taskへ分割する
   approach:
@@ -71,10 +71,13 @@ plan:
     acceptance: []
     steps:
     - description: 全体契約から導かれるworktree、Task、Agent sessionの対応とcontrol planeの境界を確定する
-      state: pending
-      skip_reason: null
+      state: skipped
+      skip_reason: 具体的なworktree基盤設計はTASK-072へ移管し、本Taskでは長期要件と契約の確定までを扱うため
       deleted: false
-    log: []
+    log:
+    - value:
+        handoff: TASK-072へ具体的なworktree基盤設計を移管した。
+      deleted: false
     deleted: false
   - title: 並列化基盤を設計する
     acceptance: []
@@ -89,31 +92,40 @@ plan:
     acceptance: []
     steps:
     - description: 候補を実装可能なTaskへ分解し、必要最小限の依存と将来判断を整理する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - value:
         finding: '候補をA: 並列実行、B: Agent対話・監督、C: 段階的移行へ再編し、状態・依頼文・通知でAgentに呼ばれる体験を優先原則として記録した。'
       deleted: false
+    - value:
+        result: A/B/Cの候補一覧をdocs/development/agent-workspace/tasks.mdへ記録した。
+      deleted: false
     deleted: false
   - title: 直近Taskを起票する
     acceptance: []
     steps:
     - description: 最初に着手するworktree基盤Taskをdraftとして起票する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        result: TASK-072を、次セッションでworktree基盤を計画・実装するためのdraft Taskとして起票した。
+      deleted: false
     deleted: false
   - title: 設計成果を検証する
     acceptance: []
     steps:
     - description: Task workflowと候補一覧の整合性を確認し、後続Taskへ渡す判断を記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: TASK-062、TASK-071、TASK-072はwflow task checkでvalidを確認した。
+      deleted: false
     deleted: false
 approvals:
 - actor: user
@@ -122,4 +134,5 @@ acceptance_results: []
 change_requests:
 - reason: worktreeの詳細設計より前に、browser terminal、cockpit、権限、Git操作が必要とする契約とデータ関係を確定する工程を追加するため
 cancellation: null
-result: null
+result:
+  summary: 長期要件と契約を文書化し、具体的なworktree基盤の設計・実装をTASK-072へ引き継いだ。

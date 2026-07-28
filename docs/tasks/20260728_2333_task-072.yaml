@@ -1,0 +1,21 @@
+schema_version: 1
+task:
+  id: TASK-072
+  state: draft
+  title: worktree基盤を作成する
+  objective: 親Projectの子worktreeを一意に管理する基盤の実装を次セッションで開始する
+  approach:
+  - '要件: [requirements](../development/agent-workspace/requirements.md)'
+  - 'control plane: [control-plane](../development/agent-workspace/control-plane.md)'
+  - '一意対応: [identity](../development/agent-workspace/identity.md)'
+  - '候補一覧A: [tasks](../development/agent-workspace/tasks.md)'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
