@@ -56,6 +56,7 @@ export function OverviewPage({ collapsed }: OverviewPageProps) {
           selectedTask={selectedTask}
           showAllLink
         />
+        <BacklogWidget project={projectSelection.selectedProject} />
       </OverviewColumn>
       <OverviewSide collapsed={collapsed.right} side="right">
         <TaskDetailWidget
@@ -69,7 +70,6 @@ export function OverviewPage({ collapsed }: OverviewPageProps) {
             taskId={selectedTask.taskId}
           />
         )}
-        <BacklogWidget project={projectSelection.selectedProject} />
       </OverviewSide>
     </OverviewFrame>
   );
