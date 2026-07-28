@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-032
-  state: in_progress
+  state: completed
   title: 任意時刻のDaily追記と元気度記録をInbox Widgetへ統合
   objective: 感じた時点の思考・感情を日末まで記憶せず低負担で残せるよう、Overviewの既存Inbox Widgetからvault/dailyへ時刻付き生ログと任意の元気度を追記できるようにする
   approach:
@@ -195,14 +195,18 @@ plan:
     acceptance: []
     steps:
     - description: cleanなwhub-dev checkoutをsourceに明示してwhub release build、verify、applyを順に実行する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: apply後に~/.local/bin/whubでDaily APIとappの起動を確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        release: 0.1.0+g4f6e3096をbuild・verify・apply済み。~/.local/bin/whubはcommit 4f6e309を表示し、production
+          app 8710でDaily空本文が400を返した
+      deleted: false
     deleted: false
 approvals:
 - actor: user
@@ -210,11 +214,52 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - Dailyフォームは任意入力で複数行本文を送信できる
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Daily serviceがローカル日時から日付・HH:MMを保存する
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - 連続投稿と日付境界をservice testで検証した
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - Overviewは単一DailyWidgetFrame内で切替える
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - Inbox/Dailyの下書きと送信状態をcomponent testで検証した
+- acceptance: ACC-006
+  status: passed
+  evidence:
+  - '新規Dailyはtags: [Daily]形式で作成する'
+- acceptance: ACC-007
+  status: passed
+  evidence:
+  - 分析・要約・活動量スコアをTask対象外に維持した
+- acceptance: ACC-008
+  status: passed
+  evidence:
+  - pytest 438件、npm test 26件、build成功、ユーザーが実画面を確認
+- acceptance: ACC-009
+  status: passed
+  evidence:
+  - vault運用文書にDaily直接入力を明記した
+- acceptance: ACC-010
+  status: passed
+  evidence:
+  - 任意Satisfaction星1〜5と未記録を実装・検証した
 change_requests:
 - reason: vault/dailyを独立した新規入力先として運用文書へ明文化し、新規Dailyのfrontmatter契約を追加するため
 - reason: InboxWidgetをカスタムせず、feature/dailyの新規WidgetFrameでInbox/Daily切替を提供する構成へ変更するため
 - reason: 全体検証後にwhub release build・verify・apply・切替後確認を行うPhaseを追加するため
 - reason: 開発版確認でDaily既定、Satisfaction表示、星の色と同一値の再選択による解除を追加するため
 cancellation: null
-result: null
+result:
+  summary: 時刻付きDaily生ログと任意Satisfaction記録をOverviewへ追加し、release 0.1.0+g4f6e3096として適用した
