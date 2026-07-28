@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 
 import { BacklogWidget } from "../backlog/BacklogWidget";
-import { InboxWidget } from "../inbox/InboxWidget";
+import { DailyWidgetFrame } from "../daily/DailyWidgetFrame";
 import { ProjectTabsWidget } from "../projects/ProjectTabsWidget";
 import { useProjectSelection } from "../projects/useProjectSelection";
 import { ResourceStatusWidget } from "../status/ResourceStatusWidget";
@@ -41,7 +41,7 @@ export function OverviewPage({ collapsed }: OverviewPageProps) {
       </OverviewWide>
       <OverviewSide collapsed={collapsed.left} side="left">
         <TodoFormWidget controller={todoController} />
-        <InboxWidget />
+        <DailyWidgetFrame />
         <ResourceStatusWidget />
       </OverviewSide>
       <OverviewColumn>

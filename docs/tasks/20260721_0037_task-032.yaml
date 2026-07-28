@@ -145,26 +145,30 @@ plan:
         result: 同日連続投稿、日付境界、本文保持、元気度有無、vault未配置、API入力エラーを含むbackend test 28件が成功
       deleted: false
     deleted: false
-  - title: OverviewのInbox/Daily切替を実装する
+  - title: Daily WidgetFrameでInbox/Dailyフォームを独立して構成する
     acceptance: []
     steps:
-    - description: 既存Inbox入力を共通フォームとモード別状態へ整理する
-      state: pending
+    - description: feature/dailyに新規DailyWidgetFrameを追加し、既存InboxWidgetのFrameとInboxページの振る舞いを維持したまま、再利用可能なInboxフォームとDailyフォームを構成する
+      state: done
       skip_reason: null
       deleted: false
-    - description: 単一WidgetFrame内にInbox/Daily切替を配置し、Dailyでは本文と任意の星1〜5選択だけを表示する
-      state: pending
+    - description: DailyWidgetFrameのaction領域にInbox/Daily切替を配置し、Dailyでは本文と任意の星1〜5選択だけを表示する
+      state: done
       skip_reason: null
       deleted: false
     - description: 下書き、validation、送信状態、成功・失敗表示をモード別に保持し、Inboxの既存投函動作を維持する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 両モードの入力・送信・切替・エラーをcomponent testで検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        result: feature/dailyの新規DailyWidgetFrameでInbox/Dailyを切替。フォーム別の下書き保持とDaily
+          API送信をcomponent testで検証し、typecheckと5件のfrontend testが成功
+      deleted: false
     deleted: false
   - title: 運用境界と総合検証を完了する
     acceptance: []
@@ -182,8 +186,10 @@ plan:
 approvals:
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: vault/dailyを独立した新規入力先として運用文書へ明文化し、新規Dailyのfrontmatter契約を追加するため
+- reason: InboxWidgetをカスタムせず、feature/dailyの新規WidgetFrameでInbox/Daily切替を提供する構成へ変更するため
 cancellation: null
 result: null
