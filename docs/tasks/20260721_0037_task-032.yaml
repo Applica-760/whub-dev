@@ -178,14 +178,18 @@ plan:
     acceptance: []
     steps:
     - description: 実画面で複数行・連続投稿・元気度有無・Overview占有面積を確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: uv run pytest、npm test、npm run typecheck、npm run buildを実行する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        result: ユーザーが開発版でOverviewとInbox/Daily切替を確認し、Daily既定・Satisfaction UIのフィードバックを反映。uv
+          run pytest 438件、npm test 26件、npm run buildが成功
+      deleted: false
     deleted: false
   - title: releaseを検証して適用する
     acceptance: []
