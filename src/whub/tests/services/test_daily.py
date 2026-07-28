@@ -19,6 +19,12 @@ class FrozenDatetime(datetime):
         return cls(2026, 7, 28, 16, 30, tzinfo=tz)
 
 
+class NextDayDatetime(datetime):
+    @classmethod
+    def now(cls, tz=None) -> NextDayDatetime:
+        return cls(2026, 7, 29, 0, 5, tzinfo=tz)
+
+
 def _vault_manifest(tmp_path: Path) -> tuple[Manifest, Path]:
     source = tmp_path / "vault-source"
     (source / "daily").mkdir(parents=True)
@@ -87,6 +93,37 @@ def test_append_daily_entry_appends_existing_daily_in_order(
     )
 
 
+def test_append_daily_entry_keeps_same_day_posts_in_order(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr("whub.services.daily.datetime", FrozenDatetime)
+    vault_manifest, vault_path = _vault_manifest(tmp_path)
+
+    append_daily_entry(vault_manifest, "first")
+    append_daily_entry(vault_manifest, "second")
+
+    content = (vault_path / "daily" / "2026-07-28.md").read_text()
+    assert content.index("first") < content.index("second")
+    assert content.count("## 16:30") == 2
+
+
+def test_append_daily_entry_uses_a_new_file_after_date_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    vault_manifest, vault_path = _vault_manifest(tmp_path)
+    monkeypatch.setattr("whub.services.daily.datetime", FrozenDatetime)
+    append_daily_entry(vault_manifest, "yesterday")
+    monkeypatch.setattr("whub.services.daily.datetime", NextDayDatetime)
+
+    path = append_daily_entry(vault_manifest, "today")
+
+    assert path == vault_path / "daily" / "2026-07-29.md"
+    assert "today" in path.read_text()
+    assert "today" not in (vault_path / "daily" / "2026-07-28.md").read_text()
+
+
 @pytest.mark.parametrize("energy", [0, 6, True])
 def test_append_daily_entry_rejects_invalid_energy(
     tmp_path: Path,
@@ -108,3 +145,11 @@ def test_append_daily_entry_rejects_blank_body(tmp_path: Path) -> None:
 def test_append_daily_entry_rejects_missing_vault_project() -> None:
     with pytest.raises(ServiceError, match="vault project is not defined"):
         append_daily_entry(manifest(), "body")
+
+
+def test_append_daily_entry_rejects_unavailable_vault(tmp_path: Path) -> None:
+    vault_manifest, vault_path = _vault_manifest(tmp_path)
+    vault_path.unlink()
+
+    with pytest.raises(ServiceError, match="vault workspace path is not available"):
+        append_daily_entry(vault_manifest, "body")

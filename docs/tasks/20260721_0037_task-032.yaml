@@ -137,10 +137,13 @@ plan:
     acceptance: []
     steps:
     - description: 新規作成・既存追記・同日複数投稿・日付境界・本文保持・元気度有無・vault未配置をservice/API testで検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        result: 同日連続投稿、日付境界、本文保持、元気度有無、vault未配置、API入力エラーを含むbackend test 28件が成功
+      deleted: false
     deleted: false
   - title: OverviewのInbox/Daily切替を実装する
     acceptance: []

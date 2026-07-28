@@ -202,6 +202,22 @@ def test_create_daily_entry_rejects_out_of_range_energy(client: TestClient) -> N
     assert response.status_code == 422
 
 
+def test_create_daily_entry_returns_service_error_for_blank_body(
+    client: TestClient,
+) -> None:
+    with (
+        patch("whub.webapp.routers.daily.load_manifest", return_value=manifest()),
+        patch(
+            "whub.webapp.routers.daily.append_daily_entry",
+            side_effect=ServiceError("daily body is required"),
+        ),
+    ):
+        response = client.post("/api/daily", json={"body": " \n"})
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "daily body is required"}
+
+
 def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
     summary = TaskSummary(
         path="20260715_task.yaml",
