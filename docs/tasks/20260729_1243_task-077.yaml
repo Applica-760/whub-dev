@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-077
-  state: paused
+  state: in_progress
   title: Agentロールと権限ポリシーを定義する
   objective: Agent非依存のロール・権限ポリシーをSSOTとして定義し、CodexとClaude Codeを含む実行環境へ安全に変換できる判断基準を文書化する
   approach:
