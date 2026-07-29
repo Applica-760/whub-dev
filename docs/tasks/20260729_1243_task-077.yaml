@@ -1,14 +1,15 @@
 schema_version: 1
 task:
   id: TASK-077
-  state: in_progress
+  state: paused
   title: Agentロールと権限ポリシーを定義する
   objective: Agent非依存のロール・権限ポリシーをSSOTとして定義し、CodexとClaude Codeを含む実行環境へ安全に変換できる判断基準を文書化する
   approach:
   - allow・prompt・deny、filesystem・network・Git・外部ツールを共通ポリシーとして表し、Agentで強制不能な規則は起動不可とする
   depends_on: []
-  interruption_task_id: TASK-081
-  interruption_reason: TASK-077の成果を安全にPR・mergeして統合するため、worktreeのPR/merge lifecycleを先に定義・実装する必要がある。
+  interruption_task_id: TASK-082
+  interruption_reason: Task planningにworktree/PR/merge lifecycleとremote operation文書の導線を追加し、Task
+    077のPR/merge前に運用手順を確定するため。
   interruption_source_task_id: null
 plan:
   acceptance: []
@@ -56,7 +57,7 @@ plan:
     acceptance: []
     steps:
     - description: 基底roleと用途別拡張roleを合成する機械可読profileの構造、配置、合成規則、説明文書の名称を定義する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -84,12 +85,17 @@ plan:
         result: base agent authへhub_logical_treeのread scopeを追加し、filesystem scopeで制限できるls/tree/stat/file/wc/du/cat/head/tail/grepを有効化した。dfは全mount
           metadataを返すためsystem metadata権限の定義まで保留。YAML解析成功。
       deleted: false
+    - value:
+        result: base.yamlとextension roleの配置、description.mdの適用範囲、variablesとcommands.templatesの評価規則を定義した。baseにCodeGraphと任意の登録済みProjectに対するwflow
+          task ls/check/showを追加し、implementer roleに対応worktree write、対応Taskの計画操作・Step
+          done、test/formatterを追加した。YAML解析とgit diff --checkが成功。
+      deleted: false
     deleted: false
   - title: 初期規約を文書化し検証する
     acceptance: []
     steps:
     - description: あなたが列挙する規約を正規化して初期profileと設計文書へ反映し、後続adapterへ渡す検証条件を記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -109,6 +115,11 @@ plan:
     - value:
         result: wflow taskのread系はProject名をwhub-devへ固定して追加した。task check/showはTask ID可変のためprefix、引数なしtask
           lsはexact。任意Project対応は型付き可変引数を表現できるschema拡張へ保留。YAML解析成功。
+      deleted: false
+    - value:
+        result: implementerにTask YAMLを直接編集せずwflow taskで更新する指示を追加した。本元Task YAMLをSSOT、worktree内のTask
+          YAMLを更新対象外とする契約をagent-auth.mdへ記録した。wflow --projectの親Project root解決テスト4件、role
+          YAML解析、git diff --checkが成功。schema validatorとadapter/harnessによる強制は後続Taskへ移管する。
       deleted: false
     deleted: false
 approvals:

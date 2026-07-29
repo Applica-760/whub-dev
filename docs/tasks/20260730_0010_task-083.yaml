@@ -1,0 +1,58 @@
+schema_version: 1
+task:
+  id: TASK-083
+  state: in_progress
+  title: Task interruptionとplan approvalの状態遷移を整合させる
+  objective: 承認済みの子Taskを親Taskのinterruptとして開始できるよう、task-planning Skillとwflow Workflowの状態遷移を整合させる
+  approach:
+  - interruptが要求する子Task状態とapprove_planの遷移を調査し、承認済み計画を破棄せずに親をpause・子を開始できるWorkflowとテストを実装する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: interruptの状態契約を確定する
+    acceptance: []
+    steps:
+    - description: 承認済みin_progress childをinterruptが受け入れ、再遷移せず親子関連を記録する不変条件とテストケースを定義する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: interrupt は draft または approve_plan 済みの in_progress child を受け入れる。後者は
+          state と approvals を再変更せず interruption_source_task_id のみ記録する。
+      deleted: false
+    deleted: false
+  - title: interrupt実装を整合させる
+    acceptance: []
+    steps:
+    - description: childのstate判定と開始処理を修正し、承認済みchildで親をpauseして関係を記録するservice/CLI回帰テストを追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: interruption child を draft/in_progress に拡張し、in_progress は state/approvals
+          を維持して source link のみ付与した。CLI interruption tests は3 passed。サービス試験の収集は既存の
+          whub.core.health と whub.models.status の循環importで失敗。
+      deleted: false
+    deleted: false
+  - title: 修正を検証して記録する
+    acceptance: []
+    steps:
+    - description: focused test、wflow関連回帰、git diff --checkを実行し、検証済みの修正をTask 083だけ明示的にcommitする。Task
+        083を含むcleanなwhub-dev checkoutをsourceにrelease build・verify・applyを実行し、~/.local/bin/whubで動作を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

@@ -1,0 +1,67 @@
+schema_version: 1
+task:
+  id: TASK-082
+  state: completed
+  title: task-planningのworktree lifecycleを整備する
+  objective: Taskのworktree作成・再開確認・PR/merge・完了の順序をtask-planning Skillへ記録する
+  approach:
+  - Task 077のPR/merge手順を一般化し、worktreeを使わないTaskにも適用できる分岐を定義する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: TASK-077
+plan:
+  acceptance: []
+  phases:
+  - title: worktree lifecycleを確定する
+    acceptance: []
+    steps:
+    - description: 新規・再開・完了時のworktree判断、軽微Taskの完了条件、PR/mergeとreleaseの責務分担を定義する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: 新規Taskはinit後にworktree作成の要否をユーザーへ確認する。再開時はwhub worktree checkで登録とdiagnosticを確認する。worktreeありはPR作成依頼・merge成功・cleanup確認後にcomplete、軽微TaskはPR/mergeを省略して通常commitと検証後にcompleteとする。worktreeの事実契約はreference、反復手順はoperations、release正本はreleace.mdに置く。remote詳細はworkspace
+          root AGENTS.mdからwhub-devのoperations/remote.mdへ移す。
+      deleted: false
+    deleted: false
+  - title: Skillとoperation手順を更新する
+    acceptance: []
+    steps:
+    - description: task-planning Skillにworktree lifecycle、PR/merge、release手順へのリンクを組み込み、docs/operations/worktree.mdを作成する。remote運用の詳細をAGENTS.mdからdocs/operations/remote.mdへ移し、AGENTS.mdには参照だけを残す
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: task-planning Skillへ新規・再開・完了のworktree lifecycleとPR/merge後completeを追加した。workspace
+          root AGENTS.mdのremote詳細をoperations/remote.mdへの参照へ置換し、operations/worktree.mdとoperations/remote.mdを追加した。worktree
+          operationにはrelease手順を含めない。
+      deleted: false
+    deleted: false
+  - title: 手順を検証する
+    acceptance: []
+    steps:
+    - description: 新規Task・既存Task・worktreeあり・軽微Taskの各分岐、CLI参照、文書リンクを確認し、Task 077のPR/merge前に適用可能であることを検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: whub worktree create/merge、remote getのCLI helpを確認し、operation文書のコマンド形式と一致した。対象operation文書のgit
+          diff --checkが成功し、root AGENTS.mdからremote operation文書への参照、Skillからworktree/release正本への参照、worktree
+          operationにrelease節がないことを確認した。interruptの子Task draft要求とSkillの承認順序の不整合は後続Taskへ分離する。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: 割り込みはdraftの子Taskを開始する実装であるため、承認済み計画を変更せず起動経路を整合させる。
+cancellation: null
+result:
+  summary: task-planning Skillへworktree lifecycleとPR/merge後のcomplete手順を追加し、workspace
+    root AGENTS.mdのremote詳細をoperation文書参照へ移した。whub-devにworktree/remote operation文書を追加した。interruptとplan
+    approvalの状態遷移不整合は後続Taskへ分離した。

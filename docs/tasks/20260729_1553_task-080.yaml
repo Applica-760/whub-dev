@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-080
-  state: draft
+  state: cancelled
   title: dev API serverのreload監視によるCPU常時消費を解消する
   objective: uvicorn --reloadの監視方式に起因するdev API serverのCPU常時消費を解消し、開発時のreload監視コストを継続的に抑える
   approach:
@@ -28,5 +28,7 @@ plan:
 approvals: []
 acceptance_results: []
 change_requests: []
-cancellation: null
+cancellation:
+  reason: ユーザー依頼によりキャンセル
+  actor: user
 result: null
