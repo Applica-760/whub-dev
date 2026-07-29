@@ -51,6 +51,17 @@ CodeGraphは`stdio`の外部ツールとしてbase agent authに含める。`cod
 `codegraph_impact`、`codegraph_files`、`codegraph_status`だけを許可する。CodeGraph MCPは
 ローカルプロセスであり、network権限を必要としない。
 
+## Task operation boundary
+
+implementerはTask YAMLを直接編集せず、対応Taskに束縛した`wflow task`操作を使う。
+`wflow task --project PROJECT`は実行cwdに依存せず、登録済みProjectのcontent rootにある
+`docs/tasks/`を操作する。本元のTask YAMLがSSOTであり、worktree内に残るTask YAMLの
+スナップショットは更新対象ではない。
+
+この直接編集禁止は現在はAgentへの指示であり、profileのcommand allowlistだけでは強制しない。
+adapter/harnessは後続Taskで、本元Task YAMLへのraw writeを拒否し、許可済み`wflow`操作だけを
+通す境界として実装・検証する。
+
 ## Filesystem authorization
 
 base agent authはHubの論理ツリー全体にreadを付与する。Hub直下の通常ファイル・ディレクトリに加え、Hub直下で登録されたdirectory symlinkまたはmountを入口として、そのProject配下の通常ファイル・ディレクトリを読める。
@@ -63,6 +74,6 @@ base agent authはHubの論理ツリー全体にreadを付与する。Hub直下�
 
 ## Deferred
 
-- agent authのYAML schema検証方法
+- agent authのYAML schema validator
 - networkの接続先表現と`stdio`以外のtransport
-- Agent adapterへの変換方法
+- Agent adapter/harnessによるfilesystem・Task YAML操作の強制
