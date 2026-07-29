@@ -86,10 +86,15 @@ plan:
     acceptance: []
     steps:
     - description: whub worktree配下へcreate・check・removeを追加し、引数解釈と表示だけをCLI adapterに置く。serviceの診断・未実装remoteエラーを利用者向けに表示し、失敗時は非0で終了する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: whub worktree create・check・removeを追加し、Project・Taskによる対象選択、diagnostic表示と非0終了を実装した。service
+          APIをProject・Task単位に統合し、モデル不変条件と重複する判定を削除した。uv run pytestの25件、ruff check、git
+          diff --checkで成功。
+      deleted: false
     deleted: false
   - title: 契約を検証し文書化する
     acceptance: []

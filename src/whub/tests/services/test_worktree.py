@@ -9,12 +9,12 @@ import yaml
 from whub.models import Manifest, SymlinkResource, WorktreeDefinition
 from whub.services.errors import ServiceError
 from whub.services.worktree import (
+    _create_worktree,
+    _require_worktree_parent,
     create_project_worktree,
-    create_worktree,
     list_worktree_definitions,
-    remove_worktree,
+    remove_project_worktree,
     resolve_worktree_parent,
-    require_worktree_parent,
     save_worktree_definition,
     worktree_definition_path,
 )
@@ -41,14 +41,14 @@ def worktree_definition(
 
 
 def test_require_worktree_parent_accepts_local_resource_with_git() -> None:
-    resource = require_worktree_parent(local_git_manifest(), "local")
+    resource = _require_worktree_parent(local_git_manifest(), "local")
     assert isinstance(resource, SymlinkResource)
     assert resource.git is not None
 
 
 def test_require_worktree_parent_rejects_local_resource_without_git() -> None:
     with pytest.raises(ServiceError, match="worktree parent has no git declaration: local"):
-        require_worktree_parent(Manifest.model_validate(manifest_data()), "local")
+        _require_worktree_parent(Manifest.model_validate(manifest_data()), "local")
 
 
 def test_require_worktree_parent_rejects_remote_resource_with_git() -> None:
@@ -58,7 +58,7 @@ def test_require_worktree_parent_rejects_remote_resource_with_git() -> None:
         ServiceError,
         match="worktree for remote resource is not implemented: remote",
     ):
-        require_worktree_parent(Manifest.model_validate(data), "remote")
+        _require_worktree_parent(Manifest.model_validate(data), "remote")
 
 
 def test_resolve_worktree_parent_uses_definition_parent_project(tmp_path: Path) -> None:
@@ -104,7 +104,7 @@ def test_require_worktree_parent_rejects_unusable_project(
     message: str,
 ) -> None:
     with pytest.raises(ServiceError, match=message):
-        require_worktree_parent(local_git_manifest(), project)
+        _require_worktree_parent(local_git_manifest(), project)
 
 
 def test_save_worktree_definition_creates_canonical_yaml(tmp_path: Path) -> None:
@@ -134,7 +134,7 @@ def test_create_worktree_saves_definition_then_adds_existing_branch(
             subprocess.CompletedProcess([], 0),
         ],
     ) as run:
-        path = create_worktree(Manifest.model_validate(data), tmp_path, definition)
+        path = _create_worktree(Manifest.model_validate(data), tmp_path, definition)
 
     assert path == tmp_path / definition.workspace_path
     assert worktree_definition_path(tmp_path, definition).is_file()
@@ -172,7 +172,7 @@ def test_create_worktree_creates_missing_branch(tmp_path: Path) -> None:
             subprocess.CompletedProcess([], 0),
         ],
     ) as run:
-        create_worktree(Manifest.model_validate(data), tmp_path, definition)
+        _create_worktree(Manifest.model_validate(data), tmp_path, definition)
 
     assert run.call_args_list[1] == call(
         source,
@@ -201,7 +201,7 @@ def test_create_worktree_keeps_definition_when_git_add_fails(tmp_path: Path) -> 
         ],
     ):
         with pytest.raises(ServiceError, match="git worktree add failed: git add failed"):
-            create_worktree(Manifest.model_validate(data), tmp_path, definition)
+            _create_worktree(Manifest.model_validate(data), tmp_path, definition)
 
     assert worktree_definition_path(tmp_path, definition).is_file()
 
@@ -247,7 +247,9 @@ def test_remove_worktree_removes_clean_git_worktree_then_definition(
             ],
         ) as run,
     ):
-        remove_worktree(Manifest.model_validate(data), tmp_path, definition)
+        remove_project_worktree(
+            Manifest.model_validate(data), tmp_path, "local", "TASK-072"
+        )
 
     assert not definition_path.exists()
     assert run.call_args_list == [
@@ -287,7 +289,9 @@ def test_remove_worktree_rejects_uncommitted_changes(
             match="worktree has uncommitted changes: projects/worktrees/local-072",
         ),
     ):
-        remove_worktree(Manifest.model_validate(data), tmp_path, definition)
+        remove_project_worktree(
+            Manifest.model_validate(data), tmp_path, "local", "TASK-072"
+        )
 
     assert definition_path.exists()
     run.assert_called_once_with(destination, "status", "--porcelain", "--untracked-files=all")
@@ -312,7 +316,7 @@ def test_remove_worktree_rejects_inconsistent_definition(tmp_path: Path) -> None
             match="cannot remove inconsistent worktree: git worktree is missing",
         ),
     ):
-        remove_worktree(local_git_manifest(), tmp_path, definition)
+        remove_project_worktree(local_git_manifest(), tmp_path, "local", "TASK-072")
 
     assert definition_path.exists()
     run.assert_not_called()
@@ -346,7 +350,9 @@ def test_remove_worktree_keeps_definition_when_yaml_removal_fails(tmp_path: Path
         patch.object(Path, "unlink", side_effect=OSError("permission denied")),
         pytest.raises(ServiceError, match="failed to remove worktree definition"),
     ):
-        remove_worktree(Manifest.model_validate(data), tmp_path, definition)
+        remove_project_worktree(
+            Manifest.model_validate(data), tmp_path, "local", "TASK-072"
+        )
 
     assert definition_path.exists()
 

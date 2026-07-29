@@ -37,7 +37,7 @@ def worktree_definition_path(
     return worktree_definitions_dir(workspace_root) / f"{name}.yaml"
 
 
-def require_worktree_parent(manifest: Manifest, project: str) -> SymlinkResource:
+def _require_worktree_parent(manifest: Manifest, project: str) -> SymlinkResource:
     """Resolve a Project eligible to own a local Git worktree."""
     resolved_project = manifest.resolve_project(project)
     if resolved_project is None:
@@ -59,11 +59,11 @@ def resolve_worktree_parent(
     definition: WorktreeDefinition,
 ) -> Path:
     """Resolve DEFINITION's current local parent repository path."""
-    resource = require_worktree_parent(manifest, definition.parent_project)
+    resource = _require_worktree_parent(manifest, definition.parent_project)
     return Path(resource.source)
 
 
-def create_worktree(
+def _create_worktree(
     manifest: Manifest,
     workspace_root: Path,
     definition: WorktreeDefinition,
@@ -106,32 +106,39 @@ def create_project_worktree(
         branch=f"tasks/{number}",
         workspace_path=f"projects/worktrees/{project}-{number}",
     )
-    return create_worktree(manifest, workspace_root, definition)
+    return _create_worktree(manifest, workspace_root, definition)
 
 
-def remove_worktree(
+def remove_project_worktree(
     manifest: Manifest,
     workspace_root: Path,
-    definition: WorktreeDefinition,
+    project: str,
+    task_id: str,
 ) -> None:
-    """Remove a clean, consistent worktree and then its definition YAML."""
+    """Remove PROJECT's clean, consistent worktree for TASK_ID."""
     from whub.services.worktree_check import inspect_worktrees
 
     inspection = next(
         (
             item
             for item in inspect_worktrees(manifest, workspace_root)
-            if item.definition == definition
+            if (
+                item.definition is not None
+                and item.definition.parent_project == project
+                and item.definition.task_id == task_id
+            )
         ),
         None,
     )
     if inspection is None:
-        raise ServiceError(f"worktree definition is not registered: {definition.task_id}")
+        raise ServiceError(f"worktree definition not found: {project}/{task_id}")
     if inspection.diagnostics:
         raise ServiceError(
             "cannot remove inconsistent worktree: " + "; ".join(inspection.diagnostics)
         )
 
+    definition = inspection.definition
+    assert definition is not None
     parent = resolve_worktree_parent(manifest, definition)
     destination = workspace_root / definition.workspace_path
     status = run_git(destination, "status", "--porcelain", "--untracked-files=all")
@@ -184,20 +191,13 @@ def _reject_duplicate_definition(
         definition = record.definition
         if definition is None:
             continue
-        if definition.parent_project == candidate.parent_project:
-            if definition.task_id == candidate.task_id:
-                raise ServiceError(
-                    "duplicate worktree task: "
-                    f"{candidate.parent_project}/{candidate.task_id}"
-                )
-            if definition.branch == candidate.branch:
-                raise ServiceError(
-                    "duplicate worktree branch: "
-                    f"{candidate.parent_project}/{candidate.branch}"
-                )
-        if definition.workspace_path == candidate.workspace_path:
+        if (
+            definition.parent_project == candidate.parent_project
+            and definition.task_id == candidate.task_id
+        ):
             raise ServiceError(
-                f"duplicate worktree workspace path: {candidate.workspace_path}"
+                "duplicate worktree task: "
+                f"{candidate.parent_project}/{candidate.task_id}"
             )
 
 
