@@ -690,6 +690,47 @@ def test_task_interrupt_and_resume_use_cross_task_validation(
     assert "resumed TASK-001" in resumed.output
 
 
+def test_task_interrupt_preserves_approved_child(tmp_path: Path, monkeypatch) -> None:
+    task_dir = tmp_path / "docs/tasks"
+    task_dir.mkdir(parents=True)
+    parent = yaml.safe_load(_TASK_PATH.read_text())
+    parent["task"]["state"] = "in_progress"
+    parent["result"] = None
+    child = yaml.safe_load(_TASK_PATH.read_text())
+    child["task"].update(id="TASK-002", state="in_progress")
+    child["approvals"] = [{"actor": "user"}]
+    child["acceptance_results"] = []
+    child["change_requests"] = []
+    child["result"] = None
+    for phase in child["plan"]["phases"]:
+        phase["log"] = []
+        for step in phase["steps"]:
+            step["state"] = "pending"
+    (task_dir / "parent.yaml").write_text(yaml.safe_dump(parent, allow_unicode=True))
+    (task_dir / "child.yaml").write_text(yaml.safe_dump(child, allow_unicode=True))
+    monkeypatch.chdir(tmp_path)
+
+    interrupted = CliRunner().invoke(
+        main,
+        [
+            "task",
+            "interrupt",
+            "001",
+            "002",
+            "--reason",
+            "urgent",
+            "--task-dir",
+            str(task_dir),
+        ],
+    )
+
+    assert interrupted.exit_code == 0
+    started_child = yaml.safe_load((task_dir / "child.yaml").read_text())
+    assert started_child["task"]["state"] == "in_progress"
+    assert started_child["task"]["interruption_source_task_id"] == "TASK-001"
+    assert started_child["approvals"] == [{"actor": "user"}]
+
+
 def test_task_ls_uses_whub_dev_by_default(tmp_path: Path, monkeypatch) -> None:
     task_dir = tmp_path / "docs/tasks"
     task_dir.mkdir(parents=True)

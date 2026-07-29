@@ -210,6 +210,28 @@ def test_interrupt_operation_requires_terminal_child_before_resume() -> None:
     assert resumed.task.state == "in_progress"
 
 
+def test_interrupt_operation_preserves_approved_child_state_and_approval() -> None:
+    workflow = load_task_workflow()
+    parent = apply_transition(_draft_task(), workflow, "approve_plan", "user")
+    child = _draft_task().model_copy(
+        update={"task": _draft_task().task.model_copy(update={"id": "TASK-002"})}
+    )
+    approved_child = apply_transition(child, workflow, "approve_plan", "user")
+
+    paused, interrupted = interrupt_task(
+        parent,
+        approved_child,
+        {parent.task.id: parent, approved_child.task.id: approved_child},
+        workflow,
+        "urgent issue",
+    )
+
+    assert paused.task.state == "paused"
+    assert interrupted.task.state == "in_progress"
+    assert interrupted.task.interruption_source_task_id == paused.task.id
+    assert interrupted.approvals == approved_child.approvals
+
+
 def test_nested_interruptions_resume_in_reverse_order() -> None:
     workflow = load_task_workflow()
     parent = apply_transition(_draft_task(), workflow, "approve_plan", "user")

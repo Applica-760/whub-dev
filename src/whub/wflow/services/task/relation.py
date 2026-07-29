@@ -76,8 +76,9 @@ def interrupt_task(
 
     child_data = child.model_dump(mode="python")
     child_data["task"]["interruption_source_task_id"] = parent.task.id
-    child_data["task"]["state"] = "in_progress"
-    child_data["approvals"].append({"actor": "user"})
+    if child.task.state == "draft":
+        child_data["task"]["state"] = "in_progress"
+        child_data["approvals"].append({"actor": "user"})
     started_child = TaskDocument.model_validate(child_data)
 
     _require_no_diagnostics(

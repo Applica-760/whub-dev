@@ -70,12 +70,13 @@ def interruption_start_diagnostics(
                 ),
             )
         )
-    if child.task.state != "draft":
+    if child.task.state not in {"draft", "in_progress"}:
         diagnostics.append(
             (
                 child.task.id,
                 Diagnostic(
-                    "interruption_child_not_draft", "interruption child must be draft"
+                    "interruption_child_not_startable",
+                    "interruption child must be draft or in_progress",
                 ),
             )
         )
