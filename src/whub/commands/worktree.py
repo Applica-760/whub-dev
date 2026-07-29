@@ -14,6 +14,7 @@ from whub.services.worktree import (
     create_project_pull_request,
     create_project_worktree,
     inspect_worktrees,
+    merge_project_pull_request,
     remove_project_worktree,
 )
 from whub.utils.render import render_table
@@ -68,6 +69,28 @@ def pull_request(ctx: click.Context, project: str, task_id: str) -> None:
     except ServiceError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"pull request {project}/{task_id}: {url}")
+
+
+@worktree.command()
+@click.argument("project", shell_complete=project_names)
+@click.argument("task_id", callback=lambda _ctx, _param, value: _task_id(value))
+@click.option(
+    "--method",
+    type=click.Choice(("merge", "squash", "rebase")),
+    required=True,
+    help="GitHub merge method.",
+)
+@click.pass_context
+def merge(ctx: click.Context, project: str, task_id: str, method: str) -> None:
+    """Merge PROJECT's pull request for TASK_ID and remove its worktree."""
+    workspace_root = current_context().workspace_root
+    try:
+        merge_project_pull_request(
+            get_manifest(ctx), workspace_root, project, task_id, method
+        )
+    except ServiceError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"merged {project}/{task_id}")
 
 
 @worktree.command()

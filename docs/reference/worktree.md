@@ -1,6 +1,6 @@
 # Worktree リファレンス
 
-状態: TASK-074で実装済みの契約。PR/merge lifecycleはTASK-081で実装予定。
+状態: TASK-074とTASK-081で実装済みの契約。
 
 ## 目的
 
@@ -72,6 +72,12 @@ merge方式は明示必須とする。レビュー承認、branch protection、r
 GitHubを正本とし、CLIは承認を記録・代行しない。GitHubでmergeが成功した場合だけ、
 既存の安全なremove操作でcleanなworktreeと定義YAMLを削除する。mergeまたはcleanupが
 失敗した場合は、対象を削除しない。PR操作とcleanupはいずれもtask branchを削除しない。
+merge対象はtask branchと`manifest.git.branch`に一致する唯一のopen PRとし、対象なし・
+複数件は拒否する。
+
+未統合のPRはCLIが自動でcloseしない。同じtask branchでPR作成を再実行すると既存の
+open PRを返す。放棄したPRとremote branchは人がGitHub上で明示的に扱う。未処理PRの
+蓄積が運用上の問題になった時点で、明示的なabandon操作を別途検討する。
 
 ## Status と Web app
 

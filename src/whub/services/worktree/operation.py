@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 
 from whub.models import Manifest, RemoteResource, SymlinkResource, WorktreeDefinition
@@ -11,7 +12,6 @@ from whub.services.task import load_project_task
 from whub.services.worktree.definition import save_worktree_definition
 from whub.services.worktree.github import run_gh
 from whub.services.worktree.git import process_detail, run_git
-from whub.wflow.models.task import TaskDocument
 
 
 @dataclass(frozen=True)
@@ -21,8 +21,8 @@ class ResolvedProjectWorktree:
     definition: WorktreeDefinition
     parent: Path
     destination: Path
-    task: TaskDocument
     base_branch: str
+_MERGE_METHODS = frozenset(("merge", "squash", "rebase"))
 
 
 def _require_worktree_parent(manifest: Manifest, project: str) -> SymlinkResource:
@@ -77,11 +77,11 @@ def resolve_project_worktree(
     assert resource.git is not None
     if resource.git.branch is None:
         raise ServiceError(f"worktree parent has no git branch declaration: {project}")
+    load_project_task(manifest, project, definition.task_id)
     return ResolvedProjectWorktree(
         definition=definition,
         parent=Path(resource.source),
         destination=workspace_root / definition.workspace_path,
-        task=load_project_task(manifest, project, definition.task_id),
         base_branch=resource.git.branch,
     )
 
@@ -149,6 +149,81 @@ def create_project_pull_request(
     if created.returncode != 0:
         raise ServiceError("gh PR create failed: " + process_detail(created))
     return created.stdout.strip()
+
+
+def merge_project_pull_request(
+    manifest: Manifest,
+    workspace_root: Path,
+    project: str,
+    task_id: str,
+    method: str,
+) -> None:
+    """Merge one open task PR, then remove its worktree only after confirmation."""
+    if method not in _MERGE_METHODS:
+        raise ServiceError(f"invalid merge method: {method}")
+    worktree = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    _require_clean_worktree(worktree)
+    viewed = run_gh(
+        worktree.destination,
+        "pr",
+        "list",
+        "--head",
+        worktree.definition.branch,
+        "--base",
+        worktree.base_branch,
+        "--state",
+        "open",
+        "--json",
+        "url,headRefOid",
+    )
+    if viewed.returncode != 0:
+        raise ServiceError("gh PR lookup failed: " + process_detail(viewed))
+    try:
+        pull_requests = json.loads(viewed.stdout)
+        if not isinstance(pull_requests, list):
+            raise TypeError
+        if not pull_requests:
+            raise ServiceError(
+                f"open pull request not found: {project}/{task_id}"
+            )
+        if len(pull_requests) != 1:
+            raise ServiceError(
+                f"multiple open pull requests found: {project}/{task_id}"
+            )
+        pull_request = pull_requests[0]
+        url = pull_request["url"]
+        head_oid = pull_request["headRefOid"]
+    except (json.JSONDecodeError, KeyError, TypeError) as error:
+        raise ServiceError("gh PR lookup returned invalid data") from error
+    merged = run_gh(
+        worktree.destination,
+        "pr",
+        "merge",
+        url,
+        f"--{method}",
+        "--match-head-commit",
+        head_oid,
+    )
+    if merged.returncode != 0:
+        raise ServiceError("gh PR merge failed: " + process_detail(merged))
+    confirmed = run_gh(
+        worktree.destination,
+        "pr",
+        "view",
+        url,
+        "--json",
+        "state",
+        "--jq",
+        ".state",
+    )
+    if confirmed.returncode != 0:
+        raise ServiceError("gh PR verification failed: " + process_detail(confirmed))
+    if confirmed.stdout.strip() != "MERGED":
+        raise ServiceError(f"pull request was not merged: {url}")
+    try:
+        remove_project_worktree(manifest, workspace_root, project, task_id)
+    except ServiceError as error:
+        raise ServiceError(f"pull request merged but cleanup failed: {error}") from error
 
 
 def create_project_worktree(

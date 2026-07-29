@@ -119,3 +119,38 @@ def test_pull_request_renders_service_errors(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "gh PR lookup failed: not logged in" in result.output
+
+
+def test_merge_requires_method_and_passes_it_to_service(tmp_path: Path) -> None:
+    with (
+        patch("whub.commands.worktree.get_manifest", return_value=manifest()),
+        patch("whub.commands.worktree.current_context", return_value=_context(tmp_path)),
+        patch("whub.commands.worktree.merge_project_pull_request") as merge,
+    ):
+        missing = CliRunner().invoke(worktree, ["merge", "local", "TASK-072"])
+        result = CliRunner().invoke(
+            worktree, ["merge", "local", "TASK-072", "--method", "squash"]
+        )
+
+    assert missing.exit_code != 0
+    assert "Missing option '--method'" in missing.output
+    assert result.exit_code == 0
+    assert "merged local/TASK-072" in result.output
+    merge.assert_called_once_with(manifest(), tmp_path, "local", "TASK-072", "squash")
+
+
+def test_merge_renders_service_errors(tmp_path: Path) -> None:
+    with (
+        patch("whub.commands.worktree.get_manifest", return_value=manifest()),
+        patch("whub.commands.worktree.current_context", return_value=_context(tmp_path)),
+        patch(
+            "whub.commands.worktree.merge_project_pull_request",
+            side_effect=ServiceError("gh PR merge failed: review required"),
+        ),
+    ):
+        result = CliRunner().invoke(
+            worktree, ["merge", "local", "TASK-072", "--method", "merge"]
+        )
+
+    assert result.exit_code != 0
+    assert "gh PR merge failed: review required" in result.output

@@ -12,6 +12,7 @@ from whub.services.worktree import (
     create_project_pull_request,
     create_project_worktree,
     list_worktree_definitions,
+    merge_project_pull_request,
     remove_project_worktree,
     resolve_project_worktree,
     resolve_worktree_parent,
@@ -19,6 +20,7 @@ from whub.services.worktree import (
     worktree_definition_path,
 )
 from whub.services.worktree.operation import _create_worktree, _require_worktree_parent
+from whub.services.worktree.operation import ResolvedProjectWorktree
 from whub.tests.helpers import manifest_data
 
 
@@ -105,13 +107,12 @@ def test_resolve_project_worktree_returns_pr_lifecycle_inputs(tmp_path: Path) ->
     )
     definition = worktree_definition()
     inspection = _inspection(tmp_path / "local-072.yaml", definition)
-    task = object()
     with (
         patch(
             "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.operation.load_project_task", return_value=task),
+        patch("whub.services.worktree.operation.load_project_task") as load_task,
     ):
         resolved = resolve_project_worktree(
             Manifest.model_validate(data), tmp_path, "local", "TASK-072"
@@ -120,8 +121,10 @@ def test_resolve_project_worktree_returns_pr_lifecycle_inputs(tmp_path: Path) ->
     assert resolved.definition == definition
     assert resolved.parent == source
     assert resolved.destination == tmp_path / definition.workspace_path
-    assert resolved.task is task
     assert resolved.base_branch == "main"
+    load_task.assert_called_once_with(
+        Manifest.model_validate(data), "local", "TASK-072"
+    )
 
 
 def test_resolve_project_worktree_requires_git_base_branch(tmp_path: Path) -> None:
@@ -718,6 +721,170 @@ def test_create_pull_request_reports_gh_create_failure(tmp_path: Path) -> None:
         )
 
     assert gh.call_count == 2
+
+
+def test_merge_pull_request_removes_worktree_only_after_confirmation(
+    tmp_path: Path,
+) -> None:
+    service_manifest = local_git_manifest()
+    definition = worktree_definition()
+    resolved = ResolvedProjectWorktree(
+        definition,
+        tmp_path / "source",
+        tmp_path / definition.workspace_path,
+        "main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.operation.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch(
+            "whub.services.worktree.operation.run_gh",
+            side_effect=[
+                subprocess.CompletedProcess(
+                    [],
+                    0,
+                    stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]',
+                ),
+                subprocess.CompletedProcess([], 0),
+                subprocess.CompletedProcess([], 0, stdout="MERGED\n"),
+            ],
+        ),
+        patch("whub.services.worktree.operation.remove_project_worktree") as remove,
+    ):
+        merge_project_pull_request(
+            service_manifest, tmp_path, "local", "TASK-072", "squash"
+        )
+
+    remove.assert_called_once_with(service_manifest, tmp_path, "local", "TASK-072")
+
+
+def test_merge_pull_request_reports_merge_failure(tmp_path: Path) -> None:
+    definition = worktree_definition()
+    resolved = ResolvedProjectWorktree(
+        definition, tmp_path / "source", tmp_path / definition.workspace_path, "main"
+    )
+    with (
+        patch("whub.services.worktree.operation.resolve_project_worktree", return_value=resolved),
+        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch(
+            "whub.services.worktree.operation.run_gh",
+            side_effect=[
+                subprocess.CompletedProcess([], 0, stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]'),
+                subprocess.CompletedProcess([], 1, stderr="review required"),
+            ],
+        ),
+        patch("whub.services.worktree.operation.remove_project_worktree") as remove,
+        pytest.raises(ServiceError, match="gh PR merge failed: review required"),
+    ):
+        merge_project_pull_request(
+            local_git_manifest(), tmp_path, "local", "TASK-072", "merge"
+        )
+
+    remove.assert_not_called()
+
+
+def test_merge_pull_request_reports_cleanup_failure_after_merge(tmp_path: Path) -> None:
+    definition = worktree_definition()
+    resolved = ResolvedProjectWorktree(
+        definition, tmp_path / "source", tmp_path / definition.workspace_path, "main"
+    )
+    with (
+        patch("whub.services.worktree.operation.resolve_project_worktree", return_value=resolved),
+        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch(
+            "whub.services.worktree.operation.run_gh",
+            side_effect=[
+                subprocess.CompletedProcess([], 0, stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]'),
+                subprocess.CompletedProcess([], 0),
+                subprocess.CompletedProcess([], 0, stdout="MERGED\n"),
+            ],
+        ),
+        patch(
+            "whub.services.worktree.operation.remove_project_worktree",
+            side_effect=ServiceError("git worktree remove failed: locked"),
+        ),
+        pytest.raises(
+            ServiceError,
+            match="pull request merged but cleanup failed: git worktree remove failed: locked",
+        ),
+    ):
+        merge_project_pull_request(
+            local_git_manifest(), tmp_path, "local", "TASK-072", "rebase"
+        )
+
+
+def test_merge_pull_request_keeps_worktree_when_not_merged(tmp_path: Path) -> None:
+    service_manifest = local_git_manifest()
+    definition = worktree_definition()
+    resolved = ResolvedProjectWorktree(
+        definition,
+        tmp_path / "source",
+        tmp_path / definition.workspace_path,
+        "main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.operation.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch(
+            "whub.services.worktree.operation.run_gh",
+            side_effect=[
+                subprocess.CompletedProcess(
+                    [],
+                    0,
+                    stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]',
+                ),
+                subprocess.CompletedProcess([], 0),
+                subprocess.CompletedProcess([], 0, stdout="OPEN\n"),
+            ],
+        ),
+        patch("whub.services.worktree.operation.remove_project_worktree") as remove,
+        pytest.raises(ServiceError, match="pull request was not merged"),
+    ):
+        merge_project_pull_request(
+            service_manifest, tmp_path, "local", "TASK-072", "merge"
+        )
+
+    remove.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("output", "message"),
+    [
+        ("[]", "open pull request not found: local/TASK-072"),
+        ("[{}, {}]", "multiple open pull requests found: local/TASK-072"),
+    ],
+)
+def test_merge_pull_request_requires_one_matching_open_pr(
+    tmp_path: Path, output: str, message: str
+) -> None:
+    definition = worktree_definition()
+    resolved = ResolvedProjectWorktree(
+        definition, tmp_path / "source", tmp_path / definition.workspace_path, "main"
+    )
+    with (
+        patch(
+            "whub.services.worktree.operation.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch(
+            "whub.services.worktree.operation.run_gh",
+            return_value=subprocess.CompletedProcess([], 0, stdout=output),
+        ),
+        patch("whub.services.worktree.operation.remove_project_worktree") as remove,
+        pytest.raises(ServiceError, match=message),
+    ):
+        merge_project_pull_request(
+            local_git_manifest(), tmp_path, "local", "TASK-072", "merge"
+        )
+
+    remove.assert_not_called()
 
 
 def _save_result(

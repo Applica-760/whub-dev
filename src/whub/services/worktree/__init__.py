@@ -10,6 +10,7 @@ from whub.services.worktree.definition import (
 from whub.services.worktree.operation import (
     create_project_pull_request,
     create_project_worktree,
+    merge_project_pull_request,
     remove_project_worktree,
     resolve_project_worktree,
     resolve_worktree_parent,
@@ -22,6 +23,7 @@ __all__ = [
     "create_project_worktree",
     "inspect_worktrees",
     "list_worktree_definitions",
+    "merge_project_pull_request",
     "remove_project_worktree",
     "resolve_project_worktree",
     "resolve_worktree_parent",
