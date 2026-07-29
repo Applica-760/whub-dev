@@ -2,27 +2,23 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import fcntl
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 
 import yaml
 from pydantic import ValidationError
 
-from whub.models import Manifest, RemoteResource, SymlinkResource, WorktreeDefinition
+from whub.models import (
+    Manifest,
+    RemoteResource,
+    SymlinkResource,
+    WorktreeDefinition,
+    WorktreeDefinitionRecord,
+)
 from whub.services.errors import ServiceError
-
-
-@dataclass(frozen=True)
-class WorktreeDefinitionRecord:
-    """One discovered definition and any recoverable diagnostics."""
-
-    path: Path
-    definition: WorktreeDefinition | None
-    diagnostics: tuple[str, ...] = ()
+from whub.services.worktree_git import process_detail, run_git
 
 
 def worktree_definitions_dir(workspace_root: Path) -> Path:
@@ -77,35 +73,62 @@ def create_worktree(
     save_worktree_definition(workspace_root, definition)
 
     branch_ref = f"refs/heads/{definition.branch}"
-    branch_check = _run_git(parent, "show-ref", "--verify", "--quiet", branch_ref)
+    branch_check = run_git(parent, "show-ref", "--verify", "--quiet", branch_ref)
     if branch_check.returncode == 0:
         command = ("worktree", "add", str(destination), definition.branch)
     elif branch_check.returncode == 1:
         command = ("worktree", "add", "-b", definition.branch, str(destination))
     else:
         raise ServiceError(
-            "git branch lookup failed: " + _process_detail(branch_check)
+            "git branch lookup failed: " + process_detail(branch_check)
         )
 
-    result = _run_git(parent, *command)
+    result = run_git(parent, *command)
     if result.returncode != 0:
-        raise ServiceError("git worktree add failed: " + _process_detail(result))
+        raise ServiceError("git worktree add failed: " + process_detail(result))
     return destination
 
 
-def _run_git(parent: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
-    try:
-        return subprocess.run(
-            ["git", "-C", str(parent), *arguments],
-            capture_output=True,
-            text=True,
+def remove_worktree(
+    manifest: Manifest,
+    workspace_root: Path,
+    definition: WorktreeDefinition,
+) -> None:
+    """Remove a clean, consistent worktree and then its definition YAML."""
+    from whub.services.worktree_check import inspect_worktrees
+
+    inspection = next(
+        (
+            item
+            for item in inspect_worktrees(manifest, workspace_root)
+            if item.definition == definition
+        ),
+        None,
+    )
+    if inspection is None:
+        raise ServiceError(f"worktree definition is not registered: {definition.task_id}")
+    if inspection.diagnostics:
+        raise ServiceError(
+            "cannot remove inconsistent worktree: " + "; ".join(inspection.diagnostics)
         )
+
+    parent = resolve_worktree_parent(manifest, definition)
+    destination = workspace_root / definition.workspace_path
+    status = run_git(destination, "status", "--porcelain", "--untracked-files=all")
+    if status.returncode != 0:
+        raise ServiceError("git status failed: " + process_detail(status))
+    if status.stdout.strip():
+        raise ServiceError(f"worktree has uncommitted changes: {definition.workspace_path}")
+
+    result = run_git(parent, "worktree", "remove", str(destination))
+    if result.returncode != 0:
+        raise ServiceError("git worktree remove failed: " + process_detail(result))
+    try:
+        inspection.record.path.unlink()
     except OSError as error:
-        raise ServiceError(f"git invocation failed: {error}") from error
-
-
-def _process_detail(result: subprocess.CompletedProcess[str]) -> str:
-    return result.stderr.strip() or result.stdout.strip() or f"exit status {result.returncode}"
+        raise ServiceError(
+            f"failed to remove worktree definition: {inspection.record.path}: {error}"
+        ) from error
 
 
 def save_worktree_definition(

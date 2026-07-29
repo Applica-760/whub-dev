@@ -15,11 +15,17 @@ from whub.models.manifest import (
 )
 from whub.models.session import SessionDescriptor, SessionPane, SessionTmux
 from whub.models.todo import PRIORITY_EMOJI, Todo, Todos, load_todos, save_todos
-from whub.models.worktree import WorktreeDefinition
+from whub.models.worktree import (
+    GitWorktree,
+    WorktreeDefinition,
+    WorktreeDefinitionRecord,
+    WorktreeInspection,
+)
 
 __all__ = [
     "BaseResource",
     "GitInfo",
+    "GitWorktree",
     "Host",
     "Manifest",
     "ManifestError",
@@ -34,6 +40,8 @@ __all__ = [
     "Todo",
     "Todos",
     "WorktreeDefinition",
+    "WorktreeDefinitionRecord",
+    "WorktreeInspection",
     "load_manifest",
     "load_todos",
     "project_names",

@@ -38,15 +38,22 @@ plan:
     acceptance: []
     steps:
     - description: 登録済み定義を一覧化し、directory欠損・Git worktree不整合を診断として表示できるservice結果を返す
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 削除前にtracked・untracked変更、Git worktree実体と定義の不整合を検査し、問題があれば拒否する。Git
         worktreeと定義YAMLだけを削除し、branchは保持する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        note: YAML名不一致でもdirectoryが存在する場合にGit照合を継続して複数diagnosticを返す改善は、削除安全条件に影響しないため後続の小改善として扱う。
+      deleted: false
+    - value:
+        verification: 登録定義とGit worktreeの照合、clean状態確認、Git worktree削除後の定義YAML削除を実装した。tracked・untracked変更、不整合、Git/YAML削除失敗を拒否し、uv
+          run pytestの31件とruff checkで成功。
+      deleted: false
     deleted: false
   - title: CLI adapterを実装する
     acceptance: []

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -34,3 +36,32 @@ class WorktreeDefinition(WorktreeModel):
         if self.workspace_path != expected_workspace_path:
             raise ValueError(f"workspace_path must be {expected_workspace_path}")
         return self
+
+
+@dataclass(frozen=True)
+class WorktreeDefinitionRecord:
+    """One discovered definition and any recoverable diagnostics."""
+
+    path: Path
+    definition: WorktreeDefinition | None
+    diagnostics: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class GitWorktree:
+    """One Git worktree entry reported by `git worktree list --porcelain`."""
+
+    path: Path
+    branch: str | None
+
+
+@dataclass(frozen=True)
+class WorktreeInspection:
+    """One registered definition and its YAML and Git consistency diagnostics."""
+
+    record: WorktreeDefinitionRecord
+    diagnostics: tuple[str, ...]
+
+    @property
+    def definition(self) -> WorktreeDefinition | None:
+        return self.record.definition
