@@ -6,12 +6,13 @@ from dataclasses import dataclass
 import fcntl
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 
 import yaml
 from pydantic import ValidationError
 
-from whub.models import Manifest, SymlinkResource, WorktreeDefinition
+from whub.models import Manifest, RemoteResource, SymlinkResource, WorktreeDefinition
 from whub.services.errors import ServiceError
 
 
@@ -47,11 +48,64 @@ def require_worktree_parent(manifest: Manifest, project: str) -> SymlinkResource
     resource = resolved_project.resource
     if resource is None:
         raise ServiceError(f"project has no resource: {project}")
+    if isinstance(resource, RemoteResource):
+        raise ServiceError(f"worktree for remote resource is not implemented: {project}")
     if not isinstance(resource, SymlinkResource):
         raise ServiceError(f"not a local resource: {project}")
     if resource.git is None:
         raise ServiceError(f"worktree parent has no git declaration: {project}")
     return resource
+
+
+def resolve_worktree_parent(
+    manifest: Manifest,
+    definition: WorktreeDefinition,
+) -> Path:
+    """Resolve DEFINITION's current local parent repository path."""
+    resource = require_worktree_parent(manifest, definition.parent_project)
+    return Path(resource.source)
+
+
+def create_worktree(
+    manifest: Manifest,
+    workspace_root: Path,
+    definition: WorktreeDefinition,
+) -> Path:
+    """Save DEFINITION, then create its Git worktree and branch if needed."""
+    parent = resolve_worktree_parent(manifest, definition)
+    destination = workspace_root / definition.workspace_path
+    save_worktree_definition(workspace_root, definition)
+
+    branch_ref = f"refs/heads/{definition.branch}"
+    branch_check = _run_git(parent, "show-ref", "--verify", "--quiet", branch_ref)
+    if branch_check.returncode == 0:
+        command = ("worktree", "add", str(destination), definition.branch)
+    elif branch_check.returncode == 1:
+        command = ("worktree", "add", "-b", definition.branch, str(destination))
+    else:
+        raise ServiceError(
+            "git branch lookup failed: " + _process_detail(branch_check)
+        )
+
+    result = _run_git(parent, *command)
+    if result.returncode != 0:
+        raise ServiceError("git worktree add failed: " + _process_detail(result))
+    return destination
+
+
+def _run_git(parent: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(parent), *arguments],
+            capture_output=True,
+            text=True,
+        )
+    except OSError as error:
+        raise ServiceError(f"git invocation failed: {error}") from error
+
+
+def _process_detail(result: subprocess.CompletedProcess[str]) -> str:
+    return result.stderr.strip() or result.stdout.strip() or f"exit status {result.returncode}"
 
 
 def save_worktree_definition(

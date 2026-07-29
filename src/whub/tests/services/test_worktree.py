@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import subprocess
+from unittest.mock import call, patch
 
 import pytest
 import yaml
@@ -7,7 +9,9 @@ import yaml
 from whub.models import Manifest, SymlinkResource, WorktreeDefinition
 from whub.services.errors import ServiceError
 from whub.services.worktree import (
+    create_worktree,
     list_worktree_definitions,
+    resolve_worktree_parent,
     require_worktree_parent,
     save_worktree_definition,
     worktree_definition_path,
@@ -48,8 +52,42 @@ def test_require_worktree_parent_rejects_local_resource_without_git() -> None:
 def test_require_worktree_parent_rejects_remote_resource_with_git() -> None:
     data = manifest_data()
     data["projects"][1]["resource"]["git"] = {"url": "git@example.com:remote.git"}
-    with pytest.raises(ServiceError, match="not a local resource: remote"):
+    with pytest.raises(
+        ServiceError,
+        match="worktree for remote resource is not implemented: remote",
+    ):
         require_worktree_parent(Manifest.model_validate(data), "remote")
+
+
+def test_resolve_worktree_parent_uses_definition_parent_project(tmp_path: Path) -> None:
+    data = manifest_data()
+    source = tmp_path / "source"
+    source.mkdir()
+    data["projects"][0]["resource"].update(
+        git={"url": "git@example.com:local.git"},
+        source=str(source),
+    )
+
+    parent = resolve_worktree_parent(
+        Manifest.model_validate(data),
+        worktree_definition(),
+    )
+
+    assert parent == source
+
+
+def test_resolve_worktree_parent_rejects_remote_resource_as_unimplemented() -> None:
+    data = manifest_data()
+    data["projects"][1]["resource"]["git"] = {"url": "git@example.com:remote.git"}
+
+    with pytest.raises(
+        ServiceError,
+        match="worktree for remote resource is not implemented: remote",
+    ):
+        resolve_worktree_parent(
+            Manifest.model_validate(data),
+            worktree_definition(parent_project="remote"),
+        )
 
 
 @pytest.mark.parametrize(
@@ -74,6 +112,106 @@ def test_save_worktree_definition_creates_canonical_yaml(tmp_path: Path) -> None
 
     assert path == worktree_definition_path(tmp_path, definition)
     assert yaml.safe_load(path.read_text()) == definition.model_dump(mode="json")
+
+
+def test_create_worktree_saves_definition_then_adds_existing_branch(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    data = manifest_data()
+    data["projects"][0]["resource"].update(
+        git={"url": "git@example.com:local.git"},
+        source=str(source),
+    )
+    definition = worktree_definition()
+    with patch(
+        "whub.services.worktree.subprocess.run",
+        side_effect=[
+            subprocess.CompletedProcess([], 0),
+            subprocess.CompletedProcess([], 0),
+        ],
+    ) as run:
+        path = create_worktree(Manifest.model_validate(data), tmp_path, definition)
+
+    assert path == tmp_path / definition.workspace_path
+    assert worktree_definition_path(tmp_path, definition).is_file()
+    assert run.call_args_list == [
+        call(
+            ["git", "-C", str(source), "show-ref", "--verify", "--quiet", "refs/heads/tasks/072"],
+            capture_output=True,
+            text=True,
+        ),
+        call(
+            [
+                "git",
+                "-C",
+                str(source),
+                "worktree",
+                "add",
+                str(path),
+                "tasks/072",
+            ],
+            capture_output=True,
+            text=True,
+        ),
+    ]
+
+
+def test_create_worktree_creates_missing_branch(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    data = manifest_data()
+    data["projects"][0]["resource"].update(
+        git={"url": "git@example.com:local.git"},
+        source=str(source),
+    )
+    definition = worktree_definition()
+    with patch(
+        "whub.services.worktree.subprocess.run",
+        side_effect=[
+            subprocess.CompletedProcess([], 1),
+            subprocess.CompletedProcess([], 0),
+        ],
+    ) as run:
+        create_worktree(Manifest.model_validate(data), tmp_path, definition)
+
+    assert run.call_args_list[1] == call(
+        [
+            "git",
+            "-C",
+            str(source),
+            "worktree",
+            "add",
+            "-b",
+            "tasks/072",
+            str(tmp_path / definition.workspace_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_create_worktree_keeps_definition_when_git_add_fails(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    data = manifest_data()
+    data["projects"][0]["resource"].update(
+        git={"url": "git@example.com:local.git"},
+        source=str(source),
+    )
+    definition = worktree_definition()
+    with patch(
+        "whub.services.worktree.subprocess.run",
+        side_effect=[
+            subprocess.CompletedProcess([], 0),
+            subprocess.CompletedProcess([], 1, stderr="git add failed"),
+        ],
+    ):
+        with pytest.raises(ServiceError, match="git worktree add failed: git add failed"):
+            create_worktree(Manifest.model_validate(data), tmp_path, definition)
+
+    assert worktree_definition_path(tmp_path, definition).is_file()
 
 
 def test_save_worktree_definition_rejects_duplicate_task(tmp_path: Path) -> None:

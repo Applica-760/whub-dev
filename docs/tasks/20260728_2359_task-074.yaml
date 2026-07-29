@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-074
-  state: draft
+  state: in_progress
   title: worktree CLI操作を実装する
   objective: 登録済みworktreeを対象に、Git worktreeの作成・一覧・削除と対応するproject symlinkの作成を安全に実行する
   approach:
@@ -12,8 +12,66 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: 操作対象と作成契約を実装する
+    acceptance: []
+    steps:
+    - description: 親ProjectをWorktreeDefinitionのparent_projectからmanifestへ解決し、localかつ有効なgit宣言を持つResourceだけを操作対象にする。remote
+        Resourceは未実装であることを明示して拒否する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 定義YAMLを先に保存してからgit worktree addを実行し、Git失敗時は定義を変更せず操作失敗として返す。親の現在pathはmanifestから解決し、子worktreeをmanifest
+        Projectやsymlinkとして追加しない
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 親Projectの動的解決、remote未実装拒否、定義先行保存とGit worktree作成を実装し、uv run pytest
+          src/whub/tests/services/test_worktree.pyで15件、ruff checkで成功。
+      deleted: false
+    deleted: false
+  - title: 一覧と削除の安全条件を実装する
+    acceptance: []
+    steps:
+    - description: 登録済み定義を一覧化し、directory欠損・Git worktree不整合を診断として表示できるservice結果を返す
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 削除前にtracked・untracked変更、Git worktree実体と定義の不整合を検査し、問題があれば拒否する。Git
+        worktreeと定義YAMLだけを削除し、branchは保持する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: CLI adapterを実装する
+    acceptance: []
+    steps:
+    - description: whub worktree配下へcreate・list・removeを追加し、引数解釈と表示だけをCLI adapterに置く。serviceの診断・未実装remoteエラーを利用者向けに表示し、失敗時は非0で終了する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 契約を検証し文書化する
+    acceptance: []
+    steps:
+    - description: 登録、作成、一覧、削除、remote拒否、Git失敗、不整合、未コミット変更をservice・CLI境界で自動テストする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: worktreeとCLI referenceを実装済みの操作契約へ更新し、稼働sessionの検出・削除拒否はTask、worktree、sessionの対応を保存・検証する後続Taskの責務として記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
