@@ -1,0 +1,19 @@
+schema_version: 1
+task:
+  id: TASK-079
+  state: draft
+  title: Agent実行ハーネスを設計する
+  objective: Task、worktree、role、Agent adapter、tmux session、run記録を一貫して選択・起動・停止・再接続するハーネスの責務と契約を設計する
+  approach:
+  - ハーネスは共通ポリシーとadapterの結果を利用し、Agent固有の設定形式・状態解析・権限判断を持たない
+  depends_on:
+  - TASK-078
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

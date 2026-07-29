@@ -228,6 +228,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/worktrees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Worktrees */
+        get: operations["get_worktrees_api_worktrees_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -606,6 +623,24 @@ export interface components {
         VaultTreeResponse: {
             /** Nodes */
             nodes: components["schemas"]["VaultNode"][];
+        };
+        /** WorktreeListResponse */
+        WorktreeListResponse: {
+            /** Worktrees */
+            worktrees: components["schemas"]["WorktreeResponse"][];
+        };
+        /** WorktreeResponse */
+        WorktreeResponse: {
+            /** Parent Project */
+            parent_project: string | null;
+            /** Task Id */
+            task_id: string | null;
+            /** Branch */
+            branch: string | null;
+            /** Workspace Path */
+            workspace_path: string | null;
+            /** Diagnostics */
+            diagnostics: string[];
         };
     };
     responses: never;
@@ -1069,6 +1104,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worktrees_api_worktrees_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorktreeListResponse"];
                 };
             };
         };

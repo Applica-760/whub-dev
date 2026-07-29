@@ -1,0 +1,141 @@
+schema_version: 1
+task:
+  id: TASK-075
+  state: completed
+  title: worktree表示を統合する
+  objective: 子worktreeを親Projectとの関係、branch、作業path、登録状態とともにCLI・status・Web appで識別・表示する
+  approach:
+  - TASK-074で確立した登録とCLI操作の結果を読み取り専用で表示する
+  - tmux sessionの起動・再接続・操作は対象外とし、将来のsession基盤Taskへ残す
+  depends_on:
+  - TASK-074
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Worktree状態の読み取り契約を定義する
+    acceptance: []
+    steps:
+    - description: 既存の inspect_worktrees を読み取り専用で利用し、親Project・Task・branch・workspace
+        path・登録診断を表す統合表示用の結果を定義する
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: 正常登録、不正YAML、directory欠損、Git不整合を個別登録のdiagnosticとして継続表示し、sessionの起動・再接続・対応保存には触れないことをserviceテストで固定する
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: services/worktree packageへ再編し、definition.pyに定義YAMLのpath・保存・探索を集約する。operation.pyに親Projectの適格性判定とcreate/removeを置き、check.py・git.py・status.pyへ既存の検査・Git操作・表示用読み取りを分離する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 既存のinspection結果だけを入力として、親Project・Task・branch・workspace path・登録diagnosticを表すWorktreeStatusと収集serviceを定義する。操作・Git・YAMLの変更やsessionの起動・再接続・対応保存は行わない
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 正常登録、不正YAML、directory欠損、Git不整合を個別登録のdiagnosticとして継続表示し、package再編後のimport境界と読み取り専用契約をserviceテストで固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: services/worktreeをdefinition・operation・check・git・statusへ再編し、WorktreeStatusの読み取り投影を追加。ruff
+          checkとworktree関連pytest 30件が成功。
+      deleted: false
+    deleted: false
+  - title: Statusの総合診断へ統合する
+    acceptance: []
+    steps:
+    - description: whub status が既存resource状態の収集後にworktree診断を実行し、登録件数と異常の有無を簡潔に表示する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: worktree診断がなければ従来どおり正常終了し、diagnosticが一つでもあれば非0で終了する。resource表へ子worktree行は追加せず、詳細は
+        worktree check に委ねる
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: whub statusへworktree総合診断を追加。正常時は登録数とok、異常時は識別子とdiagnosticを表示して非0で終了する。ruff
+          checkとpytest 476件が成功。
+      deleted: false
+    - value:
+        correction: StatusReport・ResourceStatus・WorktreeStatusをmodels/status.pyへ移し、services/status.pyで親resourceへworktreeを紐付けるよう補正。commands/status.pyはreportの描画と終了コード変換だけにした。ruff
+          checkとpytest 475件が成功。
+      deleted: false
+    deleted: false
+  - title: Web appにworktree一覧を追加する
+    acceptance: []
+    steps:
+    - description: Worktree状態を返す読み取り専用APIを追加し、親Project・Task・branch・workspace path・登録状態・diagnosticをOpenAPI契約として公開する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Web appにworktree専用の一覧表示を追加し、親Projectとの関係、branch、作業path、登録状態を表示する。resource
+        Status widgetの既存表構造は変更しない
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        validation: 'whub worktree create whub-dev TASK-075でprojects/worktrees/whub-dev-075とtasks/075を作成。worktree
+          checkはok、whub statusはworktrees: 1 registered, okを表示。'
+      deleted: false
+    - value:
+        verification: GET /api/worktreesと/worktrees一覧を追加。生成型、Python pytest 476件、Vitest
+          26件、typecheck、buildが成功し、実データwhub-dev/TASK-075がブラウザでok表示されることを利用者が確認。
+      deleted: false
+    deleted: false
+  - title: 契約を検証し文書化する
+    acceptance: []
+    steps:
+    - description: service・CLI・API・Reactの自動テストで、正常登録、登録なし、不正YAML、directory欠損、Git不整合、およびstatus終了コードを検証する
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: worktree referenceとCLI referenceに、statusは総合診断、worktree checkとWeb
+        appは詳細表示という責務、終了コード、sessionを扱わない境界を記録する
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: worktree referenceとCLI referenceに、StatusReportの親子関係、worktree API・Web
+        app一覧、statusの総合診断、sessionを扱わない境界を記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 実測に使用したwhub-dev/TASK-075 worktreeを、clean状態・定義・Git整合性を確認してからwhub
+        worktree removeで削除し、branchを保持する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: cleanなsourceからrelease build・verify・applyを実行し、current releaseのwhubでworktree
+        CLIを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: whub-dev/TASK-075はcleanかつcheck okを確認後にwhub worktree removeで削除。削除後のworktree
+          checkは(no worktrees)、tasks/075 branchはshow-refで保持を確認。
+      deleted: false
+    - value:
+        verification: release 0.1.0+ga7150dcbをbuild・verify・apply。currentの~/.local/bin/whubはcommit
+          a7150dcbを表示し、worktree checkは(no worktrees)、statusは正常終了。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: worktree serviceを責務単位のpackageへ再編し、status/Web向けread modelの境界を固定するため
+- reason: resourceとworktreeの統合判定をcommands/status.pyからservices/status.pyへ移し、CLI adapterを表示と終了コード変換に限定するため
+- reason: Phase 4へ実作成worktreeの安全な削除とCLI登録用releaseを追加し、文書化・削除・releaseの順序を明確化するため
+cancellation: null
+result:
+  summary: worktreeの状態統合、CLI総合診断、Web app一覧、文書化、実測作成・削除、releaseを完了

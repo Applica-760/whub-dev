@@ -1,0 +1,19 @@
+schema_version: 1
+task:
+  id: TASK-078
+  state: draft
+  title: CodexとClaude CodeのAgent adapter契約を定義する
+  objective: 共通ロール・権限ポリシーとsession操作をCodexおよびClaude Codeの設定・起動方式へ変換するadapter契約を定義する
+  approach:
+  - 共通ポリシーの変換結果と強制不能な制約を明示し、弱い設定への暗黙のフォールバックを禁止する
+  depends_on:
+  - TASK-077
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

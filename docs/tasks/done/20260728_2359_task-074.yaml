@@ -1,0 +1,128 @@
+schema_version: 1
+task:
+  id: TASK-074
+  state: completed
+  title: worktree CLI操作を実装する
+  objective: 登録済みworktreeを対象に、Git worktreeの作成・一覧・削除と対応するproject symlinkの作成を安全に実行する
+  approach:
+  - TASK-072の登録・整合性サービスだけを参照し、CLI adapterには表示と引数解釈を置く
+  - 未コミット変更、稼働session、Git worktree不整合時は削除を拒否する
+  depends_on:
+  - TASK-072
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 操作対象と作成契約を実装する
+    acceptance: []
+    steps:
+    - description: 親ProjectをWorktreeDefinitionのparent_projectからmanifestへ解決し、localかつ有効なgit宣言を持つResourceだけを操作対象にする。remote
+        Resourceは未実装であることを明示して拒否する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 定義YAMLを先に保存してからgit worktree addを実行し、Git失敗時は定義を変更せず操作失敗として返す。親の現在pathはmanifestから解決し、子worktreeをmanifest
+        Projectやsymlinkとして追加しない
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 親Projectの動的解決、remote未実装拒否、定義先行保存とGit worktree作成を実装し、uv run pytest
+          src/whub/tests/services/test_worktree.pyで15件、ruff checkで成功。
+      deleted: false
+    deleted: false
+  - title: 一覧と削除の安全条件を実装する
+    acceptance: []
+    steps:
+    - description: 登録済み定義を一覧化し、directory欠損・Git worktree不整合を診断として表示できるservice結果を返す
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 削除前にtracked・untracked変更、Git worktree実体と定義の不整合を検査し、問題があれば拒否する。Git
+        worktreeと定義YAMLだけを削除し、branchは保持する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        note: YAML名不一致でもdirectoryが存在する場合にGit照合を継続して複数diagnosticを返す改善は、削除安全条件に影響しないため後続の小改善として扱う。
+      deleted: false
+    - value:
+        verification: 登録定義とGit worktreeの照合、clean状態確認、Git worktree削除後の定義YAML削除を実装した。tracked・untracked変更、不整合、Git/YAML削除失敗を拒否し、uv
+          run pytestの31件とruff checkで成功。
+      deleted: false
+    deleted: false
+  - title: Task対応と登録一意性を検証する
+    acceptance: []
+    steps:
+    - description: parent_projectとtask_idの組をworktree識別子として扱い、create時に対象ProjectのTask
+        YAMLが存在することを確認する。同じ組への既存定義がある場合は上書きせず拒否する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: create時に対象ProjectのTask YAMLをload_project_taskで検証し、worktree識別子と重複判定をparent_projectとtask_idの組へ修正した。uv
+          run pytest src/whub/tests/services/test_worktree.pyで21件、ruff checkで成功。
+      deleted: false
+    deleted: false
+  - title: CLI契約を文書化する
+    acceptance: []
+    steps:
+    - description: whub worktree create・check・removeの引数、対象選択、出力、diagnostic、終了コード、非破壊境界をreferenceへ記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 一般契約をworktree referenceへ、create・check・removeの引数と操作規約をCLI referenceへ分離して記録し、git
+          diff --checkとTask YAML検証で成功。
+      deleted: false
+    deleted: false
+  - title: CLI adapterを実装する
+    acceptance: []
+    steps:
+    - description: whub worktree配下へcreate・check・removeを追加し、引数解釈と表示だけをCLI adapterに置く。serviceの診断・未実装remoteエラーを利用者向けに表示し、失敗時は非0で終了する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: whub worktree create・check・removeを追加し、Project・Taskによる対象選択、diagnostic表示と非0終了を実装した。service
+          APIをProject・Task単位に統合し、モデル不変条件と重複する判定を削除した。uv run pytestの25件、ruff check、git
+          diff --checkで成功。
+      deleted: false
+    deleted: false
+  - title: 契約を検証し文書化する
+    acceptance: []
+    steps:
+    - description: 登録、作成、一覧、削除、remote拒否、Git失敗、不整合、未コミット変更をservice・CLI境界で自動テストする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: worktreeとCLI referenceを実装済みの操作契約へ更新し、稼働sessionの検出・削除拒否はTask、worktree、sessionの対応を保存・検証する後続Taskの責務として記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 全体pytest 474件と全体ruff checkが成功。CLI referenceは引数規約、worktree referenceは一般契約として整合し、worktree
+          referenceの状態を実装済みに更新した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: Task IDはProjectごとの識別子であるため、worktreeの一意性をparent_projectとtask_idの組へ修正し、create時のTask
+    YAML存在・所属検証を追加する
+- reason: 採用済みの文書先行方針に合わせ、CLI実装前にcreate・check・removeの引数・出力・終了コード契約をreferenceへ記録する。listはcheckへ統合する
+cancellation: null
+result:
+  summary: 登録済みGit worktreeのcreate・check・remove CLIを実装し、Task YAML確認、Project・Task単位の一意性、安全削除、診断表示を提供した。全体pytest
+    474件とruff checkが成功。

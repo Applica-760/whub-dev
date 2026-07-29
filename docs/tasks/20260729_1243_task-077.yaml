@@ -1,0 +1,86 @@
+schema_version: 1
+task:
+  id: TASK-077
+  state: in_progress
+  title: Agentロールと権限ポリシーを定義する
+  objective: Agent非依存のロール・権限ポリシーをSSOTとして定義し、CodexとClaude Codeを含む実行環境へ安全に変換できる判断基準を文書化する
+  approach:
+  - allow・prompt・deny、filesystem・network・Git・外部ツールを共通ポリシーとして表し、Agentで強制不能な規則は起動不可とする
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: SSOTのスキーマと配置を決める
+    acceptance: []
+    steps:
+    - description: role profileのスキーマ・配置・評価規則を定義し、src/whub/assets/rolesを開発時の配布元として位置付ける
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 初期role定義を作成する
+    acceptance: []
+    steps:
+    - description: あなたが列挙する許可・要承認・拒否を正規化し、初期roleのprofile.yamlとREADME.mdを作成する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 検証と将来境界を文書化する
+    acceptance: []
+    steps:
+    - description: 設計文書、YAML検証方法、後続adapterと.agentsへの展開境界を記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: roleモデルと用語を確定する
+    acceptance: []
+    steps:
+    - description: 基底role・拡張role・role profileの用語、責務、適用単位を定義し、未決定の許可判定語彙を列挙する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: agent auth、base agent auth、extension agent authの定義と、ホワイトリストの和集合による合成原則をagent-auth.mdへ記録した。
+      deleted: false
+    deleted: false
+  - title: profileの構造と配置を定義する
+    acceptance: []
+    steps:
+    - description: 基底roleと用途別拡張roleを合成する機械可読profileの構造、配置、合成規則、説明文書の名称を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: src/whub/assets/roles/templatesにagent authのラフなYAML雛形と説明Markdown雛形を追加した。YAMLはuv環境で解析できた。
+      deleted: false
+    - value:
+        result: workspace-hub直下のClaude設定のBash許可をargv prefix 25件と完全一致6件へ分類し、roles/base/agent-auth.yamlへ記録した。filesystem、network、external_toolsは空のままにした。
+      deleted: false
+    deleted: false
+  - title: 初期規約を文書化し検証する
+    acceptance: []
+    steps:
+    - description: あなたが列挙する規約を正規化して初期profileと設計文書へ反映し、後続adapterへ渡す検証条件を記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: 基底roleと用途別拡張roleの合成モデルを導入し、用語・評価規則・asset配置を先に確定する必要があるため
+cancellation: null
+result: null

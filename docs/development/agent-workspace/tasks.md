@@ -27,6 +27,7 @@ whub appを、単一利用者が複数のCoding Agentを監督・操作する主
 
 4. Task、worktree、Agent sessionの対応を保存・検証する
    - 再接続・復旧・削除時に対応関係が失われないことを保証する。
+   - 稼働中の対応sessionを検出し、worktree削除を拒否する。
 
 ### B. Agentを対話・監督する
 
@@ -72,3 +73,4 @@ whub appを、単一利用者が複数のCoding Agentを監督・操作する主
 
 16. スマホ向けの部分操作と通知を追加する
     - TailscaleまたはMac・iPhone連携を比較し、状態監視・通知・質問への回答を優先する。
+    - コマンド実行の承認命令とか出せるといいね
