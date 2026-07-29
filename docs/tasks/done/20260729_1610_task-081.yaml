@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-081
-  state: in_progress
+  state: completed
   title: worktreeのPRとmerge lifecycleを実装する
   objective: Task worktreeのpull request作成、明示承認後のmerge、統合済みworktreeの安全なcleanupを定義・実装する
   approach:
@@ -114,4 +114,5 @@ acceptance_results: []
 change_requests:
 - reason: GitHub専用、PR作成のidempotency、未コミット変更の拒否を反映し、service・CLI・検証を独立Stepへ分解するため
 cancellation: null
-result: null
+result:
+  summary: GitHub専用のworktree PR作成・明示方式merge・MERGED確認後cleanupを実装し、全493テストとruff checkで検証した。
