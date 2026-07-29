@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-072
-  state: in_progress
+  state: completed
   title: worktree登録基盤を実装する
   objective: operation rootに親Projectの子worktree登録を永続化し、親Project・Task・branch・worktree
     pathの一意対応を検証する
@@ -86,20 +86,38 @@ plan:
     acceptance: []
     steps:
     - description: modelとserviceの正常系、親資格の拒否、重複、不正YAML、directory欠損、同時作成の衝突を自動テストする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: WorktreeDefinitionの配置と親資格をreferenceへ、workspace配置とremote ResourceをMVP対象外にした理由をADRへ記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: Worktree referenceをdirectory欠損をdiagnosticとして返す契約へ更新し、uv run
+          pytestで455件、ruff checkで成功。
+      deleted: false
     deleted: false
 approvals:
 - actor: user
 - actor: user
-acceptance_results: []
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - require_worktree_parent rejects non-local or git-less resources
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - Persistence, duplicate rejection, diagnostics, and concurrent creation are covered
+    by tests
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - Worktree reference and ADR document placement, eligibility, and MVP scope
 change_requests:
 - reason: 合意済みのWorktreeDefinition、親資格、YAML保存・不整合診断、MVP範囲、ADRを実装可能なStepと受け入れ条件へ分解するため
 cancellation: null
-result: null
+result:
+  summary: WorktreeDefinitionの親資格、原子的保存、探索診断、重複拒否を実装し、455テストで検証した。

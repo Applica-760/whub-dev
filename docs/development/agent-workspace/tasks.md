@@ -37,6 +37,7 @@ whub appを、単一利用者が複数のCoding Agentを監督・操作する主
    - Task、worktree、tmux sessionに対応するAgentの起動、停止、再接続、実行記録を一貫して扱う。
    - Agentが計画を編集するのは`--actor agent`で承認するが、最終的なcompleteやそもそもの起票は人間だけにする
    - worktree以下のディレクトリは任意の編集をしていいが（gitのブランチに過ぎないので）、それより上の階層への編集権は与えないとか
+   - `.codex/rules/default.rules` `.claude/settings.local.json`みたいに細かいコマンド制御を、ロール毎に頒布可能な形で定義する
 
 7. Agent lifecycle hooksを整備する
    - 起動、状態変化、質問、権限要求、終了を構造化してcontrol planeへ通知する。

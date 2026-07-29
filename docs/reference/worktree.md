@@ -38,8 +38,8 @@ workspace_path: projects/worktrees/whub-dev-072
 - directory と YAML の名前は `<project>-<task-number>`、branch は
   `tasks/<task-number>` とする。`task-number` はwflowのTask ID
   `TASK-<task-number>`から取り出した数値部分である。
-- YAML を先に作成する。YAML があって対応する有効な directory がなければ、表示では
-  「有効なディレクトリがありません」と報告する。
+- YAML を先に作成する。YAML があって対応する directory がなければ、探索結果の
+  diagnosticとして報告する。
 - worktree の作成は Task の状態遷移と連動させず、任意の時点で行える。
 
 ## 親 Project の適格性
