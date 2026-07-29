@@ -1,0 +1,20 @@
+schema_version: 1
+task:
+  id: TASK-075
+  state: draft
+  title: worktree表示を統合する
+  objective: 子worktreeを親Projectとの関係、branch、作業path、登録状態とともにCLI・status・Web appで識別・表示する
+  approach:
+  - TASK-074で確立した登録とCLI操作の結果を読み取り専用で表示する
+  - tmux sessionの起動・再接続・操作は対象外とし、将来のsession基盤Taskへ残す
+  depends_on:
+  - TASK-074
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

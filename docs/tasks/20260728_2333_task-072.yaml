@@ -1,21 +1,98 @@
 schema_version: 1
 task:
   id: TASK-072
-  state: draft
-  title: worktree基盤を作成する
-  objective: 親Projectの子worktreeを一意に管理する基盤の実装を次セッションで開始する
+  state: in_progress
+  title: worktree登録基盤を実装する
+  objective: operation rootに親Projectの子worktree登録を永続化し、親Project・Task・branch・worktree
+    pathの一意対応を検証する
   approach:
-  - '要件: [requirements](../development/agent-workspace/requirements.md)'
-  - 'control plane: [control-plane](../development/agent-workspace/control-plane.md)'
-  - '一意対応: [identity](../development/agent-workspace/identity.md)'
-  - '候補一覧A: [tasks](../development/agent-workspace/tasks.md)'
+  - Task・worktree登録・sessionの管理情報はoperation rootに集約する既存control plane契約に従う
+  - Git worktreeの作成・削除、project symlinkの操作、CLI・表示統合は後続Taskへ分離する
   depends_on: []
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: Resource.gitを持つlocal Resourceだけがworktree親として受理される
+  - id: ACC-002
+    statement: WorktreeDefinitionの保存・探索・重複検査・directory欠損診断が自動テストで確認される
+  - id: ACC-003
+    statement: WorktreeDefinitionの配置・MVP親資格・採用理由がreferenceとADRに記録される
+  phases:
+  - title: worktree登録基盤を実装する
+    acceptance: []
+    steps:
+    - description: operation rootにworktree登録を保存し、親Project・Task・branch・worktree pathの一意対応を解決するサービスと整合性検証を実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: WorktreeDefinitionはprojects/worktrees/<project>-<NNN>.yamlを正本とする。MVPの親は有効なgit宣言を持つlocal
+          Resourceに限定し、branchはtasks/<NNN>とする。YAMLを先に作成し、有効なdirectoryがなければ表示で報告する。削除はtracked・untrackedとも変更のないworktreeとYAMLだけを対象にしてbranchを残し、add・commit・push・branch削除は暗黙に行わない。
+      deleted: false
+    - value:
+        decision: worktree作成はTask状態遷移へ組み込まずwhub worktreeの任意操作とする。作成済み状態はTask YAMLに重複保存せず、projects/worktreesのWorktreeDefinition
+          YAMLを探索して導出する。配置とMVP範囲の採用理由・不採用案はADR-0014へ記録した。
+      deleted: false
+    deleted: true
+  - title: 登録基盤を検証する
+    acceptance: []
+    steps:
+    - description: 登録の永続化・重複・欠損・不整合を自動テストし、現在の構造を文書化する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: WorktreeDefinitionと親資格を実装する
+    acceptance: []
+    steps:
+    - description: WorktreeDefinitionのPydantic modelを追加し、Task ID・親Project・branch・workspace
+        pathと命名規約の対応を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: manifestのgit宣言とlocal Resourceを検査し、worktree親として不適格なProjectを利用者向けエラーで拒否する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 定義YAMLの保存と整合性を実装する
+    acceptance: []
+    steps:
+    - description: workspace rootのprojects/worktrees配下へWorktreeDefinition YAMLを原子的に保存し、同名・同一Task・branch・workspace
+        pathの重複を拒否する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 定義YAMLを探索して一覧化し、schema不正・名前と定義の不一致・directory欠損を診断として返す
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 契約を検証し文書化する
+    acceptance: []
+    steps:
+    - description: modelとserviceの正常系、親資格の拒否、重複、不正YAML、directory欠損、同時作成の衝突を自動テストする
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: WorktreeDefinitionの配置と親資格をreferenceへ、workspace配置とremote ResourceをMVP対象外にした理由をADRへ記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: 合意済みのWorktreeDefinition、親資格、YAML保存・不整合診断、MVP範囲、ADRを実装可能なStepと受け入れ条件へ分解するため
 cancellation: null
 result: null

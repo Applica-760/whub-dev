@@ -33,8 +33,10 @@ whub appを、単一利用者が複数のCoding Agentを監督・操作する主
 5. CodexとClaude CodeのAgent adapterを定義する
    - 起動、再接続、終了、共通状態の報告に必要な最小契約を定める。
 
-6. Agent実行ハーネスを整備する
+6. Agent実行ハーネスを整備する⭐️
    - Task、worktree、tmux sessionに対応するAgentの起動、停止、再接続、実行記録を一貫して扱う。
+   - Agentが計画を編集するのは`--actor agent`で承認するが、最終的なcompleteやそもそもの起票は人間だけにする
+   - worktree以下のディレクトリは任意の編集をしていいが（gitのブランチに過ぎないので）、それより上の階層への編集権は与えないとか
 
 7. Agent lifecycle hooksを整備する
    - 起動、状態変化、質問、権限要求、終了を構造化してcontrol planeへ通知する。

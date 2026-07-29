@@ -1,0 +1,86 @@
+schema_version: 1
+task:
+  id: TASK-076
+  state: draft
+  title: whub/wflowのhooks整備
+  objective: Claude Code hooksからwhub/wflowを呼び、task-planning規約の遵守をプロンプト依存からハーネスによる強制へ移す
+  approach:
+  - 検証・読み取り系コマンド(wflow check / wflow task check / whub ls)をPostToolUse・SessionStartへ載せる
+  - hook入力JSONを直接処理するgate subcommandを新設し、規約違反をexit 2で遮断する
+  - 状態遷移の自動実行は採用せず、遷移の遵守判定に限定する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 現状調査とhook適性評価
+    acceptance: []
+    steps:
+    - description: whub/wflowの各コマンドをhook適性で分類する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 検証系コマンドの終了コードと実行時間を実測する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: task-planning Skill規約のうちhookで強制可能な項目を特定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: gate仕様の設計
+    acceptance: []
+    steps:
+    - description: Claude Code hook仕様(入力JSON・exit code規約・発火イベント)を一次情報で確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: wflow gate subcommandのI/Fとexit code規約を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: hookで強制する規約項目と対象イベントを確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 実装
+    acceptance: []
+    steps:
+    - description: wflow task show --json など機械可読クエリを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: gate subcommandを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: gate判定のテストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: hooks設定と動作検証
+    acceptance: []
+    steps:
+    - description: settings.jsonへhookを設定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 規約違反ケースが実際に遮断されることを検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

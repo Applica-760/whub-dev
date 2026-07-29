@@ -19,6 +19,7 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 
 - [CLI reference](docs/reference/cli.md)
 - [Manifest reference](docs/reference/manifest.md)
+- [Worktree reference](docs/reference/worktree.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Development conventions](docs/development/conventions.md)
 - [Architecture decisions](docs/ADR/)
