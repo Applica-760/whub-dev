@@ -18,6 +18,7 @@ from whub.models import (
     WorktreeDefinitionRecord,
 )
 from whub.services.errors import ServiceError
+from whub.services.task import load_project_task
 from whub.services.worktree_git import process_detail, run_git
 
 
@@ -87,6 +88,25 @@ def create_worktree(
     if result.returncode != 0:
         raise ServiceError("git worktree add failed: " + process_detail(result))
     return destination
+
+
+def create_project_worktree(
+    manifest: Manifest,
+    workspace_root: Path,
+    project: str,
+    task_id: str,
+) -> Path:
+    """Create a worktree for an existing Task in PROJECT."""
+    task = load_project_task(manifest, project, task_id)
+    resolved_task_id = task.task.id
+    number = resolved_task_id.removeprefix("TASK-")
+    definition = WorktreeDefinition(
+        task_id=resolved_task_id,
+        parent_project=project,
+        branch=f"tasks/{number}",
+        workspace_path=f"projects/worktrees/{project}-{number}",
+    )
+    return create_worktree(manifest, workspace_root, definition)
 
 
 def remove_worktree(
@@ -164,10 +184,17 @@ def _reject_duplicate_definition(
         definition = record.definition
         if definition is None:
             continue
-        if definition.task_id == candidate.task_id:
-            raise ServiceError(f"duplicate worktree task ID: {candidate.task_id}")
-        if definition.branch == candidate.branch:
-            raise ServiceError(f"duplicate worktree branch: {candidate.branch}")
+        if definition.parent_project == candidate.parent_project:
+            if definition.task_id == candidate.task_id:
+                raise ServiceError(
+                    "duplicate worktree task: "
+                    f"{candidate.parent_project}/{candidate.task_id}"
+                )
+            if definition.branch == candidate.branch:
+                raise ServiceError(
+                    "duplicate worktree branch: "
+                    f"{candidate.parent_project}/{candidate.branch}"
+                )
         if definition.workspace_path == candidate.workspace_path:
             raise ServiceError(
                 f"duplicate worktree workspace path: {candidate.workspace_path}"

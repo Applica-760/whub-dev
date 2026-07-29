@@ -9,6 +9,7 @@ import yaml
 from whub.models import Manifest, SymlinkResource, WorktreeDefinition
 from whub.services.errors import ServiceError
 from whub.services.worktree import (
+    create_project_worktree,
     create_worktree,
     list_worktree_definitions,
     remove_worktree,
@@ -205,6 +206,19 @@ def test_create_worktree_keeps_definition_when_git_add_fails(tmp_path: Path) -> 
     assert worktree_definition_path(tmp_path, definition).is_file()
 
 
+def test_create_project_worktree_rejects_missing_project_task(tmp_path: Path) -> None:
+    with (
+        patch(
+            "whub.services.worktree.load_project_task",
+            side_effect=ServiceError("task not found: local/TASK-072"),
+        ),
+        pytest.raises(ServiceError, match="task not found: local/TASK-072"),
+    ):
+        create_project_worktree(local_git_manifest(), tmp_path, "local", "TASK-072")
+
+    assert list_worktree_definitions(tmp_path) == []
+
+
 def test_remove_worktree_removes_clean_git_worktree_then_definition(
     tmp_path: Path,
 ) -> None:
@@ -340,7 +354,7 @@ def test_remove_worktree_keeps_definition_when_yaml_removal_fails(tmp_path: Path
 def test_save_worktree_definition_rejects_duplicate_task(tmp_path: Path) -> None:
     save_worktree_definition(tmp_path, worktree_definition())
 
-    with pytest.raises(ServiceError, match="duplicate worktree task ID: TASK-072"):
+    with pytest.raises(ServiceError, match="duplicate worktree task: local/TASK-072"):
         save_worktree_definition(tmp_path, worktree_definition())
 
 
@@ -356,7 +370,7 @@ def test_save_worktree_definition_does_not_overwrite_existing_name(
         save_worktree_definition(tmp_path, definition)
 
 
-def test_save_worktree_definition_serializes_duplicate_task_creations(
+def test_save_worktree_definition_allows_same_task_id_for_different_projects(
     tmp_path: Path,
 ) -> None:
     definitions = [
@@ -372,9 +386,8 @@ def test_save_worktree_definition_serializes_duplicate_task_creations(
             )
         )
 
-    assert sum(isinstance(result, Path) for result in results) == 1
-    assert sum(isinstance(result, ServiceError) for result in results) == 1
-    assert len(list(worktree_definition_path(tmp_path, definitions[0]).parent.glob("*.yaml"))) == 1
+    assert all(isinstance(result, Path) for result in results)
+    assert len(list(worktree_definition_path(tmp_path, definitions[0]).parent.glob("*.yaml"))) == 2
 
 
 def test_list_worktree_definitions_reports_recoverable_inconsistencies(

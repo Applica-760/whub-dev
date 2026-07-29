@@ -55,6 +55,20 @@ plan:
           run pytestの31件とruff checkで成功。
       deleted: false
     deleted: false
+  - title: Task対応と登録一意性を検証する
+    acceptance: []
+    steps:
+    - description: parent_projectとtask_idの組をworktree識別子として扱い、create時に対象ProjectのTask
+        YAMLが存在することを確認する。同じ組への既存定義がある場合は上書きせず拒否する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: create時に対象ProjectのTask YAMLをload_project_taskで検証し、worktree識別子と重複判定をparent_projectとtask_idの組へ修正した。uv
+          run pytest src/whub/tests/services/test_worktree.pyで21件、ruff checkで成功。
+      deleted: false
+    deleted: false
   - title: CLI adapterを実装する
     acceptance: []
     steps:
@@ -79,7 +93,10 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: Task IDはProjectごとの識別子であるため、worktreeの一意性をparent_projectとtask_idの組へ修正し、create時のTask
+    YAML存在・所属検証を追加する
 cancellation: null
 result: null
