@@ -5,29 +5,24 @@ from __future__ import annotations
 import shlex
 import subprocess
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import replace
 from pathlib import Path
 
-from whub.core.health import (
-    HealthState,
-    inspect_aggregated_mount,
-    inspect_symlink,
-)
+from whub.core.health import inspect_aggregated_mount, inspect_symlink
 from whub.core.remote import SSH_CONNECTION_FAILURE, run_ssh_command
 from whub.core.target import collect_targets
 from whub.core.tmux import session_name
-from whub.models import Host, Manifest, Project, RemoteResource, SymlinkResource
+from whub.models import (
+    Host,
+    Manifest,
+    Project,
+    RemoteResource,
+    ResourceStatus,
+    StatusReport,
+    SymlinkResource,
+)
 from whub.services.remote.mount import host_mountpoint, host_volume_name
-
-
-@dataclass(frozen=True)
-class ResourceStatus:
-    project: str
-    state: HealthState
-    type: str
-    mount: str = "-"
-    tmux: str = "-"
-    git: str = "-"
+from whub.services.worktree import collect_worktree_status
 
 
 def _fetch_local_info(
@@ -172,3 +167,20 @@ def collect_resource_status(manifest: Manifest) -> list[ResourceStatus]:
         else:
             infos.append(remote_infos[target.data.name])
     return infos
+
+
+def collect_status(manifest: Manifest, workspace_root: Path) -> StatusReport:
+    """Collect resources and attach each worktree to its parent resource."""
+    resources = collect_resource_status(manifest)
+    grouped: dict[str, list] = {}
+    invalid = []
+    for worktree in collect_worktree_status(manifest, workspace_root):
+        if worktree.parent_project is None:
+            invalid.append(worktree)
+        else:
+            grouped.setdefault(worktree.parent_project, []).append(worktree)
+    attached = tuple(
+        replace(resource, worktrees=tuple(grouped.pop(resource.project, [])))
+        for resource in resources
+    )
+    return StatusReport(attached, tuple([*invalid, *sum(grouped.values(), [])]))

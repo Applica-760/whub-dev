@@ -62,6 +62,10 @@ plan:
         verification: whub statusへworktree総合診断を追加。正常時は登録数とok、異常時は識別子とdiagnosticを表示して非0で終了する。ruff
           checkとpytest 476件が成功。
       deleted: false
+    - value:
+        correction: StatusReport・ResourceStatus・WorktreeStatusをmodels/status.pyへ移し、services/status.pyで親resourceへworktreeを紐付けるよう補正。commands/status.pyはreportの描画と終了コード変換だけにした。ruff
+          checkとpytest 475件が成功。
+      deleted: false
     deleted: false
   - title: Web appにworktree一覧を追加する
     acceptance: []
@@ -94,8 +98,10 @@ plan:
 approvals:
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: worktree serviceを責務単位のpackageへ再編し、status/Web向けread modelの境界を固定するため
+- reason: resourceとworktreeの統合判定をcommands/status.pyからservices/status.pyへ移し、CLI adapterを表示と終了コード変換に限定するため
 cancellation: null
 result: null
