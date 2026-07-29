@@ -82,4 +82,25 @@
 - Knowledge YAMLとTask YAMLの配置を将来再検討する。docs/knowledge.yamlは確定済みのプロジェクト知識・仕様SSOTとしてdocs配置が妥当。一方、Task YAMLはstate・進捗・log・依存をCLIが更新する実行記録であり、docs/tasksより.wflow/tasks等のrepository-localなワークフローデータ領域へ分離する方が責務は明確になる。既存の凍結済みMarkdown履歴はdocs/tasks/doneに残す案を含め、可読性・Agentの発見性・移行コストと合わせて判断する。
 - バイトの稼働管理できるタイマーあればいいな
 - ⭐️ overviewのタスク詳細ページにstatusと同様の更新ボタンをつける
+- dev API server(uvicorn --reload, port 8713)がCPU 50〜72%を常時消費する。
+
+[観測事実]
+- .venvにwatchfiles未インストール → uvicorn/supervisors/__init__.pyのImportError分岐でStatReloadにフォールバック
+- StatReload.should_restart()は毎周reload_dirのrglob("*.py")を全走査し各ファイルをstat
+- runner.py:131が--reload-dir未指定 → config.py:338でcwd(whubリポジトリ全体)が監視対象
+- 1周の実測 約0.4秒(sys 0.30秒) > reload_delay既定0.25秒 のため休みなく走査が回る
+- 起動から1日3時間放置され、sampleのmain threadはscandir/readdirに滞留。プロセスは手動killで停止済み
+
+[可能性(未検証)]
+- 走査コストは.venv/node_modules/dist等のヒットしないディレクトリ探索が支配的と推定、内訳は未計測
+- runner --dev停止時のuvicorn子プロセス残存有無は未確認
+- release runner(port 8710)は--reloadなしで影響外と見られるが未計測
+- 他環境での再現性は未確認
+
+[方向性案(未採用)]
+- A: watchfilesをdev依存に追加しWatchFilesReload(FSEvents)を使わせる
+- B: runnerに--reload-dirを追加し監視対象をsrc/whubへ限定
+- C: reload_delayを延長
+- D: dev serverのライフサイクル管理見直し
+- AとBは排他ではなく併用可
 <!-- hub:backlog:appended:end -->
