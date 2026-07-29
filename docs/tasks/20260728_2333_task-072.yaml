@@ -69,14 +69,18 @@ plan:
     steps:
     - description: workspace rootのprojects/worktrees配下へWorktreeDefinition YAMLを原子的に保存し、同名・同一Task・branch・workspace
         pathの重複を拒否する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 定義YAMLを探索して一覧化し、schema不正・名前と定義の不一致・directory欠損を診断として返す
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: 定義YAMLの原子的保存、重複拒否、探索時の不正YAML・名前不一致・directory欠損診断を実装し、uv run
+          pytestで455件成功。
+      deleted: false
     deleted: false
   - title: 契約を検証し文書化する
     acceptance: []
