@@ -11,13 +11,13 @@ from whub.models import (
     WorktreeInspection,
 )
 from whub.services.errors import ServiceError
-from whub.services.worktree import list_worktree_definitions, resolve_worktree_parent
-from whub.services.worktree_git import process_detail, run_git
+from whub.services.worktree.definition import list_worktree_definitions
+from whub.services.worktree.git import process_detail, run_git
+from whub.services.worktree.operation import resolve_worktree_parent
 
 
 def inspect_worktrees(
-    manifest: Manifest,
-    workspace_root: Path,
+    manifest: Manifest, workspace_root: Path
 ) -> list[WorktreeInspection]:
     """Inspect registered definitions without modifying Git or YAML state."""
     return [
@@ -27,25 +27,23 @@ def inspect_worktrees(
 
 
 def _inspect_worktree(
-    manifest: Manifest,
-    workspace_root: Path,
-    record: WorktreeDefinitionRecord,
+    manifest: Manifest, workspace_root: Path, record: WorktreeDefinitionRecord
 ) -> WorktreeInspection:
     diagnostics = list(record.diagnostics)
     definition = record.definition
     if definition is None or diagnostics:
         return WorktreeInspection(record, tuple(diagnostics))
-
     try:
-        parent = resolve_worktree_parent(manifest, definition)
-        worktrees = _list_git_worktrees(parent)
+        worktrees = _list_git_worktrees(resolve_worktree_parent(manifest, definition))
     except ServiceError as error:
         diagnostics.append(str(error))
         return WorktreeInspection(record, tuple(diagnostics))
-
-    destination = workspace_root / definition.workspace_path
     git_worktree = next(
-        (item for item in worktrees if item.path == destination),
+        (
+            item
+            for item in worktrees
+            if item.path == workspace_root / definition.workspace_path
+        ),
         None,
     )
     if git_worktree is None:
@@ -80,10 +78,7 @@ def _parse_git_worktrees(output: str) -> list[GitWorktree]:
             continue
         if "worktree" in fields:
             worktrees.append(
-                GitWorktree(
-                    path=Path(fields["worktree"]),
-                    branch=fields.get("branch"),
-                )
+                GitWorktree(path=Path(fields["worktree"]), branch=fields.get("branch"))
             )
         fields = {}
     return worktrees

@@ -9,8 +9,6 @@ import yaml
 from whub.models import Manifest, SymlinkResource, WorktreeDefinition
 from whub.services.errors import ServiceError
 from whub.services.worktree import (
-    _create_worktree,
-    _require_worktree_parent,
     create_project_worktree,
     list_worktree_definitions,
     remove_project_worktree,
@@ -18,6 +16,7 @@ from whub.services.worktree import (
     save_worktree_definition,
     worktree_definition_path,
 )
+from whub.services.worktree.operation import _create_worktree, _require_worktree_parent
 from whub.tests.helpers import manifest_data
 
 
@@ -47,7 +46,9 @@ def test_require_worktree_parent_accepts_local_resource_with_git() -> None:
 
 
 def test_require_worktree_parent_rejects_local_resource_without_git() -> None:
-    with pytest.raises(ServiceError, match="worktree parent has no git declaration: local"):
+    with pytest.raises(
+        ServiceError, match="worktree parent has no git declaration: local"
+    ):
         _require_worktree_parent(Manifest.model_validate(manifest_data()), "local")
 
 
@@ -128,7 +129,7 @@ def test_create_worktree_saves_definition_then_adds_existing_branch(
     )
     definition = worktree_definition()
     with patch(
-        "whub.services.worktree.run_git",
+        "whub.services.worktree.operation.run_git",
         side_effect=[
             subprocess.CompletedProcess([], 0),
             subprocess.CompletedProcess([], 0),
@@ -166,7 +167,7 @@ def test_create_worktree_creates_missing_branch(tmp_path: Path) -> None:
     )
     definition = worktree_definition()
     with patch(
-        "whub.services.worktree.run_git",
+        "whub.services.worktree.operation.run_git",
         side_effect=[
             subprocess.CompletedProcess([], 1),
             subprocess.CompletedProcess([], 0),
@@ -194,13 +195,15 @@ def test_create_worktree_keeps_definition_when_git_add_fails(tmp_path: Path) -> 
     )
     definition = worktree_definition()
     with patch(
-        "whub.services.worktree.run_git",
+        "whub.services.worktree.operation.run_git",
         side_effect=[
             subprocess.CompletedProcess([], 0),
             subprocess.CompletedProcess([], 1, stderr="git add failed"),
         ],
     ):
-        with pytest.raises(ServiceError, match="git worktree add failed: git add failed"):
+        with pytest.raises(
+            ServiceError, match="git worktree add failed: git add failed"
+        ):
             _create_worktree(Manifest.model_validate(data), tmp_path, definition)
 
     assert worktree_definition_path(tmp_path, definition).is_file()
@@ -209,7 +212,7 @@ def test_create_worktree_keeps_definition_when_git_add_fails(tmp_path: Path) -> 
 def test_create_project_worktree_rejects_missing_project_task(tmp_path: Path) -> None:
     with (
         patch(
-            "whub.services.worktree.load_project_task",
+            "whub.services.worktree.operation.load_project_task",
             side_effect=ServiceError("task not found: local/TASK-072"),
         ),
         pytest.raises(ServiceError, match="task not found: local/TASK-072"),
@@ -236,11 +239,11 @@ def test_remove_worktree_removes_clean_git_worktree_then_definition(
     inspection = _inspection(definition_path, definition)
     with (
         patch(
-            "whub.services.worktree_check.inspect_worktrees",
+            "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
         patch(
-            "whub.services.worktree.run_git",
+            "whub.services.worktree.operation.run_git",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0),
@@ -277,11 +280,11 @@ def test_remove_worktree_rejects_uncommitted_changes(
     inspection = _inspection(definition_path, definition)
     with (
         patch(
-            "whub.services.worktree_check.inspect_worktrees",
+            "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
         patch(
-            "whub.services.worktree.run_git",
+            "whub.services.worktree.operation.run_git",
             return_value=subprocess.CompletedProcess([], 0, stdout=status_output),
         ) as run,
         pytest.raises(
@@ -294,7 +297,9 @@ def test_remove_worktree_rejects_uncommitted_changes(
         )
 
     assert definition_path.exists()
-    run.assert_called_once_with(destination, "status", "--porcelain", "--untracked-files=all")
+    run.assert_called_once_with(
+        destination, "status", "--porcelain", "--untracked-files=all"
+    )
 
 
 def test_remove_worktree_rejects_inconsistent_definition(tmp_path: Path) -> None:
@@ -307,10 +312,10 @@ def test_remove_worktree_rejects_inconsistent_definition(tmp_path: Path) -> None
     )
     with (
         patch(
-            "whub.services.worktree_check.inspect_worktrees",
+            "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.run_git") as run,
+        patch("whub.services.worktree.operation.run_git") as run,
         pytest.raises(
             ServiceError,
             match="cannot remove inconsistent worktree: git worktree is missing",
@@ -322,7 +327,9 @@ def test_remove_worktree_rejects_inconsistent_definition(tmp_path: Path) -> None
     run.assert_not_called()
 
 
-def test_remove_worktree_keeps_definition_when_yaml_removal_fails(tmp_path: Path) -> None:
+def test_remove_worktree_keeps_definition_when_yaml_removal_fails(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "source"
     source.mkdir()
     data = manifest_data()
@@ -337,11 +344,11 @@ def test_remove_worktree_keeps_definition_when_yaml_removal_fails(tmp_path: Path
     inspection = _inspection(definition_path, definition)
     with (
         patch(
-            "whub.services.worktree_check.inspect_worktrees",
+            "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
         patch(
-            "whub.services.worktree.run_git",
+            "whub.services.worktree.operation.run_git",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0),
@@ -372,7 +379,9 @@ def test_save_worktree_definition_does_not_overwrite_existing_name(
     path.parent.mkdir(parents=True)
     path.write_text("invalid: true\n")
 
-    with pytest.raises(ServiceError, match=f"worktree definition already exists: {path.name}"):
+    with pytest.raises(
+        ServiceError, match=f"worktree definition already exists: {path.name}"
+    ):
         save_worktree_definition(tmp_path, definition)
 
 
@@ -393,7 +402,14 @@ def test_save_worktree_definition_allows_same_task_id_for_different_projects(
         )
 
     assert all(isinstance(result, Path) for result in results)
-    assert len(list(worktree_definition_path(tmp_path, definitions[0]).parent.glob("*.yaml"))) == 2
+    assert (
+        len(
+            list(
+                worktree_definition_path(tmp_path, definitions[0]).parent.glob("*.yaml")
+            )
+        )
+        == 2
+    )
 
 
 def test_list_worktree_definitions_reports_recoverable_inconsistencies(
@@ -414,11 +430,19 @@ def test_list_worktree_definitions_reports_recoverable_inconsistencies(
     assert invalid.definition is None
     assert invalid.diagnostics[0].startswith("invalid worktree definition YAML")
     assert renamed.definition == definition
-    assert "worktree definition name does not match identity: renamed.yaml" in renamed.diagnostics
-    assert "worktree directory is missing: projects/worktrees/local-072" in renamed.diagnostics
+    assert (
+        "worktree definition name does not match identity: renamed.yaml"
+        in renamed.diagnostics
+    )
+    assert (
+        "worktree directory is missing: projects/worktrees/local-072"
+        in renamed.diagnostics
+    )
 
 
-def _save_result(workspace_root: Path, definition: WorktreeDefinition) -> Path | ServiceError:
+def _save_result(
+    workspace_root: Path, definition: WorktreeDefinition
+) -> Path | ServiceError:
     try:
         return save_worktree_definition(workspace_root, definition)
     except ServiceError as error:

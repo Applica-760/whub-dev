@@ -12,9 +12,9 @@ from whub.models import project_names
 from whub.services.errors import ServiceError
 from whub.services.worktree import (
     create_project_worktree,
+    inspect_worktrees,
     remove_project_worktree,
 )
-from whub.services.worktree_check import inspect_worktrees
 from whub.utils.render import render_table
 from whub.wflow.models.task import TASK_ID_PATTERN
 

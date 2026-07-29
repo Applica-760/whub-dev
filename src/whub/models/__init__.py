@@ -20,6 +20,7 @@ from whub.models.worktree import (
     WorktreeDefinition,
     WorktreeDefinitionRecord,
     WorktreeInspection,
+    WorktreeStatus,
 )
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "WorktreeDefinition",
     "WorktreeDefinitionRecord",
     "WorktreeInspection",
+    "WorktreeStatus",
     "load_manifest",
     "load_todos",
     "project_names",

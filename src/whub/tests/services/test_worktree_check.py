@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from whub.models import Manifest, WorktreeDefinition
 from whub.services.worktree import save_worktree_definition
-from whub.services.worktree_check import inspect_worktrees
+from whub.services.worktree.check import inspect_worktrees
 from whub.tests.helpers import manifest_data
 
 
@@ -38,7 +38,7 @@ def test_inspect_worktrees_accepts_matching_git_worktree(tmp_path: Path) -> None
     destination.mkdir(parents=True)
     save_worktree_definition(tmp_path, definition)
     with patch(
-        "whub.services.worktree_check.run_git",
+        "whub.services.worktree.check.run_git",
         return_value=subprocess.CompletedProcess(
             [], 0, stdout=_git_worktree_output(destination)
         ),
@@ -57,7 +57,7 @@ def test_inspect_worktrees_reports_missing_git_worktree(tmp_path: Path) -> None:
     (tmp_path / definition.workspace_path).mkdir(parents=True)
     save_worktree_definition(tmp_path, definition)
     with patch(
-        "whub.services.worktree_check.run_git",
+        "whub.services.worktree.check.run_git",
         return_value=subprocess.CompletedProcess([], 0, stdout=""),
     ):
         inspections = inspect_worktrees(_manifest(source), tmp_path)
@@ -75,7 +75,7 @@ def test_inspect_worktrees_reports_branch_mismatch(tmp_path: Path) -> None:
     destination.mkdir(parents=True)
     save_worktree_definition(tmp_path, definition)
     with patch(
-        "whub.services.worktree_check.run_git",
+        "whub.services.worktree.check.run_git",
         return_value=subprocess.CompletedProcess(
             [], 0, stdout=_git_worktree_output(destination, "tasks/999")
         ),

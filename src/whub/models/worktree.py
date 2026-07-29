@@ -65,3 +65,14 @@ class WorktreeInspection:
     @property
     def definition(self) -> WorktreeDefinition | None:
         return self.record.definition
+
+
+@dataclass(frozen=True)
+class WorktreeStatus:
+    """Read-only worktree state for status and web presentation."""
+
+    parent_project: str | None
+    task_id: str | None
+    branch: str | None
+    workspace_path: str | None
+    diagnostics: tuple[str, ...] = ()

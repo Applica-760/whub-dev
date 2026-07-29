@@ -22,4 +22,8 @@ def run_git(parent: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
 
 def process_detail(result: subprocess.CompletedProcess[str]) -> str:
     """Return a concise failure detail for a completed Git process."""
-    return result.stderr.strip() or result.stdout.strip() or f"exit status {result.returncode}"
+    return (
+        result.stderr.strip()
+        or result.stdout.strip()
+        or f"exit status {result.returncode}"
+    )

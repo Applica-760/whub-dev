@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-075
-  state: draft
+  state: in_progress
   title: worktree表示を統合する
   objective: 子worktreeを親Projectとの関係、branch、作業path、登録状態とともにCLI・status・Web appで識別・表示する
   approach:
@@ -12,9 +12,86 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: Worktree状態の読み取り契約を定義する
+    acceptance: []
+    steps:
+    - description: 既存の inspect_worktrees を読み取り専用で利用し、親Project・Task・branch・workspace
+        path・登録診断を表す統合表示用の結果を定義する
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: 正常登録、不正YAML、directory欠損、Git不整合を個別登録のdiagnosticとして継続表示し、sessionの起動・再接続・対応保存には触れないことをserviceテストで固定する
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: services/worktree packageへ再編し、definition.pyに定義YAMLのpath・保存・探索を集約する。operation.pyに親Projectの適格性判定とcreate/removeを置き、check.py・git.py・status.pyへ既存の検査・Git操作・表示用読み取りを分離する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 既存のinspection結果だけを入力として、親Project・Task・branch・workspace path・登録diagnosticを表すWorktreeStatusと収集serviceを定義する。操作・Git・YAMLの変更やsessionの起動・再接続・対応保存は行わない
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 正常登録、不正YAML、directory欠損、Git不整合を個別登録のdiagnosticとして継続表示し、package再編後のimport境界と読み取り専用契約をserviceテストで固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: services/worktreeをdefinition・operation・check・git・statusへ再編し、WorktreeStatusの読み取り投影を追加。ruff
+          checkとworktree関連pytest 30件が成功。
+      deleted: false
+    deleted: false
+  - title: Statusの総合診断へ統合する
+    acceptance: []
+    steps:
+    - description: whub status が既存resource状態の収集後にworktree診断を実行し、登録件数と異常の有無を簡潔に表示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: worktree診断がなければ従来どおり正常終了し、diagnosticが一つでもあれば非0で終了する。resource表へ子worktree行は追加せず、詳細は
+        worktree check に委ねる
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Web appにworktree一覧を追加する
+    acceptance: []
+    steps:
+    - description: Worktree状態を返す読み取り専用APIを追加し、親Project・Task・branch・workspace path・登録状態・diagnosticをOpenAPI契約として公開する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Web appにworktree専用の一覧表示を追加し、親Projectとの関係、branch、作業path、登録状態を表示する。resource
+        Status widgetの既存表構造は変更しない
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 契約を検証し文書化する
+    acceptance: []
+    steps:
+    - description: service・CLI・API・Reactの自動テストで、正常登録、登録なし、不正YAML、directory欠損、Git不整合、およびstatus終了コードを検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: worktree referenceとCLI referenceに、statusは総合診断、worktree checkとWeb
+        appは詳細表示という責務、終了コード、sessionを扱わない境界を記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: worktree serviceを責務単位のpackageへ再編し、status/Web向けread modelの境界を固定するため
 cancellation: null
 result: null
