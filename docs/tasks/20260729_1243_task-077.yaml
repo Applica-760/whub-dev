@@ -7,8 +7,8 @@ task:
   approach:
   - allow・prompt・deny、filesystem・network・Git・外部ツールを共通ポリシーとして表し、Agentで強制不能な規則は起動不可とする
   depends_on: []
-  interruption_task_id: null
-  interruption_reason: null
+  interruption_task_id: TASK-081
+  interruption_reason: TASK-077の成果を安全にPR・mergeして統合するため、worktreeのPR/merge lifecycleを先に定義・実装する必要がある。
   interruption_source_task_id: null
 plan:
   acceptance: []
@@ -66,6 +66,24 @@ plan:
     - value:
         result: workspace-hub直下のClaude設定のBash許可をargv prefix 25件と完全一致6件へ分類し、roles/base/agent-auth.yamlへ記録した。filesystem、network、external_toolsは空のままにした。
       deleted: false
+    - value:
+        decision: base agent authのfilesystem readは、Hubの論理ツリー全体を対象にする。Hub直下から登録済みのdirectory
+          symlinkおよびmountを経由して到達するProject配下も含め、通常の調査コマンドを許可する。これは秘密情報隔離の境界ではなくworkspace調査の境界として扱う。
+      deleted: false
+    - value:
+        decision: filesystem readでは、Hub直下で登録されたdirectory symlinkおよびmountだけを論理ツリーへの入口として許可する。Project内部のsymlinkを追加で辿って読むことは禁止する。
+      deleted: false
+    - value:
+        decision_update: MVPではProject内部のnested symlinkを特別扱いしない。追跡可否と境界は必要になった時点で別途定義する。
+      deleted: false
+    - value:
+        result: agent-auth YAML templateに、workspace-hub固有のhub_logical_tree scopeとread
+          accessの例を追加した。scope名は文脈依存で、adapterが具体的pathへ解決することをコメントに記録した。YAML解析成功。
+      deleted: false
+    - value:
+        result: base agent authへhub_logical_treeのread scopeを追加し、filesystem scopeで制限できるls/tree/stat/file/wc/du/cat/head/tail/grepを有効化した。dfは全mount
+          metadataを返すためsystem metadata権限の定義まで保留。YAML解析成功。
+      deleted: false
     deleted: false
   - title: 初期規約を文書化し検証する
     acceptance: []
@@ -74,7 +92,24 @@ plan:
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        proposal: whub runに--auth base[,extension...]を追加し、指定時だけprofileを評価して未許可argvをSSH実行前に拒否する。既存whub
+          runは人間の運用との互換性を維持する。profile選択方法・filesystem強制方法・常時強制化は未決定で、受け入れ条件には未追加。
+      deleted: false
+    - value:
+        finding: whubはls/status/shell-init/worktree check、remote sessionのls/show/logsなどを非変更コマンドとして確認。wflowはcheckとtask
+          check/show/lsが非変更だが、必須の--project <project>がsubcommandより前にあり、現行の固定argv prefix/exactではtask
+          read系だけを安全に表現できない。release verifyはvenv作成とrelease.json書込みを行うため除外。
+      deleted: false
+    - value:
+        result: base agent authへ、ローカル非変更のwhub ls/shell-init/worktree check、whub todo一覧2形態、wflow
+          checkを追加した。wflow task read系は--projectがtask直後必須で現行固定argv schemaでは安全に表現できないため未追加。YAML解析成功。
+      deleted: false
+    - value:
+        result: wflow taskのread系はProject名をwhub-devへ固定して追加した。task check/showはTask ID可変のためprefix、引数なしtask
+          lsはexact。任意Project対応は型付き可変引数を表現できるschema拡張へ保留。YAML解析成功。
+      deleted: false
     deleted: false
 approvals:
 - actor: user

@@ -1,0 +1,32 @@
+schema_version: 1
+task:
+  id: TASK-080
+  state: draft
+  title: dev API serverのreload監視によるCPU常時消費を解消する
+  objective: uvicorn --reloadの監視方式に起因するdev API serverのCPU常時消費を解消し、開発時のreload監視コストを継続的に抑える
+  approach:
+  - '案A: watchfilesをdev依存に追加し、WatchFilesReload(FSEventsベース)を使わせる'
+  - '案B: runnerのuvicorn起動に--reload-dirを追加し、監視対象をsrc/whubへ限定する'
+  - '案C: reload_delayを延ばしてポーリング頻度を下げる'
+  - '案D: dev serverのライフサイクル管理を見直し、起動しっぱなしを防ぐ'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 事象調査
+    acceptance: []
+    steps:
+    - description: CPU常時消費の発生条件と原因を特定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
