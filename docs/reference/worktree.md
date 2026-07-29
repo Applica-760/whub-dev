@@ -1,10 +1,10 @@
 # Worktree リファレンス
 
-状態: TASK-072 で実装する予定の契約。`whub worktree` は未実装。
+状態: TASK-074で実装中の契約。
 
 ## 目的
 
-子 worktree は一つの manifest Project と一つの Task に属する。コードと
+子 worktree は一つの親Projectと一つのTaskに属する。コードと
 operation data を分離し、operation data は workspace root 配下で子 worktree
 と隣接して管理する。
 
@@ -34,7 +34,7 @@ workspace_path: projects/worktrees/whub-dev-072
 
 - `task_id`、`parent_project`、`branch`、`workspace_path` が一つの子 worktree を識別する。
 - Task と worktree は一対一に対応する。
-- Task、branch、workspace path は他の定義と重複してはならない。
+- 親ProjectとTaskの組、同一親Project内のbranch、workspace pathは他の定義と重複してはならない。
 - directory と YAML の名前は `<project>-<task-number>`、branch は
   `tasks/<task-number>` とする。`task-number` はwflowのTask ID
   `TASK-<task-number>`から取り出した数値部分である。
@@ -52,8 +52,7 @@ workspace_path: projects/worktrees/whub-dev-072
 適格性を定義しない。Git コマンドの失敗は operation failure として扱い、定義 YAML を
 変更せずに報告する。
 
-MVP は local Resource（`symlink`）だけを親にできる。remote Resource の worktree は
-対象外とする。
+MVP は local Resource（`symlink`）だけを親にできる。remote Resource を指定すると、未実装であることを示すエラーを返す。
 
 ## 削除の境界
 

@@ -69,10 +69,23 @@ plan:
           run pytest src/whub/tests/services/test_worktree.pyで21件、ruff checkで成功。
       deleted: false
     deleted: false
+  - title: CLI契約を文書化する
+    acceptance: []
+    steps:
+    - description: whub worktree create・check・removeの引数、対象選択、出力、diagnostic、終了コード、非破壊境界をreferenceへ記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 一般契約をworktree referenceへ、create・check・removeの引数と操作規約をCLI referenceへ分離して記録し、git
+          diff --checkとTask YAML検証で成功。
+      deleted: false
+    deleted: false
   - title: CLI adapterを実装する
     acceptance: []
     steps:
-    - description: whub worktree配下へcreate・list・removeを追加し、引数解釈と表示だけをCLI adapterに置く。serviceの診断・未実装remoteエラーを利用者向けに表示し、失敗時は非0で終了する
+    - description: whub worktree配下へcreate・check・removeを追加し、引数解釈と表示だけをCLI adapterに置く。serviceの診断・未実装remoteエラーを利用者向けに表示し、失敗時は非0で終了する
       state: pending
       skip_reason: null
       deleted: false
@@ -94,9 +107,11 @@ plan:
 approvals:
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: Task IDはProjectごとの識別子であるため、worktreeの一意性をparent_projectとtask_idの組へ修正し、create時のTask
     YAML存在・所属検証を追加する
+- reason: 採用済みの文書先行方針に合わせ、CLI実装前にcreate・check・removeの引数・出力・終了コード契約をreferenceへ記録する。listはcheckへ統合する
 cancellation: null
 result: null
