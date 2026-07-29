@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-077
-  state: in_progress
+  state: completed
   title: Agentロールと権限ポリシーを定義する
   objective: Agent非依存のロール・権限ポリシーをSSOTとして定義し、CodexとClaude Codeを含む実行環境へ安全に変換できる判断基準を文書化する
   approach:
@@ -129,4 +129,6 @@ acceptance_results: []
 change_requests:
 - reason: 基底roleと用途別拡張roleの合成モデルを導入し、用語・評価規則・asset配置を先に確定する必要があるため
 cancellation: null
-result: null
+result:
+  summary: 'base/implementer role authorization profile、テンプレート、agent-auth文書を整備し、PR
+    #1を通常mergeしてcleanup済み。'
