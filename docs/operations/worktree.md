@@ -22,5 +22,19 @@ worktreeなしのTaskは、全Stepの検証と通常のcommit後に`wflow task -
 
 登録済みworktreeのTaskは、全Stepの検証後にユーザーへPR作成を依頼する。PR作成は
 `whub worktree pull-request <project> <TASK-ID>`、mergeはユーザーが指定した方式で
-`whub worktree merge <project> <TASK-ID> --method <method>`を実行する。GitHubでのmergeと
-cleanupが成功した後にだけ、`wflow task --project <project> complete`でTaskを完了する。
+`whub worktree merge <project> <TASK-ID> --method <method>`を実行する。
+
+### Project側との同期
+
+`whub worktree pull-request`がpushするのはworktree branchだけであり、Project側の`main`に
+あるcommitはpushしない。Taskの再開記録など、Project側で作られたcommitはPR作成前に
+`git push origin main`で反映する。
+
+1. Project側のTask記録をcommitし、`git push origin main`する。
+2. `whub worktree pull-request <project> <TASK-ID>`でworktree branchをpushしてPRを作成する。
+3. ユーザー指定の方式で`whub worktree merge <project> <TASK-ID> --method <method>`を実行する。
+4. cleanup後、Project側で`git pull --ff-only`を実行する。
+5. `wflow task --project <project> complete`でTaskを完了し、生成されたTask YAMLをcommit・pushする。
+
+`git pull --ff-only`が失敗した場合は、Project側に未push commitが残っているため、merge前に
+Project側のcommit/pushを完了してから同期する。
