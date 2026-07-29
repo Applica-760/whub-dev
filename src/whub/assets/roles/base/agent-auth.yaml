@@ -4,34 +4,47 @@ type: base
 grants:
   commands:
     prefixes:
-      # 次のコマンドは対象pathの内容、構造、またはmetadataを読める。
-      # filesystem権限を定義してからbaseへ追加する。
-      # - ["ls"]
-      # - ["tree"]
-      # - ["stat"]
-      # - ["file"]
-      # - ["wc"]
-      # - ["du"]
-      # - ["df"]
-      # - ["cat"]
-      # - ["head"]
-      # - ["tail"]
-      # - ["grep"]
+      # filesystem
+      - ["ls"]
+      - ["tree"]
+      - ["stat"]
+      - ["file"]
+      - ["wc"]
+      - ["du"]
+      - ["cat"]
+      - ["head"]
+      - ["tail"]
+      - ["grep"]
+
+      # system
       - ["which"]
       - ["uname"]
       - ["ps"]
+
+      # git
       - ["git", "status"]
       - ["git", "log"]
       - ["git", "ls-files"]
+
+      # system metadata
+      # dfは対象pathに限定できず、全mountのmetadataを返す。
+      # system metadata権限を定義してからbaseへ追加する。
+      # - ["df"]
     exact:
+      # system
       - ["date"]
       - ["whoami"]
+
+      # git
       - ["git", "diff"]
       - ["git", "show"]
       - ["git", "branch"]
       - ["git", "branch", "-a"]
       - ["git", "branch", "-r"]
       - ["git", "branch", "--show-current"]
-  filesystem: []
+  filesystem:
+    # workspace-hubのHub論理ツリーを指すscope。adapterが具体的なpathへ解決する。
+    - scope: hub_logical_tree
+      access: read
   network: []
   external_tools: []

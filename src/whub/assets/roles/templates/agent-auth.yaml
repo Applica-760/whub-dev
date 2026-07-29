@@ -5,6 +5,11 @@ grants:
   commands:
     prefixes: []  # argvがこの配列で始まる実行を許可する。
     exact: []     # argv全体がこの配列と一致する実行だけを許可する。
-  filesystem: []
+  filesystem:
+    # scopeはadapterが具体的なpathへ解決する文脈依存の名前。
+    # hub_logical_treeはworkspace-hubでは、Hub直下と直下のdirectory symlink/mountで
+    # 到達するProject配下を指す。他のworkspaceでは固有のscope名を定義する。
+    - scope: hub_logical_tree
+      access: read
   network: []
   external_tools: []

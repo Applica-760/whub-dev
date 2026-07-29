@@ -22,8 +22,18 @@ agent authはcommand、filesystem、network、外部ツールを対象とする�
 - どのagent authにも記載されない行動に、権限は与えない。
 - extension agent authの選択順序は権限の意味を変えない。
 
+## Filesystem authorization
+
+base agent authはHubの論理ツリー全体にreadを付与する。Hub直下の通常ファイル・ディレクトリに加え、Hub直下で登録されたdirectory symlinkまたはmountを入口として、そのProject配下の通常ファイル・ディレクトリを読める。
+
+- `ls`、`tree`、`stat`、`file`、`wc`、`cat`、`head`、`tail`、`grep`などのread操作は、この範囲でのみ行う。
+- MVPではProject内部のnested symlinkを特別扱いしない。必要性が生じた時点で、追跡可否と境界を別途定義する。
+- `..`、未登録の絶対path、または許可された入口以外からHub論理ツリーの外へ出るpathは拒否する。
+- このread範囲はworkspace調査の境界であり、秘密情報の隔離境界ではない。許可されたProject内のファイルはAgentから読める。
+- Agent adapterはこの契約を強制できるfilesystem境界へ変換しなければならない。
+
 ## Deferred
 
 - agent authの機械可読形式、配置、検証方法
-- command、filesystem、network、外部ツールごとの具体的な許可項目
+- command、network、外部ツールごとの具体的な許可項目
 - Agent adapterへの変換方法
