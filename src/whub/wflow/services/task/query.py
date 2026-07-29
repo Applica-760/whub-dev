@@ -11,7 +11,6 @@ from whub.wflow.services.errors import WflowError
 from whub.wflow.services.task.common import (
     iter_task_paths,
     load_task,
-    resolve_task_reference,
 )
 from whub.wflow.services.task.integrity import validate_task, validate_task_interruption
 from whub.wflow.services.workflow import load_workflow

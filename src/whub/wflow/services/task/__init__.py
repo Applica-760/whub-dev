@@ -3,7 +3,12 @@
 from whub.wflow.services.task.graph import render_task_flow
 from whub.wflow.services.task.eligibility import dependency_start_diagnostics
 from whub.wflow.services.task.integrity import validate_task, validate_task_interruption
-from whub.wflow.services.task.common import archive_task, create_task, write_task
+from whub.wflow.services.task.common import (
+    archive_task,
+    create_task,
+    resolve_task_reference,
+    write_task,
+)
 from whub.wflow.services.task.operation import (
     append_phase_log,
     complete_step,
@@ -29,7 +34,6 @@ from whub.wflow.services.task.query import (
     load_task,
     load_task_records,
     load_task_workflow,
-    resolve_task_reference,
 )
 
 __all__ = [

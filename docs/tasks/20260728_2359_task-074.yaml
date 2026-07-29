@@ -100,14 +100,18 @@ plan:
     acceptance: []
     steps:
     - description: 登録、作成、一覧、削除、remote拒否、Git失敗、不整合、未コミット変更をservice・CLI境界で自動テストする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: worktreeとCLI referenceを実装済みの操作契約へ更新し、稼働sessionの検出・削除拒否はTask、worktree、sessionの対応を保存・検証する後続Taskの責務として記録する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: 全体pytest 474件と全体ruff checkが成功。CLI referenceは引数規約、worktree referenceは一般契約として整合し、worktree
+          referenceの状態を実装済みに更新した。
+      deleted: false
     deleted: false
 approvals:
 - actor: user
