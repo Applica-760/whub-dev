@@ -1,0 +1,37 @@
+name: base
+type: base
+
+grants:
+  commands:
+    prefixes:
+      - ["ls"]
+      - ["tree"]
+      - ["stat"]
+      - ["file"]
+      - ["wc"]
+      - ["df"]
+      - ["cat"]
+      - ["head"]
+      - ["tail"]
+      # grepとduは対象pathの内容または構造を読める。
+      # filesystem権限を定義してからbaseへ追加する。
+      # - ["du"]
+      # - ["grep"]
+      - ["which"]
+      - ["uname"]
+      - ["ps"]
+      - ["git", "status"]
+      - ["git", "log"]
+      - ["git", "ls-files"]
+    exact:
+      - ["date"]
+      - ["whoami"]
+      - ["git", "diff"]
+      - ["git", "show"]
+      - ["git", "branch"]
+      - ["git", "branch", "-a"]
+      - ["git", "branch", "-r"]
+      - ["git", "branch", "--show-current"]
+  filesystem: []
+  network: []
+  external_tools: []

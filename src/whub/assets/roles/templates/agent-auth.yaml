@@ -1,0 +1,10 @@
+name:
+type: base
+
+grants:
+  commands:
+    prefixes: []  # argvがこの配列で始まる実行を許可する。
+    exact: []     # argv全体がこの配列と一致する実行だけを許可する。
+  filesystem: []
+  network: []
+  external_tools: []
