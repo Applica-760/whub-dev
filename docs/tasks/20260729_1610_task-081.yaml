@@ -1,0 +1,97 @@
+schema_version: 1
+task:
+  id: TASK-081
+  state: in_progress
+  title: worktreeのPRとmerge lifecycleを実装する
+  objective: Task worktreeのpull request作成、明示承認後のmerge、統合済みworktreeの安全なcleanupを定義・実装する
+  approach:
+  - 既存のworktree create/check/remove契約を拡張し、PR作成とmergeを明示コマンドとして分離する。merge成功後だけcleanなworktreeをremoveする。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: TASK-077
+plan:
+  acceptance: []
+  phases:
+  - title: PR/merge lifecycleの契約を決める
+    acceptance: []
+    steps:
+    - description: worktreeの対象識別子、PR作成、merge方式、成功後cleanupの契約を決定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: GitHub専用、manifest.git.branchを統合先、TASK-IDをPRタイトル、GitHub branch protectionを承認の正本とし、merge成功後だけremoveする契約をreferenceへ記録した。
+      deleted: false
+    deleted: false
+  - title: GitHub PR作成を実装する
+    acceptance: []
+    steps:
+    - description: 登録済みworktree、Task YAML、manifest.git.branchを共通に解決し、gh実行失敗をServiceErrorへ変換するservice境界を追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: cleanなtask branchをpushし、同一head/baseのopen PRがあればURLを返し、なければTASK-IDタイトルで作成するPR
+        serviceを実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: worktree identityを受け取るpull-request CLIを追加し、PR URLと利用者向けエラーを表示する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: PR作成serviceとCLIの正常系、未コミット変更、base未設定、PR再実行、gh失敗をfocused testで検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 登録済みworktree・Task・base branchを解決するResolvedProjectWorktreeと、worktree内でghを起動するhelperを追加した。focused
+          test 22件とruff checkが成功。
+      deleted: false
+    - value:
+        result: cleanなtask branchをpushし、同じhead/baseのopen PRはURLを返し、存在しない場合はTASK-IDをタイトルにGitHub
+          PRを作成するserviceを実装した。focused test 25件とruff checkが成功。
+      deleted: false
+    - value:
+        result: worktree pull-request CLIを追加し、PR URLを表示する薄いadapterとしてservice errorをClick
+          errorへ変換した。command/service focused test 30件とruff checkが成功。
+      deleted: false
+    - value:
+        result: sub-agentによる境界テストをレビューし、base branch未設定、gh lookup/create失敗、dirty worktree、既存PR再利用、CLI
+          errorを検証した。focused test 34件とruff checkが成功。
+      deleted: false
+    deleted: false
+  - title: GitHub mergeと安全なcleanupを実装する
+    acceptance: []
+    steps:
+    - description: merge方式を明示必須とし、cleanかつ整合したworktreeだけをGitHubでmergeして、成功後だけ既存removeを呼ぶserviceを実装する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: worktree identityとmerge方式を受け取るmerge CLIを追加し、GitHubのreview・branch
+        protection・required checksによる拒否を利用者向けに表示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: merge serviceとCLIの方式検証、GitHub拒否、merge後cleanup、cleanup失敗時の残存、branch非削除をfocused
+        testで検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: CLI referenceとworktree referenceを実装済み契約へ更新し、focused test、uv run
+        pytest、ruff checkで回帰を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: GitHub専用、PR作成のidempotency、未コミット変更の拒否を反映し、service・CLI・検証を独立Stepへ分解するため
+cancellation: null
+result: null

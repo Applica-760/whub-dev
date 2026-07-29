@@ -88,3 +88,34 @@ def test_create_renders_service_errors(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "task not found: local/TASK-072" in result.output
+
+
+def test_pull_request_renders_url(tmp_path: Path) -> None:
+    with (
+        patch("whub.commands.worktree.get_manifest", return_value=manifest()),
+        patch("whub.commands.worktree.current_context", return_value=_context(tmp_path)),
+        patch(
+            "whub.commands.worktree.create_project_pull_request",
+            return_value="https://example/pr/72",
+        ) as create,
+    ):
+        result = CliRunner().invoke(worktree, ["pull-request", "local", "TASK-072"])
+
+    assert result.exit_code == 0
+    assert "https://example/pr/72" in result.output
+    create.assert_called_once_with(manifest(), tmp_path, "local", "TASK-072")
+
+
+def test_pull_request_renders_service_errors(tmp_path: Path) -> None:
+    with (
+        patch("whub.commands.worktree.get_manifest", return_value=manifest()),
+        patch("whub.commands.worktree.current_context", return_value=_context(tmp_path)),
+        patch(
+            "whub.commands.worktree.create_project_pull_request",
+            side_effect=ServiceError("gh PR lookup failed: not logged in"),
+        ),
+    ):
+        result = CliRunner().invoke(worktree, ["pull-request", "local", "TASK-072"])
+
+    assert result.exit_code != 0
+    assert "gh PR lookup failed: not logged in" in result.output

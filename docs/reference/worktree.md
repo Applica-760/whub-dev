@@ -1,6 +1,6 @@
 # Worktree リファレンス
 
-状態: TASK-074で実装済みの契約。
+状態: TASK-074で実装済みの契約。PR/merge lifecycleはTASK-081で実装予定。
 
 ## 目的
 
@@ -60,6 +60,18 @@ worktree を削除する前に、tracked と untracked のいずれも変更が�
 確認する。削除は Git worktree の実体と WorktreeDefinition YAML だけを対象とし、branch
 は残す。削除が `git add`、`git commit`、`git push`、branch 削除を暗黙に実行しては
 ならない。変更の公開と branch 削除は、削除とは別の明示的な操作とする。
+
+## PR と merge lifecycle
+
+PR と merge はGitHub専用操作とし、GitHub CLI `gh`を利用する。対象は既存の
+`parent_project` と `task_id` の組で特定する。PR作成時はtask branchをpushし、
+`manifest.git.branch` を統合先にする。PRのタイトルは `TASK-ID` とし、作業内容は
+対象Task YAMLを正本とする。
+
+merge方式は明示必須とする。レビュー承認、branch protection、required checksは
+GitHubを正本とし、CLIは承認を記録・代行しない。GitHubでmergeが成功した場合だけ、
+既存の安全なremove操作でcleanなworktreeと定義YAMLを削除する。mergeまたはcleanupが
+失敗した場合は、対象を削除しない。PR操作とcleanupはいずれもtask branchを削除しない。
 
 ## Status と Web app
 

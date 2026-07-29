@@ -11,6 +11,7 @@ from whub.core.context import current_context
 from whub.models import project_names
 from whub.services.errors import ServiceError
 from whub.services.worktree import (
+    create_project_pull_request,
     create_project_worktree,
     inspect_worktrees,
     remove_project_worktree,
@@ -51,6 +52,22 @@ def create(ctx: click.Context, project: str, task_id: str) -> None:
         [(project, task_id, f"tasks/{number}", destination)],
         headers=("project", "task", "branch", "workspace path"),
     )
+
+
+@worktree.command(name="pull-request")
+@click.argument("project", shell_complete=project_names)
+@click.argument("task_id", callback=lambda _ctx, _param, value: _task_id(value))
+@click.pass_context
+def pull_request(ctx: click.Context, project: str, task_id: str) -> None:
+    """Create or show PROJECT's pull request for TASK_ID."""
+    workspace_root = current_context().workspace_root
+    try:
+        url = create_project_pull_request(
+            get_manifest(ctx), workspace_root, project, task_id
+        )
+    except ServiceError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"pull request {project}/{task_id}: {url}")
 
 
 @worktree.command()

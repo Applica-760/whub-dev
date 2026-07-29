@@ -2,13 +2,27 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from whub.models import Manifest, RemoteResource, SymlinkResource, WorktreeDefinition
 from whub.services.errors import ServiceError
 from whub.services.task import load_project_task
 from whub.services.worktree.definition import save_worktree_definition
+from whub.services.worktree.github import run_gh
 from whub.services.worktree.git import process_detail, run_git
+from whub.wflow.models.task import TaskDocument
+
+
+@dataclass(frozen=True)
+class ResolvedProjectWorktree:
+    """One consistent registered worktree and its PR lifecycle inputs."""
+
+    definition: WorktreeDefinition
+    parent: Path
+    destination: Path
+    task: TaskDocument
+    base_branch: str
 
 
 def _require_worktree_parent(manifest: Manifest, project: str) -> SymlinkResource:
@@ -33,6 +47,108 @@ def _require_worktree_parent(manifest: Manifest, project: str) -> SymlinkResourc
 def resolve_worktree_parent(manifest: Manifest, definition: WorktreeDefinition) -> Path:
     """Resolve DEFINITION's current local parent repository path."""
     return Path(_require_worktree_parent(manifest, definition.parent_project).source)
+
+
+def resolve_project_worktree(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> ResolvedProjectWorktree:
+    """Resolve one cleanly registered worktree and its GitHub PR inputs."""
+    from whub.services.worktree.check import inspect_worktrees
+
+    inspection = next(
+        (
+            item
+            for item in inspect_worktrees(manifest, workspace_root)
+            if item.definition is not None
+            and item.definition.parent_project == project
+            and item.definition.task_id == task_id
+        ),
+        None,
+    )
+    if inspection is None:
+        raise ServiceError(f"worktree definition not found: {project}/{task_id}")
+    if inspection.diagnostics:
+        raise ServiceError(
+            "cannot use inconsistent worktree: " + "; ".join(inspection.diagnostics)
+        )
+    definition = inspection.definition
+    assert definition is not None
+    resource = _require_worktree_parent(manifest, project)
+    assert resource.git is not None
+    if resource.git.branch is None:
+        raise ServiceError(f"worktree parent has no git branch declaration: {project}")
+    return ResolvedProjectWorktree(
+        definition=definition,
+        parent=Path(resource.source),
+        destination=workspace_root / definition.workspace_path,
+        task=load_project_task(manifest, project, definition.task_id),
+        base_branch=resource.git.branch,
+    )
+
+
+def _require_clean_worktree(worktree: ResolvedProjectWorktree) -> None:
+    """Reject a worktree whose branch does not fully represent its contents."""
+    status = run_git(
+        worktree.destination, "status", "--porcelain", "--untracked-files=all"
+    )
+    if status.returncode != 0:
+        raise ServiceError("git status failed: " + process_detail(status))
+    if status.stdout.strip():
+        raise ServiceError(
+            f"worktree has uncommitted changes: {worktree.definition.workspace_path}"
+        )
+
+
+def create_project_pull_request(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> str:
+    """Push a clean task branch and create or return its open GitHub PR."""
+    worktree = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    _require_clean_worktree(worktree)
+    pushed = run_git(
+        worktree.destination,
+        "push",
+        "--set-upstream",
+        "origin",
+        worktree.definition.branch,
+    )
+    if pushed.returncode != 0:
+        raise ServiceError("git push failed: " + process_detail(pushed))
+    existing = run_gh(
+        worktree.destination,
+        "pr",
+        "list",
+        "--head",
+        worktree.definition.branch,
+        "--base",
+        worktree.base_branch,
+        "--state",
+        "open",
+        "--json",
+        "url",
+        "--jq",
+        ".[0].url",
+    )
+    if existing.returncode != 0:
+        raise ServiceError("gh PR lookup failed: " + process_detail(existing))
+    if existing.stdout.strip():
+        return existing.stdout.strip()
+    created = run_gh(
+        worktree.destination,
+        "pr",
+        "create",
+        "--base",
+        worktree.base_branch,
+        "--head",
+        worktree.definition.branch,
+        "--title",
+        worktree.definition.task_id,
+        "--body",
+        "",
+    )
+    if created.returncode != 0:
+        raise ServiceError("gh PR create failed: " + process_detail(created))
+    return created.stdout.strip()
 
 
 def create_project_worktree(
