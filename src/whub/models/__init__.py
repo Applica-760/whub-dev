@@ -15,6 +15,7 @@ from whub.models.manifest import (
 )
 from whub.models.session import SessionDescriptor, SessionPane, SessionTmux
 from whub.models.todo import PRIORITY_EMOJI, Todo, Todos, load_todos, save_todos
+from whub.models.worktree import WorktreeDefinition
 
 __all__ = [
     "BaseResource",
@@ -32,6 +33,7 @@ __all__ = [
     "SymlinkResource",
     "Todo",
     "Todos",
+    "WorktreeDefinition",
     "load_manifest",
     "load_todos",
     "project_names",

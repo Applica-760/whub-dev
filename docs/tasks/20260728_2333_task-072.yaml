@@ -52,14 +52,17 @@ plan:
     steps:
     - description: WorktreeDefinitionのPydantic modelを追加し、Task ID・親Project・branch・workspace
         pathと命名規約の対応を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: manifestのgit宣言とlocal Resourceを検査し、worktree親として不適格なProjectを利用者向けエラーで拒否する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: WorktreeDefinitionと親資格判定を実装し、uv run pytestで450件成功。Task ID形式はwflowのTASK_ID_PATTERNを再利用する。
+      deleted: false
     deleted: false
   - title: 定義YAMLの保存と整合性を実装する
     acceptance: []

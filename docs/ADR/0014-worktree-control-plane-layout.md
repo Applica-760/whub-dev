@@ -19,7 +19,9 @@ symlinkする仕組みを追加で扱う必要がある。
 worktree control planeはworkspace rootの`projects/worktrees/`に置く。
 
 - 子worktreeの実体と`WorktreeDefinition` YAMLを同じdirectory直下に並べる。
-- directoryとYAMLの名前は`<project>-<NNN>`、branchは`tasks/<NNN>`とする。
+- directoryとYAMLの名前は`<project>-<task-number>`、branchは
+  `tasks/<task-number>`とする。`task-number`はwflowのTask ID
+  `TASK-<task-number>`から取り出した数値部分である。
 - `WorktreeDefinition` YAMLを先に作成し、YAMLの探索をworktree存在の正本とする。
 - 親資格はmanifestの`Resource.git`で判定する。MVPはlocal Resource（`symlink`）だけを
   対象とし、remote Resourceは対象外とする。
