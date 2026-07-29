@@ -1,6 +1,12 @@
 name: base
 type: base
 
+variables:
+  # argv内の値をwhubに登録済みのProject名として検証する。
+  # 未登録のProject名は実行を拒否する。
+  project:
+    source: registered_project
+
 grants:
   commands:
     prefixes:
@@ -26,10 +32,19 @@ grants:
       - ["git", "log"]
       - ["git", "ls-files"]
 
+      # whub
+      - ["whub", "ls"]
+      - ["whub", "shell-init"]
+      - ["whub", "worktree", "check"]
+
+      # wflow
+      - ["wflow", "check"]
+
       # system metadata
       # dfは対象pathに限定できず、全mountのmetadataを返す。
       # system metadata権限を定義してからbaseへ追加する。
       # - ["df"]
+      
     exact:
       # system
       - ["date"]
@@ -42,9 +57,35 @@ grants:
       - ["git", "branch", "-a"]
       - ["git", "branch", "-r"]
       - ["git", "branch", "--show-current"]
+
+      # whub
+      - ["whub", "todo"]
+      - ["whub", "todo", "-a"]
+    templates:
+      - mode: exact
+        argv: ["wflow", "task", "--project", "$project", "ls"]
+      - mode: prefix
+        argv: ["wflow", "task", "--project", "$project", "check"]
+      - mode: prefix
+        argv: ["wflow", "task", "--project", "$project", "show"]
+
   filesystem:
     # workspace-hubのHub論理ツリーを指すscope。adapterが具体的なpathへ解決する。
     - scope: hub_logical_tree
       access: read
-  network: []
-  external_tools: []
+
+  network:
+    outbound: []
+
+  external_tools:
+    - name: codegraph
+      transport: stdio
+      tools:
+        - codegraph_explore
+        - codegraph_search
+        - codegraph_node
+        - codegraph_callers
+        - codegraph_callees
+        - codegraph_impact
+        - codegraph_files
+        - codegraph_status

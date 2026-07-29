@@ -1,0 +1,40 @@
+name: implementer
+type: extension
+
+variables:
+  # adapterが現在のAgent実行に紐付くwhub worktree登録から解決する。
+  # worktreeが未登録、またはTaskとの対応が一意でない場合は実行を拒否する。
+  current_worktree:
+    source: registered_task_worktree
+    fields: [project, task, path]
+
+grants:
+  commands:
+    prefixes:
+      # verification and formatting
+      - ["uv", "run", "pytest"]
+      - ["uv", "run", "ruff", "check"]
+      - ["uv", "run", "ruff", "format"]
+      - ["npm", "test"]
+      - ["npm", "run", "test"]
+      - ["npm", "run", "format"]
+      - ["npm", "run", "format:check"]
+    exact: []
+    templates:
+      # Task lifecycleの変更ではなく、対応Taskの計画とStepだけを操作する。
+      - mode: prefix
+        argv: ["wflow", "task", "--project", "$current_worktree.project", "plan", "insert", "$current_worktree.task"]
+      - mode: prefix
+        argv: ["wflow", "task", "--project", "$current_worktree.project", "plan", "delete", "$current_worktree.task"]
+      - mode: prefix
+        argv: ["wflow", "task", "--project", "$current_worktree.project", "plan", "restore", "$current_worktree.task"]
+      - mode: prefix
+        argv: ["wflow", "task", "--project", "$current_worktree.project", "plan", "update", "$current_worktree.task"]
+      - mode: prefix
+        argv: ["wflow", "task", "--project", "$current_worktree.project", "done", "$current_worktree.task"]
+  filesystem:
+    - scope: current_worktree
+      access: write
+  network:
+    outbound: []
+  external_tools: []
