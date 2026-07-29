@@ -4,18 +4,18 @@ type: base
 grants:
   commands:
     prefixes:
-      - ["ls"]
-      - ["tree"]
-      - ["stat"]
-      - ["file"]
-      - ["wc"]
-      - ["df"]
-      - ["cat"]
-      - ["head"]
-      - ["tail"]
-      # grepとduは対象pathの内容または構造を読める。
+      # 次のコマンドは対象pathの内容、構造、またはmetadataを読める。
       # filesystem権限を定義してからbaseへ追加する。
+      # - ["ls"]
+      # - ["tree"]
+      # - ["stat"]
+      # - ["file"]
+      # - ["wc"]
       # - ["du"]
+      # - ["df"]
+      # - ["cat"]
+      # - ["head"]
+      # - ["tail"]
       # - ["grep"]
       - ["which"]
       - ["uname"]
