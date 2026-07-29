@@ -18,6 +18,7 @@ def test_openapi_schema_contains_all_resource_endpoints() -> None:
         "/api/daily",
         "/api/inbox",
         "/api/resources/status",
+        "/api/worktrees",
         "/api/tasks",
         "/api/tasks/all",
         "/api/tasks/{task_id}",

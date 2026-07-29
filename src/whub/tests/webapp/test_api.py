@@ -26,7 +26,7 @@ from fastapi.testclient import TestClient
 from whub.models import ManifestError
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
-from whub.services.status import ResourceStatus
+from whub.models import ResourceStatus, StatusReport, WorktreeStatus
 from whub.services.task import ProjectTasks
 from whub.services.vault import VaultNode
 from whub.tests.helpers import manifest
@@ -365,6 +365,43 @@ def test_get_resource_status_returns_service_results(client: TestClient) -> None
         ],
     }
     mock_collect.assert_called_once_with(m)
+
+
+def test_get_worktrees_returns_status_report_entries(
+    client: TestClient, tmp_path: Path
+) -> None:
+    m = manifest()
+    worktree = WorktreeStatus(
+        "local", "TASK-075", "tasks/075", "projects/worktrees/local-075"
+    )
+    report = StatusReport(
+        (ResourceStatus("local", "ok", "symlink", worktrees=(worktree,)),)
+    )
+    with (
+        patch("whub.webapp.routers.worktrees.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.worktrees.current_context",
+            return_value=type("Context", (), {"workspace_root": tmp_path})(),
+        ),
+        patch(
+            "whub.webapp.routers.worktrees.collect_status", return_value=report
+        ) as mock_collect,
+    ):
+        response = client.get("/api/worktrees")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "worktrees": [
+            {
+                "parent_project": "local",
+                "task_id": "TASK-075",
+                "branch": "tasks/075",
+                "workspace_path": "projects/worktrees/local-075",
+                "diagnostics": [],
+            }
+        ]
+    }
+    mock_collect.assert_called_once_with(m, tmp_path)
 
 
 def test_vault_endpoints_use_services(client: TestClient) -> None:

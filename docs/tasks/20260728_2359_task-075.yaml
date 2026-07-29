@@ -71,15 +71,23 @@ plan:
     acceptance: []
     steps:
     - description: Worktree状態を返す読み取り専用APIを追加し、親Project・Task・branch・workspace path・登録状態・diagnosticをOpenAPI契約として公開する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Web appにworktree専用の一覧表示を追加し、親Projectとの関係、branch、作業path、登録状態を表示する。resource
         Status widgetの既存表構造は変更しない
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        validation: 'whub worktree create whub-dev TASK-075でprojects/worktrees/whub-dev-075とtasks/075を作成。worktree
+          checkはok、whub statusはworktrees: 1 registered, okを表示。'
+      deleted: false
+    - value:
+        verification: GET /api/worktreesと/worktrees一覧を追加。生成型、Python pytest 476件、Vitest
+          26件、typecheck、buildが成功し、実データwhub-dev/TASK-075がブラウザでok表示されることを利用者が確認。
+      deleted: false
     deleted: false
   - title: 契約を検証し文書化する
     acceptance: []
