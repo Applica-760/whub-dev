@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-083
-  state: in_progress
+  state: completed
   title: Task interruptionとplan approvalの状態遷移を整合させる
   objective: 承認済みの子Taskを親Taskのinterruptとして開始できるよう、task-planning Skillとwflow Workflowの状態遷移を整合させる
   approach:
@@ -45,14 +45,19 @@ plan:
     steps:
     - description: focused test、wflow関連回帰、git diff --checkを実行し、検証済みの修正をTask 083だけ明示的にcommitする。Task
         083を含むcleanなwhub-dev checkoutをsourceにrelease build・verify・applyを実行し、~/.local/bin/whubで動作を確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        release: '0.1.0+gda7bbd66: build、verify、applyが成功。~/.local/bin/whub はcommit
+          da7bbd66を表示し、~/.local/bin/wflow --helpも成功。'
+      deleted: false
     deleted: false
 approvals:
 - actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: 承認済みin_progress子Taskを割込みに紐付け、状態・承認履歴を維持するようにした。CLI回帰テストとrelease 0.1.0+gda7bbd66を検証済み。
