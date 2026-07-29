@@ -49,15 +49,19 @@ plan:
     acceptance: []
     steps:
     - description: whub status が既存resource状態の収集後にworktree診断を実行し、登録件数と異常の有無を簡潔に表示する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: worktree診断がなければ従来どおり正常終了し、diagnosticが一つでもあれば非0で終了する。resource表へ子worktree行は追加せず、詳細は
         worktree check に委ねる
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: whub statusへworktree総合診断を追加。正常時は登録数とok、異常時は識別子とdiagnosticを表示して非0で終了する。ruff
+          checkとpytest 476件が成功。
+      deleted: false
     deleted: false
   - title: Web appにworktree一覧を追加する
     acceptance: []
