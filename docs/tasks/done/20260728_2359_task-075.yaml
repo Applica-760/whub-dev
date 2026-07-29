@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-075
-  state: in_progress
+  state: completed
   title: worktree表示を統合する
   objective: 子worktreeを親Projectとの関係、branch、作業path、登録状態とともにCLI・status・Web appで識別・表示する
   approach:
@@ -113,13 +113,17 @@ plan:
       deleted: false
     - description: cleanなsourceからrelease build・verify・applyを実行し、current releaseのwhubでworktree
         CLIを確認する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
     - value:
         verification: whub-dev/TASK-075はcleanかつcheck okを確認後にwhub worktree removeで削除。削除後のworktree
           checkは(no worktrees)、tasks/075 branchはshow-refで保持を確認。
+      deleted: false
+    - value:
+        verification: release 0.1.0+ga7150dcbをbuild・verify・apply。currentの~/.local/bin/whubはcommit
+          a7150dcbを表示し、worktree checkは(no worktrees)、statusは正常終了。
       deleted: false
     deleted: false
 approvals:
@@ -133,4 +137,5 @@ change_requests:
 - reason: resourceとworktreeの統合判定をcommands/status.pyからservices/status.pyへ移し、CLI adapterを表示と終了コード変換に限定するため
 - reason: Phase 4へ実作成worktreeの安全な削除とCLI登録用releaseを追加し、文書化・削除・releaseの順序を明確化するため
 cancellation: null
-result: null
+result:
+  summary: worktreeの状態統合、CLI総合診断、Web app一覧、文書化、実測作成・削除、releaseを完了
