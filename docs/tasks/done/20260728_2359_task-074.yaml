@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-074
-  state: in_progress
+  state: completed
   title: worktree CLI操作を実装する
   objective: 登録済みworktreeを対象に、Git worktreeの作成・一覧・削除と対応するproject symlinkの作成を安全に実行する
   approach:
@@ -123,4 +123,6 @@ change_requests:
     YAML存在・所属検証を追加する
 - reason: 採用済みの文書先行方針に合わせ、CLI実装前にcreate・check・removeの引数・出力・終了コード契約をreferenceへ記録する。listはcheckへ統合する
 cancellation: null
-result: null
+result:
+  summary: 登録済みGit worktreeのcreate・check・remove CLIを実装し、Task YAML確認、Project・Task単位の一意性、安全削除、診断表示を提供した。全体pytest
+    474件とruff checkが成功。
