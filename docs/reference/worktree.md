@@ -60,3 +60,18 @@ worktree を削除する前に、tracked と untracked のいずれも変更が�
 確認する。削除は Git worktree の実体と WorktreeDefinition YAML だけを対象とし、branch
 は残す。削除が `git add`、`git commit`、`git push`、branch 削除を暗黙に実行しては
 ならない。変更の公開と branch 削除は、削除とは別の明示的な操作とする。
+
+## Status と Web app
+
+実行時の状態は `StatusReport` が表す。正常な worktree は親Resourceの
+`ResourceStatus.worktrees` に属し、親Projectを確定できない不正な定義だけが
+`StatusReport.invalid_worktrees` に残る。定義 YAML は引き続き
+`parent_project` で親を参照するだけで、manifest Resourceを複製しない。
+
+`whub status` はResource表を維持したままworktree診断を総合する。登録済み件数と
+正常・異常を表示し、worktree diagnosticが一つでもあれば非0で終了する。詳細な
+一覧・診断は `whub worktree check` が担当する。
+
+Web appの `GET /api/worktrees` と `/worktrees` は、親Project、Task、branch、
+workspace path、diagnosticを読み取り専用で表示する。作成・削除・Task状態遷移・
+Agent sessionの起動、再接続、対応保存は扱わない。

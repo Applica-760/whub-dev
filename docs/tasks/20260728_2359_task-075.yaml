@@ -95,15 +95,35 @@ plan:
     - description: service・CLI・API・Reactの自動テストで、正常登録、登録なし、不正YAML、directory欠損、Git不整合、およびstatus終了コードを検証する
       state: pending
       skip_reason: null
-      deleted: false
+      deleted: true
     - description: worktree referenceとCLI referenceに、statusは総合診断、worktree checkとWeb
         appは詳細表示という責務、終了コード、sessionを扱わない境界を記録する
       state: pending
       skip_reason: null
+      deleted: true
+    - description: worktree referenceとCLI referenceに、StatusReportの親子関係、worktree API・Web
+        app一覧、statusの総合診断、sessionを扱わない境界を記録する
+      state: done
+      skip_reason: null
       deleted: false
-    log: []
+    - description: 実測に使用したwhub-dev/TASK-075 worktreeを、clean状態・定義・Git整合性を確認してからwhub
+        worktree removeで削除し、branchを保持する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: cleanなsourceからrelease build・verify・applyを実行し、current releaseのwhubでworktree
+        CLIを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: whub-dev/TASK-075はcleanかつcheck okを確認後にwhub worktree removeで削除。削除後のworktree
+          checkは(no worktrees)、tasks/075 branchはshow-refで保持を確認。
+      deleted: false
     deleted: false
 approvals:
+- actor: user
 - actor: user
 - actor: user
 - actor: user
@@ -111,5 +131,6 @@ acceptance_results: []
 change_requests:
 - reason: worktree serviceを責務単位のpackageへ再編し、status/Web向けread modelの境界を固定するため
 - reason: resourceとworktreeの統合判定をcommands/status.pyからservices/status.pyへ移し、CLI adapterを表示と終了コード変換に限定するため
+- reason: Phase 4へ実作成worktreeの安全な削除とCLI登録用releaseを追加し、文書化・削除・releaseの順序を明確化するため
 cancellation: null
 result: null

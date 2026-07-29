@@ -20,6 +20,7 @@ whub remote cleanup-appledouble <PROJECT> [--apply]
 - `remote cleanup-appledouble` はremote host上でAppleDouble sidecarを検証して一覧表示し、`--apply`指定時だけ削除する。SSHFS mountは走査しない。
 - `remote mount` はhost単位でsshfsを1本だけ接続する。無引数では `auto_mount: true` のhostだけを対象にし、`-a` またはProject指定ではこの制限を外す。
 - `remote unmount` はmountが作成したworkspace symlinkも撤去する。`status` の `slow` は正常系であり、`stale` と `unreadable` だけを対処対象とする。
+- `status` はResource状態に加えて登録済みworktreeを診断する。正常時は登録数と`ok`を表示し、worktree diagnosticがあれば対象と理由を表示して非0で終了する。worktreeの詳細一覧は `worktree check` を使う。
 
 ## Worktree
 
@@ -60,6 +61,8 @@ whub remote session <COMMAND>
 ```
 
 Web appは読み取り用の派生ビューであり、Task YAMLは更新しない。Remote GUI sessionの予約・handoff・観測・削除は[operations/session.md](../operations/session.md)を参照する。
+
+`/worktrees` は `GET /api/worktrees` を用いる読み取り専用一覧である。親Project、Task、branch、workspace path、diagnosticを表示し、作成・削除・session操作は提供しない。
 
 ## Operation release
 
