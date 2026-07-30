@@ -13,7 +13,12 @@ from whub.models.manifest import (
     load_manifest,
     project_names,
 )
-from whub.models.agent.auth import AgentAuth, AgentAuthError, load_agent_auth
+from whub.models.agent.auth import (
+    AgentAuth,
+    AgentAuthError,
+    EffectiveAuth,
+    load_agent_auth,
+)
 from whub.models.agent.extension_tool import (
     ExtensionTool,
     ExtensionToolCatalog,
@@ -37,6 +42,7 @@ __all__ = [
     "ExtensionTool",
     "ExtensionToolCatalog",
     "ExtensionToolError",
+    "EffectiveAuth",
     "GitInfo",
     "GitWorktree",
     "Host",

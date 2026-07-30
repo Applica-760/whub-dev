@@ -156,6 +156,13 @@ class AgentAuth(AgentAuthModel):
             raise ValueError(f"invalid command variable reference: ${reference}")
 
 
+class EffectiveAuth(AgentAuthModel):
+    """Authorization grants composed from one base and extension auths."""
+
+    variables: dict[str, VariableDefinition]
+    grants: Grants
+
+
 def load_agent_auth(path: Path) -> AgentAuth:
     """Load and validate one `agent-auth.yaml` or `base.yaml` asset."""
     try:
