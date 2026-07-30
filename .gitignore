@@ -1,26 +1,6 @@
 # hub:managed:start
-.agents/
-.claude/
-.codex/
 .codegraph/
-.mcp.json
-AGENTS.md
 # hub:managed:end
-
-.claude/
-.codex/
-.codegraph/
-AGENTS.md
-
-!src/whub/boot/.claude/
-!src/whub/boot/.claude/**
-!src/whub/boot/.codex/
-!src/whub/boot/.codex/**
-!src/whub/boot/AGENTS.md
-!src/whub/boot/.mcp.json
-
-# whub local config
-.whub
 
 # Python cache
 .pytest_cache
@@ -35,7 +15,3 @@ app/node_modules
 
 # Release build metadata
 src/whub/_build.json
-
-# whub link (auto-generated)
-/projects
-/vault

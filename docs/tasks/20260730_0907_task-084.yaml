@@ -1,0 +1,18 @@
+schema_version: 1
+task:
+  id: TASK-084
+  state: draft
+  title: whub link の gitignore 管理見直し
+  objective: whub link が自動生成する gitignore 対象を現行の symlink/mount 設計に照らして検証し、必要な変更方針を決定する
+  approach:
+  - link と mount の実装・テスト・履歴を確認し、gitignore の管理責務と対象を最小限に見直す
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
