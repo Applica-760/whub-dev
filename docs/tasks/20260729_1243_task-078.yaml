@@ -97,6 +97,21 @@ plan:
           pytest 9件とRuffに成功。
       deleted: false
     deleted: false
+  - title: Agent実装境界を作る
+    acceptance: []
+    steps:
+    - description: services/agent/authorization.py と adapters/ の空実装を作成し、agent-auth文書へauthorization・adapters・将来のharnessの責務境界を記録して検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: services/agent/authorization.pyとadapters/へ責務境界を分離し、Codex・Claude Codeの空adapterを配置した。agent-auth文書へauthorization、adapter、後続harnessの境界を記録し、RuffとAgentAuthテスト9件に成功。
+      deleted: false
+    - value:
+        result: AgentAuthとExtensionToolをmodels/agent/auth.py・extension_tool.pyへ集約し、importとテストを更新した。配置説明の文書追記は削除し、RuffとAgentAuthテスト9件に成功。
+      deleted: false
+    deleted: false
   - title: adapterを実装して検証する
     acceptance: []
     steps:
@@ -107,7 +122,18 @@ plan:
       deleted: false
     log: []
     deleted: false
+  - title: adapterを実装して検証する
+    acceptance: []
+    steps:
+    - description: Codex / Claude Code adapterとpolicy hook生成を実装し、許可・拒否・表現不能ケースのテスト、設定構文検証、uv
+        run pytestを成功させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
 approvals:
+- actor: user
 - actor: user
 - actor: user
 - actor: user
@@ -125,5 +151,6 @@ change_requests:
 - reason: Phase 2の履歴を保持し、Role Modelのcleanupを独立したPhase 3へ分離するため
 - reason: Extension toolの個別MCP tool名をYAMLの短縮名集合へ移し、ModelからCodeGraph固有型を削除するため
 - reason: 不要なAgentAuth.resolve_extension_tools委譲メソッドを削除するため
+- reason: Agent共通のauthorization・adapter・harness境界を明確にし、directory skeletonと後続adapter実装を独立した検証可能なPhaseへ分割するため
 cancellation: null
 result: null

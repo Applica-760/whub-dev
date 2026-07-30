@@ -13,8 +13,8 @@ from whub.models.manifest import (
     load_manifest,
     project_names,
 )
-from whub.models.agent_auth import AgentAuth, AgentAuthError, load_agent_auth
-from whub.models.extension_tool import (
+from whub.models.agent.auth import AgentAuth, AgentAuthError, load_agent_auth
+from whub.models.agent.extension_tool import (
     ExtensionTool,
     ExtensionToolCatalog,
     ExtensionToolError,

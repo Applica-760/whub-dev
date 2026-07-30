@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from whub.models.agent_auth import (
+from whub.models.agent.auth import (
     AgentAuth,
     AgentAuthError,
     CommandRule,
@@ -13,7 +13,7 @@ from whub.models.agent_auth import (
     VariableReference,
     load_agent_auth,
 )
-from whub.models.extension_tool import (
+from whub.models.agent.extension_tool import (
     ExtensionTool,
     ExtensionToolError,
     load_extension_tool_catalog,

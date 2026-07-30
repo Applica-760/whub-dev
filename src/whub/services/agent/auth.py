@@ -1,0 +1,1 @@
+"""Agent-independent auth service."""

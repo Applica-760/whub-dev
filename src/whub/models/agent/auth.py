@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from whub.models.extension_tool import ExtensionToolId
+from whub.models.agent.extension_tool import ExtensionToolId
 
 
 class AgentAuthError(ValueError):
