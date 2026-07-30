@@ -14,16 +14,6 @@ class ExtensionToolError(ValueError):
 
 
 ExtensionToolId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
-CodeGraphTool = Literal[
-    "codegraph_explore",
-    "codegraph_search",
-    "codegraph_node",
-    "codegraph_callers",
-    "codegraph_callees",
-    "codegraph_impact",
-    "codegraph_files",
-    "codegraph_status",
-]
 
 
 class ExtensionTool(BaseModel):
@@ -44,19 +34,12 @@ class ExtensionTool(BaseModel):
         return value
 
 
-class CodeGraphExtensionTool(ExtensionTool):
-    """The Hub-managed CodeGraph MCP tool."""
-
-    id: Literal["codegraph"]
-    tools: list[CodeGraphTool] = Field(min_length=1)
-
-
 class ExtensionToolCatalog(BaseModel):
     """All extension tools registered in one Hub."""
 
     model_config = ConfigDict(extra="forbid")
 
-    tools: list[CodeGraphExtensionTool]
+    tools: list[ExtensionTool]
 
     @model_validator(mode="after")
     def _validate_unique_ids(self) -> ExtensionToolCatalog:

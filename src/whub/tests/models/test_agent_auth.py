@@ -129,20 +129,7 @@ def test_loads_codegraph_extension_tool() -> None:
 
     assert isinstance(extension_tool, ExtensionTool)
     assert extension_tool.id == "codegraph"
-    assert "codegraph_explore" in extension_tool.tools
-
-
-def test_rejects_unknown_codegraph_tool(tmp_path: Path) -> None:
-    data = (
-        (ASSETS.parent / "extension_tools" / "codegraph.yaml")
-        .read_text()
-        .replace("codegraph_explore", "codegraph_unknown", 1)
-    )
-    target = tmp_path / "codegraph.yaml"
-    target.write_text(data)
-
-    with pytest.raises(ExtensionToolError):
-        load_extension_tool_catalog(tmp_path)
+    assert "explore" in extension_tool.tools
 
 
 def test_resolves_role_extension_tools() -> None:

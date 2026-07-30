@@ -71,6 +71,19 @@ plan:
           run pytest src/whub/tests/models（36 passed）とRuff check/format checkに成功。
       deleted: false
     deleted: false
+  - title: Extension toolの責務を整理する
+    acceptance: []
+    steps:
+    - description: CodeGraph tool名をYAMLの短縮名集合へ移し、ExtensionTool modelをgenericなextension定義へ戻してasset読込を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: CodeGraph YAMLのtool名を短縮名集合へ変更し、ExtensionTool modelからCodeGraph固有型を削除してgeneric
+          catalogへ戻した。focused pytest 9件とRuff check/format checkに成功。
+      deleted: false
+    deleted: false
   - title: adapterを実装して検証する
     acceptance: []
     steps:
@@ -87,6 +100,7 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: Network deny-all model、filesystem grantsの操作別scope集合化、Role asset・agent-auth文書の整合化をPhase
@@ -95,5 +109,6 @@ change_requests:
     2へ反映するため
 - reason: Network service catalogを導入せず、agent_auth内のdeny-allモデルに留める設計へ簡素化するため
 - reason: Phase 2の履歴を保持し、Role Modelのcleanupを独立したPhase 3へ分離するため
+- reason: Extension toolの個別MCP tool名をYAMLの短縮名集合へ移し、ModelからCodeGraph固有型を削除するため
 cancellation: null
 result: null
