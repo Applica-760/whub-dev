@@ -6,9 +6,8 @@ from pydantic import ValidationError
 from whub.models.agent_auth import (
     AgentAuth,
     AgentAuthError,
-    ExactCommandRule,
-    OptionArgument,
-    PrefixCommandRule,
+    CommandRule,
+    NetworkPolicy,
     RegisteredProjectVariable,
     RegisteredTaskWorktreeVariable,
     VariableReference,
@@ -17,7 +16,6 @@ from whub.models.agent_auth import (
 from whub.models.extension_tool import (
     ExtensionTool,
     ExtensionToolError,
-    load_extension_tool,
     load_extension_tool_catalog,
 )
 
@@ -33,12 +31,12 @@ def test_loads_base_agent_auth() -> None:
     assert auth.grants.filesystem.read == ["hub_logical_tree"]
     assert auth.grants.filesystem.write == []
     assert auth.grants.extension_tools == ["codegraph"]
-    assert isinstance(auth.grants.commands.prefixes[0], PrefixCommandRule)
-    assert isinstance(auth.grants.commands.exact[0], ExactCommandRule)
-    option = auth.grants.commands.exact[-1].arguments[1]
-    assert isinstance(option, OptionArgument)
-    assert isinstance(option.option.value, VariableReference)
-    assert option.option.value.name == "project"
+    assert isinstance(auth.grants.commands.prefixes[0], CommandRule)
+    assert isinstance(auth.grants.commands.exact[0], CommandRule)
+    assert auth.grants.network.policy is NetworkPolicy.DENY_ALL
+    variable = auth.grants.commands.exact[-1].arguments[2]
+    assert isinstance(variable, VariableReference)
+    assert variable.name == "project"
 
 
 def test_loads_implementer_agent_auth() -> None:
@@ -60,8 +58,8 @@ def test_rejects_unknown_fields() -> None:
         "variables": {},
         "grants": {
             "commands": {"prefixes": [], "exact": [], "templates": []},
-            "filesystem": [],
-            "network": {},
+            "filesystem": {"read": [], "write": []},
+            "network": {"policy": "deny_all"},
             "extension_tools": [],
         },
         "unknown": True,
@@ -116,7 +114,7 @@ def test_rejects_network_configuration(tmp_path: Path) -> None:
     data = (
         (ASSETS / "base.yaml")
         .read_text()
-        .replace("network: {}", "network:\n    outbound: []", 1)
+        .replace("policy: deny_all", "outbound: []", 1)
     )
     target = tmp_path / "invalid-agent-auth.yaml"
     target.write_text(data)
@@ -126,9 +124,8 @@ def test_rejects_network_configuration(tmp_path: Path) -> None:
 
 
 def test_loads_codegraph_extension_tool() -> None:
-    extension_tool = load_extension_tool(
-        ASSETS.parent / "extension_tools" / "codegraph.yaml"
-    )
+    catalog = load_extension_tool_catalog(ASSETS.parent / "extension_tools")
+    extension_tool = catalog.tools[0]
 
     assert isinstance(extension_tool, ExtensionTool)
     assert extension_tool.id == "codegraph"
@@ -141,11 +138,11 @@ def test_rejects_unknown_codegraph_tool(tmp_path: Path) -> None:
         .read_text()
         .replace("codegraph_explore", "codegraph_unknown", 1)
     )
-    target = tmp_path / "invalid-codegraph.yaml"
+    target = tmp_path / "codegraph.yaml"
     target.write_text(data)
 
     with pytest.raises(ExtensionToolError):
-        load_extension_tool(target)
+        load_extension_tool_catalog(tmp_path)
 
 
 def test_resolves_role_extension_tools() -> None:

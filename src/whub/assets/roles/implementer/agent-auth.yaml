@@ -13,82 +13,34 @@ grants:
     prefixes:
       # verification and formatting
       - executable: uv  # uv run pytest *
-        arguments:
-          - positional: run
-          - positional: pytest
+        arguments: [run, pytest]
       - executable: uv  # uv run ruff check *
-        arguments:
-          - positional: run
-          - positional: ruff
-          - positional: check
+        arguments: [run, ruff, check]
       - executable: uv  # uv run ruff format *
-        arguments:
-          - positional: run
-          - positional: ruff
-          - positional: format
+        arguments: [run, ruff, format]
       - executable: npm  # npm test *
-        arguments:
-          - positional: test
+        arguments: [test]
       - executable: npm  # npm run test *
-        arguments:
-          - positional: run
-          - positional: test
+        arguments: [run, test]
       - executable: npm  # npm run format *
-        arguments:
-          - positional: run
-          - positional: format
+        arguments: [run, format]
       - executable: npm  # npm run format:check *
-        arguments:
-          - positional: run
-          - positional: format:check
+        arguments: [run, format:check]
       # Task lifecycleの変更ではなく、対応Taskの計画とStepだけを操作する。
       - executable: wflow  # wflow task --project $current_worktree.project plan insert $current_worktree.task *
-        arguments:
-          - positional: task
-          - option:
-              name: --project
-              value: "$current_worktree.project"
-          - positional: plan
-          - positional: insert
-          - positional: "$current_worktree.task"
+        arguments: [task, --project, "$current_worktree.project", plan, insert, "$current_worktree.task"]
       - executable: wflow  # wflow task --project $current_worktree.project plan delete $current_worktree.task *
-        arguments:
-          - positional: task
-          - option:
-              name: --project
-              value: "$current_worktree.project"
-          - positional: plan
-          - positional: delete
-          - positional: "$current_worktree.task"
+        arguments: [task, --project, "$current_worktree.project", plan, delete, "$current_worktree.task"]
       - executable: wflow  # wflow task --project $current_worktree.project plan restore $current_worktree.task *
-        arguments:
-          - positional: task
-          - option:
-              name: --project
-              value: "$current_worktree.project"
-          - positional: plan
-          - positional: restore
-          - positional: "$current_worktree.task"
+        arguments: [task, --project, "$current_worktree.project", plan, restore, "$current_worktree.task"]
       - executable: wflow  # wflow task --project $current_worktree.project plan update $current_worktree.task *
-        arguments:
-          - positional: task
-          - option:
-              name: --project
-              value: "$current_worktree.project"
-          - positional: plan
-          - positional: update
-          - positional: "$current_worktree.task"
+        arguments: [task, --project, "$current_worktree.project", plan, update, "$current_worktree.task"]
       - executable: wflow  # wflow task --project $current_worktree.project done $current_worktree.task *
-        arguments:
-          - positional: task
-          - option:
-              name: --project
-              value: "$current_worktree.project"
-          - positional: done
-          - positional: "$current_worktree.task"
+        arguments: [task, --project, "$current_worktree.project", done, "$current_worktree.task"]
     exact: []
   filesystem:
     read: []
     write: [current_worktree]
-  network: {}
+  network:
+    policy: deny_all
   extension_tools: []

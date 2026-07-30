@@ -9,20 +9,18 @@ grants:
     prefixes: []
     # exactはexecutableとargumentsだけのargvを許可する。
     exact: []
-    # positionalは順序付きの定数または$variableを一つ持つ。optionはnameと定数または$variableのvalueを不可分に持つ。$variableはvariablesの定義を参照し、文字列結合やshell展開はしない。
+    # argumentsは順序付きのliteralまたは$variable token列。$variableはvariablesの定義を参照し、文字列結合やshell展開はしない。
     # example --project $current_worktree.project *
     # prefixes:
     #   - executable: example
-    #     arguments:
-    #       - option:
-    #           name: --project
-    #           value: "$current_worktree.project"
+    #     arguments: [--project, "$current_worktree.project"]
   filesystem:
     # scopeはadapterが具体的なpathへ解決する文脈依存の名前。
     # hub_logical_treeはworkspace-hubでは、Hub直下と直下のdirectory symlink/mountで
     # 到達するProject配下を指す。他のworkspaceでは固有のscope名を定義する。
     read: [hub_logical_tree]
     write: []
-  network: {}
+  network:
+    policy: deny_all
   # Hubに登録済みの拡張ツールIDだけを指定する。例: [example_tool]
   extension_tools: []

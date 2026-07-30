@@ -56,6 +56,21 @@ plan:
           passed）およびRuff check/format checkに成功。
       deleted: false
     deleted: false
+  - title: RoleのModelを整理する
+    acceptance: []
+    steps:
+    - description: Extension tool loaderをcatalog loaderへ統合して不要な分岐を削除し、NetworkPolicy
+        enum、CodeGraph tool集合、共通CommandRuleへRole Modelを整理してテストする
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: CommandRuleをexecutableと順序付きliteral/variable token列へ整理し、Prefix/Exactの空派生モデルとoption/positional階層を削除した。NetworkPolicy
+          deny_allとCodeGraph tool集合を維持し、extension tool loaderをcatalog loaderへ統合した。uv
+          run pytest src/whub/tests/models（36 passed）とRuff check/format checkに成功。
+      deleted: false
+    deleted: false
   - title: adapterを実装して検証する
     acceptance: []
     steps:
@@ -71,6 +86,7 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: Network deny-all model、filesystem grantsの操作別scope集合化、Role asset・agent-auth文書の整合化をPhase
@@ -78,5 +94,6 @@ change_requests:
 - reason: Networkを登録済みサービスIDのoutbound集合として定義し、CodeGraph tool集合もLiteralで制約する設計をPhase
     2へ反映するため
 - reason: Network service catalogを導入せず、agent_auth内のdeny-allモデルに留める設計へ簡素化するため
+- reason: Phase 2の履歴を保持し、Role Modelのcleanupを独立したPhase 3へ分離するため
 cancellation: null
 result: null

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -56,13 +57,13 @@ class VariableReference(AgentAuthModel):
     name: str = Field(pattern=r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
 
 
-CommandValue = Annotated[
+CommandToken = Annotated[
     LiteralValue | VariableReference,
     Field(discriminator="kind"),
 ]
 
 
-def _parse_command_value(value: str | dict[str, str]) -> dict[str, str]:
+def _parse_command_token(value: str | dict[str, str]) -> dict[str, str]:
     if isinstance(value, dict):
         return value
     if not isinstance(value, str):
@@ -72,48 +73,19 @@ def _parse_command_value(value: str | dict[str, str]) -> dict[str, str]:
     return {"kind": "literal", "value": value}
 
 
-class PositionalArgument(AgentAuthModel):
-    positional: CommandValue
-
-    @field_validator("positional", mode="before")
-    @classmethod
-    def _parse_value(cls, value: str | dict[str, str]) -> dict[str, str]:
-        return _parse_command_value(value)
-
-
-class CommandOption(AgentAuthModel):
-    name: str = Field(pattern=r"^-{1,2}[A-Za-z0-9][A-Za-z0-9_-]*$")
-    value: CommandValue | None = None
-
-    @field_validator("value", mode="before")
-    @classmethod
-    def _parse_value(cls, value: str | dict[str, str] | None) -> dict[str, str] | None:
-        return _parse_command_value(value) if value is not None else None
-
-
-class OptionArgument(AgentAuthModel):
-    option: CommandOption
-
-
-CommandArgument = PositionalArgument | OptionArgument
-
-
 class CommandRule(AgentAuthModel):
     executable: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
-    arguments: list[CommandArgument] = Field(default_factory=list)
+    arguments: list[CommandToken] = Field(default_factory=list)
 
-
-class PrefixCommandRule(CommandRule):
-    """Allow argv whose initial tokens match this rule."""
-
-
-class ExactCommandRule(CommandRule):
-    """Allow only argv whose complete tokens match this rule."""
+    @field_validator("arguments", mode="before")
+    @classmethod
+    def _parse_tokens(cls, value: list[str | dict[str, str]]) -> list[dict[str, str]]:
+        return [_parse_command_token(token) for token in value]
 
 
 class CommandGrants(AgentAuthModel):
-    prefixes: list[PrefixCommandRule]
-    exact: list[ExactCommandRule]
+    prefixes: list[CommandRule]
+    exact: list[CommandRule]
 
 
 # ── Filesystem ─────────────────────────────────────────────────────────────────────────────
@@ -135,8 +107,12 @@ class FilesystemGrants(AgentAuthModel):
 
 
 # ── Network ────────────────────────────────────────────────────────────────────────────────
+class NetworkPolicy(StrEnum):
+    DENY_ALL = "deny_all"
+
+
 class NetworkGrants(AgentAuthModel):
-    """No network access is granted."""
+    policy: NetworkPolicy
 
 
 # ── Role ───────────────────────────────────────────────────────────────────────────────────
@@ -166,14 +142,9 @@ class AgentAuth(AgentAuthModel):
     def _validate_command_variables(self) -> AgentAuth:
         rules = [*self.grants.commands.prefixes, *self.grants.commands.exact]
         for rule in rules:
-            for argument in rule.arguments:
-                value = (
-                    argument.positional
-                    if isinstance(argument, PositionalArgument)
-                    else argument.option.value
-                )
-                if isinstance(value, VariableReference):
-                    self._validate_variable_reference(value.name)
+            for token in rule.arguments:
+                if isinstance(token, VariableReference):
+                    self._validate_variable_reference(token.name)
         return self
 
     def resolve_extension_tools(

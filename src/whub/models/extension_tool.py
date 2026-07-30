@@ -75,33 +75,15 @@ class ExtensionToolCatalog(BaseModel):
         return [by_id[tool_id] for tool_id in ids]
 
 
-def load_extension_tool(path: Path) -> CodeGraphExtensionTool:
-    """Load and validate one registered extension tool asset."""
-    try:
-        data = yaml.safe_load(path.read_text())
-    except (OSError, UnicodeError, yaml.YAMLError) as error:
-        raise ExtensionToolError(f"invalid extension tool asset: {path}") from error
-    try:
-        return CodeGraphExtensionTool.model_validate(data)
-    except ValueError as error:
-        raise ExtensionToolError(
-            f"invalid extension tool asset: {path}: {error}"
-        ) from error
-
-
 def load_extension_tool_catalog(directory: Path) -> ExtensionToolCatalog:
     """Load all registered extension tool assets in one directory."""
     try:
-        paths = sorted(directory.glob("*.yaml"))
-    except OSError as error:
-        raise ExtensionToolError(
-            f"invalid extension tool directory: {directory}"
-        ) from error
-    if not paths:
-        raise ExtensionToolError(f"no extension tool assets: {directory}")
-    try:
-        return ExtensionToolCatalog(tools=[load_extension_tool(path) for path in paths])
-    except ValueError as error:
+        data = [
+            yaml.safe_load(path.read_text())
+            for path in sorted(directory.glob("*.yaml"))
+        ]
+        return ExtensionToolCatalog.model_validate({"tools": data})
+    except (OSError, UnicodeError, yaml.YAMLError, ValueError) as error:
         raise ExtensionToolError(
             f"invalid extension tool catalog: {directory}"
         ) from error

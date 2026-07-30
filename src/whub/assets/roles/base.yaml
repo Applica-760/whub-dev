@@ -29,45 +29,27 @@ grants:
 
       # git
       - executable: git  # git status *
-        arguments:
-          - positional: status
+        arguments: [status]
       - executable: git  # git log *
-        arguments:
-          - positional: log
+        arguments: [log]
       - executable: git  # git ls-files *
-        arguments:
-          - positional: ls-files
+        arguments: [ls-files]
 
       # whub
       - executable: whub  # whub ls *
-        arguments:
-          - positional: ls
+        arguments: [ls]
       - executable: whub  # whub shell-init *
-        arguments:
-          - positional: shell-init
+        arguments: [shell-init]
       - executable: whub  # whub worktree check *
-        arguments:
-          - positional: worktree
-          - positional: check
+        arguments: [worktree, check]
 
       # wflow
       - executable: wflow  # wflow check *
-        arguments:
-          - positional: check
+        arguments: [check]
       - executable: wflow  # wflow task --project $project check *
-        arguments:
-          - positional: task
-          - option:
-              name: --project
-              value: "$project"
-          - positional: check
+        arguments: [task, --project, "$project", check]
       - executable: wflow  # wflow task --project $project show *
-        arguments:
-          - positional: task
-          - option:
-              name: --project
-              value: "$project"
-          - positional: show
+        arguments: [task, --project, "$project", show]
 
       # system metadata
       # dfは対象pathに限定できず、全mountのmetadataを返す。
@@ -80,52 +62,33 @@ grants:
 
       # git
       - executable: git  # git diff
-        arguments:
-          - positional: diff
+        arguments: [diff]
       - executable: git  # git show
-        arguments:
-          - positional: show
+        arguments: [show]
       - executable: git  # git branch
-        arguments:
-          - positional: branch
+        arguments: [branch]
       - executable: git  # git branch -a
-        arguments:
-          - positional: branch
-          - option:
-              name: -a
+        arguments: [branch, -a]
       - executable: git  # git branch -r
-        arguments:
-          - positional: branch
-          - option:
-              name: -r
+        arguments: [branch, -r]
       - executable: git  # git branch --show-current
-        arguments:
-          - positional: branch
-          - option:
-              name: --show-current
+        arguments: [branch, --show-current]
 
       # whub
       - executable: whub  # whub todo
-        arguments:
-          - positional: todo
+        arguments: [todo]
       - executable: whub  # whub todo -a
-        arguments:
-          - positional: todo
-          - positional: -a
+        arguments: [todo, -a]
       - executable: wflow  # wflow task --project $project ls
-        arguments:
-          - positional: task
-          - option:
-              name: --project
-              value: "$project"
-          - positional: ls
+        arguments: [task, --project, "$project", ls]
 
   filesystem:
     # scopeはadapterが具体的なpathへ解決する。
     read: [hub_logical_tree]
     write: []
 
-  network: {}
+  network:
+    policy: deny_all
 
   extension_tools:
     - codegraph
