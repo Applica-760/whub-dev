@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-079
-  state: draft
+  state: in_progress
   title: Agent実行ハーネスを設計する
   objective: Task、worktree、role、Agent adapter、tmux session、run記録を一貫して選択・起動・停止・再接続するハーネスの責務と契約を設計する
   approach:
@@ -11,9 +11,69 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: 要求・理想を定義する
+    acceptance: []
+    steps:
+    - description: ユースケース、利用フロー、非目標、成功条件を文書化する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 人による承認境界とエージェント権限の初期モデルを定義する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        requirements: 単一利用者・複数Agent/worktree、削除/Git/通信/予算/承認の初期要件をrequirements.mdへ記録
+      deleted: false
+    deleted: false
+  - title: 既存知見を調査する
+    acceptance: []
+    steps:
+    - description: worktree隔離、実行ハーネス、権限、監査、復旧のベストプラクティスを一次情報中心に調査する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 要求に照らして各知見の採否と根拠を整理する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Network policyを定義する
+    acceptance: []
+    steps:
+    - description: Web検索、パッケージ取得、Git操作について、接続先、認証情報、承認単位を定義する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 現在のagent authモデルとの互換性と移行方針を整理する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 仕様と実装方針を確定する
+    acceptance: []
+    steps:
+    - description: MVPの責務、CLI、状態遷移、ログ、検証条件を仕様化する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 実装を後続Taskへ分割できる実行計画として提示する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: Web検索、パッケージ取得、Git操作を許可するnetwork policyの仕様化を独立Phaseとして追加するため
 cancellation: null
 result: null
