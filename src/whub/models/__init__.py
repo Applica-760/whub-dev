@@ -17,12 +17,10 @@ from whub.models.agent.auth import (
     AgentAuth,
     AgentAuthError,
     EffectiveAuth,
-    load_agent_auth,
-)
-from whub.models.agent.extension_tool import (
     ExtensionTool,
     ExtensionToolCatalog,
     ExtensionToolError,
+    load_agent_auth,
     load_extension_tool,
 )
 from whub.models.session import SessionDescriptor, SessionPane, SessionTmux

@@ -44,6 +44,8 @@ CodeGraph catalogの`tools`は許可する固定MCP tool名の集合である。
 
 - `id`: MCP serverの設定名
 - `transport`: 接続方式。MVPではローカルプロセスの`stdio`だけを扱う。
+- `command`: stdio serverを起動する固定command。shell展開はしない。
+- `args`: commandへ渡す固定argv。
 - `tools`: 許可するMCP toolの固定名の配列
 
 CodeGraphは`stdio`の外部ツールとしてbase agent authに含める。`codegraph_explore`、

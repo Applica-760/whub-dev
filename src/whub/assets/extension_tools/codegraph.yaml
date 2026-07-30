@@ -1,4 +1,6 @@
 id: codegraph
 protocol: mcp
 transport: stdio
+command: codegraph
+args: [serve, --mcp]
 tools: [explore, search, node, callers, callees, impact, files, status]

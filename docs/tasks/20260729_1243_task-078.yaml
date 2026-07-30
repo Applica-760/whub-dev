@@ -112,6 +112,40 @@ plan:
         result: AgentAuthとExtensionToolをmodels/agent/auth.py・extension_tool.pyへ集約し、importとテストを更新した。配置説明の文書追記は削除し、RuffとAgentAuthテスト9件に成功。
       deleted: false
     deleted: false
+  - title: ExtensionToolの起動定義を追加する
+    acceptance: []
+    steps:
+    - description: ExtensionTool catalogにMCP stdio serverのcommand・args起動定義を追加し、asset読込・catalog解決・既存Roleとの整合性を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: ExtensionToolをAgent auth modelへ統合し、MCP stdio launcherの固定command・argsを追加した。CodeGraphの実際のCodex用設定（codegraph
+          serve --mcp）をcatalogへ記録し、agent-auth文書、asset読込、catalog解決、Roleとの整合を更新した。focused
+          pytest 12件とRuffに成功。
+      deleted: false
+    deleted: false
+  - title: Codex adapterを実装して検証する
+    acceptance: []
+    steps:
+    - description: Codex adapterを実装し、EffectiveAuthを継承せずCodex render planとして.rules・config内容とruntime
+        guard要件を返す。公式仕様に基づく表現可能性・制約をdocs/architecture/agent-adapters.mdへ記録し、許可・拒否・表現不能ケースと設定構文を検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: Claude Code adapterを実装して検証する
+    acceptance: []
+    steps:
+    - description: Claude Code adapterとpolicy hook生成を実装し、許可・拒否・表現不能ケースのテスト、設定構文検証、uv
+        run pytestを成功させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
   - title: adapterを実装して検証する
     acceptance: []
     steps:
@@ -130,7 +164,7 @@ plan:
           schemaとasset読込を維持し、未知extension tool IDの拒否はserviceのAuthErrorとして扱う。focused
           pytest 12件とRuffに成功。
       deleted: false
-    deleted: false
+    deleted: true
   - title: adapterを実装して検証する
     acceptance: []
     steps:
@@ -150,6 +184,7 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: Network deny-all model、filesystem grantsの操作別scope集合化、Role asset・agent-auth文書の整合化をPhase
@@ -161,5 +196,7 @@ change_requests:
 - reason: Extension toolの個別MCP tool名をYAMLの短縮名集合へ移し、ModelからCodeGraph固有型を削除するため
 - reason: 不要なAgentAuth.resolve_extension_tools委譲メソッドを削除するため
 - reason: Agent共通のauthorization・adapter・harness境界を明確にし、directory skeletonと後続adapter実装を独立した検証可能なPhaseへ分割するため
+- reason: ExtensionToolにMCP起動定義がなくCodex configを生成できないため、catalog改修、Codex adapter契約・実装、Claude
+    Code adapter実装を検証可能なPhaseへ分割し、Codexの表現可能性とruntime guard要件をarchitecture文書へ記録するため
 cancellation: null
 result: null

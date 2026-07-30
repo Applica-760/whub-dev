@@ -9,13 +9,11 @@ from whub.models.agent.auth import (
     AgentAuth,
     CommandRule,
     EffectiveAuth,
-    LiteralValue,
-    VariableReference,
-)
-from whub.models.agent.extension_tool import (
     ExtensionTool,
     ExtensionToolCatalog,
     ExtensionToolId,
+    LiteralValue,
+    VariableReference,
 )
 
 

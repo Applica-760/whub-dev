@@ -7,14 +7,12 @@ from whub.models.agent.auth import (
     AgentAuth,
     AgentAuthError,
     CommandRule,
+    ExtensionTool,
     NetworkPolicy,
     RegisteredProjectVariable,
     RegisteredTaskWorktreeVariable,
     VariableReference,
     load_agent_auth,
-)
-from whub.models.agent.extension_tool import (
-    ExtensionTool,
     load_extension_tool,
 )
 from whub.services.agent.auth import AuthError, resolve_extension_tools
@@ -129,6 +127,8 @@ def test_loads_codegraph_extension_tool() -> None:
 
     assert isinstance(extension_tool, ExtensionTool)
     assert extension_tool.id == "codegraph"
+    assert extension_tool.command == "codegraph"
+    assert extension_tool.args == ["serve", "--mcp"]
     assert "explore" in extension_tool.tools
 
 
