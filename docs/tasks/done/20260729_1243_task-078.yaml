@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-078
-  state: in_progress
+  state: completed
   title: CodexとClaude CodeのAgent adapter契約を定義する
   objective: 共通ロール・権限ポリシーとsession操作をCodexおよびClaude Codeの設定・起動方式へ変換するadapter契約を定義する
   approach:
@@ -151,7 +151,10 @@ plan:
       deleted: false
     log:
     - value:
-        result: Claude Code adapterを純粋なrender planとして実装し、.claude/settings.jsonのPreToolUse hook、Bash/MCP認可hook、.mcp.jsonを生成するようにした。hookはexact/prefix commandとExtensionToolのMCP tool allowlistを照合し、shell構文を含むBash commandを拒否する。filesystem・networkはharnessのruntime guard要件として維持した。focused pytest 15件、Ruff、生成JSON/Python hook構文検証に成功。
+        result: Claude Code adapterを純粋なrender planとして実装し、.claude/settings.jsonのPreToolUse
+          hook、Bash/MCP認可hook、.mcp.jsonを生成するようにした。hookはexact/prefix commandとExtensionToolのMCP
+          tool allowlistを照合し、shell構文を含むBash commandを拒否する。filesystem・networkはharnessのruntime
+          guard要件として維持した。focused pytest 15件、Ruff、生成JSON/Python hook構文検証に成功。
       deleted: false
     deleted: false
   - title: adapterを実装して検証する
@@ -207,4 +210,5 @@ change_requests:
 - reason: ExtensionToolにMCP起動定義がなくCodex configを生成できないため、catalog改修、Codex adapter契約・実装、Claude
     Code adapter実装を検証可能なPhaseへ分割し、Codexの表現可能性とruntime guard要件をarchitecture文書へ記録するため
 cancellation: null
-result: null
+result:
+  summary: CodexとClaude Codeの純粋adapterを実装し、共通Agent authから設定・policy hookのrender planを生成する契約を確立した。
