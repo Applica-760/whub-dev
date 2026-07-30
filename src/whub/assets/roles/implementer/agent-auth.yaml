@@ -37,7 +37,9 @@ grants:
         arguments: [task, --project, "$current_worktree.project", plan, update, "$current_worktree.task"]
       - executable: wflow  # wflow task --project $current_worktree.project done $current_worktree.task *
         arguments: [task, --project, "$current_worktree.project", done, "$current_worktree.task"]
-    exact: []
+    exact:
+      - executable: git  # git fetch
+        arguments: [fetch]
   filesystem:
     read: []
     write: [current_worktree]

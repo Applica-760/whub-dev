@@ -29,7 +29,7 @@ agent authはcommand、filesystem、network、外部ツールを対象とする�
 役割指示が必要なextensionだけ同じディレクトリに`description.md`を置く。base agent authに
 `description.md`は置かない。
 
-`grants.network.policy`は現在`deny_all`だけを受け付け、network accessを許可しない。
+`grants.network.policy`は現在`deny_all`だけを受け付け、Agent processへ継続的なnetwork accessを許可しない。Web検索はextension tool経由で行う。git fetchは登録済みremoteに対するexact commandだけを許可する。パッケージのインストールとcurlは、ユーザー承認した一回限りのharness仲介操作とし、Agent processのnetwork policyを緩めない。
 
 `variables`はroleの権限評価に使う、adapterが解決または検証する値である。
 `registered_task_worktree`は、現在のAgentに割り当てられた登録済みworktreeから`project`、`task`、`path`を

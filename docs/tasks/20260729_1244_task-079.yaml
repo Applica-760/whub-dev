@@ -53,14 +53,22 @@ plan:
     acceptance: []
     steps:
     - description: Web検索、パッケージ取得、Git操作について、接続先、認証情報、承認単位を定義する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 現在のagent authモデルとの互換性と移行方針を整理する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        network: NetworkPolicyはdeny_allを維持する。git fetchは登録済みremoteに対するexact commandで許可し、package
+          installとcurlはユーザー承認した一回限りのharness仲介操作とする。
+      deleted: false
+    - value:
+        compatibility: NetworkPolicyはdeny_allを維持。Web検索はextension tool、git fetchはimplementerのexact
+          command、package install/curlは一回限りの承認済みharness仲介操作として記録した。
+      deleted: false
     deleted: false
   - title: 仕様と実装方針を確定する
     acceptance: []
