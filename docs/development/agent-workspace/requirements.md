@@ -12,12 +12,14 @@ whub appを、複数のCoding Agentを並列に動かし、人間が必要な判
 
 ## Safety and autonomy requirements
 
+- 安全境界はfilesystem境界とGit操作境界を分離して扱う。filesystem境界はAgentを対応worktree外から隔離し、Git操作境界は共有Git metadataを通じた親repositoryへの破壊的操作を拒否する。
 - 通常のAgentは、対応するworktree内でのファイル作成と更新を行えるが、削除は行えない。
 - 通常のAgent権限では、ファイル削除、Git branchの削除、履歴を遡及して消す操作、force push、git pushを実行できない。指示文ではなくharnessで強制する。
 - ファイル削除は、人間が対象を明示して承認した場合だけ許可する。
 - Web検索、パッケージ取得、git fetchはAgentに許可する。接続先と承認の境界はnetwork policyとして別途定義する。
 - Agentが自律的に連続実行できる上限を設定できるようにする。上限に達したら停止し、利用者の判断を求める。
 - 承認が必要な操作は、可能な限りまとめて利用者へ提示する。
+- 複数のtmux sessionを一画面で監督し、対応するworktreeの作業内容を実行中から確認できることを理想とする。強い安全境界に必要な場合だけ、隔離した作業結果を後から反映する方式を検討する。
 
 ## Required experience
 

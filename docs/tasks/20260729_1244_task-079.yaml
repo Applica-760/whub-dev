@@ -34,14 +34,20 @@ plan:
     acceptance: []
     steps:
     - description: worktree隔離、実行ハーネス、権限、監査、復旧のベストプラクティスを一次情報中心に調査する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: 要求に照らして各知見の採否と根拠を整理する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        decision: Dockerは候補であり、macOS sandbox・Codex sandboxと比較する。filesystem境界とGit操作境界は別軸として設計する。理想はtmuxから実worktreeの作業をリアルタイム監督すること。
+      deleted: false
+    - value:
+        research: Git worktree、Docker filesystem隔離、CodexとClaude Codeのruntime controlsを一次情報で調査し、harness-research.mdへ記録
+      deleted: false
     deleted: false
   - title: Network policyを定義する
     acceptance: []
