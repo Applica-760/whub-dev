@@ -16,3 +16,15 @@ render planに含め、Codex設定だけを強制済みとして扱わない。
 Codexはtrustedなproject config layerの`.codex/rules/`を起動時に読む。rulesの詳細は
 [Codex Rules](https://learn.chatgpt.com/docs/agent-configuration/rules.md)、configの詳細は
 [Codex Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference.md)を正本とする。
+
+## Claude Code
+
+Claude Code adapterは .claude/settings.json、PreToolUse hook、.mcp.json をrenderする。
+hookはBash commandを解決済みのexact/prefix argvと照合し、登録済みExtensionToolのMCP toolだけを許可する。
+パイプ・リダイレクト・command substitutionなど単一argvとして解釈できないBash構文は拒否する。
+
+filesystemとprocess networkはhookでは完全に強制できないため、commandを含めharnessのruntime guardを必須とする。
+Claude Codeのproject settings・hook・MCP仕様は
+[Settings](https://code.claude.com/docs/en/settings)、
+[Hooks](https://code.claude.com/docs/en/hooks)、
+[MCP](https://code.claude.com/docs/en/mcp)を正本とする。
