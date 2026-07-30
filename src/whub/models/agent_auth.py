@@ -9,11 +9,7 @@ from typing import Annotated, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from whub.models.extension_tool import (
-    ExtensionTool,
-    ExtensionToolCatalog,
-    ExtensionToolId,
-)
+from whub.models.extension_tool import ExtensionToolId
 
 
 class AgentAuthError(ValueError):
@@ -146,12 +142,6 @@ class AgentAuth(AgentAuthModel):
                 if isinstance(token, VariableReference):
                     self._validate_variable_reference(token.name)
         return self
-
-    def resolve_extension_tools(
-        self, catalog: ExtensionToolCatalog
-    ) -> list[ExtensionTool]:
-        """Resolve this Role's extension-tool IDs against the Hub catalog."""
-        return catalog.resolve(self.grants.extension_tools)
 
     def _validate_variable_reference(self, reference: str) -> None:
         root, *fields = reference.split(".")

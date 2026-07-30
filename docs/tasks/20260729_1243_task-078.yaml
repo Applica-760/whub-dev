@@ -84,6 +84,19 @@ plan:
           catalogへ戻した。focused pytest 9件とRuff check/format checkに成功。
       deleted: false
     deleted: false
+  - title: Role Modelの不要な委譲を削除する
+    acceptance: []
+    steps:
+    - description: 不要なAgentAuth.resolve_extension_tools委譲メソッドを削除し、catalog直接解決へテストを更新して検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 不要なAgentAuth.resolve_extension_tools委譲メソッドを削除し、ExtensionToolCatalogを直接解決するテストへ変更した。focused
+          pytest 9件とRuffに成功。
+      deleted: false
+    deleted: false
   - title: adapterを実装して検証する
     acceptance: []
     steps:
@@ -101,6 +114,7 @@ approvals:
 - actor: user
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: Network deny-all model、filesystem grantsの操作別scope集合化、Role asset・agent-auth文書の整合化をPhase
@@ -110,5 +124,6 @@ change_requests:
 - reason: Network service catalogを導入せず、agent_auth内のdeny-allモデルに留める設計へ簡素化するため
 - reason: Phase 2の履歴を保持し、Role Modelのcleanupを独立したPhase 3へ分離するため
 - reason: Extension toolの個別MCP tool名をYAMLの短縮名集合へ移し、ModelからCodeGraph固有型を削除するため
+- reason: 不要なAgentAuth.resolve_extension_tools委譲メソッドを削除するため
 cancellation: null
 result: null

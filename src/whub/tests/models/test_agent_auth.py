@@ -136,7 +136,7 @@ def test_resolves_role_extension_tools() -> None:
     auth = load_agent_auth(ASSETS / "base.yaml")
     catalog = load_extension_tool_catalog(ASSETS.parent / "extension_tools")
 
-    resolved = auth.resolve_extension_tools(catalog)
+    resolved = catalog.resolve(auth.grants.extension_tools)
 
     assert [tool.id for tool in resolved] == ["codegraph"]
     with pytest.raises(ExtensionToolError, match="unknown extension tools"):
