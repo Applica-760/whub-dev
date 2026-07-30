@@ -125,6 +125,11 @@ plan:
         result: Agent非依存のauth serviceを実装した。base/extension authの合成では同名変数を完全一致時だけ統合し、異なる定義は拒否する。commandのexact/prefix
           argv判定と未解決変数の拒否を追加し、focused pytest 12件とRuffに成功。
       deleted: false
+    - value:
+        result: ExtensionToolCatalogのgrant解決をmodelからauth serviceへ移動した。modelはcatalog
+          schemaとasset読込を維持し、未知extension tool IDの拒否はserviceのAuthErrorとして扱う。focused
+          pytest 12件とRuffに成功。
+      deleted: false
     deleted: false
   - title: adapterを実装して検証する
     acceptance: []

@@ -12,6 +12,11 @@ from whub.models.agent.auth import (
     LiteralValue,
     VariableReference,
 )
+from whub.models.agent.extension_tool import (
+    ExtensionTool,
+    ExtensionToolCatalog,
+    ExtensionToolId,
+)
 
 
 class AuthError(ValueError):
@@ -80,6 +85,18 @@ def allows_command(
         _matches_rule(rule, argv, variables, prefix=False)
         for rule in auth.grants.commands.exact
     )
+
+
+def resolve_extension_tools(
+    catalog: ExtensionToolCatalog,
+    ids: Sequence[ExtensionToolId],
+) -> list[ExtensionTool]:
+    """Resolve granted extension tool IDs from a Hub catalog."""
+    by_id = {tool.id: tool for tool in catalog.tools}
+    unknown_ids = sorted(set(ids) - by_id.keys())
+    if unknown_ids:
+        raise AuthError(f"unknown extension tools: {', '.join(unknown_ids)}")
+    return [by_id[tool_id] for tool_id in ids]
 
 
 def _ordered_union(items: Iterable[Item]) -> list[Item]:

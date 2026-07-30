@@ -15,9 +15,9 @@ from whub.models.agent.auth import (
 )
 from whub.models.agent.extension_tool import (
     ExtensionTool,
-    ExtensionToolError,
     load_extension_tool_catalog,
 )
+from whub.services.agent.auth import AuthError, resolve_extension_tools
 
 
 ASSETS = Path(__file__).parents[2] / "assets" / "roles"
@@ -136,8 +136,8 @@ def test_resolves_role_extension_tools() -> None:
     auth = load_agent_auth(ASSETS / "base.yaml")
     catalog = load_extension_tool_catalog(ASSETS.parent / "extension_tools")
 
-    resolved = catalog.resolve(auth.grants.extension_tools)
+    resolved = resolve_extension_tools(catalog, auth.grants.extension_tools)
 
     assert [tool.id for tool in resolved] == ["codegraph"]
-    with pytest.raises(ExtensionToolError, match="unknown extension tools"):
-        catalog.resolve(["unknown"])
+    with pytest.raises(AuthError, match="unknown extension tools"):
+        resolve_extension_tools(catalog, ["unknown"])

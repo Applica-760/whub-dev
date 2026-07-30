@@ -48,15 +48,6 @@ class ExtensionToolCatalog(BaseModel):
             raise ValueError("extension tool IDs must be unique")
         return self
 
-    def resolve(self, ids: list[str]) -> list[ExtensionTool]:
-        by_id = {tool.id: tool for tool in self.tools}
-        unknown_ids = sorted(set(ids) - by_id.keys())
-        if unknown_ids:
-            raise ExtensionToolError(
-                f"unknown extension tools: {', '.join(unknown_ids)}"
-            )
-        return [by_id[tool_id] for tool_id in ids]
-
 
 def load_extension_tool_catalog(directory: Path) -> ExtensionToolCatalog:
     """Load all registered extension tool assets in one directory."""
