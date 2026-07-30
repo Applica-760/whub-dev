@@ -8,6 +8,12 @@ from typing import Annotated, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from whub.models.extension_tool import (
+    ExtensionTool,
+    ExtensionToolCatalog,
+    ExtensionToolId,
+)
+
 
 class AgentAuthError(ValueError):
     """Raised when an Agent authorization asset cannot be loaded."""
@@ -111,9 +117,40 @@ class CommandGrants(AgentAuthModel):
 
 
 # ── Filesystem ─────────────────────────────────────────────────────────────────────────────
+class HubLogicalTreeScope(AgentAuthModel):
+    """Hub root and its registered symlink or mount entries."""
+
+    kind: Literal["hub_logical_tree"]
+
+
+class CurrentWorktreeScope(AgentAuthModel):
+    """The worktree uniquely resolved for the current Agent execution."""
+
+    kind: Literal["current_worktree"]
+
+
+FilesystemScope = Annotated[
+    HubLogicalTreeScope | CurrentWorktreeScope,
+    Field(discriminator="kind"),
+]
+
+
+def _parse_filesystem_scope(value: str | dict[str, str]) -> dict[str, str]:
+    if isinstance(value, str):
+        return {"kind": value}
+    if isinstance(value, dict):
+        return value
+    raise ValueError("filesystem scope must be a string")
+
+
 class FilesystemGrant(AgentAuthModel):
-    scope: str = Field(min_length=1)
+    scope: FilesystemScope
     access: Literal["read", "write"]
+
+    @field_validator("scope", mode="before")
+    @classmethod
+    def _parse_scope(cls, value: str | dict[str, str]) -> dict[str, str]:
+        return _parse_filesystem_scope(value)
 
 
 # ── Network ────────────────────────────────────────────────────────────────────────────────
@@ -121,19 +158,12 @@ class NetworkGrants(AgentAuthModel):
     outbound: list[str]
 
 
-# ── External tools ─────────────────────────────────────────────────────────────────────────
-class ExternalToolGrant(AgentAuthModel):
-    name: str = Field(min_length=1)
-    transport: Literal["stdio"]
-    tools: list[str]
-
-
 # ── Role ───────────────────────────────────────────────────────────────────────────────────
 class Grants(AgentAuthModel):
     commands: CommandGrants
     filesystem: list[FilesystemGrant]
     network: NetworkGrants
-    external_tools: list[ExternalToolGrant]
+    extension_tools: list[ExtensionToolId]
 
 
 class AgentAuth(AgentAuthModel):
@@ -155,6 +185,12 @@ class AgentAuth(AgentAuthModel):
                 if isinstance(value, VariableReference):
                     self._validate_variable_reference(value.name)
         return self
+
+    def resolve_extension_tools(
+        self, catalog: ExtensionToolCatalog
+    ) -> list[ExtensionTool]:
+        """Resolve this Role's extension-tool IDs against the Hub catalog."""
+        return catalog.resolve(self.grants.extension_tools)
 
     def _validate_variable_reference(self, reference: str) -> None:
         root, *fields = reference.split(".")

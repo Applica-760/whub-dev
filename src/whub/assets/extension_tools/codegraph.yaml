@@ -1,0 +1,12 @@
+id: codegraph
+protocol: mcp
+transport: stdio
+tools:
+  - codegraph_explore
+  - codegraph_search
+  - codegraph_node
+  - codegraph_callers
+  - codegraph_callees
+  - codegraph_impact
+  - codegraph_files
+  - codegraph_status

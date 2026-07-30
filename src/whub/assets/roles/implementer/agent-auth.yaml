@@ -92,4 +92,4 @@ grants:
       access: write
   network:
     outbound: []
-  external_tools: []
+  extension_tools: []

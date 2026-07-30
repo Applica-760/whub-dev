@@ -1,0 +1,84 @@
+"""Models for Hub-registered extension tools."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated, Literal
+
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+class ExtensionToolError(ValueError):
+    """Raised when a registered extension tool cannot be loaded."""
+
+
+ExtensionToolId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
+
+
+class ExtensionTool(BaseModel):
+    """One Hub-managed external tool that a Role may be granted."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    id: ExtensionToolId
+    protocol: Literal["mcp"]
+    transport: Literal["stdio"]
+    tools: list[str] = Field(min_length=1)
+
+    @field_validator("tools")
+    @classmethod
+    def _validate_tools(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("extension tool names must be unique")
+        return value
+
+
+class ExtensionToolCatalog(BaseModel):
+    """All extension tools registered in one Hub."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tools: list[ExtensionTool]
+
+    @model_validator(mode="after")
+    def _validate_unique_ids(self) -> ExtensionToolCatalog:
+        ids = [tool.id for tool in self.tools]
+        if len(ids) != len(set(ids)):
+            raise ValueError("extension tool IDs must be unique")
+        return self
+
+    def resolve(self, ids: list[str]) -> list[ExtensionTool]:
+        by_id = {tool.id: tool for tool in self.tools}
+        unknown_ids = sorted(set(ids) - by_id.keys())
+        if unknown_ids:
+            raise ExtensionToolError(
+                f"unknown extension tools: {', '.join(unknown_ids)}"
+            )
+        return [by_id[tool_id] for tool_id in ids]
+
+
+def load_extension_tool(path: Path) -> ExtensionTool:
+    """Load and validate one registered extension tool asset."""
+    try:
+        data = yaml.safe_load(path.read_text())
+    except (OSError, UnicodeError, yaml.YAMLError) as error:
+        raise ExtensionToolError(f"invalid extension tool asset: {path}") from error
+    try:
+        return ExtensionTool.model_validate(data)
+    except ValueError as error:
+        raise ExtensionToolError(f"invalid extension tool asset: {path}: {error}") from error
+
+
+def load_extension_tool_catalog(directory: Path) -> ExtensionToolCatalog:
+    """Load all registered extension tool assets in one directory."""
+    try:
+        paths = sorted(directory.glob("*.yaml"))
+    except OSError as error:
+        raise ExtensionToolError(f"invalid extension tool directory: {directory}") from error
+    if not paths:
+        raise ExtensionToolError(f"no extension tool assets: {directory}")
+    try:
+        return ExtensionToolCatalog(tools=[load_extension_tool(path) for path in paths])
+    except ValueError as error:
+        raise ExtensionToolError(f"invalid extension tool catalog: {directory}") from error

@@ -45,6 +45,10 @@ plan:
         result: 構造化command grantをAgentAuthモデルへ反映した。exact/prefix rule、positional/option
           argument、$variable参照を型で区別し、variablesのsource・fieldと参照整合性をasset読込時に検証する。
       deleted: false
+    - value:
+        result: AgentAuthのfilesystem scopeをHubLogicalTreeScopeとCurrentWorktreeScopeの判別unionへ変更し、access(read/write)を独立軸として維持した。登録済みExtensionTool、ExtensionToolCatalog、CodeGraph
+          assetを追加し、Roleはextension_toolsでIDだけを宣言してcatalogで解決する。focused pytest 7件とRuffに成功。次はNetworkGrantsの対象・allowlist・拡張ツールとの実効権限境界を見直す。
+      deleted: false
     deleted: false
   - title: adapterを実装して検証する
     acceptance: []

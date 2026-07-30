@@ -25,7 +25,5 @@ grants:
       access: read
   network:
     outbound: []  # 外向き接続先のallowlist。接続を許可しない場合は空にする。
-  external_tools:
-    - name: example-tool
-      transport: stdio
-      tools: []  # この外部ツールで許可する固定のtool名。
+  # Hubに登録済みの拡張ツールIDだけを指定する。例: [example_tool]
+  extension_tools: []

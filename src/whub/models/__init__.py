@@ -14,6 +14,13 @@ from whub.models.manifest import (
     project_names,
 )
 from whub.models.agent_auth import AgentAuth, AgentAuthError, load_agent_auth
+from whub.models.extension_tool import (
+    ExtensionTool,
+    ExtensionToolCatalog,
+    ExtensionToolError,
+    load_extension_tool,
+    load_extension_tool_catalog,
+)
 from whub.models.session import SessionDescriptor, SessionPane, SessionTmux
 from whub.models.status import ResourceStatus, StatusReport, WorktreeStatus
 from whub.models.todo import PRIORITY_EMOJI, Todo, Todos, load_todos, save_todos
@@ -28,6 +35,9 @@ __all__ = [
     "AgentAuth",
     "AgentAuthError",
     "BaseResource",
+    "ExtensionTool",
+    "ExtensionToolCatalog",
+    "ExtensionToolError",
     "GitInfo",
     "GitWorktree",
     "Host",
@@ -52,6 +62,8 @@ __all__ = [
     "WorktreeStatus",
     "load_manifest",
     "load_agent_auth",
+    "load_extension_tool",
+    "load_extension_tool_catalog",
     "load_todos",
     "project_names",
     "save_todos",
