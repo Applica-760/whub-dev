@@ -12,26 +12,81 @@ grants:
   commands:
     prefixes:
       # verification and formatting
-      - ["uv", "run", "pytest"]
-      - ["uv", "run", "ruff", "check"]
-      - ["uv", "run", "ruff", "format"]
-      - ["npm", "test"]
-      - ["npm", "run", "test"]
-      - ["npm", "run", "format"]
-      - ["npm", "run", "format:check"]
-    exact: []
-    templates:
+      - executable: uv  # uv run pytest *
+        arguments:
+          - positional: run
+          - positional: pytest
+      - executable: uv  # uv run ruff check *
+        arguments:
+          - positional: run
+          - positional: ruff
+          - positional: check
+      - executable: uv  # uv run ruff format *
+        arguments:
+          - positional: run
+          - positional: ruff
+          - positional: format
+      - executable: npm  # npm test *
+        arguments:
+          - positional: test
+      - executable: npm  # npm run test *
+        arguments:
+          - positional: run
+          - positional: test
+      - executable: npm  # npm run format *
+        arguments:
+          - positional: run
+          - positional: format
+      - executable: npm  # npm run format:check *
+        arguments:
+          - positional: run
+          - positional: format:check
       # Task lifecycleの変更ではなく、対応Taskの計画とStepだけを操作する。
-      - mode: prefix
-        argv: ["wflow", "task", "--project", "$current_worktree.project", "plan", "insert", "$current_worktree.task"]
-      - mode: prefix
-        argv: ["wflow", "task", "--project", "$current_worktree.project", "plan", "delete", "$current_worktree.task"]
-      - mode: prefix
-        argv: ["wflow", "task", "--project", "$current_worktree.project", "plan", "restore", "$current_worktree.task"]
-      - mode: prefix
-        argv: ["wflow", "task", "--project", "$current_worktree.project", "plan", "update", "$current_worktree.task"]
-      - mode: prefix
-        argv: ["wflow", "task", "--project", "$current_worktree.project", "done", "$current_worktree.task"]
+      - executable: wflow  # wflow task --project $current_worktree.project plan insert $current_worktree.task *
+        arguments:
+          - positional: task
+          - option:
+              name: --project
+              value: "$current_worktree.project"
+          - positional: plan
+          - positional: insert
+          - positional: "$current_worktree.task"
+      - executable: wflow  # wflow task --project $current_worktree.project plan delete $current_worktree.task *
+        arguments:
+          - positional: task
+          - option:
+              name: --project
+              value: "$current_worktree.project"
+          - positional: plan
+          - positional: delete
+          - positional: "$current_worktree.task"
+      - executable: wflow  # wflow task --project $current_worktree.project plan restore $current_worktree.task *
+        arguments:
+          - positional: task
+          - option:
+              name: --project
+              value: "$current_worktree.project"
+          - positional: plan
+          - positional: restore
+          - positional: "$current_worktree.task"
+      - executable: wflow  # wflow task --project $current_worktree.project plan update $current_worktree.task *
+        arguments:
+          - positional: task
+          - option:
+              name: --project
+              value: "$current_worktree.project"
+          - positional: plan
+          - positional: update
+          - positional: "$current_worktree.task"
+      - executable: wflow  # wflow task --project $current_worktree.project done $current_worktree.task *
+        arguments:
+          - positional: task
+          - option:
+              name: --project
+              value: "$current_worktree.project"
+          - positional: done
+          - positional: "$current_worktree.task"
+    exact: []
   filesystem:
     - scope: current_worktree
       access: write

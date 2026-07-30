@@ -11,63 +11,111 @@ grants:
   commands:
     prefixes:
       # filesystem
-      - ["ls"]
-      - ["tree"]
-      - ["stat"]
-      - ["file"]
-      - ["wc"]
-      - ["du"]
-      - ["cat"]
-      - ["head"]
-      - ["tail"]
-      - ["grep"]
+      - executable: ls  # ls *
+      - executable: tree  # tree *
+      - executable: stat  # stat *
+      - executable: file  # file *
+      - executable: wc  # wc *
+      - executable: du  # du *
+      - executable: cat  # cat *
+      - executable: head  # head *
+      - executable: tail  # tail *
+      - executable: grep  # grep *
 
       # system
-      - ["which"]
-      - ["uname"]
-      - ["ps"]
+      - executable: which  # which *
+      - executable: uname  # uname *
+      - executable: ps  # ps *
 
       # git
-      - ["git", "status"]
-      - ["git", "log"]
-      - ["git", "ls-files"]
+      - executable: git  # git status *
+        arguments:
+          - positional: status
+      - executable: git  # git log *
+        arguments:
+          - positional: log
+      - executable: git  # git ls-files *
+        arguments:
+          - positional: ls-files
 
       # whub
-      - ["whub", "ls"]
-      - ["whub", "shell-init"]
-      - ["whub", "worktree", "check"]
+      - executable: whub  # whub ls *
+        arguments:
+          - positional: ls
+      - executable: whub  # whub shell-init *
+        arguments:
+          - positional: shell-init
+      - executable: whub  # whub worktree check *
+        arguments:
+          - positional: worktree
+          - positional: check
 
       # wflow
-      - ["wflow", "check"]
+      - executable: wflow  # wflow check *
+        arguments:
+          - positional: check
+      - executable: wflow  # wflow task --project $project check *
+        arguments:
+          - positional: task
+          - option:
+              name: --project
+              value: "$project"
+          - positional: check
+      - executable: wflow  # wflow task --project $project show *
+        arguments:
+          - positional: task
+          - option:
+              name: --project
+              value: "$project"
+          - positional: show
 
       # system metadata
       # dfは対象pathに限定できず、全mountのmetadataを返す。
       # system metadata権限を定義してからbaseへ追加する。
       # - ["df"]
-      
     exact:
       # system
-      - ["date"]
-      - ["whoami"]
+      - executable: date  # date
+      - executable: whoami  # whoami
 
       # git
-      - ["git", "diff"]
-      - ["git", "show"]
-      - ["git", "branch"]
-      - ["git", "branch", "-a"]
-      - ["git", "branch", "-r"]
-      - ["git", "branch", "--show-current"]
+      - executable: git  # git diff
+        arguments:
+          - positional: diff
+      - executable: git  # git show
+        arguments:
+          - positional: show
+      - executable: git  # git branch
+        arguments:
+          - positional: branch
+      - executable: git  # git branch -a
+        arguments:
+          - positional: branch
+          - positional: -a
+      - executable: git  # git branch -r
+        arguments:
+          - positional: branch
+          - positional: -r
+      - executable: git  # git branch --show-current
+        arguments:
+          - positional: branch
+          - positional: --show-current
 
       # whub
-      - ["whub", "todo"]
-      - ["whub", "todo", "-a"]
-    templates:
-      - mode: exact
-        argv: ["wflow", "task", "--project", "$project", "ls"]
-      - mode: prefix
-        argv: ["wflow", "task", "--project", "$project", "check"]
-      - mode: prefix
-        argv: ["wflow", "task", "--project", "$project", "show"]
+      - executable: whub  # whub todo
+        arguments:
+          - positional: todo
+      - executable: whub  # whub todo -a
+        arguments:
+          - positional: todo
+          - positional: -a
+      - executable: wflow  # wflow task --project $project ls
+        arguments:
+          - positional: task
+          - option:
+              name: --project
+              value: "$project"
+          - positional: ls
 
   filesystem:
     # workspace-hubのHub論理ツリーを指すscope。adapterが具体的なpathへ解決する。

@@ -38,6 +38,9 @@ plan:
         result: 現行role YAMLを厳格にparse・validateするAgentAuthモデル、asset読込テスト、Agent別adapterの空パッケージ境界を追加した。command
           policy YAMLのexact/prefix/templates構造は次の設計段階で見直す。
       deleted: false
+    - value:
+        decision: command grantはexecutableと順序付きargumentsへ構造化した。argumentはpositionalまたはoption(name/value)とし、$variable参照を維持する。prefixは表示コメント末尾を*、exactは*なしとする。
+      deleted: false
     deleted: false
   - title: adapterを実装して検証する
     acceptance: []
