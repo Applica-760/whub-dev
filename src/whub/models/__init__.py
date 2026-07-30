@@ -23,7 +23,7 @@ from whub.models.agent.extension_tool import (
     ExtensionTool,
     ExtensionToolCatalog,
     ExtensionToolError,
-    load_extension_tool_catalog,
+    load_extension_tool,
 )
 from whub.models.session import SessionDescriptor, SessionPane, SessionTmux
 from whub.models.status import ResourceStatus, StatusReport, WorktreeStatus
@@ -67,7 +67,7 @@ __all__ = [
     "WorktreeStatus",
     "load_manifest",
     "load_agent_auth",
-    "load_extension_tool_catalog",
+    "load_extension_tool",
     "load_todos",
     "project_names",
     "save_todos",

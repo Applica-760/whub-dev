@@ -15,7 +15,7 @@ from whub.models.agent.auth import (
 )
 from whub.models.agent.extension_tool import (
     ExtensionTool,
-    load_extension_tool_catalog,
+    load_extension_tool,
 )
 from whub.services.agent.auth import AuthError, resolve_extension_tools
 
@@ -124,7 +124,7 @@ def test_rejects_network_configuration(tmp_path: Path) -> None:
 
 
 def test_loads_codegraph_extension_tool() -> None:
-    catalog = load_extension_tool_catalog(ASSETS.parent / "extension_tools")
+    catalog = load_extension_tool(ASSETS.parent / "extension_tools")
     extension_tool = catalog.tools[0]
 
     assert isinstance(extension_tool, ExtensionTool)
@@ -134,7 +134,7 @@ def test_loads_codegraph_extension_tool() -> None:
 
 def test_resolves_role_extension_tools() -> None:
     auth = load_agent_auth(ASSETS / "base.yaml")
-    catalog = load_extension_tool_catalog(ASSETS.parent / "extension_tools")
+    catalog = load_extension_tool(ASSETS.parent / "extension_tools")
 
     resolved = resolve_extension_tools(catalog, auth.grants.extension_tools)
 

@@ -49,7 +49,7 @@ class ExtensionToolCatalog(BaseModel):
         return self
 
 
-def load_extension_tool_catalog(directory: Path) -> ExtensionToolCatalog:
+def load_extension_tool(directory: Path) -> ExtensionToolCatalog:
     """Load all registered extension tool assets in one directory."""
     try:
         data = [
