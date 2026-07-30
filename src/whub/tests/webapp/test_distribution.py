@@ -30,7 +30,7 @@ def test_wheel_serves_packaged_app_from_operation_context(tmp_path: Path) -> Non
         names = archive.namelist()
     assert "whub/webapp/dist/index.html" in names
     assert any(name.startswith("whub/webapp/dist/assets/") for name in names)
-    assert "whub/assets/cleanup_appledouble.py" in names
+    assert "whub/assets/cleanup/appledouble.py" in names
     assert not any(name.startswith("app/") for name in names)
 
     installed = tmp_path / "installed"

@@ -18,7 +18,7 @@ from whub.utils.apple_double import APPLE_DOUBLE_MAGIC, APPLE_DOUBLE_PREFIX
 
 
 def run_asset(root: Path, mode: str) -> subprocess.CompletedProcess[str]:
-    script = files("whub").joinpath("assets", "cleanup_appledouble.py").read_text()
+    script = files("whub").joinpath("assets", "cleanup", "appledouble.py").read_text()
     return subprocess.run(
         [
             sys.executable,

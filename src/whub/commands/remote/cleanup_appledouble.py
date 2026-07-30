@@ -37,7 +37,7 @@ def cleanup_appledouble(ctx: click.Context, apply: bool, project: str) -> None:
         (
             "python3",
             "-c",
-            files("whub").joinpath("assets", "cleanup_appledouble.py").read_text(),
+            files("whub").joinpath("assets", "cleanup", "appledouble.py").read_text(),
             "--apply" if apply else "--list",
             APPLE_DOUBLE_PREFIX,
             APPLE_DOUBLE_MAGIC.hex(),
