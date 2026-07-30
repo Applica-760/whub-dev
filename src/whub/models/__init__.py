@@ -13,6 +13,7 @@ from whub.models.manifest import (
     load_manifest,
     project_names,
 )
+from whub.models.agent_auth import AgentAuth, AgentAuthError, load_agent_auth
 from whub.models.session import SessionDescriptor, SessionPane, SessionTmux
 from whub.models.status import ResourceStatus, StatusReport, WorktreeStatus
 from whub.models.todo import PRIORITY_EMOJI, Todo, Todos, load_todos, save_todos
@@ -24,6 +25,8 @@ from whub.models.worktree import (
 )
 
 __all__ = [
+    "AgentAuth",
+    "AgentAuthError",
     "BaseResource",
     "GitInfo",
     "GitWorktree",
@@ -48,6 +51,7 @@ __all__ = [
     "WorktreeStatus",
     "WorktreeStatus",
     "load_manifest",
+    "load_agent_auth",
     "load_todos",
     "project_names",
     "save_todos",

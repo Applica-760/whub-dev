@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-078
-  state: draft
+  state: in_progress
   title: CodexとClaude CodeのAgent adapter契約を定義する
   objective: 共通ロール・権限ポリシーとsession操作をCodexおよびClaude Codeの設定・起動方式へ変換するadapter契約を定義する
   approach:
@@ -11,8 +11,46 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: 調査と責務境界を確定する
+    acceptance: []
+    steps:
+    - description: Codex / Claude Code の公式 hook・権限・session 仕様と既存session資産を照合し、adapterが扱う範囲とTASK-079へ委譲するharness境界を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: CodexとClaude CodeはPreToolUse hookでtool呼び出しを拒否できるが、Codexはhookを完全な強制境界としない。よってadapterはhookだけを強制済み設定として返さず、harnessが提供する管理済みruntime境界を要求する。session起動・状態管理はTASK-079に委譲する。
+      deleted: false
+    deleted: false
+  - title: adapter契約と変換規則を設計する
+    acceptance: []
+    steps:
+    - description: assets/roles profileを入力、Agent固有の設定・hook定義を出力、表現不能な制約は明示的に拒否するadapter契約・エラー・fixtureを設計する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 現行role YAMLを厳格にparse・validateするAgentAuthモデル、asset読込テスト、Agent別adapterの空パッケージ境界を追加した。command
+          policy YAMLのexact/prefix/templates構造は次の設計段階で見直す。
+      deleted: false
+    deleted: false
+  - title: adapterを実装して検証する
+    acceptance: []
+    steps:
+    - description: Codex / Claude Code adapterとpolicy hook生成を実装し、許可・拒否・表現不能ケースのテスト、設定構文検証、uv
+        run pytestを成功させる
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
 acceptance_results: []
 change_requests: []
 cancellation: null
