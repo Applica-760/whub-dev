@@ -6,10 +6,12 @@ from pydantic import ValidationError
 from whub.models.agent_auth import (
     AgentAuth,
     AgentAuthError,
+    ExactCommandRule,
+    OptionArgument,
+    PrefixCommandRule,
     RegisteredProjectVariable,
     RegisteredTaskWorktreeVariable,
-    VariableExactCommand,
-    VariablePrefixCommand,
+    VariableReference,
     load_agent_auth,
 )
 
@@ -22,8 +24,12 @@ def test_loads_base_agent_auth() -> None:
 
     assert auth.type == "base"
     assert isinstance(auth.variables["project"], RegisteredProjectVariable)
-    assert isinstance(auth.grants.commands.templates[0], VariableExactCommand)
-    assert isinstance(auth.grants.commands.templates[1], VariablePrefixCommand)
+    assert isinstance(auth.grants.commands.prefixes[0], PrefixCommandRule)
+    assert isinstance(auth.grants.commands.exact[0], ExactCommandRule)
+    option = auth.grants.commands.exact[-1].arguments[1]
+    assert isinstance(option, OptionArgument)
+    assert isinstance(option.option.value, VariableReference)
+    assert option.option.value.name == "project"
 
 
 def test_loads_implementer_agent_auth() -> None:

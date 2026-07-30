@@ -91,15 +91,18 @@ grants:
       - executable: git  # git branch -a
         arguments:
           - positional: branch
-          - positional: -a
+          - option:
+              name: -a
       - executable: git  # git branch -r
         arguments:
           - positional: branch
-          - positional: -r
+          - option:
+              name: -r
       - executable: git  # git branch --show-current
         arguments:
           - positional: branch
-          - positional: --show-current
+          - option:
+              name: --show-current
 
       # whub
       - executable: whub  # whub todo

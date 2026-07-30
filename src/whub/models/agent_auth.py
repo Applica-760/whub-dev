@@ -6,10 +6,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-
-Argv = Annotated[list[str], Field(min_length=1)]
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class AgentAuthError(ValueError):
@@ -43,26 +40,74 @@ VariableDefinition = Annotated[
 
 
 # ── Commands ───────────────────────────────────────────────────────────────────────────────
-class VariableExactCommand(AgentAuthModel):
-    mode: Literal["exact"]
-    argv: Argv
+class LiteralValue(AgentAuthModel):
+    kind: Literal["literal"] = "literal"
+    value: str = Field(min_length=1)
 
 
-class VariablePrefixCommand(AgentAuthModel):
-    mode: Literal["prefix"]
-    argv: Argv
+class VariableReference(AgentAuthModel):
+    kind: Literal["variable"] = "variable"
+    name: str = Field(pattern=r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
 
 
-VariableCommand = Annotated[
-    VariableExactCommand | VariablePrefixCommand,
-    Field(discriminator="mode"),
+CommandValue = Annotated[
+    LiteralValue | VariableReference,
+    Field(discriminator="kind"),
 ]
 
 
+def _parse_command_value(value: str | dict[str, str]) -> dict[str, str]:
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str):
+        raise ValueError("command value must be a string")
+    if value.startswith("$"):
+        return {"kind": "variable", "name": value[1:]}
+    return {"kind": "literal", "value": value}
+
+
+class PositionalArgument(AgentAuthModel):
+    positional: CommandValue
+
+    @field_validator("positional", mode="before")
+    @classmethod
+    def _parse_value(cls, value: str | dict[str, str]) -> dict[str, str]:
+        return _parse_command_value(value)
+
+
+class CommandOption(AgentAuthModel):
+    name: str = Field(pattern=r"^-{1,2}[A-Za-z0-9][A-Za-z0-9_-]*$")
+    value: CommandValue | None = None
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def _parse_value(cls, value: str | dict[str, str] | None) -> dict[str, str] | None:
+        return _parse_command_value(value) if value is not None else None
+
+
+class OptionArgument(AgentAuthModel):
+    option: CommandOption
+
+
+CommandArgument = PositionalArgument | OptionArgument
+
+
+class CommandRule(AgentAuthModel):
+    executable: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
+    arguments: list[CommandArgument] = Field(default_factory=list)
+
+
+class PrefixCommandRule(CommandRule):
+    """Allow argv whose initial tokens match this rule."""
+
+
+class ExactCommandRule(CommandRule):
+    """Allow only argv whose complete tokens match this rule."""
+
+
 class CommandGrants(AgentAuthModel):
-    prefixes: list[Argv]
-    exact: list[Argv]
-    templates: list[VariableCommand]
+    prefixes: list[PrefixCommandRule]
+    exact: list[ExactCommandRule]
 
 
 # ── Filesystem ─────────────────────────────────────────────────────────────────────────────
@@ -96,6 +141,32 @@ class AgentAuth(AgentAuthModel):
     type: Literal["base", "extension"]
     variables: dict[str, VariableDefinition]
     grants: Grants
+
+    @model_validator(mode="after")
+    def _validate_command_variables(self) -> AgentAuth:
+        rules = [*self.grants.commands.prefixes, *self.grants.commands.exact]
+        for rule in rules:
+            for argument in rule.arguments:
+                value = (
+                    argument.positional
+                    if isinstance(argument, PositionalArgument)
+                    else argument.option.value
+                )
+                if isinstance(value, VariableReference):
+                    self._validate_variable_reference(value.name)
+        return self
+
+    def _validate_variable_reference(self, reference: str) -> None:
+        root, *fields = reference.split(".")
+        variable = self.variables.get(root)
+        if variable is None:
+            raise ValueError(f"unknown command variable: ${reference}")
+        if isinstance(variable, RegisteredProjectVariable):
+            if fields:
+                raise ValueError(f"variable does not expose fields: ${reference}")
+            return
+        if len(fields) != 1 or fields[0] not in variable.fields:
+            raise ValueError(f"invalid command variable reference: ${reference}")
 
 
 def load_agent_auth(path: Path) -> AgentAuth:

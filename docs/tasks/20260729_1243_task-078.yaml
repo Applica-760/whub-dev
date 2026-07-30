@@ -41,6 +41,10 @@ plan:
     - value:
         decision: command grantはexecutableと順序付きargumentsへ構造化した。argumentはpositionalまたはoption(name/value)とし、$variable参照を維持する。prefixは表示コメント末尾を*、exactは*なしとする。
       deleted: false
+    - value:
+        result: 構造化command grantをAgentAuthモデルへ反映した。exact/prefix rule、positional/option
+          argument、$variable参照を型で区別し、variablesのsource・fieldと参照整合性をasset読込時に検証する。
+      deleted: false
     deleted: false
   - title: adapterを実装して検証する
     acceptance: []
