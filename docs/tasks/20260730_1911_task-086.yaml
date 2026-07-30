@@ -1,0 +1,20 @@
+schema_version: 1
+task:
+  id: TASK-086
+  state: draft
+  title: Manifest Modelをpure schema化する
+  objective: Manifestモデルから暗黙Context依存とI/O・補完を分離し、入力Contextに対して一貫した解決を保証する。
+  approach:
+  - '前提: modelsはschemaと検証を担い、操作はserviceまたはadapterに置く。'
+  - '課題: manifest validatorの暗黙Context依存とYAML I/O・補完がModel層に混在している。'
+  - '方針案: schemaを維持したままContext注入とload/save・補完を適切な層へ移し、互換facadeを段階的に保つ。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

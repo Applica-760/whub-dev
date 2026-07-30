@@ -1,0 +1,20 @@
+schema_version: 1
+task:
+  id: TASK-091
+  state: draft
+  title: Wflow Task commandを薄くする
+  objective: wflow task CLIからユースケース処理をserviceへ移し、commandを引数解釈・表示・例外変換へ限定する。
+  approach:
+  - '前提: wflow taskのCLI互換性と既存のTask workflow規則を維持する。'
+  - '課題: wflow/commands/task.pyに検証・遷移・複数文書更新などのユースケース処理が混在している。'
+  - '方針案: command群を責務で分け、ユースケース処理はwflow/services/taskのapplication層へ移す。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

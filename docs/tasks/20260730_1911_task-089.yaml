@@ -1,0 +1,20 @@
+schema_version: 1
+task:
+  id: TASK-089
+  state: draft
+  title: Remote sessionの埋め込みスクリプトをassets化する
+  objective: Remote sessionで生成しているPythonスクリプトをpackage assetへ移し、serviceをプロトコル呼び出しと結果解釈へ限定する。
+  approach:
+  - '前提: remote側で実行するPython・PyYAML契約とsession操作の振る舞いを維持する。'
+  - '課題: services/remote/session.pyに実行用Python文字列が埋め込まれ、保守性と検証性を下げている。'
+  - '方針案: assets/remote_sessionへ実スクリプトを配置し、serviceはasset読込・引数設定・結果解釈を担う。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

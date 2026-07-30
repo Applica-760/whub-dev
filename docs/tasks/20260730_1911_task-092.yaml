@@ -1,0 +1,20 @@
+schema_version: 1
+task:
+  id: TASK-092
+  state: draft
+  title: Remote transfer commandを薄くする
+  objective: remote transfer commandの転送・整合性確認・metadata・削除処理をserviceへ移す。
+  approach:
+  - '前提: get・put・rmのCLI仕様、remote resource操作、既存テストの意図を維持する。'
+  - '課題: commands/remote/transfer.pyに転送処理とadapter処理が混在している。'
+  - '方針案: services/remote/transfer.pyへユースケースを移し、commandは引数解釈・表示・例外変換に限定する。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
