@@ -13,6 +13,7 @@ workspace root自体はProjectでもResourceでもない。`WhubContext` が `~/
 - CLI・Webに依存しない層は `core` に置く。
 - local/remoteの分岐はtargetまたはserviceへ委譲する。targetの低位エラーはserviceで `ServiceError` へ変換し、各adapterが利用者向け例外へ変換する。
 - `core/remote.py` はSSH、rsync、sshfsの低位操作だけを担い、Project固有の判断を持たない。
+- Agent authとCodex/Claude Code adapterの境界は[Agent adapters](agent-adapters.md)を参照する。
 
 ## Remote access
 

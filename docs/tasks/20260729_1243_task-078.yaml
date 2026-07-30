@@ -131,10 +131,15 @@ plan:
     steps:
     - description: Codex adapterを実装し、EffectiveAuthを継承せずCodex render planとして.rules・config内容とruntime
         guard要件を返す。公式仕様に基づく表現可能性・制約をdocs/architecture/agent-adapters.mdへ記録し、許可・拒否・表現不能ケースと設定構文を検証する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        result: Codex adapterを純粋なrender planとして実装し、.codex/rules/whub.rulesとMCP config内容、harness必須のcommand/filesystem/network
+          guard要件を返すようにした。exact commandはCodex prefix ruleへ変換せず、architecture文書へ制約を記録した。Ruff、focused
+          pytest 15件、TOML parser、Codex CLI 0.144.5 execpolicy checkに成功。
+      deleted: false
     deleted: false
   - title: Claude Code adapterを実装して検証する
     acceptance: []
