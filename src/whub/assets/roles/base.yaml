@@ -121,12 +121,11 @@ grants:
           - positional: ls
 
   filesystem:
-    # workspace-hubのHub論理ツリーを指すscope。adapterが具体的なpathへ解決する。
-    - scope: hub_logical_tree
-      access: read
+    # scopeはadapterが具体的なpathへ解決する。
+    read: [hub_logical_tree]
+    write: []
 
-  network:
-    outbound: []
+  network: {}
 
   extension_tools:
     - codegraph

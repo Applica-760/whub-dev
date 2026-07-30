@@ -88,8 +88,7 @@ grants:
           - positional: "$current_worktree.task"
     exact: []
   filesystem:
-    - scope: current_worktree
-      access: write
-  network:
-    outbound: []
+    read: []
+    write: [current_worktree]
+  network: {}
   extension_tools: []

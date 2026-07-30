@@ -6,9 +6,7 @@ from pydantic import ValidationError
 from whub.models.agent_auth import (
     AgentAuth,
     AgentAuthError,
-    CurrentWorktreeScope,
     ExactCommandRule,
-    HubLogicalTreeScope,
     OptionArgument,
     PrefixCommandRule,
     RegisteredProjectVariable,
@@ -32,7 +30,8 @@ def test_loads_base_agent_auth() -> None:
 
     assert auth.type == "base"
     assert isinstance(auth.variables["project"], RegisteredProjectVariable)
-    assert isinstance(auth.grants.filesystem[0].scope, HubLogicalTreeScope)
+    assert auth.grants.filesystem.read == ["hub_logical_tree"]
+    assert auth.grants.filesystem.write == []
     assert auth.grants.extension_tools == ["codegraph"]
     assert isinstance(auth.grants.commands.prefixes[0], PrefixCommandRule)
     assert isinstance(auth.grants.commands.exact[0], ExactCommandRule)
@@ -50,7 +49,8 @@ def test_loads_implementer_agent_auth() -> None:
         auth.variables["current_worktree"], RegisteredTaskWorktreeVariable
     )
     assert auth.variables["current_worktree"].fields == ["project", "task", "path"]
-    assert isinstance(auth.grants.filesystem[0].scope, CurrentWorktreeScope)
+    assert auth.grants.filesystem.read == []
+    assert auth.grants.filesystem.write == ["current_worktree"]
 
 
 def test_rejects_unknown_fields() -> None:
@@ -61,7 +61,7 @@ def test_rejects_unknown_fields() -> None:
         "grants": {
             "commands": {"prefixes": [], "exact": [], "templates": []},
             "filesystem": [],
-            "network": {"outbound": []},
+            "network": {},
             "extension_tools": [],
         },
         "unknown": True,
@@ -73,7 +73,10 @@ def test_rejects_unknown_fields() -> None:
 
 def test_rejects_registered_project_with_fields(tmp_path: Path) -> None:
     path = ASSETS / "templates" / "agent-auth.yaml"
-    data = path.read_text().replace("variables: {}", "variables:\n  project:\n    source: registered_project\n    fields: [project]")
+    data = path.read_text().replace(
+        "variables: {}",
+        "variables:\n  project:\n    source: registered_project\n    fields: [project]",
+    )
     target = tmp_path / "invalid-agent-auth.yaml"
     target.write_text(data)
 
@@ -82,13 +85,43 @@ def test_rejects_registered_project_with_fields(tmp_path: Path) -> None:
 
 
 def test_rejects_unknown_filesystem_scope(tmp_path: Path) -> None:
-    data = (ASSETS / "base.yaml").read_text().replace(
-        "scope: hub_logical_tree", "scope: unknown_scope", 1
+    data = (
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace("hub_logical_tree", "unknown_scope", 1)
     )
     target = tmp_path / "invalid-agent-auth.yaml"
     target.write_text(data)
 
     with pytest.raises(AgentAuthError):
+        load_agent_auth(target)
+
+
+def test_rejects_duplicate_filesystem_scope(tmp_path: Path) -> None:
+    data = (
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace(
+            "read: [hub_logical_tree]", "read: [hub_logical_tree, hub_logical_tree]", 1
+        )
+    )
+    target = tmp_path / "invalid-agent-auth.yaml"
+    target.write_text(data)
+
+    with pytest.raises(AgentAuthError, match="filesystem scopes must be unique"):
+        load_agent_auth(target)
+
+
+def test_rejects_network_configuration(tmp_path: Path) -> None:
+    data = (
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace("network: {}", "network:\n    outbound: []", 1)
+    )
+    target = tmp_path / "invalid-agent-auth.yaml"
+    target.write_text(data)
+
+    with pytest.raises(AgentAuthError, match="Extra inputs are not permitted"):
         load_agent_auth(target)
 
 
@@ -100,6 +133,19 @@ def test_loads_codegraph_extension_tool() -> None:
     assert isinstance(extension_tool, ExtensionTool)
     assert extension_tool.id == "codegraph"
     assert "codegraph_explore" in extension_tool.tools
+
+
+def test_rejects_unknown_codegraph_tool(tmp_path: Path) -> None:
+    data = (
+        (ASSETS.parent / "extension_tools" / "codegraph.yaml")
+        .read_text()
+        .replace("codegraph_explore", "codegraph_unknown", 1)
+    )
+    target = tmp_path / "invalid-codegraph.yaml"
+    target.write_text(data)
+
+    with pytest.raises(ExtensionToolError):
+        load_extension_tool(target)
 
 
 def test_resolves_role_extension_tools() -> None:

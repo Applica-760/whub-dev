@@ -29,8 +29,9 @@ plan:
   - title: adapter契約と変換規則を設計する
     acceptance: []
     steps:
-    - description: assets/roles profileを入力、Agent固有の設定・hook定義を出力、表現不能な制約は明示的に拒否するadapter契約・エラー・fixtureを設計する
-      state: pending
+    - description: AgentAuthのNetworkをdeny-allモデルとして簡素化し、filesystemのread/write別scope集合化、CodeGraph
+        tool集合化、Role asset・agent-auth文書の整合化を設計・検証する
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -49,6 +50,11 @@ plan:
         result: AgentAuthのfilesystem scopeをHubLogicalTreeScopeとCurrentWorktreeScopeの判別unionへ変更し、access(read/write)を独立軸として維持した。登録済みExtensionTool、ExtensionToolCatalog、CodeGraph
           assetを追加し、Roleはextension_toolsでIDだけを宣言してcatalogで解決する。focused pytest 7件とRuffに成功。次はNetworkGrantsの対象・allowlist・拡張ツールとの実効権限境界を見直す。
       deleted: false
+    - value:
+        result: Filesystemをread/write別のscope集合へ正規化し、Networkをagent_auth内のdeny-all空モデルへ簡素化した。CodeGraph
+          MCP toolは固定名集合として検証し、Role asset・文書・モデルテストを更新した。uv run pytest src/whub/tests/models（36
+          passed）およびRuff check/format checkに成功。
+      deleted: false
     deleted: false
   - title: adapterを実装して検証する
     acceptance: []
@@ -62,7 +68,15 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: Network deny-all model、filesystem grantsの操作別scope集合化、Role asset・agent-auth文書の整合化をPhase
+    2へ追加するため
+- reason: Networkを登録済みサービスIDのoutbound集合として定義し、CodeGraph tool集合もLiteralで制約する設計をPhase
+    2へ反映するため
+- reason: Network service catalogを導入せず、agent_auth内のdeny-allモデルに留める設計へ簡素化するため
 cancellation: null
 result: null

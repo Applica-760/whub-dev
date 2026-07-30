@@ -29,20 +29,21 @@ agent authはcommand、filesystem、network、外部ツールを対象とする�
 役割指示が必要なextensionだけ同じディレクトリに`description.md`を置く。base agent authに
 `description.md`は置かない。
 
-`grants.network.outbound`は外向き接続先のallowlistである。空配列は外向き接続を許可しない。
+`grants.network`は現在空オブジェクトだけを受け付け、network accessを許可しない。
 
 `variables`はroleの権限評価に使う、adapterが解決または検証する値である。
 `registered_task_worktree`は、現在のAgentに割り当てられた登録済みworktreeから`project`、`task`、`path`を
 解決する。未解決または複数候補の場合、adapterは実行を拒否する。
 `registered_project`はargvの値がwhubに登録済みのProject名であることを検証し、未登録なら実行を拒否する。
 
-`grants.commands.templates`は変数付きのargv許可である。各項目は`mode`を`prefix`または`exact`、
-`argv`を配列で指定する。`$current_worktree.project`のような変数参照はargvの単独要素だけに使え、
-文字列結合およびshell展開は行わない。
+`grants.commands.prefixes`と`grants.commands.exact`は、`executable`と順序付きの`arguments`でargvを
+許可する。argumentは`positional`または`option`であり、`option`は`name`と任意の`value`を持つ。
+`$current_worktree.project`のような変数参照はargumentの値だけに使え、文字列結合およびshell展開は行わない。
 
-`grants.external_tools`の各項目は、外部ツールを次のフィールドで定義する。
+`grants.extension_tools`はHubに登録された外部ツールIDの集合である。外部ツールの接続定義はcatalogで管理する。
+CodeGraph catalogの`tools`は許可する固定MCP tool名の集合である。
 
-- `name`: MCP serverの設定名
+- `id`: MCP serverの設定名
 - `transport`: 接続方式。MVPではローカルプロセスの`stdio`だけを扱う。
 - `tools`: 許可するMCP toolの固定名の配列
 
@@ -64,6 +65,9 @@ adapter/harnessは後続Taskで、本元Task YAMLへのraw writeを拒否し、�
 
 ## Filesystem authorization
 
+`grants.filesystem.read`と`grants.filesystem.write`は、それぞれの操作を許可するscopeの集合である。
+readとwriteは独立し、write scopeはreadを暗黙に許可しない。
+
 base agent authはHubの論理ツリー全体にreadを付与する。Hub直下の通常ファイル・ディレクトリに加え、Hub直下で登録されたdirectory symlinkまたはmountを入口として、そのProject配下の通常ファイル・ディレクトリを読める。
 
 - `ls`、`tree`、`stat`、`file`、`wc`、`cat`、`head`、`tail`、`grep`などのread操作は、この範囲でのみ行う。
@@ -74,6 +78,6 @@ base agent authはHubの論理ツリー全体にreadを付与する。Hub直下�
 
 ## Deferred
 
-- agent authのYAML schema validator
-- networkの接続先表現と`stdio`以外のtransport
+- networkの接続先表現
+- `stdio`以外のtransport
 - Agent adapter/harnessによるfilesystem・Task YAML操作の強制

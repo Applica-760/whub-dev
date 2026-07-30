@@ -14,6 +14,16 @@ class ExtensionToolError(ValueError):
 
 
 ExtensionToolId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
+CodeGraphTool = Literal[
+    "codegraph_explore",
+    "codegraph_search",
+    "codegraph_node",
+    "codegraph_callers",
+    "codegraph_callees",
+    "codegraph_impact",
+    "codegraph_files",
+    "codegraph_status",
+]
 
 
 class ExtensionTool(BaseModel):
@@ -34,12 +44,19 @@ class ExtensionTool(BaseModel):
         return value
 
 
+class CodeGraphExtensionTool(ExtensionTool):
+    """The Hub-managed CodeGraph MCP tool."""
+
+    id: Literal["codegraph"]
+    tools: list[CodeGraphTool] = Field(min_length=1)
+
+
 class ExtensionToolCatalog(BaseModel):
     """All extension tools registered in one Hub."""
 
     model_config = ConfigDict(extra="forbid")
 
-    tools: list[ExtensionTool]
+    tools: list[CodeGraphExtensionTool]
 
     @model_validator(mode="after")
     def _validate_unique_ids(self) -> ExtensionToolCatalog:
@@ -58,16 +75,18 @@ class ExtensionToolCatalog(BaseModel):
         return [by_id[tool_id] for tool_id in ids]
 
 
-def load_extension_tool(path: Path) -> ExtensionTool:
+def load_extension_tool(path: Path) -> CodeGraphExtensionTool:
     """Load and validate one registered extension tool asset."""
     try:
         data = yaml.safe_load(path.read_text())
     except (OSError, UnicodeError, yaml.YAMLError) as error:
         raise ExtensionToolError(f"invalid extension tool asset: {path}") from error
     try:
-        return ExtensionTool.model_validate(data)
+        return CodeGraphExtensionTool.model_validate(data)
     except ValueError as error:
-        raise ExtensionToolError(f"invalid extension tool asset: {path}: {error}") from error
+        raise ExtensionToolError(
+            f"invalid extension tool asset: {path}: {error}"
+        ) from error
 
 
 def load_extension_tool_catalog(directory: Path) -> ExtensionToolCatalog:
@@ -75,10 +94,14 @@ def load_extension_tool_catalog(directory: Path) -> ExtensionToolCatalog:
     try:
         paths = sorted(directory.glob("*.yaml"))
     except OSError as error:
-        raise ExtensionToolError(f"invalid extension tool directory: {directory}") from error
+        raise ExtensionToolError(
+            f"invalid extension tool directory: {directory}"
+        ) from error
     if not paths:
         raise ExtensionToolError(f"no extension tool assets: {directory}")
     try:
         return ExtensionToolCatalog(tools=[load_extension_tool(path) for path in paths])
     except ValueError as error:
-        raise ExtensionToolError(f"invalid extension tool catalog: {directory}") from error
+        raise ExtensionToolError(
+            f"invalid extension tool catalog: {directory}"
+        ) from error

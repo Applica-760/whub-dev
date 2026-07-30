@@ -21,9 +21,8 @@ grants:
     # scopeはadapterが具体的なpathへ解決する文脈依存の名前。
     # hub_logical_treeはworkspace-hubでは、Hub直下と直下のdirectory symlink/mountで
     # 到達するProject配下を指す。他のworkspaceでは固有のscope名を定義する。
-    - scope: hub_logical_tree
-      access: read
-  network:
-    outbound: []  # 外向き接続先のallowlist。接続を許可しない場合は空にする。
+    read: [hub_logical_tree]
+    write: []
+  network: {}
   # Hubに登録済みの拡張ツールIDだけを指定する。例: [example_tool]
   extension_tools: []

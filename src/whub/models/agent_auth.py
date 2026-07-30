@@ -117,53 +117,43 @@ class CommandGrants(AgentAuthModel):
 
 
 # ── Filesystem ─────────────────────────────────────────────────────────────────────────────
-class HubLogicalTreeScope(AgentAuthModel):
-    """Hub root and its registered symlink or mount entries."""
-
-    kind: Literal["hub_logical_tree"]
+FilesystemScope = Literal["hub_logical_tree", "current_worktree"]
 
 
-class CurrentWorktreeScope(AgentAuthModel):
-    """The worktree uniquely resolved for the current Agent execution."""
+class FilesystemGrants(AgentAuthModel):
+    read: list[FilesystemScope] = Field(default_factory=list)
+    write: list[FilesystemScope] = Field(default_factory=list)
 
-    kind: Literal["current_worktree"]
-
-
-FilesystemScope = Annotated[
-    HubLogicalTreeScope | CurrentWorktreeScope,
-    Field(discriminator="kind"),
-]
-
-
-def _parse_filesystem_scope(value: str | dict[str, str]) -> dict[str, str]:
-    if isinstance(value, str):
-        return {"kind": value}
-    if isinstance(value, dict):
-        return value
-    raise ValueError("filesystem scope must be a string")
-
-
-class FilesystemGrant(AgentAuthModel):
-    scope: FilesystemScope
-    access: Literal["read", "write"]
-
-    @field_validator("scope", mode="before")
+    @field_validator("read", "write")
     @classmethod
-    def _parse_scope(cls, value: str | dict[str, str]) -> dict[str, str]:
-        return _parse_filesystem_scope(value)
+    def _validate_unique_scopes(
+        cls, value: list[FilesystemScope]
+    ) -> list[FilesystemScope]:
+        if len(value) != len(set(value)):
+            raise ValueError("filesystem scopes must be unique")
+        return value
 
 
 # ── Network ────────────────────────────────────────────────────────────────────────────────
 class NetworkGrants(AgentAuthModel):
-    outbound: list[str]
+    """No network access is granted."""
 
 
 # ── Role ───────────────────────────────────────────────────────────────────────────────────
 class Grants(AgentAuthModel):
     commands: CommandGrants
-    filesystem: list[FilesystemGrant]
+    filesystem: FilesystemGrants
     network: NetworkGrants
     extension_tools: list[ExtensionToolId]
+
+    @field_validator("extension_tools")
+    @classmethod
+    def _validate_unique_extension_tools(
+        cls, value: list[ExtensionToolId]
+    ) -> list[ExtensionToolId]:
+        if len(value) != len(set(value)):
+            raise ValueError("extension tools must be unique")
+        return value
 
 
 class AgentAuth(AgentAuthModel):
