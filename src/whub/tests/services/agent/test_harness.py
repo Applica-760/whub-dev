@@ -344,6 +344,43 @@ def test_open_harness_uses_the_registered_task_id(tmp_path: Path) -> None:
     assert start.call_args.args[0].task_id == "TASK-095"
 
 
+def test_open_harness_projects_hub_context_without_harness_specific_logic(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "AGENTS.md").write_text("# Hub rules\n")
+    skill = tmp_path / ".agents/skills/issue-log"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("---\nname: issue-log\n---\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    (worktree / "AGENTS.md").write_text("# Project rules\n")
+    registered = SimpleNamespace(
+        definition=SimpleNamespace(task_id="TASK-095"), destination=worktree
+    )
+    resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
+    plan = SimpleNamespace(files={})
+    session = SimpleNamespace()
+
+    with (
+        patch(
+            "whub.services.agent.harness.resolve_project_worktree",
+            return_value=registered,
+        ),
+        patch(
+            "whub.services.agent.harness.resolve_agent_auth",
+            return_value=resolved_auth,
+        ),
+        patch("whub.services.agent.harness.render_codex", return_value=plan),
+        patch("whub.services.agent.harness.render_claude_code", return_value=plan),
+        patch("whub.services.agent.harness._start_tmux_session", return_value=session),
+    ):
+        assert open_harness(None, tmp_path, "whub-dev", "TASK-095", ()) is session
+
+    assert "# Hub rules" in (worktree / "AGENTS.md").read_text()
+    assert (worktree / ".agents/skills/issue-log/SKILL.md").exists()
+    assert (worktree / ".claude/CLAUDE.md").exists()
+
+
 def test_close_stops_tmux_before_state_cleanup(tmp_path: Path) -> None:
     registered = SimpleNamespace(
         definition=SimpleNamespace(task_id="TASK-095"), destination=tmp_path
