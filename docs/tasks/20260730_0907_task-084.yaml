@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-084
-  state: draft
+  state: in_progress
   title: whub link の gitignore 管理見直し
   objective: whub link が自動生成する gitignore 対象を現行の symlink/mount 設計に照らして検証し、必要な変更方針を決定する
   approach:
@@ -10,9 +10,156 @@ task:
   interruption_task_id: null
   interruption_reason: null
   interruption_source_task_id: null
-plan: null
-approvals: []
+plan:
+  acceptance: []
+  phases:
+  - title: ignore 管理契約と回帰テスト
+    acceptance: []
+    steps:
+    - description: 現行の link・CodeGraph・managed block の責務を固定し、link が管理する ignore entry
+        を .codegraph/ のみにする回帰テストを追加する。旧 link block に projects・AGENTS.md・Agent 設定などが残る入力も、利用者管理の行を損なわず
+        .codegraph/ 専用 block へ収束することを検証する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: ファイル型・ディレクトリ型を問わず、manifest の symlink resource の workspace_path
+        を ignore 対象として収集する既存ロジックを廃止する。link 実行時は managed block に .codegraph/ だけを書き、AGENTS.md、.agents/、.claude/、.codex/、.mcp.json、Project
+        symlink の各パスを追加・維持しない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 既存 marker と旧 1 行 marker の移行を実装し、旧自動生成 block に含まれる過剰な entry を次回
+        link 実行で除去する。マーカー外の利用者管理 .gitignore 行、改行、既存の .codegraph/ entry は維持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 実装と利用者向け契約
+    acceptance: []
+    steps:
+    - description: CLI の説明と README／リファレンスを更新し、whub link の .gitignore 管理対象が CodeGraph
+        の runtime directory のみであること、および Project / Agent 指示ファイルは利用者・各 repository の管理対象であることを明文化する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 検証と受け入れ確認
+    acceptance: []
+    steps:
+    - description: 対象ユニットテストを実行し、全テストまたは変更範囲に見合う検証を行う。実 workspace 相当の .gitignore fixture
+        で、.codegraph/ だけが managed block に残り AGENTS.md 等が git ignore されないことを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: ignore 管理契約と回帰テスト
+    acceptance: []
+    steps:
+    - description: link が管理する  entry を、CodeGraph runtime の 、Finder metadata の 、AppleDouble
+        sidecar の  と  に限定する回帰テストを追加する。旧 block の projects・AGENTS.md・Agent 設定・Project
+        symlink が新 block に残らず、marker 外の利用者管理行を保持することを fixture で確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: manifest の symlink resource の workspace_path を ignore 対象として収集する既存ロジックを廃止し、link
+        実行時には4 entryだけを managed block に書く。AGENTS.md、.agents/、.claude/、.codex/、.mcp.json、Project
+        symlink を追加・維持しない。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 新旧の marker 形式を 、、、 だけの block へ移行する。macOS がリンク先または mount に生成する metadata/sidecar
+        は ignore し、無関係な既存行・改行・利用者の ignore 設定を保持する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 実装と利用者向け契約
+    acceptance: []
+    steps:
+    - description: CLI の説明と README／リファレンスを更新し、whub link の  管理対象と、Project・Agent 指示ファイルが利用者または各
+        repository の管理対象であることを明文化する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: 検証と受け入れ確認
+    acceptance: []
+    steps:
+    - description: 対象ユニットテストと変更範囲に見合うテストを実行する。実 workspace 相当の  fixture で4 entryだけが
+        managed block に残り、AGENTS.md 等が git ignore されないことを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: ignore 管理契約と回帰テスト
+    acceptance: []
+    steps:
+    - description: link が管理する .gitignore entry を、CodeGraph runtime の .codegraph/、Finder
+        metadata の .DS_Store、AppleDouble sidecar の ._* と .AppleDouble/ に限定する回帰テストを追加する。旧
+        block の projects・AGENTS.md・Agent 設定・Project symlink が新 block に残らず、marker 外の利用者管理行を保持することを
+        fixture で確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: manifest の symlink resource の workspace_path を ignore 対象として収集する既存ロジックを廃止し、link
+        実行時には4 entryだけを managed block に書く。AGENTS.md、.agents/、.claude/、.codex/、.mcp.json、Project
+        symlink を追加・維持しない。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 新旧の marker 形式を .codegraph/、.DS_Store、._*、.AppleDouble/ だけの block
+        へ移行する。macOS がリンク先または mount に生成する metadata/sidecar は ignore し、無関係な既存行・改行・利用者の
+        ignore 設定を保持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: link の managed block を .codegraph/、.DS_Store、._*、.AppleDouble/
+          に固定し、旧 marker の Project path も移行時に除去した。
+      deleted: false
+    deleted: false
+  - title: 実装と利用者向け契約
+    acceptance: []
+    steps:
+    - description: CLI の説明と README／リファレンスを更新し、whub link の .gitignore 管理対象と、Project・Agent
+        指示ファイルが利用者または各 repository の管理対象であることを明文化する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        documentation: README と CLI リファレンスに、managed ignore の4対象と AGENTS.md 等を管理しない契約を記載した。
+      deleted: false
+    deleted: false
+  - title: 検証と受け入れ確認
+    acceptance: []
+    steps:
+    - description: 対象ユニットテストと変更範囲に見合うテストを実行する。実 workspace 相当の .gitignore fixture で4
+        entryだけが managed block に残り、AGENTS.md 等が git ignore されないことを確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: uv run pytest src/whub/tests/commands/test_link.py（8 passed）、ruff
+          check、git diff --check が成功した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: ユーザー指定により managed ignore 対象を .codegraph/ に加え、macOS metadata (.DS_Store)
+    と AppleDouble (._*、.AppleDouble/) へ拡張するため。
+- reason: 計画本文中の backtick が shell 展開され、対象パス表記が欠落したため、内容を正しい文字列へ訂正する。
 cancellation: null
 result: null
