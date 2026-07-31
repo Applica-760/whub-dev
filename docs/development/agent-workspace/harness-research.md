@@ -26,7 +26,7 @@ Claude Code CLIはnon-interactive modeでagentic turn数を`--max-turns`によ�
 
 - `NetworkPolicy`は`deny_all`だけを表現する。
 - base agent authとextension agent authのnetwork grantsが異なると、`compose_auth`は拒否する。
-- Codex adapterとClaude Code adapterは、command、filesystem、networkのruntime authorizationをharness必須要件として返す。生成するAgent設定だけを強制境界とは扱っていない。
+- Claude Code adapterはcommand、filesystem、networkのruntime authorization要件をrender planに含める。ただし現MVPのharnessはこれを強制せず、設定生成・tmux lifecycle・生成物cleanupだけを実装している。
 
 ## Open questions
 

@@ -39,6 +39,17 @@ whub worktree merge <PROJECT> <TASK-ID> --method {merge,squash,rebase}
 - `merge` は`--method`でmerge方式を明示する。GitHubのPR review、branch protection、required checksを満たさない場合はGitHub側で拒否される。CLIは承認を記録・代行しない。merge成功後だけ既存の`remove`を呼び、失敗時はworktreeと定義を残す。PR merge・cleanupのいずれもtask branchを削除しない。
 - remote Resourceを親にするworktreeは未実装であり、明示的にエラーとなる。
 
+## Agent
+
+```sh
+whub agent open <PROJECT> <TASK-ID> --auth <AUTH> [--auth <AUTH>]
+whub agent close <PROJECT> <TASK-ID>
+```
+
+- `open` は登録済みworktreeを検証し、選択したauthからAgent設定を生成してtmux sessionへattachする。sessionがなければ新規作成する。
+- `close` は対応sessionを停止し、whubが生成してStateへ記録した未変更の設定だけを削除する。worktree、branch、Task状態は変更しない。
+- 詳細なlifecycleと変更済み設定の復旧は[Agent harness operation](../operations/agent.md)を参照する。
+
 ## 作業支援
 
 ```sh

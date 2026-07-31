@@ -20,6 +20,7 @@ symlink・SSH・マニフェスト駆動のCLIにより、状態確認・移動�
 - [CLI reference](docs/reference/cli.md)
 - [Manifest reference](docs/reference/manifest.md)
 - [Worktree reference](docs/reference/worktree.md)
+- [Agent harness operation](docs/operations/agent.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Development conventions](docs/development/conventions.md)
 - [Architecture decisions](docs/ADR/)
@@ -49,6 +50,8 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub remote run <PROJECT> <CMD...>` | remoteの`resource`直下でワンショット実行（終了コード引き継ぎ。対話は`cd`） |
 | `whub remote cleanup-appledouble <PROJECT> [--apply]` | remote host上で検証済みAppleDouble sidecarを一覧表示し、`--apply`時だけ削除 |
 | `whub remote session <COMMAND>` | remote GUI sessionの予約・command handoff・状態確認・ログ取得・削除 |
+| `whub agent open <PROJECT> <TASK-ID> --auth <AUTH>` | 登録済みTask worktreeのAgent設定を生成し、tmux sessionへattachまたは新規起動 |
+| `whub agent close <PROJECT> <TASK-ID>` | Agent tmux sessionを停止し、whub所有の未変更設定を除去 |
 | `whub remote get <PATH>` | remoteの単一fileをworkspace rootの`remote_files/`へ取得 |
 | `whub remote put <LOCAL_NAME>` | `whub remote get`した`remote_files/`配下のfileを取得元のremote fileへ書き戻す |
 | `whub remote rm <LOCAL_NAME>` | 管理済みの`remote_files/`配下fileと対応メタデータを削除 |
