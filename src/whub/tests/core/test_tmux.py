@@ -16,7 +16,16 @@
 
 from __future__ import annotations
 
-from whub.core.tmux import build_shell_command, session_name
+from pathlib import Path
+
+import pytest
+
+from whub.core.tmux import (
+    build_shell_command,
+    session_name,
+    session_target,
+    tmux_command,
+)
 
 
 class TestTmuxSpec:
@@ -27,6 +36,24 @@ class TestTmuxSpec:
     def test_session_name_replaces_tmux_unsafe_characters(self) -> None:
         # ケース2
         assert session_name("project.name:task") == "whub-project-name-task"
+
+    def test_session_name_joins_task_identity(self) -> None:
+        assert session_name("whub-dev", "TASK-095") == "whub-whub-dev-TASK-095"
+
+    def test_session_name_rejects_empty_identity(self) -> None:
+        with pytest.raises(ValueError, match="non-empty parts"):
+            session_name("whub-dev", "")
+
+    def test_session_target_is_exact(self) -> None:
+        assert session_target("whub-whub-dev-TASK-095") == "=whub-whub-dev-TASK-095"
+
+    def test_tmux_command_uses_optional_private_socket(self) -> None:
+        assert tmux_command("has-session", socket=Path("/tmp/tmux.sock")) == [
+            "tmux",
+            "-S",
+            "/tmp/tmux.sock",
+            "has-session",
+        ]
 
     def test_build_shell_command_falls_back_when_tmux_is_missing(self) -> None:
         # ケース3

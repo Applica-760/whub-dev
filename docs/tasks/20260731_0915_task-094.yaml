@@ -34,10 +34,10 @@ plan:
     acceptance: []
     steps:
     - description: 登録済みTaskとworktreeを検証し、生成物を安全に配置する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
-    - description: tmux上でCodexを起動し、停止後の再接続を扱う
+    - description: 設定済みworktree shellをtmuxで起動し、停止後の再接続を扱う
       state: pending
       skip_reason: null
       deleted: false
@@ -58,7 +58,9 @@ plan:
     deleted: false
 approvals:
 - actor: user
+- actor: user
 acceptance_results: []
-change_requests: []
+change_requests:
+- reason: CLIはAgent実行形式を選ばず、設定済みworktree shellのtmux起動・再接続までを担うため
 cancellation: null
 result: null
