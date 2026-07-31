@@ -18,7 +18,7 @@ from whub.services.agent.harness import (
     open_harness,
 )
 from whub.services.errors import ServiceError
-from whub.services.agent.state import cleanup, prepare, state_path
+from whub.services.agent.state import cleanup, load, prepare, state_path
 
 
 def _plan(content: str = 'sandbox_mode = "workspace-write"\n') -> CodexRenderPlan:
@@ -113,6 +113,130 @@ def test_state_removes_generic_empty_parent_directories(tmp_path: Path) -> None:
     assert not (tmp_path / relative).exists()
     assert not (tmp_path / "provider/generated").exists()
     assert keep.exists()
+
+
+def test_state_injects_and_cleans_owned_block_from_existing_file(tmp_path: Path) -> None:
+    path = tmp_path / "AGENTS.md"
+    path.write_text("# Project rules\n")
+    block = "<!-- whub:harness:context:start -->\nHub rules\n<!-- whub:harness:context:end -->\n"
+
+    prepare(
+        tmp_path,
+        "whub-dev",
+        "TASK-095",
+        tmp_path,
+        {},
+        patches={PurePosixPath("AGENTS.md"): block},
+    )
+
+    assert path.read_text() == "# Project rules\n\n" + block
+    cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
+
+    assert path.read_text() == "# Project rules\n"
+    assert not state_path(tmp_path, "whub-dev", "TASK-095").exists()
+
+
+def test_state_preserves_external_edits_when_cleaning_owned_block(tmp_path: Path) -> None:
+    path = tmp_path / "AGENTS.md"
+    path.write_text("# Project rules\n")
+    block = "<!-- whub:harness:context:start -->\nHub rules\n<!-- whub:harness:context:end -->\n"
+    prepare(
+        tmp_path,
+        "whub-dev",
+        "TASK-095",
+        tmp_path,
+        {},
+        patches={PurePosixPath("AGENTS.md"): block},
+    )
+    path.write_text(path.read_text() + "\n# User note\n")
+
+    cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
+
+    assert path.read_text() == "# Project rules\n\n# User note\n"
+
+
+def test_state_rejects_changed_owned_block(tmp_path: Path) -> None:
+    path = tmp_path / "AGENTS.md"
+    path.write_text("# Project rules\n")
+    block = "<!-- whub:harness:context:start -->\nHub rules\n<!-- whub:harness:context:end -->\n"
+    prepare(
+        tmp_path,
+        "whub-dev",
+        "TASK-095",
+        tmp_path,
+        {},
+        patches={PurePosixPath("AGENTS.md"): block},
+    )
+    path.write_text(path.read_text().replace("Hub rules", "Changed rules"))
+
+    with pytest.raises(ServiceError, match="managed context was modified"):
+        cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
+
+
+def test_state_removes_owned_block_file_when_it_is_empty(tmp_path: Path) -> None:
+    block = "<!-- whub:harness:context:start -->\n@../AGENTS.md\n<!-- whub:harness:context:end -->\n"
+    prepare(
+        tmp_path,
+        "whub-dev",
+        "TASK-095",
+        tmp_path,
+        {},
+        patches={PurePosixPath(".claude/CLAUDE.md"): block},
+    )
+
+    cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
+
+    assert not (tmp_path / ".claude/CLAUDE.md").exists()
+    assert not (tmp_path / ".claude").exists()
+
+
+def test_prepare_projects_hub_context(tmp_path: Path) -> None:
+    (tmp_path / "AGENTS.md").write_text("# Hub rules\n")
+    skill = tmp_path / ".agents/skills/issue-log"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("---\nname: issue-log\n---\n")
+    (skill / "reference.md").write_text("reference\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    (worktree / "AGENTS.md").write_text("# Project rules\n")
+
+    prepare(tmp_path, "whub-dev", "TASK-095", worktree, {})
+
+    assert (worktree / ".agents/skills/issue-log/SKILL.md").read_text() == (
+        "---\nname: issue-log\n---\n"
+    )
+    assert (worktree / ".agents/skills/issue-log/reference.md").read_text() == (
+        "reference\n"
+    )
+    assert "# Hub rules" in (worktree / "AGENTS.md").read_text()
+    assert (worktree / ".claude/CLAUDE.md").read_text() == (
+        "<!-- whub:harness:context:start -->\n"
+        "@../AGENTS.md\n"
+        "<!-- whub:harness:context:end -->\n"
+    )
+
+    cleanup(tmp_path, "whub-dev", "TASK-095", worktree)
+
+    assert (worktree / "AGENTS.md").read_text() == "# Project rules\n"
+    assert not (worktree / ".agents").exists()
+    assert not (worktree / ".claude").exists()
+
+
+def test_state_loads_v1_without_patches(tmp_path: Path) -> None:
+    path = state_path(tmp_path, "whub-dev", "TASK-095")
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "schema_version: 1\n"
+        "project: whub-dev\n"
+        "task_id: TASK-095\n"
+        "worktree: /tmp/worktree\n"
+        "files: {}\n"
+    )
+
+    state = load(path)
+
+    assert state is not None
+    assert state.patches == {}
 
 
 def test_state_rejects_symlinked_config_directory(tmp_path: Path) -> None:
