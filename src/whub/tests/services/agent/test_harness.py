@@ -17,8 +17,9 @@ from whub.services.agent.harness import (
     close_harness,
     open_harness,
 )
+from whub.services.agent.hub_context import render_hub_context
 from whub.services.errors import ServiceError
-from whub.services.agent.state import cleanup, prepare, state_path
+from whub.services.agent.state import cleanup, load, prepare, state_path
 
 
 def _plan(content: str = 'sandbox_mode = "workspace-write"\n') -> CodexRenderPlan:
@@ -113,6 +114,125 @@ def test_state_removes_generic_empty_parent_directories(tmp_path: Path) -> None:
     assert not (tmp_path / relative).exists()
     assert not (tmp_path / "provider/generated").exists()
     assert keep.exists()
+
+
+def test_state_injects_and_cleans_owned_block_from_existing_file(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "AGENTS.md").write_text("Hub rules\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    path = worktree / "AGENTS.md"
+    path.write_text("# Project rules\n")
+
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_hub_context(hub))
+
+    assert "Hub rules" in path.read_text()
+    cleanup(hub, "whub-dev", "TASK-095", worktree)
+
+    assert path.read_text() == "# Project rules\n"
+    assert not state_path(hub, "whub-dev", "TASK-095").exists()
+
+
+def test_state_preserves_external_edits_when_cleaning_owned_block(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "AGENTS.md").write_text("Hub rules\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    path = worktree / "AGENTS.md"
+    path.write_text("# Project rules\n")
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_hub_context(hub))
+    path.write_text(path.read_text() + "\n# User note\n")
+
+    cleanup(hub, "whub-dev", "TASK-095", worktree)
+
+    assert path.read_text() == "# Project rules\n\n# User note\n"
+
+
+def test_state_rejects_changed_owned_block(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "AGENTS.md").write_text("Hub rules\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    path = worktree / "AGENTS.md"
+    path.write_text("# Project rules\n")
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_hub_context(hub))
+    path.write_text(path.read_text().replace("Hub rules", "Changed rules"))
+
+    with pytest.raises(ServiceError, match="managed context was modified"):
+        cleanup(hub, "whub-dev", "TASK-095", worktree)
+
+
+def test_state_removes_owned_block_file_when_it_is_empty(tmp_path: Path) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "AGENTS.md").write_text("Hub rules\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_hub_context(hub))
+
+    cleanup(hub, "whub-dev", "TASK-095", worktree)
+
+    assert not (worktree / ".claude/CLAUDE.md").exists()
+    assert not (worktree / ".claude").exists()
+
+
+def test_prepare_projects_hub_context(tmp_path: Path) -> None:
+    (tmp_path / "AGENTS.md").write_text("# Hub rules\n")
+    skill = tmp_path / ".agents/skills/issue-log"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("---\nname: issue-log\n---\n")
+    (skill / "reference.md").write_text("reference\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    (worktree / "AGENTS.md").write_text("# Project rules\n")
+
+    prepare(
+        tmp_path,
+        "whub-dev",
+        "TASK-095",
+        worktree,
+        {},
+        render_hub_context(tmp_path),
+    )
+
+    assert (worktree / ".agents/skills/issue-log/SKILL.md").read_text() == (
+        "---\nname: issue-log\n---\n"
+    )
+    assert (worktree / ".agents/skills/issue-log/reference.md").read_text() == (
+        "reference\n"
+    )
+    assert "# Hub rules" in (worktree / "AGENTS.md").read_text()
+    assert (worktree / ".claude/CLAUDE.md").read_text() == (
+        "<!-- whub:harness:context:start -->\n"
+        "@../AGENTS.md\n"
+        "<!-- whub:harness:context:end -->\n"
+    )
+
+    cleanup(tmp_path, "whub-dev", "TASK-095", worktree)
+
+    assert (worktree / "AGENTS.md").read_text() == "# Project rules\n"
+    assert not (worktree / ".agents").exists()
+    assert not (worktree / ".claude").exists()
+
+
+def test_state_loads_v1_without_patches(tmp_path: Path) -> None:
+    path = state_path(tmp_path, "whub-dev", "TASK-095")
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "schema_version: 1\n"
+        "project: whub-dev\n"
+        "task_id: TASK-095\n"
+        "worktree: /tmp/worktree\n"
+        "files: {}\n"
+    )
+
+    state = load(path)
+
+    assert state is not None
+    assert state.blocks == {}
 
 
 def test_state_rejects_symlinked_config_directory(tmp_path: Path) -> None:
@@ -218,6 +338,43 @@ def test_open_harness_uses_the_registered_task_id(tmp_path: Path) -> None:
         assert open_harness(None, tmp_path, "whub-dev", "TASK-095", ()) is session
 
     assert start.call_args.args[0].task_id == "TASK-095"
+
+
+def test_open_harness_projects_hub_context_without_harness_specific_logic(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "AGENTS.md").write_text("# Hub rules\n")
+    skill = tmp_path / ".agents/skills/issue-log"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("---\nname: issue-log\n---\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    (worktree / "AGENTS.md").write_text("# Project rules\n")
+    registered = SimpleNamespace(
+        definition=SimpleNamespace(task_id="TASK-095"), destination=worktree
+    )
+    resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
+    plan = SimpleNamespace(files={})
+    session = SimpleNamespace()
+
+    with (
+        patch(
+            "whub.services.agent.harness.resolve_project_worktree",
+            return_value=registered,
+        ),
+        patch(
+            "whub.services.agent.harness.resolve_agent_auth",
+            return_value=resolved_auth,
+        ),
+        patch("whub.services.agent.harness.render_codex", return_value=plan),
+        patch("whub.services.agent.harness.render_claude_code", return_value=plan),
+        patch("whub.services.agent.harness._start_tmux_session", return_value=session),
+    ):
+        assert open_harness(None, tmp_path, "whub-dev", "TASK-095", ()) is session
+
+    assert "# Hub rules" in (worktree / "AGENTS.md").read_text()
+    assert (worktree / ".agents/skills/issue-log/SKILL.md").exists()
+    assert (worktree / ".claude/CLAUDE.md").exists()
 
 
 def test_close_stops_tmux_before_state_cleanup(tmp_path: Path) -> None:

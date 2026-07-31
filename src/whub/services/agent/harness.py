@@ -16,6 +16,7 @@ from whub.models.agent.auth import (
 from whub.services.agent.adapters.claude_code import render as render_claude_code
 from whub.services.agent.adapters.codex import render as render_codex
 from whub.services.agent.auth import resolve_agent_auth
+from whub.services.agent.hub_context import render_hub_context
 from whub.services.agent.state import cleanup, prepare
 from whub.services.errors import ServiceError
 from whub.services.worktree.operation import resolve_project_worktree
@@ -61,12 +62,14 @@ def open_harness(
     files = {
         relative: content for plan in plans for relative, content in plan.files.items()
     }
+    hub_context = render_hub_context(workspace_root)
     prepare(
         workspace_root,
         project,
         registered.definition.task_id,
         registered.destination,
         files,
+        hub_context,
     )
     harness = _PreparedHarness(
         project, registered.definition.task_id, registered.destination

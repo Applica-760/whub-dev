@@ -4,6 +4,13 @@ Agent authの意味論は`services/agent/auth.py`が扱う。Agent固有adapter�
 相対パスと内容からなるrender planを返す。Stateがplanを対象worktreeへ安全に配置し、新規作成した
 fileだけをcontrol planeへ記録する。harnessはStateとtmux sessionのlifecycleを調整する。
 
+Hub context rendererはHub rootの`AGENTS.md`と`.agents/skills`をsnapshot renderし、Stateへ渡す。
+Stateはadapterの生成物とHub contextをworktreeへ投影する。
+既存`AGENTS.md`と`.claude/CLAUDE.md`にはHarness所有の管理blockだけを追加し、Skillsは新規fileだけを
+所有する。Stateは生成fileと管理blockのhashを一つのrecordに保存し、`close`時は未変更の所有物だけを
+除去する。Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。Harness自身はHub
+contextの内容を解釈しない。
+
 `whub agent close`はtmux sessionを停止してから、記録済みかつ内容hashが一致するfileだけを削除する。
 変更済みfileは削除せずエラーにして、利用者の手動復旧を待つ。
 
