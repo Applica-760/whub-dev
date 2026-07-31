@@ -23,7 +23,7 @@ _GITIGNORE_ENTRIES = (
 
 
 def _update_gitignore(legacy_link_paths: set[str]) -> None:
-    """Manage only whub runtime metadata, never Project link paths."""
+    """Manage Hub runtime metadata and root-level Project links."""
     gitignore = Path.cwd() / ".gitignore"
     existing = gitignore.read_text() if gitignore.exists() else None
 
@@ -37,12 +37,15 @@ def _update_gitignore(legacy_link_paths: set[str]) -> None:
         start = lines.index(_LEGACY_GITIGNORE_MARKER)
         end = start + 1
         while end < len(lines) and lines[end] in (
-            set(_GITIGNORE_ENTRIES) | legacy_link_paths
+            set(_GITIGNORE_ENTRIES)
+            | legacy_link_paths
+            | {f"/{path}" for path in legacy_link_paths}
         ):
             end += 1
         existing = "\n".join(lines[:start] + lines[end:]) + "\n"
 
-    block = format_block(_GITIGNORE_MARKERS, "\n".join(_GITIGNORE_ENTRIES))
+    entries = (*sorted(f"/{path}" for path in legacy_link_paths), *_GITIGNORE_ENTRIES)
+    block = format_block(_GITIGNORE_MARKERS, "\n".join(entries))
     text = replace_or_prepend_block(block, existing, _GITIGNORE_MARKERS)
 
     gitignore.write_text(text)

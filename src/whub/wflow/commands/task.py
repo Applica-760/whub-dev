@@ -7,10 +7,9 @@ from pathlib import Path
 
 import click
 
-from whub.core.context import PathError
 from whub.models import ManifestError, load_manifest, project_names
 from whub.services.errors import ServiceError
-from whub.services.project_content import resolve_project_content_root
+from whub.services.task import resolve_project_task_root
 from whub.utils.render import render_table
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.services import (
@@ -61,8 +60,9 @@ _PHASE_LOG_HELP = (
 def task(ctx: click.Context, project: str) -> None:
     """Operate task execution records."""
     try:
-        root = resolve_project_content_root(load_manifest(), project)
-    except (ManifestError, PathError, ServiceError) as error:
+        root = resolve_project_task_root(load_manifest(), project)
+        root.mkdir(parents=True, exist_ok=True)
+    except (ManifestError, OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
     ctx.with_resource(chdir(root))
 
@@ -76,7 +76,7 @@ def task(ctx: click.Context, project: str) -> None:
 def init(title: str, objective: str, approaches: tuple[str, ...]) -> None:
     """Create a draft Task execution record."""
     try:
-        path, record = create_task(Path("docs/tasks"), title, objective, approaches)
+        path, record = create_task(Path("."), title, objective, approaches)
     except WflowError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"initialized {record.task.id}: {path}")
@@ -290,7 +290,7 @@ def check(task_ref: str) -> None:
     """Check one task execution record."""
     try:
         task_path = resolve_task_reference(task_ref)
-        task_root = Path("docs/tasks")
+        task_root = Path(".")
         try:
             relative_path = (
                 task_path.resolve().relative_to(task_root.resolve()).as_posix()
@@ -329,7 +329,7 @@ def check(task_ref: str) -> None:
 @click.argument(
     "task_dir",
     required=False,
-    default=Path("docs/tasks"),
+    default=Path("."),
     type=click.Path(path_type=Path),
 )
 def ls(task_dir: Path) -> None:
@@ -387,7 +387,7 @@ def show(task_ref: str) -> None:
         summary = next(
             (
                 item
-                for item in list_tasks(Path("docs/tasks"))
+                for item in list_tasks(Path("."))
                 if item.id == record.task.id
             ),
             None,
@@ -454,7 +454,7 @@ def transition(
         task_path = resolve_task_reference(task_ref)
         record = load_task(task_path)
         if trigger == "approve_plan":
-            records = load_task_records(Path("docs/tasks"))
+            records = load_task_records(Path("."))
             tasks = {task_id: item for task_id, (_, item) in records.items()}
             tasks[record.task.id] = record
             if diagnostics := dependency_start_diagnostics(record, tasks):
@@ -475,7 +475,7 @@ def transition(
 @click.argument("task_ref")
 @click.option("--result", help="Summary recorded when completing an in-progress Task.")
 def complete(task_ref: str, result: str | None) -> None:
-    """Complete TASK_REF and archive its YAML below docs/tasks/done."""
+    """Complete TASK_REF and archive its YAML below done."""
     try:
         path = resolve_task_reference(task_ref)
         record = load_task(path)
@@ -513,7 +513,7 @@ def _record_for_path(
 @click.argument("parent_ref")
 @click.argument("child_ref")
 @click.option("--reason", required=True, help="Why the parent Task is interrupted.")
-@click.option("--task-dir", default=Path("docs/tasks"), type=click.Path(path_type=Path))
+@click.option("--task-dir", default=Path("."), type=click.Path(path_type=Path))
 def interrupt(parent_ref: str, child_ref: str, reason: str, task_dir: Path) -> None:
     """Freeze PARENT_REF and directly start CHILD_REF as its interruption Task."""
     try:
@@ -535,7 +535,7 @@ def interrupt(parent_ref: str, child_ref: str, reason: str, task_dir: Path) -> N
 
 @task.command("resume")
 @click.argument("parent_ref")
-@click.option("--task-dir", default=Path("docs/tasks"), type=click.Path(path_type=Path))
+@click.option("--task-dir", default=Path("."), type=click.Path(path_type=Path))
 def resume(parent_ref: str, task_dir: Path) -> None:
     """Resume a paused Task after its interruption Task reaches a terminal state."""
     try:

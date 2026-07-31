@@ -46,7 +46,7 @@ def iter_task_paths(root: Path) -> Iterator[Path]:
     return (path for path in root.rglob("*.yaml") if not is_apple_double(path))
 
 
-def resolve_task_reference(reference: str, root: Path = Path("docs/tasks")) -> Path:
+def resolve_task_reference(reference: str, root: Path = Path(".")) -> Path:
     task_id = (
         reference
         if re.fullmatch(TASK_ID_PATTERN, reference)
