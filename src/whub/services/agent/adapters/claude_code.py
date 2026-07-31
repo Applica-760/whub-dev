@@ -183,7 +183,12 @@ def _render_mcp_config(tools: Sequence[ExtensionTool]) -> str:
     return _json(
         {
             "mcpServers": {
-                tool.id: {"command": tool.command, "args": tool.args} for tool in tools
+                tool.id: {
+                    "type": tool.transport,
+                    "command": tool.command,
+                    "args": tool.args,
+                }
+                for tool in tools
             }
         }
     )

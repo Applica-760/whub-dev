@@ -28,7 +28,7 @@ def test_loads_base_agent_auth() -> None:
 
     assert auth.type == "base"
     assert isinstance(auth.variables["project"], RegisteredProjectVariable)
-    assert auth.grants.filesystem.read == ["hub_logical_tree"]
+    assert auth.grants.filesystem.read == []
     assert auth.grants.filesystem.write == []
     assert auth.grants.extension_tools == ["codegraph"]
     assert isinstance(auth.grants.commands.prefixes[0], CommandRule)
@@ -88,7 +88,7 @@ def test_rejects_unknown_filesystem_scope(tmp_path: Path) -> None:
     data = (
         (ASSETS / "base.yaml")
         .read_text()
-        .replace("hub_logical_tree", "unknown_scope", 1)
+        .replace("read: []", "read: [unknown_scope]", 1)
     )
     target = tmp_path / "invalid-agent-auth.yaml"
     target.write_text(data)
@@ -102,7 +102,7 @@ def test_rejects_duplicate_filesystem_scope(tmp_path: Path) -> None:
         (ASSETS / "base.yaml")
         .read_text()
         .replace(
-            "read: [hub_logical_tree]", "read: [hub_logical_tree, hub_logical_tree]", 1
+            "read: []", "read: [current_worktree, current_worktree]", 1
         )
     )
     target = tmp_path / "invalid-agent-auth.yaml"

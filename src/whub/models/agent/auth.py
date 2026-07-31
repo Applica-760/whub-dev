@@ -83,7 +83,7 @@ class CommandGrants(AgentAuthModel):
 
 
 # ── Filesystem ─────────────────────────────────────────────────────────────────────────────
-FilesystemScope = Literal["hub_logical_tree", "current_worktree"]
+FilesystemScope = Literal["current_worktree"]
 
 
 class FilesystemGrants(AgentAuthModel):

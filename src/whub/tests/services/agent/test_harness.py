@@ -1,5 +1,6 @@
 from pathlib import Path, PurePosixPath
 from subprocess import CompletedProcess
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -36,6 +37,22 @@ def test_materialize_rejects_different_existing_codex_config(tmp_path: Path) -> 
 
     with pytest.raises(ServiceError, match="generated config already exists"):
         _materialize(tmp_path, _plan().files)
+
+
+def test_materialize_reuses_semantically_matching_json_config(tmp_path: Path) -> None:
+    path = tmp_path / ".mcp.json"
+    path.write_text('{"mcpServers": {"codegraph": {"type": "stdio"}}}\n')
+
+    created = _materialize(
+        tmp_path,
+        {
+            PurePosixPath(".mcp.json"): (
+                '{\n  "mcpServers": {\n    "codegraph": {\n      "type": "stdio"\n    }\n  }\n}\n'
+            )
+        },
+    )
+
+    assert created == (path,)
 
 
 def test_materialize_rejects_symlinked_config_directory(tmp_path: Path) -> None:
@@ -112,3 +129,32 @@ def test_start_stops_before_tmux_when_worktree_validation_fails(tmp_path: Path) 
         open_harness(None, tmp_path, "whub-dev", "TASK-095", None)
 
     run.assert_not_called()
+
+
+def test_open_harness_uses_the_registered_task_id(tmp_path: Path) -> None:
+    registered = SimpleNamespace(
+        definition=SimpleNamespace(task_id="TASK-095"), destination=tmp_path
+    )
+    resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
+    plan = SimpleNamespace(files={})
+    session = SimpleNamespace()
+
+    with (
+        patch(
+            "whub.services.agent.harness.resolve_project_worktree",
+            return_value=registered,
+        ),
+        patch(
+            "whub.services.agent.harness.resolve_agent_auth",
+            return_value=resolved_auth,
+        ),
+        patch("whub.services.agent.harness.render_codex", return_value=plan),
+        patch("whub.services.agent.harness.render_claude_code", return_value=plan),
+        patch("whub.services.agent.harness._materialize", return_value=()),
+        patch(
+            "whub.services.agent.harness._start_tmux_session", return_value=session
+        ) as start,
+    ):
+        assert open_harness(None, tmp_path, "whub-dev", "TASK-095", ()) is session
+
+    assert start.call_args.args[0].task_id == "TASK-095"

@@ -44,7 +44,7 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
         "base",
         variables={"project": {"source": "registered_project"}},
         exact=[{"executable": "date"}],
-        read=["hub_logical_tree"],
+        read=[],
         extension_tools=["codegraph"],
     )
     extension = _auth(
@@ -64,7 +64,7 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
     effective = compose_auth(base, [extension])
 
     assert list(effective.variables) == ["project"]
-    assert effective.grants.filesystem.read == ["hub_logical_tree"]
+    assert effective.grants.filesystem.read == []
     assert effective.grants.filesystem.write == ["current_worktree"]
     assert effective.grants.extension_tools == ["codegraph"]
     assert allows_command(effective, ["date"], {})

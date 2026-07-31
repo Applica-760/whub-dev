@@ -84,7 +84,7 @@ grants:
 
   filesystem:
     # scopeはadapterが具体的なpathへ解決する。
-    read: [hub_logical_tree]
+    read: []
     write: []
 
   network:

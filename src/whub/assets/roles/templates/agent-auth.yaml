@@ -16,9 +16,7 @@ grants:
     #     arguments: [--project, "$current_worktree.project"]
   filesystem:
     # scopeはadapterが具体的なpathへ解決する文脈依存の名前。
-    # hub_logical_treeはworkspace-hubでは、Hub直下と直下のdirectory symlink/mountで
-    # 到達するProject配下を指す。他のworkspaceでは固有のscope名を定義する。
-    read: [hub_logical_tree]
+    read: []
     write: []
   network:
     policy: deny_all

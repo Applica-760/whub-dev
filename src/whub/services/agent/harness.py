@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+import json
 from pathlib import Path, PurePosixPath
 import shlex
 import subprocess
@@ -50,7 +51,10 @@ def open_harness(
     registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
     resolved_auth = resolve_agent_auth(auth_names)
     variables = _resolve_variables(
-        resolved_auth.auth.variables, project, registered.task_id, registered.destination
+        resolved_auth.auth.variables,
+        project,
+        registered.definition.task_id,
+        registered.destination,
     )
     plans = (
         render_codex(resolved_auth.auth, resolved_auth.tools, variables),
@@ -59,7 +63,9 @@ def open_harness(
     files = tuple(
         path for plan in plans for path in _materialize(registered.destination, plan.files)
     )
-    harness = _PreparedHarness(project, registered.task_id, registered.destination, files)
+    harness = _PreparedHarness(
+        project, registered.definition.task_id, registered.destination, files
+    )
     return _start_tmux_session(harness, workspace_root)
 
 
@@ -132,7 +138,7 @@ def _materialize(
                 raise ServiceError(
                     f"generated config path is not a regular file: {relative}"
                 )
-            if target.read_text() != content:
+            if not _matches_content(target, content):
                 raise ServiceError(f"generated config already exists: {relative}")
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -144,6 +150,18 @@ def _materialize(
                 ) from error
         paths.append(target)
     return tuple(paths)
+
+
+def _matches_content(path: Path, expected: str) -> bool:
+    actual = path.read_text()
+    if actual == expected:
+        return True
+    if path.suffix != ".json":
+        return False
+    try:
+        return json.loads(actual) == json.loads(expected)
+    except json.JSONDecodeError:
+        return False
 
 
 def _safe_target(worktree: Path, relative: PurePosixPath) -> Path:

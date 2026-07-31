@@ -35,7 +35,7 @@ def _auth() -> EffectiveAuth:
                     "exact": [{"executable": "git", "arguments": ["diff"]}],
                 },
                 "filesystem": {
-                    "read": ["hub_logical_tree"],
+                    "read": [],
                     "write": ["current_worktree"],
                 },
                 "network": {"policy": "deny_all"},
@@ -97,7 +97,7 @@ def test_render_generates_sandbox_config_without_extension_tools() -> None:
 def test_render_derives_codex_permissions_from_effective_auth() -> None:
     grants = _auth().grants.model_copy(
         update={
-            "filesystem": FilesystemGrants(read=["hub_logical_tree"], write=[]),
+            "filesystem": FilesystemGrants(read=[], write=[]),
             "approval": ApprovalGrants(policy="never", reviewer="auto_review"),
         }
     )

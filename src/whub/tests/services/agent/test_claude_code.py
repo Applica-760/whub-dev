@@ -33,7 +33,7 @@ def _auth() -> EffectiveAuth:
                     "exact": [{"executable": "git", "arguments": ["diff"]}],
                 },
                 "filesystem": {
-                    "read": ["hub_logical_tree"],
+                    "read": [],
                     "write": ["current_worktree"],
                 },
                 "network": {"policy": "deny_all"},
@@ -85,6 +85,7 @@ def test_render_generates_settings_policy_hook_and_mcp_config() -> None:
     assert json.loads(plan.files[PurePosixPath(".mcp.json")]) == {
         "mcpServers": {
             "codegraph": {
+                "type": "stdio",
                 "command": "codegraph",
                 "args": ["serve", "--mcp"],
             }
