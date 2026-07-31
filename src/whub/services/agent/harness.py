@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
-import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import shlex
 import subprocess
 
@@ -18,18 +16,18 @@ from whub.models.agent.auth import (
 from whub.services.agent.adapters.claude_code import render as render_claude_code
 from whub.services.agent.adapters.codex import render as render_codex
 from whub.services.agent.auth import resolve_agent_auth
+from whub.services.agent.state import cleanup, prepare
 from whub.services.errors import ServiceError
 from whub.services.worktree.operation import resolve_project_worktree
 
 
 @dataclass(frozen=True)
 class _PreparedHarness:
-    """One worktree and its generated Agent configuration files."""
+    """One worktree prepared for an Agent harness session."""
 
     project: str
     task_id: str
     worktree: Path
-    files: tuple[Path, ...]
 
 
 @dataclass(frozen=True)
@@ -60,13 +58,31 @@ def open_harness(
         render_codex(resolved_auth.auth, resolved_auth.tools, variables),
         render_claude_code(resolved_auth.auth, resolved_auth.tools, variables),
     )
-    files = tuple(
-        path for plan in plans for path in _materialize(registered.destination, plan.files)
+    files = {
+        relative: content for plan in plans for relative, content in plan.files.items()
+    }
+    prepare(
+        workspace_root,
+        project,
+        registered.definition.task_id,
+        registered.destination,
+        files,
     )
     harness = _PreparedHarness(
-        project, registered.definition.task_id, registered.destination, files
+        project, registered.definition.task_id, registered.destination
     )
     return _start_tmux_session(harness, workspace_root)
+
+
+def close_harness(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> None:
+    """Stop one harness session and clean its owned generated files."""
+    registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    _stop_tmux_session(session_name(project, registered.definition.task_id))
+    cleanup(
+        workspace_root, project, registered.definition.task_id, registered.destination
+    )
 
 
 def _start_tmux_session(
@@ -107,6 +123,24 @@ def _start_tmux_session(
     return HarnessSession(name, attach_command)
 
 
+def _stop_tmux_session(name: str) -> None:
+    target = session_target(name)
+    try:
+        existing = subprocess.run(
+            tmux_command("has-session", "-t", target), capture_output=True, text=True
+        )
+    except OSError as error:
+        raise ServiceError(f"tmux is unavailable: {error}") from error
+    if existing.returncode != 0:
+        return
+    stopped = subprocess.run(
+        tmux_command("kill-session", "-t", target), capture_output=True, text=True
+    )
+    if stopped.returncode != 0:
+        detail = stopped.stderr.strip() or f"exit status {stopped.returncode}"
+        raise ServiceError(f"failed to stop tmux session: {detail}")
+
+
 def _resolve_variables(
     definitions: dict,
     project: str,
@@ -125,55 +159,3 @@ def _resolve_variables(
         else:
             raise ServiceError(f"unsupported Agent auth variable: {name}")
     return values
-
-
-def _materialize(
-    worktree: Path, files: Mapping[PurePosixPath, str]
-) -> tuple[Path, ...]:
-    paths = []
-    for relative, content in files.items():
-        target = _safe_target(worktree, relative)
-        if target.exists():
-            if target.is_symlink() or not target.is_file():
-                raise ServiceError(
-                    f"generated config path is not a regular file: {relative}"
-                )
-            if not _matches_content(target, content):
-                raise ServiceError(f"generated config already exists: {relative}")
-        else:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                target.write_text(content, encoding="utf-8", newline="\n")
-            except OSError as error:
-                raise ServiceError(
-                    f"failed to write generated config: {relative}: {error}"
-                ) from error
-        paths.append(target)
-    return tuple(paths)
-
-
-def _matches_content(path: Path, expected: str) -> bool:
-    actual = path.read_text()
-    if actual == expected:
-        return True
-    if path.suffix != ".json":
-        return False
-    try:
-        return json.loads(actual) == json.loads(expected)
-    except json.JSONDecodeError:
-        return False
-
-
-def _safe_target(worktree: Path, relative: PurePosixPath) -> Path:
-    if relative.is_absolute() or ".." in relative.parts:
-        raise ServiceError(f"invalid generated config path: {relative}")
-    parent = worktree
-    for part in relative.parts[:-1]:
-        parent = parent / part
-        if parent.is_symlink():
-            raise ServiceError(f"generated config parent is a symlink: {relative}")
-        if parent.exists() and not parent.is_dir():
-            raise ServiceError(
-                f"generated config parent is not a directory: {relative}"
-            )
-    return worktree.joinpath(*relative.parts)

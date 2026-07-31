@@ -37,20 +37,25 @@ plan:
       state: done
       skip_reason: null
       deleted: false
-    - description: 設定済みworktree shellをtmuxで起動し、停止後の再接続を扱う
+    - description: 設定済みworktree shellをtmuxで起動・再接続・明示終了し、workspace control planeの所有記録に基づいて生成設定だけを安全に除去する
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        finding: Agent Close方針を確定。Stateをworkspace control planeのprojects/worktrees/agents/へ分離し、生成した相対パスとhashだけを記録してCloseで安全に除去する。tmux
+          session消滅時は既存agent openが再起動するため、専用restart/resumeコマンドは今回見送る。State/harness/CLI実装、focused
+          pytest 9件、ruff checkが成功。実worktreeでのOpen/Close試験は次に実施する。
+      deleted: false
     deleted: false
   - title: 検証と文書化を行う
     acceptance: []
     steps:
-    - description: 生成設定とharness lifecycleのテストを追加する
+    - description: Open/Closeの設定所有記録、tmux終了、再実行、変更済み設定の保護、生成物の非混入をテストする
       state: pending
       skip_reason: null
       deleted: false
-    - description: 利用方法とMVPの承認境界を文書化する
+    - description: Agent open/closeの利用方法、生成物の所有境界、MVPの承認境界を文書化する
       state: pending
       skip_reason: null
       deleted: false
@@ -59,8 +64,12 @@ plan:
 approvals:
 - actor: user
 - actor: user
+- actor: user
 acceptance_results: []
 change_requests:
 - reason: CLIはAgent実行形式を選ばず、設定済みworktree shellのtmux起動・再接続までを担うため
+- reason: 'Add explicit Agent close lifecycle: terminate the task tmux session and
+    remove only harness-owned generated configuration using workspace control-plane
+    metadata.'
 cancellation: null
 result: null
