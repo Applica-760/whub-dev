@@ -2,6 +2,8 @@
 
 whub appを、単一利用者が複数のCoding Agentを監督・操作する主要インターフェースへ段階的に移行するための候補一覧。実装順・Task間依存・受け入れ条件はTASK-062で確定する。
 
+理想：https://zenn.dev/singularity/articles/diy-terminal-500-commits
+
 ## Fixed premises
 
 - `1 Task = 1 worktree = 1 Agent session` とする。

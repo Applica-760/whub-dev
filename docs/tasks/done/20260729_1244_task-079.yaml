@@ -1,11 +1,11 @@
 schema_version: 1
 task:
   id: TASK-079
-  state: in_progress
+  state: completed
   title: Agent実行ハーネスを設計する
-  objective: Task、worktree、role、Agent adapter、tmux session、run記録を一貫して選択・起動・停止・再接続するハーネスの責務と契約を設計する
+  objective: Task、worktree、既存のagent authとCodex adapter、tmux session、run記録を一貫して選択・起動・停止・再接続し、allowlist外の実行を一回限りのユーザー承認へ委ねる初期ハーネスを設計する
   approach:
-  - ハーネスは共通ポリシーとadapterの結果を利用し、Agent固有の設定形式・状態解析・権限判断を持たない
+  - ハーネスは既存の共通ポリシーとCodex adapterの結果を利用し、allowlist外の実行は承認境界へ送る
   depends_on:
   - TASK-078
   interruption_task_id: null
@@ -44,7 +44,7 @@ plan:
     log:
     - value:
         decision: Dockerは候補であり、macOS sandbox・Codex sandboxと比較する。filesystem境界とGit操作境界は別軸として設計する。理想はtmuxから実worktreeの作業をリアルタイム監督すること。
-      deleted: false
+      deleted: true
     - value:
         research: Git worktree、Docker filesystem隔離、CodexとClaude Codeのruntime controlsを一次情報で調査し、harness-research.mdへ記録
       deleted: false
@@ -73,15 +73,26 @@ plan:
   - title: 仕様と実装方針を確定する
     acceptance: []
     steps:
-    - description: MVPの責務、CLI、状態遷移、ログ、検証条件を仕様化する
-      state: pending
+    - description: Codex専用MVPとして、allowlist外の一回限り承認、worktree、tmux、実行上限の責務と検証条件を仕様化する
+      state: done
       skip_reason: null
       deleted: false
-    - description: 実装を後続Taskへ分割できる実行計画として提示する
-      state: pending
+    - description: MVP実装を後続Taskへ分割する実行計画を提示する
+      state: done
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        runtime: 初期依存はDocker Desktopに固定せず、docker CLIから利用できるローカルLinux container runtimeとする。具体的なruntimeは後続で決定する。
+      deleted: true
+    - value:
+        mvp: 初期対象はCodexのみとする。既存のcommand allowlistとCodex adapterを利用し、allowlist外の実行は一回限りのユーザー承認を要求する。Docker
+          runtimeは初期要件にしない。
+      deleted: false
+    - value:
+        contract: Codex workspace-write sandboxをworktreeに限定し、sandbox外またはrulesが要求する操作は対話承認へ委ねる。削除・Git操作の一律禁止とcustom
+          runtime guardはMVPの非対象とし、Codex harness実装を後続Taskへ分離した。
+      deleted: false
     deleted: false
 approvals:
 - actor: user
@@ -90,4 +101,5 @@ acceptance_results: []
 change_requests:
 - reason: Web検索、パッケージ取得、Git操作を許可するnetwork policyの仕様化を独立Phaseとして追加するため
 cancellation: null
-result: null
+result:
+  summary: Codex sandboxとrulesをMVPの承認境界として確定し、Codex harness実装を後続Taskへ分離した。

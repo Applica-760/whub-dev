@@ -4,7 +4,7 @@
 
 whub appを、複数のCoding Agentを並列に動かし、人間が必要な判断だけを返すための主要インターフェースへ段階的に移行する。
 
-最初の対象は、単一利用者がローカルのProjectで複数のAgentとworktreeへ安全に開発Taskを委譲することとする。外部公開、共同編集、完全自律実行は対象にしない。
+最初の対象は、単一利用者がローカルのProjectでCodexと複数のworktreeへ安全に開発Taskを委譲することとする。Claude Code対応は後続の拡張とし、外部公開、共同編集、完全自律実行は対象にしない。
 
 ## Initial use cases
 
@@ -12,11 +12,10 @@ whub appを、複数のCoding Agentを並列に動かし、人間が必要な判
 
 ## Safety and autonomy requirements
 
-- 安全境界はfilesystem境界とGit操作境界を分離して扱う。filesystem境界はAgentを対応worktree外から隔離し、Git操作境界は共有Git metadataを通じた親repositoryへの破壊的操作を拒否する。
-- 通常のAgentは、対応するworktree内でのファイル作成と更新を行えるが、削除は行えない。
-- 通常のAgent権限では、ファイル削除、Git branchの削除、履歴を遡及して消す操作、force push、git pushを実行できない。指示文ではなくharnessで強制する。
-- ファイル削除は、人間が対象を明示して承認した場合だけ許可する。
-- Web検索はextension tool経由で許可し、git fetchは登録済みremoteに対するexact commandで許可する。パッケージのインストールとcurlは、ユーザー承認した一回限りのharness仲介操作とする。
+- Codex sandboxを安全境界とする。対応worktreeをworkspace rootとし、worktree外の操作はCodexの承認要求へ委ねる。
+- worktree内のファイル操作と通常のcommandは自律実行を許容する。削除とGit操作をMVPで一律に禁止しない。
+- command allowlistはCodex rulesへ変換する。sandbox外でCodexまたはrulesが承認を要求する操作は、利用者が確認して許可または拒否する。
+- Codex processのsandbox network accessは無効にする。Web検索はextension tool経由で行う。
 - Agentが自律的に連続実行できる上限を設定できるようにする。上限に達したら停止し、利用者の判断を求める。
 - 承認が必要な操作は、可能な限りまとめて利用者へ提示する。
 - 複数のtmux sessionを一画面で監督し、対応するworktreeの作業内容を実行中から確認できることを理想とする。強い安全境界に必要な場合だけ、隔離した作業結果を後から反映する方式を検討する。
@@ -24,7 +23,7 @@ whub appを、複数のCoding Agentを並列に動かし、人間が必要な判
 ## Required experience
 
 - ブラウザからターミナルを操作できる。
-- CodexやClaude CodeなどのAgentと継続して対話できる。
+- Codexと継続して対話できる。
 - 複数Agentを並列起動し、各Agentが考え中か、質問への回答待ちか、権限承認待ちかを一望できる。
 - 各Agentが何を依頼され、どこまで進んだかを、ログを遡らずに把握できる。
 - Agentの状態・依頼文・summary・通知によって、人間が対応すべきAgentを探しに行かなくてよい。
