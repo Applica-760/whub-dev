@@ -5,11 +5,11 @@
 2. health=okで"skip"出力
 3. RemoteResourceはスキップされる
 4. symlink作成失敗時にWARN出力
-5. .gitignoreにトップディレクトリがマーカー付きで追記される
+5. .gitignoreにwhub runtime metadataだけがマーカー付きで追記される
 
 検証しないケース:
 - 実ファイルシステム上のsymlink作成（inspect_symlinkのmockで境界を閉じる）
-- .gitignoreの既存マーカー置換の全パターン（_update_gitignoreは薄いglue）
+- 利用者がmarkerなしで管理する.gitignore entryの意味
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from whub.commands.link import _GITIGNORE_MARKERS, link
+from whub.commands.link import _GITIGNORE_ENTRIES, _GITIGNORE_MARKERS, link
 from whub.core.health import ResourceHealth
 from whub.tests.helpers import manifest
 
@@ -144,7 +144,38 @@ class TestLinkSpec:
         content = gitignore.read_text()
         assert _GITIGNORE_MARKERS[0] in content
         assert _GITIGNORE_MARKERS[1] in content
-        assert "projects" in content
+        for entry in _GITIGNORE_ENTRIES:
+            assert entry in content
+        for entry in ("projects", "vault", "whub-dev", "AGENTS.md", ".agents/"):
+            assert entry not in content
+
+    def test_replaces_managed_block_with_runtime_metadata_only(self, tmp_path):
+        (tmp_path / ".gitignore").write_text(
+            "# user entry\n"
+            "# whub link (auto-generated): start\n"
+            "projects\nAGENTS.md\n.agents/\n.claude/\n"
+            "# whub link (auto-generated): end\n"
+        )
+        m = manifest()
+        with (
+            patch("whub.commands.link.get_manifest", return_value=m),
+            patch(
+                "whub.commands.link.inspect_symlink", return_value=ResourceHealth("ok")
+            ),
+            patch.object(Path, "cwd", return_value=tmp_path),
+            patch(
+                "whub.commands.link.current_context",
+                return_value=SimpleNamespace(workspace_root=tmp_path),
+            ),
+        ):
+            CliRunner().invoke(link, catch_exceptions=False)
+
+        content = (tmp_path / ".gitignore").read_text()
+        assert "# user entry" in content
+        for entry in _GITIGNORE_ENTRIES:
+            assert entry in content
+        for entry in ("projects", "AGENTS.md", ".agents/", ".claude/"):
+            assert entry not in content
 
     def test_updates_legacy_gitignore_without_dropping_next_line(self, tmp_path):
         # ケース6
@@ -169,6 +200,7 @@ class TestLinkSpec:
         assert _GITIGNORE_MARKERS[0] in content
         assert _GITIGNORE_MARKERS[1] in content
         assert ".keep" in content
+        assert "projects" not in content
 
     def test_errors_outside_workspace_hub_root(self, tmp_path):
         # ケース7
