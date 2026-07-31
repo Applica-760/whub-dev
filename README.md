@@ -97,9 +97,9 @@ PYTHONPATH="$source/src" uv run --project "$source" python -m whub release apply
 | 進行記録 | `done` / `skip --reason` / `log TASK PPP --log` |
 | 計画編集 | `plan update` / `plan insert` / `plan delete` / `plan restore`（draft・in_progressのみ） |
 | 割り込み | `interrupt PARENT CHILD --reason "…"` / `resume PARENT` |
-| 受入・完了 | `accept` / `complete TASK --result "…"` |
+| 受入・終了 | `accept` / `complete TASK --result "…"` / `transition TASK cancel_task --actor user --reason "…"` |
 
-`wflow task complete`はTaskの完了記録と`docs/tasks/done`へのアーカイブを一操作で行う。
+`wflow task complete`はTaskの完了記録とProject側`docs/tasks/done/`へのアーカイブを一操作で行う。`cancel_task`はProject側`docs/tasks/done/cancelled/`へアーカイブする。
 
 ## Remote GUI session
 
