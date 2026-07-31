@@ -109,6 +109,6 @@ def test_start_stops_before_tmux_when_worktree_validation_fails(tmp_path: Path) 
         patch("whub.services.agent.harness.subprocess.run") as run,
         pytest.raises(ServiceError, match="worktree definition not found"),
     ):
-        open_harness(None, tmp_path, "whub-dev", "TASK-095", None, (), None)
+        open_harness(None, tmp_path, "whub-dev", "TASK-095", None)
 
     run.assert_not_called()

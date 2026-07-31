@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
+from importlib.resources import as_file, files
+from pathlib import Path
 from typing import TypeVar
 
 from whub.models.agent.auth import (
@@ -14,7 +17,10 @@ from whub.models.agent.auth import (
     ExtensionToolId,
     LiteralValue,
     VariableReference,
+    load_agent_auth,
+    load_extension_tool,
 )
+from whub.services.errors import ServiceError
 
 
 class AuthError(ValueError):
@@ -22,6 +28,51 @@ class AuthError(ValueError):
 
 
 Item = TypeVar("Item")
+
+
+@dataclass(frozen=True)
+class ResolvedAgentAuth:
+    """Effective authorization and tools for one Agent session."""
+
+    auth: EffectiveAuth
+    tools: tuple[ExtensionTool, ...]
+
+
+def resolve_agent_auth(auth_names: Sequence[str]) -> ResolvedAgentAuth:
+    """Load and compose the base auth with named extension auths."""
+    assets = _load_agent_assets(auth_names)
+    auth = compose_auth(assets.base_auth, assets.extension_auths)
+    tools = resolve_extension_tools(assets.extension_tool_catalog, auth.grants.extension_tools)
+    return ResolvedAgentAuth(auth, tuple(tools))
+
+
+# --- Packaged Agent assets ---------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _AgentAssets:
+    """Packaged authorization assets for one Agent session."""
+
+    base_auth: AgentAuth
+    extension_auths: tuple[AgentAuth, ...]
+    extension_tool_catalog: ExtensionToolCatalog
+
+
+def _load_agent_assets(auth_names: Sequence[str]) -> _AgentAssets:
+    if any(Path(name).name != name for name in auth_names):
+        raise ServiceError("invalid Agent auth name")
+    with as_file(files("whub").joinpath("assets")) as assets:
+        return _AgentAssets(
+            base_auth=load_agent_auth(assets / "roles" / "base.yaml"),
+            extension_auths=tuple(
+                load_agent_auth(assets / "roles" / name / "agent-auth.yaml")
+                for name in auth_names
+            ),
+            extension_tool_catalog=load_extension_tool(assets / "extension_tools"),
+        )
+
+
+# --- Authorization composition and resolution -------------------------------
 
 
 def compose_auth(base: AgentAuth, extensions: Sequence[AgentAuth]) -> EffectiveAuth:

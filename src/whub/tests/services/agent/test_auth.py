@@ -1,7 +1,13 @@
 import pytest
 
 from whub.models.agent.auth import AgentAuth
-from whub.services.agent.auth import AuthError, allows_command, compose_auth
+from whub.services.agent.auth import (
+    AuthError,
+    allows_command,
+    compose_auth,
+    resolve_agent_auth,
+)
+from whub.services.errors import ServiceError
 
 
 def _auth(
@@ -67,6 +73,18 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
         ["wflow", "task", "--project", "whub-dev", "check", "078"],
         {"project": "whub-dev"},
     )
+
+
+def test_resolve_agent_auth_loads_packaged_assets() -> None:
+    resolved = resolve_agent_auth(("implementer",))
+
+    assert resolved.auth.grants.extension_tools == ["codegraph"]
+    assert [tool.id for tool in resolved.tools] == ["codegraph"]
+
+
+def test_resolve_agent_auth_rejects_non_basename_extension_name() -> None:
+    with pytest.raises(ServiceError, match="invalid Agent auth name"):
+        resolve_agent_auth(("../implementer",))
 
 
 def test_compose_auth_rejects_conflicting_variable_definitions() -> None:

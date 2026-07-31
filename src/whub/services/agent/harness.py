@@ -9,14 +9,14 @@ import shlex
 import subprocess
 
 from whub.core.tmux import session_name, session_target, tmux_command
-from whub.models import AgentAuth, ExtensionToolCatalog, Manifest
+from whub.models import Manifest
 from whub.models.agent.auth import (
     RegisteredProjectVariable,
     RegisteredTaskWorktreeVariable,
 )
 from whub.services.agent.adapters.claude_code import render as render_claude_code
 from whub.services.agent.adapters.codex import render as render_codex
-from whub.services.agent.auth import compose_auth, resolve_extension_tools
+from whub.services.agent.auth import resolve_agent_auth
 from whub.services.errors import ServiceError
 from whub.services.worktree.operation import resolve_project_worktree
 
@@ -44,20 +44,17 @@ def open_harness(
     workspace_root: Path,
     project: str,
     task_id: str,
-    base_auth: AgentAuth,
-    extension_auths: tuple[AgentAuth, ...],
-    extension_tool_catalog: ExtensionToolCatalog,
+    auth_names: tuple[str, ...],
 ) -> HarnessSession:
     """Open PROJECT/TASK's configured Agent worktree shell."""
     registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
-    auth = compose_auth(base_auth, extension_auths)
+    resolved_auth = resolve_agent_auth(auth_names)
     variables = _resolve_variables(
-        auth.variables, project, registered.task_id, registered.destination
+        resolved_auth.auth.variables, project, registered.task_id, registered.destination
     )
-    tools = resolve_extension_tools(extension_tool_catalog, auth.grants.extension_tools)
     plans = (
-        render_codex(auth, tools, variables),
-        render_claude_code(auth, tools, variables),
+        render_codex(resolved_auth.auth, resolved_auth.tools, variables),
+        render_claude_code(resolved_auth.auth, resolved_auth.tools, variables),
     )
     files = tuple(
         path for plan in plans for path in _materialize(registered.destination, plan.files)
