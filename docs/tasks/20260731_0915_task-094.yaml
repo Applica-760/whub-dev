@@ -57,14 +57,19 @@ plan:
     acceptance: []
     steps:
     - description: Open/Closeの設定所有記録、tmux終了、再実行、変更済み設定の保護、生成物の非混入をテストする
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     - description: Agent open/closeの利用方法、生成物の所有境界、MVPの承認境界を文書化する
       state: pending
       skip_reason: null
       deleted: false
-    log: []
+    log:
+    - value:
+        verification: 独立したSol highのレビューで、変更済み所有設定の保護、Close冪等性、tmux不在時cleanup、tmux停止失敗時のcleanup抑止、tmux外部終了後のOpen再起動、既存一致設定の非所有、汎用空親directory除去を追加。uv
+          run pytest src/whub/tests/services/agent は35 passed、ruff checkとgit diff
+          --checkも成功。
+      deleted: false
     deleted: false
 approvals:
 - actor: user

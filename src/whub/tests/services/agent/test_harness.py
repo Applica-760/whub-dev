@@ -69,6 +69,52 @@ def test_state_does_not_claim_matching_existing_json_config(tmp_path: Path) -> N
     assert not state_path(tmp_path, "whub-dev", "TASK-095").exists()
 
 
+def test_state_does_not_claim_matching_existing_text_config(tmp_path: Path) -> None:
+    path = tmp_path / ".codex/config.toml"
+    path.parent.mkdir()
+    path.write_text('sandbox_mode = "workspace-write"\n')
+
+    prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan().files)
+    cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
+
+    assert path.exists()
+    assert not state_path(tmp_path, "whub-dev", "TASK-095").exists()
+
+
+def test_state_preserves_modified_owned_config_and_state(tmp_path: Path) -> None:
+    prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan().files)
+    path = tmp_path / ".codex/config.toml"
+    path.write_text("# user change\n")
+
+    with pytest.raises(
+        ServiceError, match="generated config was modified and was not removed"
+    ):
+        cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
+
+    assert path.read_text() == "# user change\n"
+    assert state_path(tmp_path, "whub-dev", "TASK-095").exists()
+
+
+def test_state_removes_generic_empty_parent_directories(tmp_path: Path) -> None:
+    keep = tmp_path / "provider/keep.txt"
+    keep.parent.mkdir()
+    keep.write_text("keep\n")
+    relative = PurePosixPath("provider/generated/nested/config.txt")
+
+    prepare(
+        tmp_path,
+        "whub-dev",
+        "TASK-095",
+        tmp_path,
+        {relative: "owned\n"},
+    )
+    cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
+
+    assert not (tmp_path / relative).exists()
+    assert not (tmp_path / "provider/generated").exists()
+    assert keep.exists()
+
+
 def test_state_rejects_symlinked_config_directory(tmp_path: Path) -> None:
     target = tmp_path / "outside"
     target.mkdir()
@@ -189,3 +235,102 @@ def test_close_stops_tmux_before_state_cleanup(tmp_path: Path) -> None:
         close_harness(None, tmp_path, "whub-dev", "TASK-095")
     assert stop.call_count == 1
     assert clean.call_count == 1
+
+
+def test_close_without_tmux_cleans_state_and_is_idempotent(tmp_path: Path) -> None:
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    prepare(tmp_path, "whub-dev", "TASK-095", worktree, _plan().files)
+    registered = SimpleNamespace(
+        definition=SimpleNamespace(task_id="TASK-095"), destination=worktree
+    )
+
+    with (
+        patch(
+            "whub.services.agent.harness.resolve_project_worktree",
+            return_value=registered,
+        ),
+        patch(
+            "whub.services.agent.harness.subprocess.run",
+            return_value=CompletedProcess([], 1, "", "missing"),
+        ) as run,
+    ):
+        close_harness(None, tmp_path, "whub-dev", "TASK-095")
+        close_harness(None, tmp_path, "whub-dev", "TASK-095")
+
+    assert run.call_count == 2
+    assert not (worktree / ".codex/config.toml").exists()
+    assert not state_path(tmp_path, "whub-dev", "TASK-095").exists()
+
+
+def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    prepare(tmp_path, "whub-dev", "TASK-095", worktree, _plan().files)
+    registered = SimpleNamespace(
+        definition=SimpleNamespace(task_id="TASK-095"), destination=worktree
+    )
+
+    with (
+        patch(
+            "whub.services.agent.harness.resolve_project_worktree",
+            return_value=registered,
+        ),
+        patch(
+            "whub.services.agent.harness.subprocess.run",
+            side_effect=[
+                CompletedProcess([], 0, "", ""),
+                CompletedProcess([], 1, "", "kill failed"),
+            ],
+        ),
+        pytest.raises(ServiceError, match="failed to stop tmux session: kill failed"),
+    ):
+        close_harness(None, tmp_path, "whub-dev", "TASK-095")
+
+    assert (worktree / ".codex/config.toml").exists()
+    assert state_path(tmp_path, "whub-dev", "TASK-095").exists()
+
+
+def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> None:
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    registered = SimpleNamespace(
+        definition=SimpleNamespace(task_id="TASK-095"), destination=worktree
+    )
+    resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
+    empty_plan = SimpleNamespace(files={})
+
+    with (
+        patch(
+            "whub.services.agent.harness.resolve_project_worktree",
+            return_value=registered,
+        ),
+        patch(
+            "whub.services.agent.harness.resolve_agent_auth",
+            return_value=resolved_auth,
+        ),
+        patch("whub.services.agent.harness.render_codex", return_value=_plan()),
+        patch(
+            "whub.services.agent.harness.render_claude_code",
+            return_value=empty_plan,
+        ),
+        patch(
+            "whub.services.agent.harness.subprocess.run",
+            side_effect=[
+                CompletedProcess([], 1, "", "missing"),
+                CompletedProcess([], 0, "", ""),
+                CompletedProcess([], 1, "", "missing"),
+                CompletedProcess([], 0, "", ""),
+            ],
+        ) as run,
+    ):
+        first = open_harness(None, tmp_path, "whub-dev", "TASK-095", ())
+        saved_state = state_path(tmp_path, "whub-dev", "TASK-095").read_text()
+        second = open_harness(None, tmp_path, "whub-dev", "TASK-095", ())
+
+    assert first == second
+    assert run.call_count == 4
+    assert (worktree / ".codex/config.toml").read_text() == (
+        'sandbox_mode = "workspace-write"\n'
+    )
+    assert state_path(tmp_path, "whub-dev", "TASK-095").read_text() == saved_state
