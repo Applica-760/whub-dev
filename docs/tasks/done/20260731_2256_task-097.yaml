@@ -1,0 +1,92 @@
+schema_version: 1
+task:
+  id: TASK-097
+  state: completed
+  title: Task YAMLをHubのwflow層へ集約する
+  objective: 未完了Task YAMLをworkspace-hub/wflow/tasks/<project>/へ集約し、Project worktreeから実行管理データを分離する。完了・取消TaskはProject側へ履歴として転写し、cancelledのアーカイブも一操作で扱えるようにする。
+  approach:
+  - workspace-hubのGit管理下にwflow専用のTask storageを置き、wflow・Web API・worktree操作のTask解決先を移行する。TASK-073のcancelled
+    Taskアーカイブ範囲を統合し、完了時のProjectへの履歴転写と運用文書・releaseまでを検証する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Hubにwflow Task層を作成し未完了Taskを移行する
+    acceptance: []
+    steps:
+    - description: workspace-hub/wflow/tasks/<project>/をTask storageとして導入し、既存の未完了Task
+        YAML（docs/tasks/done外のcancelledを含む）を全Projectから移行する。wflow・Web API・worktree操作の解決先をHub側storageへ切り替える。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Hubのwflow/tasks/<project>へ未完了Task YAMLを移行し、wflow・Web API・worktree操作の参照先を中央storageへ切り替えた。
+      deleted: false
+    deleted: false
+  - title: Web appのTask表示を改修する
+    acceptance: []
+    steps:
+    - description: 中央Task storageを参照するWeb appの表示不具合を改修し、表示を検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: フロント改修を含むWeb appの変更をreleaseし、適用後にTask表示を確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: 中央Task APIがTASK-097を返すことを確認。
+      deleted: false
+    - value:
+        finding: release 0.1.0+g2f2c914eをverify・applyし、Web appのTask APIを確認。
+      deleted: false
+    deleted: false
+  - title: cancelled Taskをアーカイブする
+    acceptance: []
+    steps:
+    - description: TASK-073の範囲を統合し、cancelledへの遷移時にHub側Task storageからProjectのdocs/tasks/done/cancelled/へ一操作でアーカイブする。完了TaskもProject側へ履歴YAMLを転写する契約を整備する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: cancel_taskとcompleteがHub storageからProject側の凍結archiveへ移動するように実装し、対象CLIテストとruffを確認した
+      deleted: false
+    deleted: false
+  - title: 運用文書を更新する
+    acceptance: []
+    steps:
+    - description: Task storage、完了・cancelled時のProjectへの転写、Agentとworktreeからの参照方法、TASK-073の統合結果を運用・参照文書へ反映する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        documentation: READMEとagent workspace文書にHub側Task storageとcompleted/cancelledのProject側archive先を記録した
+      deleted: false
+    deleted: false
+  - title: Releaseする
+    acceptance: []
+    steps:
+    - description: 移行・archive・Task探索のテストを実行し、release手順に従ってbuild、verify、apply後の動作確認まで行う。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        release: 0.1.0+g8db9aba4をbuild、verify、applyし、新releaseのTask checkとoperation
+          app healthを確認した
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: cancelled TaskをProject側の凍結archiveへ移動し、release 0.1.0+g8db9aba4で適用・動作確認した
