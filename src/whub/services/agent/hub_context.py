@@ -14,6 +14,8 @@ HUB_CONTEXT_MARKERS = (
     "<!-- whub:harness:context:start -->",
     "<!-- whub:harness:context:end -->",
 )
+HUB_AGENTS_PATH = "AGENTS.md"
+HUB_SKILLS_PATH = ".agents/skills"
 
 
 @dataclass(frozen=True)
@@ -26,13 +28,13 @@ class HubContext:
 
 def render_hub_context(workspace_root: Path) -> HubContext:
     """Snapshot Hub-owned context without materializing it."""
-    rules = workspace_root / "AGENTS.md"
+    rules = workspace_root / HUB_AGENTS_PATH
     if not rules.is_file():
         return HubContext({}, {})
     return HubContext(
-        _skill_files(workspace_root / ".agents/skills"),
+        _skill_files(workspace_root / HUB_SKILLS_PATH),
         {
-            PurePosixPath("AGENTS.md"): format_block(
+            PurePosixPath(HUB_AGENTS_PATH): format_block(
                 HUB_CONTEXT_MARKERS,
                 "# Hub common rules\n"
                 f"Relative paths in this block are relative to Hub root: {workspace_root}\n\n"
@@ -56,7 +58,7 @@ def _skill_files(root: Path) -> dict[PurePosixPath, str]:
             continue
         if source.is_symlink() or not source.is_file():
             raise ServiceError(f"Hub Skill is not a regular file: {source}")
-        files[PurePosixPath(".agents/skills") / source.relative_to(root)] = (
+        files[PurePosixPath(HUB_SKILLS_PATH) / source.relative_to(root)] = (
             source.read_text()
         )
     return files
