@@ -1,11 +1,16 @@
 from pathlib import PurePosixPath
+import tomllib
 
 import pytest
 
-from whub.models.agent.auth import EffectiveAuth, ExtensionTool
+from whub.models.agent.auth import (
+    ApprovalGrants,
+    EffectiveAuth,
+    ExtensionTool,
+    FilesystemGrants,
+)
 from whub.services.agent.adapters.codex import (
     CodexAdapterError,
-    CodexRuntimeRequirement,
     render,
 )
 
@@ -58,21 +63,55 @@ def test_render_generates_project_rules_and_mcp_config() -> None:
 
     assert plan.files[PurePosixPath(".codex/rules/whub.rules")] == (
         'prefix_rule(\n    pattern = ["wflow", "task", "--project", "whub-dev", "check"],\n'
-        '    decision = "allow",\n)\n'
+        '    decision = "prompt",\n)\n'
     )
-    assert plan.files[PurePosixPath(".codex/config.toml")] == (
-        "[mcp_servers.codegraph]\n"
-        'command = "codegraph"\n'
-        'args = ["serve", "--mcp"]\n'
-        'enabled_tools = ["codegraph_explore", "codegraph_node"]\n'
+    config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])
+    assert config["sandbox_mode"] == "workspace-write"
+    assert config["approval_policy"] == "on-request"
+    assert config["approvals_reviewer"] == "user"
+    assert config["sandbox_workspace_write"] == {
+        "network_access": False,
+        "exclude_tmpdir_env_var": True,
+        "exclude_slash_tmp": True,
+    }
+    assert config["mcp_servers"] == {
+        "codegraph": {
+            "command": "codegraph",
+            "args": ["serve", "--mcp"],
+            "enabled_tools": ["codegraph_explore", "codegraph_node"],
+        }
+    }
+
+
+def test_render_generates_sandbox_config_without_extension_tools() -> None:
+    auth = _auth().model_copy(
+        update={"grants": _auth().grants.model_copy(update={"extension_tools": []})}
     )
-    assert plan.runtime_requirements == frozenset(
-        {
-            CodexRuntimeRequirement.COMMAND_AUTHORIZATION,
-            CodexRuntimeRequirement.FILESYSTEM_AUTHORIZATION,
-            CodexRuntimeRequirement.NETWORK_AUTHORIZATION,
+
+    plan = render(auth, [], {"project": "whub-dev"})
+
+    config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])
+    assert "mcp_servers" not in config
+
+
+def test_render_derives_codex_permissions_from_effective_auth() -> None:
+    grants = _auth().grants.model_copy(
+        update={
+            "filesystem": FilesystemGrants(read=["hub_logical_tree"], write=[]),
+            "approval": ApprovalGrants(policy="never", reviewer="auto_review"),
         }
     )
+
+    plan = render(
+        _auth().model_copy(update={"grants": grants}),
+        [_codegraph()],
+        {"project": "whub-dev"},
+    )
+
+    config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])
+    assert config["sandbox_mode"] == "read-only"
+    assert config["approval_policy"] == "never"
+    assert config["approvals_reviewer"] == "auto_review"
 
 
 def test_render_rejects_unresolved_variables() -> None:

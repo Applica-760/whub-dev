@@ -4,15 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from enum import StrEnum
 import json
 from pathlib import PurePosixPath
 
 from whub.models.agent.auth import (
+    ApprovalPolicy,
     CommandRule,
     EffectiveAuth,
     ExtensionTool,
     LiteralValue,
+    NetworkPolicy,
     VariableReference,
 )
 
@@ -21,18 +22,11 @@ class CodexAdapterError(ValueError):
     """Raised when an effective auth cannot be rendered for Codex."""
 
 
-class CodexRuntimeRequirement(StrEnum):
-    COMMAND_AUTHORIZATION = "command_authorization"
-    FILESYSTEM_AUTHORIZATION = "filesystem_authorization"
-    NETWORK_AUTHORIZATION = "network_authorization"
-
-
 @dataclass(frozen=True)
 class CodexRenderPlan:
-    """Codex project files and the guards that the harness must provide."""
+    """Codex project files generated from Agent authorization."""
 
     files: Mapping[PurePosixPath, str]
-    runtime_requirements: frozenset[CodexRuntimeRequirement]
 
 
 def render(
@@ -42,18 +36,15 @@ def render(
 ) -> CodexRenderPlan:
     """Render project-scoped Codex configuration without writing files."""
     tools = _resolve_extension_tools(auth, extension_tools)
-    files: dict[PurePosixPath, str] = {}
+    files: dict[PurePosixPath, str] = {
+        PurePosixPath(".codex/config.toml"): _render_config(auth, tools)
+    }
     if auth.grants.commands.prefixes:
         files[PurePosixPath(".codex/rules/whub.rules")] = _render_rules(
             auth.grants.commands.prefixes,
             variables,
         )
-    if tools:
-        files[PurePosixPath(".codex/config.toml")] = _render_mcp_config(tools)
-    return CodexRenderPlan(
-        files=files,
-        runtime_requirements=_runtime_requirements(auth),
-    )
+    return CodexRenderPlan(files=files)
 
 
 def _resolve_extension_tools(
@@ -76,7 +67,7 @@ def _render_rules(
     return "".join(
         "prefix_rule(\n"
         f"    pattern = {_starlark_list(_rule_arguments(rule, variables))},\n"
-        '    decision = "allow",\n'
+        '    decision = "prompt",\n'
         ")\n"
         for rule in rules
     )
@@ -98,11 +89,21 @@ def _rule_arguments(
     return arguments
 
 
-def _render_mcp_config(tools: Sequence[ExtensionTool]) -> str:
-    lines: list[str] = []
+def _render_config(auth: EffectiveAuth, tools: Sequence[ExtensionTool]) -> str:
+    lines = [
+        f'sandbox_mode = "{_sandbox_mode(auth)}"',
+        f'approval_policy = "{_approval_policy(auth)}"',
+        f'approvals_reviewer = "{auth.grants.approval.reviewer.value}"',
+        "",
+        "[sandbox_workspace_write]",
+        f"network_access = {_toml_bool(_network_access(auth))}",
+        "exclude_tmpdir_env_var = true",
+        "exclude_slash_tmp = true",
+    ]
     for tool in tools:
         lines.extend(
             (
+                "",
                 f"[mcp_servers.{tool.id}]",
                 f"command = {json.dumps(tool.command)}",
                 f"args = {_toml_list(tool.args)}",
@@ -113,21 +114,30 @@ def _render_mcp_config(tools: Sequence[ExtensionTool]) -> str:
     return "\n".join(lines)
 
 
+def _sandbox_mode(auth: EffectiveAuth) -> str:
+    return "workspace-write" if auth.grants.filesystem.write else "read-only"
+
+
+def _approval_policy(auth: EffectiveAuth) -> str:
+    if auth.grants.approval.policy is ApprovalPolicy.REQUEST:
+        return "on-request"
+    if auth.grants.approval.policy is ApprovalPolicy.NEVER:
+        return "never"
+    raise CodexAdapterError(
+        f"unsupported Codex approval policy: {auth.grants.approval.policy}"
+    )
+
+
+def _network_access(auth: EffectiveAuth) -> bool:
+    if auth.grants.network.policy is NetworkPolicy.DENY_ALL:
+        return False
+    raise CodexAdapterError(
+        f"unsupported Codex network policy: {auth.grants.network.policy}"
+    )
+
+
 def _codex_tool_names(tool: ExtensionTool) -> list[str]:
     return [f"{tool.id}_{name}" for name in tool.tools]
-
-
-def _runtime_requirements(
-    auth: EffectiveAuth,
-) -> frozenset[CodexRuntimeRequirement]:
-    requirements: set[CodexRuntimeRequirement] = {
-        CodexRuntimeRequirement.NETWORK_AUTHORIZATION,
-    }
-    if auth.grants.commands.prefixes or auth.grants.commands.exact:
-        requirements.add(CodexRuntimeRequirement.COMMAND_AUTHORIZATION)
-    if auth.grants.filesystem.read or auth.grants.filesystem.write:
-        requirements.add(CodexRuntimeRequirement.FILESYSTEM_AUTHORIZATION)
-    return frozenset(requirements)
 
 
 def _starlark_list(values: Sequence[str]) -> str:
@@ -136,3 +146,7 @@ def _starlark_list(values: Sequence[str]) -> str:
 
 def _toml_list(values: Sequence[str]) -> str:
     return "[" + ", ".join(json.dumps(value) for value in values) + "]"
+
+
+def _toml_bool(value: bool) -> str:
+    return "true" if value else "false"

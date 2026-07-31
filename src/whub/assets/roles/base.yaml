@@ -90,5 +90,9 @@ grants:
   network:
     policy: deny_all
 
+  approval:
+    policy: request
+    reviewer: user
+
   extension_tools:
     - codegraph

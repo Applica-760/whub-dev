@@ -4,6 +4,8 @@ import pytest
 from pydantic import ValidationError
 
 from whub.models.agent.auth import (
+    ApprovalPolicy,
+    ApprovalReviewer,
     AgentAuth,
     AgentAuthError,
     CommandRule,
@@ -32,6 +34,8 @@ def test_loads_base_agent_auth() -> None:
     assert isinstance(auth.grants.commands.prefixes[0], CommandRule)
     assert isinstance(auth.grants.commands.exact[0], CommandRule)
     assert auth.grants.network.policy is NetworkPolicy.DENY_ALL
+    assert auth.grants.approval.policy is ApprovalPolicy.REQUEST
+    assert auth.grants.approval.reviewer is ApprovalReviewer.USER
     variable = auth.grants.commands.exact[-1].arguments[2]
     assert isinstance(variable, VariableReference)
     assert variable.name == "project"

@@ -42,6 +42,8 @@ def compose_auth(base: AgentAuth, extensions: Sequence[AgentAuth]) -> EffectiveA
 
     if any(auth.grants.network != base.grants.network for auth in extensions):
         raise AuthError("conflicting network grants")
+    if any(auth.grants.approval != base.grants.approval for auth in extensions):
+        raise AuthError("conflicting approval grants")
 
     return EffectiveAuth(
         variables=variables,

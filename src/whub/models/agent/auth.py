@@ -109,6 +109,22 @@ class NetworkGrants(AgentAuthModel):
     policy: NetworkPolicy
 
 
+# ── Approval ───────────────────────────────────────────────────────────────────────────────
+class ApprovalPolicy(StrEnum):
+    REQUEST = "request"
+    NEVER = "never"
+
+
+class ApprovalReviewer(StrEnum):
+    USER = "user"
+    AUTO_REVIEW = "auto_review"
+
+
+class ApprovalGrants(AgentAuthModel):
+    policy: ApprovalPolicy = ApprovalPolicy.REQUEST
+    reviewer: ApprovalReviewer = ApprovalReviewer.USER
+
+
 # ── Extension tools ─────────────────────────────────────────────────────────
 class ExtensionToolError(ValueError):
     """Raised when a registered extension tool cannot be loaded."""
@@ -160,6 +176,7 @@ class Grants(AgentAuthModel):
     commands: CommandGrants
     filesystem: FilesystemGrants
     network: NetworkGrants
+    approval: ApprovalGrants = Field(default_factory=ApprovalGrants)
     extension_tools: list[ExtensionToolId]
 
     @field_validator("extension_tools")

@@ -1,0 +1,64 @@
+schema_version: 1
+task:
+  id: TASK-094
+  state: in_progress
+  title: Codex実行ハーネスを実装する
+  objective: 既存のagent authとCodex adapterからworktree-scopedなCodex設定を生成し、tmux上で起動・再接続できるCodex専用ハーネスを実装する。
+  approach:
+  - Codex sandboxとrulesを承認境界として利用し、既存のworktree・agent auth・Codex adapter・tmux基盤を接続する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Codex設定を生成する
+    acceptance: []
+    steps:
+    - description: agent authからCodexのproject config、rules、MCP設定を生成する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: worktree-scoped sandboxとnetwork無効の設定を生成・検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        codex_config: EffectiveAuthのfilesystem、network、approvalをCodex sandbox、network、承認設定へ変換し、prefix
+          ruleはsandbox外でpromptを要求する。
+      deleted: false
+    deleted: false
+  - title: Codex harness lifecycleを実装する
+    acceptance: []
+    steps:
+    - description: 登録済みTaskとworktreeを検証し、生成物を安全に配置する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: tmux上でCodexを起動し、停止後の再接続を扱う
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+  - title: 検証と文書化を行う
+    acceptance: []
+    steps:
+    - description: 生成設定とharness lifecycleのテストを追加する
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 利用方法とMVPの承認境界を文書化する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null

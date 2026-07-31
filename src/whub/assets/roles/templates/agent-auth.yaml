@@ -22,5 +22,9 @@ grants:
     write: []
   network:
     policy: deny_all
+  approval:
+    # requestはadapter固有の承認要求へ変換する。例: Codexではon-request。
+    policy: request
+    reviewer: user
   # Hubに登録済みの拡張ツールIDだけを指定する。例: [example_tool]
   extension_tools: []

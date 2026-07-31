@@ -13,6 +13,7 @@ def _auth(
     exact: list[dict] | None = None,
     read: list[str] | None = None,
     write: list[str] | None = None,
+    approval: dict[str, str] | None = None,
     extension_tools: list[str] | None = None,
 ) -> AgentAuth:
     return AgentAuth.model_validate(
@@ -24,6 +25,7 @@ def _auth(
                 "commands": {"prefixes": prefixes or [], "exact": exact or []},
                 "filesystem": {"read": read or [], "write": write or []},
                 "network": {"policy": "deny_all"},
+                "approval": approval or {"policy": "request", "reviewer": "user"},
                 "extension_tools": extension_tools or [],
             },
         }
@@ -85,6 +87,18 @@ def test_compose_auth_rejects_conflicting_variable_definitions() -> None:
     )
 
     with pytest.raises(AuthError, match="conflicting variable definition: project"):
+        compose_auth(base, [extension])
+
+
+def test_compose_auth_rejects_conflicting_approval_grants() -> None:
+    base = _auth("base", "base")
+    extension = _auth(
+        "implementer",
+        "extension",
+        approval={"policy": "never", "reviewer": "user"},
+    )
+
+    with pytest.raises(AuthError, match="conflicting approval grants"):
         compose_auth(base, [extension])
 
 
