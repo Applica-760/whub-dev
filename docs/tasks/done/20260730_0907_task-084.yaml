@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-084
-  state: in_progress
+  state: completed
   title: whub link の gitignore 管理見直し
   objective: whub link が自動生成する gitignore 対象を現行の symlink/mount 設計に照らして検証し、必要な変更方針を決定する
   approach:
@@ -162,4 +162,5 @@ change_requests:
     と AppleDouble (._*、.AppleDouble/) へ拡張するため。
 - reason: 計画本文中の backtick が shell 展開され、対象パス表記が欠落したため、内容を正しい文字列へ訂正する。
 cancellation: null
-result: null
+result:
+  summary: Merge commitでmainへマージし、worktree cleanupとfast-forward同期を確認した。
