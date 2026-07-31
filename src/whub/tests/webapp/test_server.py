@@ -210,7 +210,7 @@ class TestAppCommand:
             call(42, signal.SIGKILL),
         ]
 
-    def test_down_refuses_to_stop_its_own_process_group(self, tmp_path):
+    def test_down_stops_only_the_app_in_its_own_process_group(self, tmp_path):
         with (
             patch(
                 "whub.commands.app.current_context",
@@ -223,14 +223,17 @@ class TestAppCommand:
             patch("whub.commands.app.os.getpgid", return_value=42),
             patch("whub.commands.app.os.getpgrp", return_value=42),
             patch("whub.commands.app.os.killpg") as mock_killpg,
+            patch("whub.commands.app.os.kill") as mock_kill,
+            patch("whub.commands.app._is_running", return_value=False),
             patch("whub.commands.app.remove_pid_record") as mock_remove,
         ):
             result = CliRunner().invoke(app, ["down"])
 
-        assert result.exit_code != 0
-        assert "refusing to stop a process group" in result.output
+        assert result.exit_code == 0
+        assert "app stopped" in result.output
         mock_killpg.assert_not_called()
-        mock_remove.assert_not_called()
+        mock_kill.assert_called_once_with(42, signal.SIGTERM)
+        mock_remove.assert_called_once_with(tmp_path / "app.pid", expected_pid=42)
 
     def test_dev_starts_fixed_url(self, tmp_path):
         app_dir = tmp_path / "app"

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tomllib
 import zipfile
 
@@ -78,6 +79,10 @@ def _operation_whub(context: WhubContext) -> Path:
 
 def _restart_operation_app(executable: Path, *, cwd: Path) -> None:
     _run([str(executable), "app"], cwd=cwd)
+
+
+def _stop_operation_app(*, cwd: Path) -> None:
+    _run([sys.executable, "-m", "whub", "app", "down"], cwd=cwd)
 
 
 # build ----------------------------------------------------------------------
@@ -152,7 +157,7 @@ def build_release(
         raise ReleaseBuildError(f"release is already verified: {release.release_id}")
 
     try:
-        _run([str(operation_whub), "app", "down"], cwd=source)
+        _stop_operation_app(cwd=source)
         app_stopped = True
         artifact_dir.mkdir(parents=True, exist_ok=True)
         metadata_path.write_text(

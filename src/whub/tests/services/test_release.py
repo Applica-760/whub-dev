@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import zipfile
 
 import pytest
@@ -121,7 +122,7 @@ def test_build_stages_wheel_and_removes_generated_metadata(
     assert result.release_id == "0.1.0+gaaaaaaaa"
     assert result.wheel_path.is_file()
     assert not (source / "src" / "whub" / "_build.json").exists()
-    assert calls[2][-2:] == ["app", "down"]
+    assert calls[2] == [sys.executable, "-m", "whub", "app", "down"]
     assert ["npm", "run", "build"] in calls
 
 
