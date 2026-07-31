@@ -7,9 +7,11 @@ from pathlib import Path
 from whub.core.context import current_context
 from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
+from whub.services.project_content import resolve_project_content_root
 from whub.wflow.models.task import TaskDocument, TaskSummary
 from whub.wflow.services import (
     WflowError,
+    archive_task,
     list_tasks,
     load_task,
     load_task_workflow,
@@ -36,6 +38,22 @@ def project_task_root(manifest: Manifest, project: str) -> Path | None:
     """Return PROJECT's active Hub Task directory, when it exists."""
     task_root = resolve_project_task_root(manifest, project)
     return task_root if task_root.exists() else None
+
+
+def archive_project_task(
+    manifest: Manifest,
+    project: str,
+    source: Path,
+    task: TaskDocument,
+) -> Path:
+    """Move a terminal Hub Task into the owning Project's frozen archive."""
+    destination = resolve_project_content_root(manifest, project) / "docs/tasks/done"
+    if task.task.state == "cancelled":
+        destination /= "cancelled"
+    try:
+        return archive_task(source, task, destination)
+    except WflowError as error:
+        raise ServiceError(str(error)) from error
 
 
 def list_project_tasks(

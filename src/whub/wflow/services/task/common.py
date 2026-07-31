@@ -128,14 +128,14 @@ def write_task(path: Path, task: TaskDocument) -> None:
     _write(path, task, create=False)
 
 
-def archive_task(path: Path, task: TaskDocument) -> Path:
-    """Atomically place a completed Task beneath the sibling done directory."""
-    if task.task.state != "completed":
-        raise WflowError("only completed tasks can be archived")
-    destination = path.parent / "done" / path.name
-    destination.parent.mkdir(parents=True, exist_ok=True)
+def archive_task(path: Path, task: TaskDocument, destination_root: Path) -> Path:
+    """Atomically copy a terminal Task to its archive, then remove its source."""
+    if task.task.state not in {"completed", "cancelled"}:
+        raise WflowError("only terminal tasks can be archived")
+    destination = destination_root / path.name
     temporary_path: Path | None = None
     try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",

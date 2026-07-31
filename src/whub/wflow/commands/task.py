@@ -9,13 +9,12 @@ import click
 
 from whub.models import ManifestError, load_manifest, project_names
 from whub.services.errors import ServiceError
-from whub.services.task import resolve_project_task_root
+from whub.services.task import archive_project_task, resolve_project_task_root
 from whub.utils.render import render_table
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.services import (
     WflowError,
     append_phase_log,
-    archive_task,
     apply_transition,
     complete_step,
     create_task,
@@ -64,6 +63,7 @@ def task(ctx: click.Context, project: str) -> None:
         root.mkdir(parents=True, exist_ok=True)
     except (ManifestError, OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
+    ctx.meta["task_project"] = project
     ctx.with_resource(chdir(root))
 
 
@@ -77,7 +77,7 @@ def init(title: str, objective: str, approaches: tuple[str, ...]) -> None:
     """Create a draft Task execution record."""
     try:
         path, record = create_task(Path("."), title, objective, approaches)
-    except WflowError as error:
+    except (ServiceError, WflowError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"initialized {record.task.id}: {path}")
 
@@ -114,7 +114,7 @@ def update_task(
                 approaches=() if clear_approaches else approaches or None,
             ),
         )
-    except WflowError as error:
+    except (ServiceError, WflowError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"updated {task_ref}")
 
@@ -465,9 +465,20 @@ def transition(
         updated = apply_transition(
             record, load_task_workflow(), trigger, actor, input_data
         )
-        write_task(task_path, updated)
-    except WflowError as error:
+        if updated.task.state == "cancelled":
+            destination = archive_project_task(
+                load_manifest(),
+                click.get_current_context().meta["task_project"],
+                task_path,
+                updated,
+            )
+        else:
+            write_task(task_path, updated)
+    except (ServiceError, WflowError) as error:
         raise click.ClickException(str(error)) from error
+    if updated.task.state == "cancelled":
+        click.echo(f"cancelled {updated.task.id}: {destination}")
+        return
     click.echo(f"transitioned {trigger}: {updated.task.state}")
 
 
@@ -493,8 +504,13 @@ def complete(task_ref: str, result: str | None) -> None:
                 "agent",
                 {"result": result},
             )
-        destination = archive_task(path, updated)
-    except WflowError as error:
+        destination = archive_project_task(
+            load_manifest(),
+            click.get_current_context().meta["task_project"],
+            path,
+            updated,
+        )
+    except (ServiceError, WflowError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"completed {updated.task.id}: {destination}")
 
