@@ -43,7 +43,7 @@ source <(whub shell-init)   # .zshrc に追記
 | `whub init --workspace-root PATH [--force]` | `~/.whub/config.toml` にworkspace rootを記録してcontextを初期化 |
 | `whub ls` | project名、resource type、workspace pathを表示 |
 | `whub status` | 接続状態、ヘルスチェック、git差分を表示 |
-| `whub link` | manifest の symlink を一括作成（`.gitignore` も自動更新） |
+| `whub link` | manifest の symlink を一括作成し、whub runtime metadata のみを `.gitignore` へ自動追加 |
 | `whub remote mount [PROJECT] [-a]` | 対象`resource`のhostをsshfsでマウントし`workspace_path`のsymlinkを張る（`auto_mount: false`のhostは`-a`か名指しのみ） |
 | `whub remote unmount [--force]` | 全hostのマウントを解除し`workspace_path`のsymlinkも撤去（staleマウントは`--force`で強制解除） |
 | `whub cd <PROJECT>` | localならパス移動、remoteならtmuxセッションへSSH接続（`--plain`で素シェル） |

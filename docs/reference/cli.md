@@ -16,6 +16,7 @@ whub remote cleanup-appledouble <PROJECT> [--apply]
 ```
 
 - local Resourceはsymlink、remote Resourceはsshfs mountで参照・編集する。
+- `link` は `.codegraph/`、`.DS_Store`、`._*`、`.AppleDouble/` だけをmarker付きの`.gitignore` blockで管理する。Project symlink、`AGENTS.md`、Agent設定は管理・ignoreしない。
 - remoteの走査・長時間処理は対象host上で実行する。ワンショットは `remote run`、対話的作業は `cd` を使う。
 - `remote cleanup-appledouble` はremote host上でAppleDouble sidecarを検証して一覧表示し、`--apply`指定時だけ削除する。SSHFS mountは走査しない。
 - `remote mount` はhost単位でsshfsを1本だけ接続する。無引数では `auto_mount: true` のhostだけを対象にし、`-a` またはProject指定ではこの制限を外す。

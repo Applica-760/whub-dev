@@ -14,11 +14,16 @@ _GITIGNORE_MARKERS = (
     "# whub link (auto-generated): end",
 )
 _LEGACY_GITIGNORE_MARKER = "# whub link (auto-generated)"
+_GITIGNORE_ENTRIES = (
+    ".codegraph/",
+    ".DS_Store",
+    "._*",
+    ".AppleDouble/",
+)
 
 
-def _update_gitignore(top_dirs: set[str]) -> None:
-    if not top_dirs:
-        return
+def _update_gitignore(legacy_link_paths: set[str]) -> None:
+    """Manage only whub runtime metadata, never Project link paths."""
     gitignore = Path.cwd() / ".gitignore"
     existing = gitignore.read_text() if gitignore.exists() else None
 
@@ -31,11 +36,13 @@ def _update_gitignore(top_dirs: set[str]) -> None:
         lines = existing.splitlines()
         start = lines.index(_LEGACY_GITIGNORE_MARKER)
         end = start + 1
-        while end < len(lines) and lines[end] in top_dirs:
+        while end < len(lines) and lines[end] in (
+            set(_GITIGNORE_ENTRIES) | legacy_link_paths
+        ):
             end += 1
         existing = "\n".join(lines[:start] + lines[end:]) + "\n"
 
-    block = format_block(_GITIGNORE_MARKERS, "\n".join(sorted(top_dirs)))
+    block = format_block(_GITIGNORE_MARKERS, "\n".join(_GITIGNORE_ENTRIES))
     text = replace_or_prepend_block(block, existing, _GITIGNORE_MARKERS)
 
     gitignore.write_text(text)
@@ -49,13 +56,12 @@ def link(ctx: click.Context) -> None:
         raise click.ClickException("whub link must be run from the workspace root")
     m = get_manifest(ctx)
     created = skipped = warnings = 0
-    top_dirs: set[str] = set()
-
+    legacy_link_paths: set[str] = set()
     for project in m.projects:
         r = project.resource
         if not isinstance(r, SymlinkResource):
             continue
-        top_dirs.add(r.workspace_path.split("/")[0])
+        legacy_link_paths.add(r.workspace_path.split("/")[0])
         target = r._resolved_workspace_path
         source = Path(r.source).expanduser()
         health = inspect_symlink(r)
@@ -84,5 +90,5 @@ def link(ctx: click.Context) -> None:
                 click.echo(f"  WARN  {project.name}: {result.state}{detail}")
                 warnings += 1
 
-    _update_gitignore(top_dirs)
+    _update_gitignore(legacy_link_paths)
     click.echo(f"\n  done: {created} created, {skipped} skipped, {warnings} warnings")
