@@ -122,6 +122,10 @@ def down(dev_mode: bool) -> None:
 
     try:
         process_group = os.getpgid(process.pid)
+        if process_group == os.getpgrp():
+            raise click.ClickException(
+                "refusing to stop a process group containing this command"
+            )
         os.killpg(process_group, signal.SIGTERM)
     except ProcessLookupError:
         remove_pid_record(pid_path, expected_pid=process.pid)

@@ -210,6 +210,28 @@ class TestAppCommand:
             call(42, signal.SIGKILL),
         ]
 
+    def test_down_refuses_to_stop_its_own_process_group(self, tmp_path):
+        with (
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
+            ),
+            patch(
+                "whub.commands.app._read_running_process",
+                return_value=AppProcessRecord(pid=42, port=8710),
+            ),
+            patch("whub.commands.app.os.getpgid", return_value=42),
+            patch("whub.commands.app.os.getpgrp", return_value=42),
+            patch("whub.commands.app.os.killpg") as mock_killpg,
+            patch("whub.commands.app.remove_pid_record") as mock_remove,
+        ):
+            result = CliRunner().invoke(app, ["down"])
+
+        assert result.exit_code != 0
+        assert "refusing to stop a process group" in result.output
+        mock_killpg.assert_not_called()
+        mock_remove.assert_not_called()
+
     def test_dev_starts_fixed_url(self, tmp_path):
         app_dir = tmp_path / "app"
         app_dir.mkdir()
