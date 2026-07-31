@@ -38,7 +38,7 @@ plan:
       skip_reason: null
       deleted: false
     - description: 設定済みworktree shellをtmuxで起動・再接続・明示終了し、workspace control planeの所有記録に基づいて生成設定だけを安全に除去する
-      state: pending
+      state: done
       skip_reason: null
       deleted: false
     log:
@@ -46,6 +46,11 @@ plan:
         finding: Agent Close方針を確定。Stateをworkspace control planeのprojects/worktrees/agents/へ分離し、生成した相対パスとhashだけを記録してCloseで安全に除去する。tmux
           session消滅時は既存agent openが再起動するため、専用restart/resumeコマンドは今回見送る。State/harness/CLI実装、focused
           pytest 9件、ruff checkが成功。実worktreeでのOpen/Close試験は次に実施する。
+      deleted: false
+    - value:
+        verification: TASK-094 worktreeをcleanに再作成し、uv run --project whub-dev whub
+          agent open whub-dev TASK-094 --auth implementerからtmux sessionと設定を生成した。非TTYのattachはnot
+          a terminalで終了したが、続くagent closeが成功し、tmux session不在、State YAML不在、worktreeの未追跡生成物なしを確認した。
       deleted: false
     deleted: false
   - title: 検証と文書化を行う
