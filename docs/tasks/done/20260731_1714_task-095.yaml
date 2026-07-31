@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-095
-  state: in_progress
+  state: completed
   title: Hub共通ルールをAgent worktreeへ配布する
   objective: Hubが管理する共通ルールとSkillsを、Agent Harnessが準備するworktreeへ安全に配布し、project固有設定とworktree限定の実行境界を維持する。
   approach:
@@ -76,4 +76,6 @@ approvals:
 acceptance_results: []
 change_requests: []
 cancellation: null
-result: null
+result:
+  summary: 'Hub共通ルールとSkillsをHubContextとしてrenderし、StateがAgent Auth生成物と分離してworktreeへ安全に投影・cleanupするようにした。PR
+    #3をmergeし、worktree cleanupと全体テスト550件成功を確認した。'
