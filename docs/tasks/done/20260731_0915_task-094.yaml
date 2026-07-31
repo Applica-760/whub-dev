@@ -1,7 +1,7 @@
 schema_version: 1
 task:
   id: TASK-094
-  state: in_progress
+  state: completed
   title: Codex実行ハーネスを実装する
   objective: 既存のagent authとCodex adapterからworktree-scopedなCodex設定を生成し、tmux上で起動・再接続できるCodex専用ハーネスを実装する。
   approach:
@@ -86,4 +86,5 @@ change_requests:
     remove only harness-owned generated configuration using workspace control-plane
     metadata.'
 cancellation: null
-result: null
+result:
+  summary: Agent Close lifecycleを実装・検証・文書化し、release 0.1.0+g3a416028をbuild、verify、applyした。
