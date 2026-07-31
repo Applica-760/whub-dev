@@ -1,0 +1,79 @@
+schema_version: 1
+task:
+  id: TASK-095
+  state: in_progress
+  title: Hub共通ルールをAgent worktreeへ配布する
+  objective: Hubが管理する共通ルールとSkillsを、Agent Harnessが準備するworktreeへ安全に配布し、project固有設定とworktree限定の実行境界を維持する。
+  approach:
+  - Agentの起点とworktree CWDは維持し、Harnessの生成・所有・cleanup契約を拡張してHub由来の共通コンテキストをworktreeへ投影する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Hub共通コンテキストの配布契約を定義する
+    acceptance: []
+    steps:
+    - description: AGENTS.mdと.agents/skillsの配布対象、優先順、衝突処理、所有・cleanup境界を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: CodexとClaude Codeの両方で共有内容を発見可能にする投影方式と更新契約を設計する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: agent openはworktree CWDでtmux shellを起動し、HubのAGENTS.md/.agents/skillsはworktreeから発見されない。Hubには共通AGENTS.md、.agents/skills
+          5件、.claude/CLAUDE.md（@../AGENTS.md参照）があり、対象worktreeにはいずれも存在しない。現Stateは新規fileのみ所有し、既存AGENTS.mdの安全な注入・復元は未対応。配布候補は、Hub
+          AGENTSをworktree既存AGENTSへ管理blockとしてsnapshot注入し、Skillsを個別copyする方式。
+      deleted: false
+    - value:
+        decision: Hub AGENTS.mdをworktree既存AGENTS.mdへHarness所有の管理blockとしてsnapshot注入し、Hub
+          .agents/skillsは個別copyする。Claude Codeはworktree .claude/CLAUDE.mdからAGENTS.mdを参照する。既存HarnessStateをschema拡張してfile所有と管理block所有を一体で記録し、closeは未変更の所有物だけを除去する。Hub相対パスは生成blockでHub
+          root基準と明示し、反映はclose→openで行う。
+      deleted: false
+    deleted: false
+  - title: Harnessによる配布を実装する
+    acceptance: []
+    steps:
+    - description: HarnessがHub共通コンテキストをworktreeへ安全に生成・更新する処理を実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 既存のproject固有設定とworktree CWD・sandbox境界を維持する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: HarnessStateをschema v2へ拡張し、file所有と管理block hashを同一Stateに記録する。prepareがHubのAGENTS.md/.agents/skillsをsnapshot投影し、Claude用のAGENTS参照blockも配置する。Harness
+          APIは未変更でHub contextを知らず、v1 State読込を維持した。focused pytest 21 passed、Ruff、git
+          diff --check成功。
+      deleted: false
+    deleted: false
+  - title: 検証と文書化を行う
+    acceptance: []
+    steps:
+    - description: 共有内容の利用、既存設定の保護、agent closeによる生成物だけのcleanupをテストする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Agent harness operationとarchitecture文書へ配布範囲・所有境界・運用手順を記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Hub contextのState投影・既存AGENTS保持・block変更拒否・Hub Skills cleanup・v1 State読込・Harness経由の投影をテストした。architectureとoperation文書へsnapshot、所有境界、close→open更新手順を記録した。uv
+          run pytestはWeb UI dist生成後に550 passed、uv run ruff checkとgit diff --checkも成功。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result: null
