@@ -10,14 +10,10 @@ from whub.models.agent.auth import (
     RegisteredTaskWorktreeVariable,
 )
 from whub.services.agent.adapters.codex import CodexRenderPlan
-from whub.services.agent.harness import (
-    _PreparedHarness,
-    _resolve_variables,
-    _start_tmux_session,
-    close_harness,
-    open_harness,
-)
+from whub.services.agent.agent import close_agent, open_agent
+from whub.services.agent.auth import resolve_variables
 from whub.services.agent.hub_context import render_hub_context
+from whub.services.agent.session import open_tmux_session
 from whub.services.errors import ServiceError
 from whub.services.agent.state import cleanup, load, prepare, state_path
 
@@ -245,7 +241,7 @@ def test_state_rejects_symlinked_config_directory(tmp_path: Path) -> None:
 
 
 def test_resolve_variables_uses_registered_project_and_worktree() -> None:
-    values = _resolve_variables(
+    values = resolve_variables(
         {
             "project": RegisteredProjectVariable(source="registered_project"),
             "current_worktree": RegisteredTaskWorktreeVariable(
@@ -266,15 +262,16 @@ def test_resolve_variables_uses_registered_project_and_worktree() -> None:
 
 
 def test_start_tmux_session_creates_codex_from_hub_root(tmp_path: Path) -> None:
-    harness = _PreparedHarness("whub-dev", "TASK-095", tmp_path / "worktree")
     with patch(
-        "whub.services.agent.harness.subprocess.run",
+        "whub.services.agent.session.subprocess.run",
         side_effect=[
             CompletedProcess([], 1, "", "missing"),
             CompletedProcess([], 0, "", ""),
         ],
     ) as run:
-        session = _start_tmux_session(harness, tmp_path)
+        session = open_tmux_session(
+            "whub-dev", "TASK-095", tmp_path / "worktree", tmp_path
+        )
 
     assert session.name == "whub-whub-dev-TASK-095"
     assert session.attach_command == (
@@ -298,20 +295,20 @@ def test_start_tmux_session_creates_codex_from_hub_root(tmp_path: Path) -> None:
 def test_start_stops_before_tmux_when_worktree_validation_fails(tmp_path: Path) -> None:
     with (
         patch(
-            "whub.services.agent.harness.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_project_worktree",
             side_effect=ServiceError(
                 "worktree definition not found: whub-dev/TASK-095"
             ),
         ),
-        patch("whub.services.agent.harness.subprocess.run") as run,
+        patch("whub.services.agent.session.subprocess.run") as run,
         pytest.raises(ServiceError, match="worktree definition not found"),
     ):
-        open_harness(None, tmp_path, "whub-dev", "TASK-095", None)
+        open_agent(None, tmp_path, "whub-dev", "TASK-095", None)
 
     run.assert_not_called()
 
 
-def test_open_harness_uses_the_registered_task_id(tmp_path: Path) -> None:
+def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
     registered = SimpleNamespace(
         definition=SimpleNamespace(task_id="TASK-095"), destination=tmp_path
     )
@@ -321,26 +318,26 @@ def test_open_harness_uses_the_registered_task_id(tmp_path: Path) -> None:
 
     with (
         patch(
-            "whub.services.agent.harness.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_project_worktree",
             return_value=registered,
         ),
         patch(
-            "whub.services.agent.harness.resolve_agent_auth",
+            "whub.services.agent.agent.resolve_agent_auth",
             return_value=resolved_auth,
         ),
-        patch("whub.services.agent.harness.render_codex", return_value=plan),
-        patch("whub.services.agent.harness.render_claude_code", return_value=plan),
-        patch("whub.services.agent.harness.prepare"),
+        patch("whub.services.agent.agent.render_codex", return_value=plan),
+        patch("whub.services.agent.agent.render_claude_code", return_value=plan),
+        patch("whub.services.agent.agent.prepare"),
         patch(
-            "whub.services.agent.harness._start_tmux_session", return_value=session
+            "whub.services.agent.agent.open_tmux_session", return_value=session
         ) as start,
     ):
-        assert open_harness(None, tmp_path, "whub-dev", "TASK-095", ()) is session
+        assert open_agent(None, tmp_path, "whub-dev", "TASK-095", ()) is session
 
-    assert start.call_args.args[0].task_id == "TASK-095"
+    assert start.call_args.args == ("whub-dev", "TASK-095", tmp_path, tmp_path)
 
 
-def test_open_harness_projects_hub_context_without_harness_specific_logic(
+def test_open_agent_projects_hub_context_without_agent_specific_logic(
     tmp_path: Path,
 ) -> None:
     (tmp_path / "AGENTS.md").write_text("# Hub rules\n")
@@ -359,18 +356,18 @@ def test_open_harness_projects_hub_context_without_harness_specific_logic(
 
     with (
         patch(
-            "whub.services.agent.harness.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_project_worktree",
             return_value=registered,
         ),
         patch(
-            "whub.services.agent.harness.resolve_agent_auth",
+            "whub.services.agent.agent.resolve_agent_auth",
             return_value=resolved_auth,
         ),
-        patch("whub.services.agent.harness.render_codex", return_value=plan),
-        patch("whub.services.agent.harness.render_claude_code", return_value=plan),
-        patch("whub.services.agent.harness._start_tmux_session", return_value=session),
+        patch("whub.services.agent.agent.render_codex", return_value=plan),
+        patch("whub.services.agent.agent.render_claude_code", return_value=plan),
+        patch("whub.services.agent.agent.open_tmux_session", return_value=session),
     ):
-        assert open_harness(None, tmp_path, "whub-dev", "TASK-095", ()) is session
+        assert open_agent(None, tmp_path, "whub-dev", "TASK-095", ()) is session
 
     assert "# Hub rules" in (worktree / "AGENTS.md").read_text()
     assert (worktree / ".agents/skills/issue-log/SKILL.md").exists()
@@ -383,13 +380,13 @@ def test_close_stops_tmux_before_state_cleanup(tmp_path: Path) -> None:
     )
     with (
         patch(
-            "whub.services.agent.harness.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_project_worktree",
             return_value=registered,
         ),
-        patch("whub.services.agent.harness._stop_tmux_session") as stop,
-        patch("whub.services.agent.harness.cleanup") as clean,
+        patch("whub.services.agent.agent.close_tmux_session") as stop,
+        patch("whub.services.agent.agent.cleanup") as clean,
     ):
-        close_harness(None, tmp_path, "whub-dev", "TASK-095")
+        close_agent(None, tmp_path, "whub-dev", "TASK-095")
     assert stop.call_count == 1
     assert clean.call_count == 1
 
@@ -404,16 +401,16 @@ def test_close_without_tmux_cleans_state_and_is_idempotent(tmp_path: Path) -> No
 
     with (
         patch(
-            "whub.services.agent.harness.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_project_worktree",
             return_value=registered,
         ),
         patch(
-            "whub.services.agent.harness.subprocess.run",
+            "whub.services.agent.session.subprocess.run",
             return_value=CompletedProcess([], 1, "", "missing"),
         ) as run,
     ):
-        close_harness(None, tmp_path, "whub-dev", "TASK-095")
-        close_harness(None, tmp_path, "whub-dev", "TASK-095")
+        close_agent(None, tmp_path, "whub-dev", "TASK-095")
+        close_agent(None, tmp_path, "whub-dev", "TASK-095")
 
     assert run.call_count == 2
     assert not (worktree / ".codex/config.toml").exists()
@@ -430,11 +427,11 @@ def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
 
     with (
         patch(
-            "whub.services.agent.harness.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_project_worktree",
             return_value=registered,
         ),
         patch(
-            "whub.services.agent.harness.subprocess.run",
+            "whub.services.agent.session.subprocess.run",
             side_effect=[
                 CompletedProcess([], 0, "", ""),
                 CompletedProcess([], 1, "", "kill failed"),
@@ -442,7 +439,7 @@ def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
         ),
         pytest.raises(ServiceError, match="failed to stop tmux session: kill failed"),
     ):
-        close_harness(None, tmp_path, "whub-dev", "TASK-095")
+        close_agent(None, tmp_path, "whub-dev", "TASK-095")
 
     assert (worktree / ".codex/config.toml").exists()
     assert state_path(tmp_path, "whub-dev", "TASK-095").exists()
@@ -459,20 +456,20 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
 
     with (
         patch(
-            "whub.services.agent.harness.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_project_worktree",
             return_value=registered,
         ),
         patch(
-            "whub.services.agent.harness.resolve_agent_auth",
+            "whub.services.agent.agent.resolve_agent_auth",
             return_value=resolved_auth,
         ),
-        patch("whub.services.agent.harness.render_codex", return_value=_plan()),
+        patch("whub.services.agent.agent.render_codex", return_value=_plan()),
         patch(
-            "whub.services.agent.harness.render_claude_code",
+            "whub.services.agent.agent.render_claude_code",
             return_value=empty_plan,
         ),
         patch(
-            "whub.services.agent.harness.subprocess.run",
+            "whub.services.agent.session.subprocess.run",
             side_effect=[
                 CompletedProcess([], 1, "", "missing"),
                 CompletedProcess([], 0, "", ""),
@@ -481,9 +478,9 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
             ],
         ) as run,
     ):
-        first = open_harness(None, tmp_path, "whub-dev", "TASK-095", ())
+        first = open_agent(None, tmp_path, "whub-dev", "TASK-095", ())
         saved_state = state_path(tmp_path, "whub-dev", "TASK-095").read_text()
-        second = open_harness(None, tmp_path, "whub-dev", "TASK-095", ())
+        second = open_agent(None, tmp_path, "whub-dev", "TASK-095", ())
 
     assert first == second
     assert run.call_count == 4

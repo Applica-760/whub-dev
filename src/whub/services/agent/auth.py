@@ -16,6 +16,8 @@ from whub.models.agent.auth import (
     ExtensionToolCatalog,
     ExtensionToolId,
     LiteralValue,
+    RegisteredProjectVariable,
+    RegisteredTaskWorktreeVariable,
     VariableReference,
     load_agent_auth,
     load_extension_tool,
@@ -44,6 +46,27 @@ def resolve_agent_auth(auth_names: Sequence[str]) -> ResolvedAgentAuth:
     auth = compose_auth(assets.base_auth, assets.extension_auths)
     tools = resolve_extension_tools(assets.extension_tool_catalog, auth.grants.extension_tools)
     return ResolvedAgentAuth(auth, tuple(tools))
+
+
+def resolve_variables(
+    definitions: Mapping[str, object],
+    project: str,
+    task_id: str,
+    worktree: Path,
+) -> dict[str, str]:
+    """Resolve auth variables for one registered Project worktree."""
+    values: dict[str, str] = {}
+    for name, definition in definitions.items():
+        if isinstance(definition, RegisteredProjectVariable):
+            values[name] = project
+        elif isinstance(definition, RegisteredTaskWorktreeVariable):
+            available = {"project": project, "task": task_id, "path": str(worktree)}
+            values.update(
+                {f"{name}.{field}": available[field] for field in definition.fields}
+            )
+        else:
+            raise ServiceError(f"unsupported Agent auth variable: {name}")
+    return values
 
 
 # --- Packaged Agent assets ---------------------------------------------------
