@@ -12,7 +12,7 @@ from whub.models.agent.auth import (
 from whub.services.agent.adapters.codex import CodexRenderPlan
 from whub.services.agent.agent import close_agent, open_agent
 from whub.services.agent.auth import resolve_variables
-from whub.services.agent.context import render_context
+from whub.services.agent.context import AGENTS_CONTEXT_PATH, render_context
 from whub.services.agent.session import open_tmux_session
 from whub.services.errors import ServiceError
 from whub.services.agent.state import _state_path, cleanup, prepare
@@ -112,7 +112,9 @@ def test_state_removes_generic_empty_parent_directories(tmp_path: Path) -> None:
     assert keep.exists()
 
 
-def test_state_injects_and_cleans_owned_block_from_existing_file(tmp_path: Path) -> None:
+def test_state_injects_and_cleans_owned_block_from_existing_file(
+    tmp_path: Path,
+) -> None:
     hub = tmp_path / "hub"
     hub.mkdir()
     (hub / "AGENTS.md").write_text("Hub rules\n")
@@ -123,14 +125,17 @@ def test_state_injects_and_cleans_owned_block_from_existing_file(tmp_path: Path)
 
     prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_context(hub))
 
-    assert "Hub rules" in path.read_text()
+    assert "@.agents/AGENTS_context.md" in path.read_text()
+    assert "Hub rules" in (worktree / AGENTS_CONTEXT_PATH).read_text()
     cleanup(hub, "whub-dev", "TASK-095", worktree)
 
     assert path.read_text() == "# Project rules\n"
     assert not _state_path(hub, "whub-dev", "TASK-095").exists()
 
 
-def test_state_preserves_external_edits_when_cleaning_owned_block(tmp_path: Path) -> None:
+def test_state_preserves_external_edits_when_cleaning_owned_block(
+    tmp_path: Path,
+) -> None:
     hub = tmp_path / "hub"
     hub.mkdir()
     (hub / "AGENTS.md").write_text("Hub rules\n")
@@ -155,10 +160,14 @@ def test_state_rejects_changed_owned_block(tmp_path: Path) -> None:
     path = worktree / "AGENTS.md"
     path.write_text("# Project rules\n")
     prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_context(hub))
-    path.write_text(path.read_text().replace("Hub rules", "Changed rules"))
+    path.write_text(
+        path.read_text().replace("@.agents/AGENTS_context.md", "@changed.md")
+    )
 
     with pytest.raises(ServiceError, match="managed context was modified"):
         cleanup(hub, "whub-dev", "TASK-095", worktree)
+
+    assert (worktree / AGENTS_CONTEXT_PATH).exists()
 
 
 def test_state_removes_owned_block_file_when_it_is_empty(tmp_path: Path) -> None:
@@ -200,7 +209,8 @@ def test_prepare_projects_context(tmp_path: Path) -> None:
     assert (worktree / ".agents/skills/issue-log/reference.md").read_text() == (
         "reference\n"
     )
-    assert "# Hub rules" in (worktree / "AGENTS.md").read_text()
+    assert "@.agents/AGENTS_context.md" in (worktree / "AGENTS.md").read_text()
+    assert "# Hub rules" in (worktree / AGENTS_CONTEXT_PATH).read_text()
     assert (worktree / ".claude/CLAUDE.md").read_text() == (
         "<!-- whub:agent:context:start -->\n"
         "@../AGENTS.md\n"
@@ -212,6 +222,22 @@ def test_prepare_projects_context(tmp_path: Path) -> None:
     assert (worktree / "AGENTS.md").read_text() == "# Project rules\n"
     assert not (worktree / ".agents").exists()
     assert not (worktree / ".claude").exists()
+
+
+def test_context_loads_base_and_selected_role_instructions(tmp_path: Path) -> None:
+    context = render_context(tmp_path, ("implementer",))
+
+    instructions = context.files[AGENTS_CONTEXT_PATH]
+    assert "# Base agent context" in instructions
+    assert "# Implementer" in instructions
+    assert instructions.index("# Base agent context") < (
+        instructions.index("# Implementer")
+    )
+
+
+def test_context_rejects_missing_selected_role_instructions(tmp_path: Path) -> None:
+    with pytest.raises(ServiceError, match="Agent role instructions are missing"):
+        render_context(tmp_path, ("missing",))
 
 
 def test_state_rejects_symlinked_config_directory(tmp_path: Path) -> None:
@@ -352,7 +378,8 @@ def test_open_agent_projects_context_without_agent_specific_logic(
     ):
         assert open_agent(None, tmp_path, "whub-dev", "TASK-095", ()) is session
 
-    assert "# Hub rules" in (worktree / "AGENTS.md").read_text()
+    assert "@.agents/AGENTS_context.md" in (worktree / "AGENTS.md").read_text()
+    assert "# Hub rules" in (worktree / AGENTS_CONTEXT_PATH).read_text()
     assert (worktree / ".agents/skills/issue-log/SKILL.md").exists()
     assert (worktree / ".claude/CLAUDE.md").exists()
 

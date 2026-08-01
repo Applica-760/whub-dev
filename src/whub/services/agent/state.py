@@ -76,6 +76,7 @@ def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) ->
     if state is None:
         return
     _validate(state, project, task_id, worktree)
+    files: list[Path] = []
     for relative, expected_hash in state.files.items():
         target = _safe_path(worktree, relative)
         if not target.exists():
@@ -88,7 +89,9 @@ def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) ->
             raise ServiceError(
                 f"generated config was modified and was not removed: {relative}"
             )
-        target.unlink()
+        files.append(target)
+
+    blocks: list[tuple[Path, int, int]] = []
     for relative, expected_hash in state.blocks.items():
         target = _safe_path(worktree, relative)
         if not target.exists() or not target.is_file():
@@ -97,7 +100,13 @@ def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) ->
         start, end = _block_range(content, relative)
         block = content[start:end]
         if _digest(block.encode()) != expected_hash:
-            raise ServiceError(f"managed context was modified and was not removed: {relative}")
+            raise ServiceError(
+                f"managed context was modified and was not removed: {relative}"
+            )
+        blocks.append((target, start, end))
+
+    for target, start, end in blocks:
+        content = target.read_text()
         before = content[:start]
         if before.endswith("\n\n"):
             before = before[:-1]
@@ -106,6 +115,8 @@ def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) ->
             target.write_text(remaining, encoding="utf-8", newline="\n")
         else:
             target.unlink()
+    for target in files:
+        target.unlink()
     _remove_empty_parents(worktree, (*state.files, *state.blocks))
     path.unlink()
 
@@ -184,7 +195,9 @@ def _apply_context_blocks(
             if relative in owned:
                 raise ServiceError(f"managed context is missing: {relative}") from None
             separator = "" if not content or content.endswith("\n\n") else "\n"
-            target.write_text(content + separator + block, encoding="utf-8", newline="\n")
+            target.write_text(
+                content + separator + block, encoding="utf-8", newline="\n"
+            )
             created[relative] = _digest(block.encode())
             continue
         if relative not in owned:
@@ -263,9 +276,7 @@ def _load(path: Path) -> _AgentState | None:
         blocks = data.get("blocks")
         if not isinstance(blocks, dict):
             raise ValueError("invalid blocks")
-        parsed_blocks = {
-            PurePosixPath(name): digest for name, digest in blocks.items()
-        }
+        parsed_blocks = {PurePosixPath(name): digest for name, digest in blocks.items()}
         if any(
             path.is_absolute() or ".." in path.parts
             for path in (*parsed, *parsed_blocks)
