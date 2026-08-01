@@ -225,7 +225,7 @@ def test_prepare_projects_context(tmp_path: Path) -> None:
 
 
 def test_context_loads_base_and_selected_role_instructions(tmp_path: Path) -> None:
-    context = render_context(tmp_path, ("implementer",))
+    context = render_context(tmp_path, ("implementer",), "tasks/096")
 
     instructions = context.files[AGENTS_CONTEXT_PATH]
     assert "# Base agent context" in instructions
@@ -233,6 +233,7 @@ def test_context_loads_base_and_selected_role_instructions(tmp_path: Path) -> No
     assert instructions.index("# Base agent context") < (
         instructions.index("# Implementer")
     )
+    assert "# Session context\n\n- Registered branch: `tasks/096`" in instructions
 
 
 def test_context_rejects_missing_selected_role_instructions(tmp_path: Path) -> None:
@@ -319,7 +320,8 @@ def test_start_stops_before_tmux_when_worktree_validation_fails(tmp_path: Path) 
 
 def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
     registered = SimpleNamespace(
-        definition=SimpleNamespace(task_id="TASK-095"), destination=tmp_path
+        definition=SimpleNamespace(task_id="TASK-095", branch="tasks/095"),
+        destination=tmp_path,
     )
     resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
     plan = SimpleNamespace(files={})
@@ -357,7 +359,8 @@ def test_open_agent_projects_context_without_agent_specific_logic(
     worktree.mkdir()
     (worktree / "AGENTS.md").write_text("# Project rules\n")
     registered = SimpleNamespace(
-        definition=SimpleNamespace(task_id="TASK-095"), destination=worktree
+        definition=SimpleNamespace(task_id="TASK-095", branch="tasks/095"),
+        destination=worktree,
     )
     resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
     plan = SimpleNamespace(files={})
@@ -459,7 +462,8 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
     worktree = tmp_path / "worktree"
     worktree.mkdir()
     registered = SimpleNamespace(
-        definition=SimpleNamespace(task_id="TASK-095"), destination=worktree
+        definition=SimpleNamespace(task_id="TASK-095", branch="tasks/095"),
+        destination=worktree,
     )
     resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
     empty_plan = SimpleNamespace(files={})

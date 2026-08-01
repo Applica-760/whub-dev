@@ -50,7 +50,7 @@ def open_agent(
         registered.definition.task_id,
         registered.destination,
         files,
-        render_context(workspace_root, auth_names),
+        render_context(workspace_root, auth_names, registered.definition.branch),
     )
     return open_tmux_session(
         project,
