@@ -46,7 +46,7 @@ def iter_task_paths(root: Path) -> Iterator[Path]:
     return (path for path in root.rglob("*.yaml") if not is_apple_double(path))
 
 
-def resolve_task_reference(reference: str, root: Path = Path("docs/tasks")) -> Path:
+def resolve_task_reference(reference: str, root: Path = Path(".")) -> Path:
     task_id = (
         reference
         if re.fullmatch(TASK_ID_PATTERN, reference)
@@ -96,13 +96,15 @@ def create_task(
     objective: str,
     approaches: tuple[str, ...] = (),
     now: datetime | None = None,
+    id_roots: tuple[Path, ...] = (),
 ) -> tuple[Path, TaskDocument]:
     if root.exists() and not root.is_dir():
         raise WflowError(f"task path is not a directory: {root}")
     root.mkdir(parents=True, exist_ok=True)
     numbers = [
         int(task_id.removeprefix("TASK-"))
-        for path in iter_task_paths(root)
+        for task_root in (root, *id_roots)
+        for path in iter_task_paths(task_root)
         if (task_id := _task_id(path)) is not None
     ]
     number = max(numbers, default=0) + 1
@@ -128,14 +130,14 @@ def write_task(path: Path, task: TaskDocument) -> None:
     _write(path, task, create=False)
 
 
-def archive_task(path: Path, task: TaskDocument) -> Path:
-    """Atomically place a completed Task beneath the sibling done directory."""
-    if task.task.state != "completed":
-        raise WflowError("only completed tasks can be archived")
-    destination = path.parent / "done" / path.name
-    destination.parent.mkdir(parents=True, exist_ok=True)
+def archive_task(path: Path, task: TaskDocument, destination_root: Path) -> Path:
+    """Atomically copy a terminal Task to its archive, then remove its source."""
+    if task.task.state not in {"completed", "cancelled"}:
+        raise WflowError("only terminal tasks can be archived")
+    destination = destination_root / path.name
     temporary_path: Path | None = None
     try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",

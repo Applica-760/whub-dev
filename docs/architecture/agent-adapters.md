@@ -1,21 +1,70 @@
 # Agent adapters
 
-Agent authの意味論は`services/agent/auth.py`が扱う。Agent固有adapterは`EffectiveAuth`を変更せず、
-相対パスと内容からなるrender planを返す。Stateがplanを対象worktreeへ安全に配置し、新規作成した
-fileだけをcontrol planeへ記録する。harnessはStateとtmux sessionのlifecycleを調整する。
+`services/agent/`は、Agent sessionの準備・終了を次の責務へ分ける。依存方向は`agent`から各サービスへ
+向かい、各サービス間で相手の意味論を解釈しない。
 
-Hub context rendererはHub rootの`AGENTS.md`と`.agents/skills`をsnapshot renderし、Stateへ渡す。
-Stateはadapterの生成物とHub contextをworktreeへ投影する。
-既存`AGENTS.md`と`.claude/CLAUDE.md`にはHarness所有の管理blockだけを追加し、Skillsは新規fileだけを
-所有する。Stateは生成fileと管理blockのhashを一つのrecordに保存し、`close`時は未変更の所有物だけを
-除去する。Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。Harness自身はHub
-contextの内容を解釈しない。
+- `agent.py`: `whub agent`が呼ぶ公開 API。登録済みworktreeを解決し、auth、context、state、sessionを順に調整する。
+- `auth.py`: 権限・拡張機能・変数を解決する。Agent固有adapterは`EffectiveAuth`を変更せず、相対パスと内容からなる
+  render planを返す。
+- `context.py`: Hub rootの`AGENTS.md`、`.agents/skills`、baseと選択されたRoleの指示をsnapshot renderする。
+- `state.py`: authのrender planとcontextを対象worktreeへ安全に具体化し、所有物を記録・cleanupする。
+- `session.py`: tmux sessionの開始・停止だけを扱う。
+
+`state.prepare`はauthを具体化してからcontextを具体化し、両方の所有情報を一つのstate recordとして保存する。
+contextはHub共通指示とRole指示を`.agents/AGENTS_context.md`へ生成し、既存`AGENTS.md`にはその参照だけを
+Agent所有の管理blockとして追加する。`.claude/CLAUDE.md`はworktreeの`AGENTS.md`を参照し、Skillsは新規fileだけを
+所有する。Stateは生成fileと管理blockのhashを一つのrecordに保存し、`close`時は全所有物を検証してから管理block、
+生成fileの順に未変更の所有物だけを除去する。
+Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。
+
+## Execution context
+
+Agent serviceがAgentへ渡す指示は、Hub共通、Role、Session固有の三層と、worktreeにもともとあるProject固有
+指示から構成する。優先順は、明示的な利用者指示、Sessionの安全境界、Project固有指示、Role、Hub共通
+とする。下位層は上位層の対象範囲または安全制約を緩和しない。
+
+- Hub共通は全Projectで再利用する手順とSkillだけを扱う。Hub rootを前提にした相対パスをそのまま
+  copyせず、render時にHub rootまたはworktreeのどちらを基準とするかを明示する。
+- Roleは実行者の責務と許可されたTask操作を扱う。`description.md`がある選択済みextension roleだけを
+  Sessionへ渡し、権限定義そのものはagent authを正本とする。
+- Session固有は登録済みのProject、Task、worktreeを束縛する。implementerの変更先はこのworktreeだけであり、
+  親Projectのcheckout・`main`・他Taskのworktreeを変更先にしない。未完了TaskのSSOTはHub側
+  `wflow/tasks/<project>/`であり、Task YAMLの直接編集ではなく、束縛済みProject/Taskへの`wflow task`
+  操作を使う。
+- Project固有指示はAgent serviceが生成しない既存内容であり、管理blockの外側を変更・削除しない。
+
+Hub contextとRole contextを含む`.agents/AGENTS_context.md`、その参照管理block、Agent serviceが新規作成した
+Skill・adapter設定はAgent serviceが所有する。`close`はStateに記録した未変更の所有物だけを除去し、Project固有
+指示、Agentまたは利用者が変更した内容、Task・worktree・branchは除去しない。このcontextはAgentへの説明であり、
+実行時の認可境界ではない。Hookによるblock条件とlifecycle検証は別契約で定義する。
+
+## Worktree runtime guard
+
+Task YAMLはHubのwflow層が一元管理するため、Hub runtime hookはTask操作の場所を制限しない。worktree
+runtime guardは、Agent sessionを開く際に解決した`ResolvedProjectWorktree`を唯一の実行対象とする。
+branch名は再計算せず、`whub worktree create`と同じ`WorktreeDefinition.branch`を使う。定義の`tasks/<task-number>`
+規則とGit worktreeの実branchの一致は既存のworktree検査で確認する。
+
+CodexとClaude Codeへ渡すguard policyには、登録済みworktreeの絶対pathとbranchを含める。両adapterは同じ
+policy rendererを使い、実行前に少なくとも次をblockする。
+
+- session cwdまたはGit top-levelが登録済みworktreeと一致しない操作。
+- 現在branchが登録済みのtask branchと一致しない操作。親Projectのcheckout、`main`、他Taskのworktreeは
+  この条件で対象外となる。
+- worktree外を指定するfile edit、または検証不能なshell構文による境界回避。
+
+guardの対象外であるTask YAML操作は、中央storageを正本とする既存の`wflow task`契約に委ねる。hookは
+filesystem・process全体を完全に隔離する仕組みではないため、adapterが表現できるsandbox境界と併用する。
+
+Hub hookはAgent open/closeとbuild・verify・releaseの前提・結果を確認する。worktree hookは実行対象の
+pathとbranchを検査する。両者が同じ操作を二重実行しないよう、Hubはlifecycle、worktreeは対象境界だけを
+担当する。
 
 `whub agent close`はtmux sessionを停止してから、記録済みかつ内容hashが一致するfileだけを削除する。
 変更済みfileは削除せずエラーにして、利用者の手動復旧を待つ。
 
 現MVPは設定生成、tmux lifecycle、生成物cleanupまでを扱う。adapterが表現するruntime authorizationは
-まだharnessで強制しておらず、filesystem・process network・Task YAML操作の強制は後続Taskの対象である。
+まだAgent serviceで強制しておらず、filesystem・process network・Task YAML操作の強制は後続Taskの対象である。
 
 ## Codex
 
@@ -35,7 +84,7 @@ Claude Code adapterは .claude/settings.json、PreToolUse hook、.mcp.json をre
 hookはBash commandを解決済みのexact/prefix argvと照合し、登録済みExtensionToolのMCP toolだけを許可する。
 パイプ・リダイレクト・command substitutionなど単一argvとして解釈できないBash構文は拒否する。
 
-filesystemとprocess networkはhookでは完全に強制できない。harnessによるruntime guardは後続Taskで実装する。
+filesystemとprocess networkはhookでは完全に強制できない。Agent serviceによるruntime guardは後続Taskで実装する。
 Claude Codeのproject settings・hook・MCP仕様は
 [Settings](https://code.claude.com/docs/en/settings)、
 [Hooks](https://code.claude.com/docs/en/hooks)、

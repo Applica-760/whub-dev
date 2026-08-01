@@ -8,6 +8,7 @@ import { OverviewCollapseToggles } from "./features/overview/OverviewCollapseTog
 import { OverviewPage } from "./features/overview/OverviewPage";
 import { useOverviewCollapse } from "./features/overview/useOverviewCollapse";
 import { ResourceStatusPage } from "./features/status/ResourceStatusPage";
+import { TerminalPage } from "./features/terminal/TerminalPage";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { TasksPage } from "./features/tasks/TasksPage";
 import {
@@ -41,6 +42,7 @@ const OVERVIEW_PATH = "/";
 
 const navigation: NavigationItem[] = [
   { label: "Overview", to: OVERVIEW_PATH },
+  { label: "Terminal", to: "/terminal" },
   { label: "Task", to: TASKS_PATH, isActive: isTasksRoute },
   { label: "Backlog", to: "/backlog" },
   { label: "Vault", to: "/vault" },
@@ -109,6 +111,7 @@ export function App() {
             <Route element={<BacklogPage />} path="/backlog" />
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
+            <Route element={<TerminalPage />} path="/terminal" />
             <Route element={<TasksPage />} path="/tasks" />
             <Route element={<TaskDetailPage />} path={TASK_DETAIL_PATH} />
             <Route

@@ -146,7 +146,8 @@ class TestLinkSpec:
         assert _GITIGNORE_MARKERS[1] in content
         for entry in _GITIGNORE_ENTRIES:
             assert entry in content
-        for entry in ("projects", "vault", "whub-dev", "AGENTS.md", ".agents/"):
+        assert "/projects" in content
+        for entry in ("AGENTS.md", ".agents/"):
             assert entry not in content
 
     def test_replaces_managed_block_with_runtime_metadata_only(self, tmp_path):
@@ -174,7 +175,8 @@ class TestLinkSpec:
         assert "# user entry" in content
         for entry in _GITIGNORE_ENTRIES:
             assert entry in content
-        for entry in ("projects", "AGENTS.md", ".agents/", ".claude/"):
+        assert "/projects" in content
+        for entry in ("AGENTS.md", ".agents/", ".claude/"):
             assert entry not in content
 
     def test_updates_legacy_gitignore_without_dropping_next_line(self, tmp_path):
@@ -200,7 +202,7 @@ class TestLinkSpec:
         assert _GITIGNORE_MARKERS[0] in content
         assert _GITIGNORE_MARKERS[1] in content
         assert ".keep" in content
-        assert "projects" not in content
+        assert "/projects" in content
 
     def test_errors_outside_workspace_hub_root(self, tmp_path):
         # ケース7

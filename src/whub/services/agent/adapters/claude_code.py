@@ -29,7 +29,7 @@ class ClaudeCodeRuntimeRequirement(StrEnum):
 
 @dataclass(frozen=True)
 class ClaudeCodeRenderPlan:
-    """Claude Code project files and guards that the harness must provide."""
+    """Claude Code project files and guards that Agent must provide."""
 
     files: Mapping[PurePosixPath, str]
     runtime_requirements: frozenset[ClaudeCodeRuntimeRequirement]

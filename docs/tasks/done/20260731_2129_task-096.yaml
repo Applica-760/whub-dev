@@ -1,0 +1,121 @@
+schema_version: 1
+task:
+  id: TASK-096
+  state: completed
+  title: Agent実行コンテキストを整備する
+  objective: Agentが割り当てられたworktree、Task SSOT、権限境界を理解し、作業対象やTask更新先を誤認しないようにする。
+  approach:
+  - Agent Harnessが生成する実行コンテキストを、既存のHub contextとagent authの責務に整合させて見直す。worktree内での作業範囲、Task
+    YAMLのSSOT、許可されたTask操作を明示し、生成内容とharness lifecycleをテストで検証する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 実行context契約を定義する
+    acceptance: []
+    steps:
+    - description: Hub共通、Role、Session固有の三層を区別し、各層の入力・優先順・相対パス基準・cleanup所有者・対象外を定義する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: docs/architecture/agent-adapters.md に三層contextの優先順、相対パス基準、所有境界、対象外を記録し、git
+          diff --check と task check に成功。
+      deleted: false
+    deleted: false
+  - title: Hook契約を定義する
+    acceptance: []
+    steps:
+    - description: Hubとworktreeのhook責務、Codex/Claude Codeのイベント対応、実行前block候補、wflow・agent
+        open/close・build/verify/releaseの検証契約を定義する。
+      state: skipped
+      skip_reason: Hook契約とruntime guardはTask 076へ移管済みのため
+      deleted: false
+    log:
+    - value:
+        result: Hook契約とruntime guardはTask 076へ移管した。
+      deleted: false
+    deleted: false
+  - title: Harnessで実行contextを生成する
+    acceptance: []
+    steps:
+    - description: 選択されたRoleのAgent向け指示と、Project・Task・worktree・Task操作SSOTを示すSession固有contextを生成し、既存のHub
+        contextと一つのmanaged blockへ合成する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 'Agent serviceを再編。tmux lifecycleをsession.pyへ分離し、agent.pyを公開APIに変更。hub_contextをcontextへ改名、state.prepareをauth→context→保存の逐次処理へ整理、managed
+          markerをwhub:agentへ刷新して旧marker/schema互換を削除。agent-adapters.mdにagent/auth/context/state/sessionの責務を記録。コミット:
+          0e738ac8, 3d9a34b, d64db77。検証: agent test 21 passed、Ruff、git diff --check。'
+      deleted: false
+    - value:
+        result: 'Hub指示、base、選択Role、登録済みbranchをAGENTS_context.mdへ統合し、AGENTS.mdには参照blockだけを置く実装を完了。コミット:
+          89d1554, 838cbd6。'
+      deleted: false
+    deleted: false
+  - title: 実行contextのlifecycleを検証する
+    acceptance: []
+    steps:
+    - description: contextの内容、既存Project指示の保存、再open時の再利用、close時の所有範囲をテストし、関連テストを実行して検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: CodexとClaude CodeのHub/worktree hook配置、block動作、二重実行防止、および主要lifecycle操作の検証を追加する。
+      state: skipped
+      skip_reason: Hook配置、block動作、二重実行防止の検証はTask 076へ移管済みのため
+      deleted: false
+    log:
+    - value:
+        result: harness 23件と実 worktreeでのopen/closeを確認。AGENTS link、AGENTS_context、Skills、state生成とcleanupを検証し、確認用worktreeを削除した。
+      deleted: false
+    - value:
+        result: Hook関連の検証はTask 076へ移管した。
+      deleted: false
+    deleted: false
+  - title: Role統合contextを生成する
+    acceptance: []
+    steps:
+    - description: assets/roles/base.mdを追加し、正本から分離された登録済みworktreeの作業者であること、変更範囲、Task操作の正本を定義する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: assets/roles/implementer/description.mdを、実装・編集・検証を行う作業者向けの指示として更新する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: HubのAGENTS.md、base.md、選択Roleのdescription.mdを統合した生成fileをworktreeの.agents/へ配置し、worktreeのAGENTS.mdには参照だけを管理blockとして置く。生成・再open・closeの所有と復元、テスト、文書を更新して検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 'base.mdを追加し、登録済みworktreeと正本checkoutの分離、変更範囲、Session登録情報を定義した。検証:
+          uv run pytest src/whub/tests/models/test_agent_auth.py (9 passed)、git diff
+          --check。'
+      deleted: false
+    - value:
+        result: 'implementerの作業指示をworktree限定、wflowによる対応Taskの計画・Step更新、lifecycle非変更、テスト・formatter実行に整理した。検証:
+          uv run pytest src/whub/tests/models/test_agent_auth.py (9 passed)、git diff
+          --check。'
+      deleted: false
+    - value:
+        result: 'AGENTS_context.md生成、AGENTS.md参照block、state所有・cleanup順序、architecture/operation文書を更新。harness
+          23件、Ruff、実worktree open/closeを検証。コミット: 89d1554, 5867c7b。'
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: Role指示を統合してworktreeへ生成し、AGENTS.mdを参照形式へ移行するため
+cancellation: null
+result:
+  summary: Role統合contextをAGENTS_context.mdへ生成し、AGENTS.md参照方式、state cleanup、文書、branch共有を整備した。Hook契約・検証はTask
+    076へ移管。harness 23件、Ruff、実worktree open/closeを検証。

@@ -122,7 +122,11 @@ def down(dev_mode: bool) -> None:
 
     try:
         process_group = os.getpgid(process.pid)
-        os.killpg(process_group, signal.SIGTERM)
+        same_process_group = process_group == os.getpgrp()
+        if same_process_group:
+            os.kill(process.pid, signal.SIGTERM)
+        else:
+            os.killpg(process_group, signal.SIGTERM)
     except ProcessLookupError:
         remove_pid_record(pid_path, expected_pid=process.pid)
         click.echo(f"{name} stopped")
@@ -130,7 +134,10 @@ def down(dev_mode: bool) -> None:
     time.sleep(0.1)
     if _is_running(process.pid):
         try:
-            os.killpg(process_group, signal.SIGKILL)
+            if same_process_group:
+                os.kill(process.pid, signal.SIGKILL)
+            else:
+                os.killpg(process_group, signal.SIGKILL)
         except ProcessLookupError:
             pass
     if dev_mode:

@@ -8,11 +8,13 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "anyio>=4.7",
     "click>=8.1",
     "fastapi>=0.115",
     "pydantic>=2.5",
     "pyyaml>=6.0",
     "uvicorn>=0.30",
+    "websockets>=13.0",
 ]
 
 [project.scripts]

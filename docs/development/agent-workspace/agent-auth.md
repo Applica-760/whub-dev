@@ -56,9 +56,10 @@ CodeGraphは`stdio`の外部ツールとしてbase agent authに含める。`cod
 ## Task operation boundary
 
 implementerはTask YAMLを直接編集せず、対応Taskに束縛した`wflow task`操作を使う。
-`wflow task --project PROJECT`は実行cwdに依存せず、登録済みProjectのcontent rootにある
-`docs/tasks/`を操作する。本元のTask YAMLがSSOTであり、worktree内に残るTask YAMLの
-スナップショットは更新対象ではない。
+`wflow task --project PROJECT`は実行cwdに依存せず、Hub側の
+`wflow/tasks/PROJECT/`にある未完了Taskを操作する。completeまたはcancelledになったTaskは
+Project側の`docs/tasks/done/`（cancelledはその下の`cancelled/`）へ凍結アーカイブする。
+worktree内に残るTask YAMLのスナップショットは更新対象ではない。
 
 この直接編集禁止は現在はAgentへの指示であり、profileのcommand allowlistだけでは強制しない。
 adapter/harnessは後続Taskで、本元Task YAMLへのraw writeを拒否し、許可済み`wflow`操作だけを

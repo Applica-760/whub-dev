@@ -1,4 +1,4 @@
-"""Persistence and cleanup for Agent-harness generated files."""
+"""Persistence and cleanup for Agent-generated files."""
 
 from __future__ import annotations
 
@@ -13,12 +13,12 @@ import tempfile
 import yaml
 
 from whub.services.errors import ServiceError
-from whub.services.agent.hub_context import HUB_CONTEXT_MARKERS, HubContext
+from whub.services.agent.context import CONTEXT_MARKERS, AgentContext
 from whub.utils.managed_block import managed_range
 
 
 @dataclass(frozen=True)
-class HarnessState:
+class _AgentState:
     project: str
     task_id: str
     worktree: Path
@@ -26,39 +26,57 @@ class HarnessState:
     blocks: Mapping[PurePosixPath, str] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class _Materialization:
+    files: Mapping[PurePosixPath, str] = field(default_factory=dict)
+    blocks: Mapping[PurePosixPath, str] = field(default_factory=dict)
+
+
+# --- Agent configuration lifecycle ------------------------------------------
+
+
 def prepare(
     workspace_root: Path,
     project: str,
     task_id: str,
     worktree: Path,
-    files: Mapping[PurePosixPath, str],
-    hub_context: HubContext = HubContext({}, {}),
+    auth_files: Mapping[PurePosixPath, str],
+    agent_context: AgentContext = AgentContext({}, {}),
 ) -> None:
-    """Materialize Agent settings and Hub context, then persist their ownership."""
-    path = state_path(workspace_root, project, task_id)
-    state = load(path)
-    if state is not None:
-        _validate(state, project, task_id, worktree)
-    created = _materialize_agent_auth_files(worktree, files)
-    context_files, context_blocks = _materialize_hub_context(
-        worktree, hub_context, {} if state is None else state.blocks
+    """Materialize auth settings, then context, and persist their ownership."""
+    path = _state_path(workspace_root, project, task_id)
+    previous = _load(path)
+    if previous is not None:
+        _validate(previous, project, task_id, worktree)
+    auth = _materialize_auth(worktree, auth_files)
+    context = _materialize_context(
+        worktree, agent_context, {} if previous is None else previous.blocks
     )
-    created.update(context_files)
-    owned = {} if state is None else dict(state.files)
-    owned.update(created)
-    owned_blocks = {} if state is None else dict(state.blocks)
-    owned_blocks.update(context_blocks)
-    if owned or owned_blocks:
-        save(path, HarnessState(project, task_id, worktree, owned, owned_blocks))
+    files = dict({} if previous is None else previous.files)
+    blocks = dict({} if previous is None else previous.blocks)
+    files.update(auth.files)
+    files.update(context.files)
+    blocks.update(auth.blocks)
+    blocks.update(context.blocks)
+    state = _AgentState(
+        project,
+        task_id,
+        worktree,
+        files,
+        blocks,
+    )
+    if state.files or state.blocks:
+        _save(path, state)
 
 
 def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) -> None:
-    """Remove unchanged files owned by this harness, then its state record."""
-    path = state_path(workspace_root, project, task_id)
-    state = load(path)
+    """Remove unchanged files owned by this Agent, then its state record."""
+    path = _state_path(workspace_root, project, task_id)
+    state = _load(path)
     if state is None:
         return
     _validate(state, project, task_id, worktree)
+    files: list[Path] = []
     for relative, expected_hash in state.files.items():
         target = _safe_path(worktree, relative)
         if not target.exists():
@@ -71,7 +89,9 @@ def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) ->
             raise ServiceError(
                 f"generated config was modified and was not removed: {relative}"
             )
-        target.unlink()
+        files.append(target)
+
+    blocks: list[tuple[Path, int, int]] = []
     for relative, expected_hash in state.blocks.items():
         target = _safe_path(worktree, relative)
         if not target.exists() or not target.is_file():
@@ -80,7 +100,13 @@ def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) ->
         start, end = _block_range(content, relative)
         block = content[start:end]
         if _digest(block.encode()) != expected_hash:
-            raise ServiceError(f"managed context was modified and was not removed: {relative}")
+            raise ServiceError(
+                f"managed context was modified and was not removed: {relative}"
+            )
+        blocks.append((target, start, end))
+
+    for target, start, end in blocks:
+        content = target.read_text()
         before = content[:start]
         if before.endswith("\n\n"):
             before = before[:-1]
@@ -89,11 +115,13 @@ def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) ->
             target.write_text(remaining, encoding="utf-8", newline="\n")
         else:
             target.unlink()
+    for target in files:
+        target.unlink()
     _remove_empty_parents(worktree, (*state.files, *state.blocks))
     path.unlink()
 
 
-def state_path(workspace_root: Path, project: str, task_id: str) -> Path:
+def _state_path(workspace_root: Path, project: str, task_id: str) -> Path:
     number = task_id.removeprefix("TASK-")
     return (
         workspace_root
@@ -104,13 +132,17 @@ def state_path(workspace_root: Path, project: str, task_id: str) -> Path:
     )
 
 
-def _materialize_agent_auth_files(
-    worktree: Path, files: Mapping[PurePosixPath, str]
-) -> dict[PurePosixPath, str]:
-    return _materialize_new_files(worktree, files)
+# --- Generated file materialization -----------------------------------------
 
 
-def _materialize_new_files(
+def _materialize_auth(
+    worktree: Path,
+    files: Mapping[PurePosixPath, str],
+) -> _Materialization:
+    return _Materialization(files=_materialize_files(worktree, files))
+
+
+def _materialize_files(
     worktree: Path, files: Mapping[PurePosixPath, str]
 ) -> dict[PurePosixPath, str]:
     created: dict[PurePosixPath, str] = {}
@@ -126,18 +158,21 @@ def _materialize_new_files(
     return created
 
 
-def _materialize_hub_context(
+def _materialize_context(
     worktree: Path,
-    hub_context: HubContext,
+    context: AgentContext,
     owned_blocks: Mapping[PurePosixPath, str],
-) -> tuple[dict[PurePosixPath, str], dict[PurePosixPath, str]]:
-    return (
-        _materialize_new_files(worktree, hub_context.files),
-        _apply_hub_blocks(worktree, hub_context.blocks, owned_blocks),
+) -> _Materialization:
+    return _Materialization(
+        files=_materialize_files(worktree, context.files),
+        blocks=_apply_context_blocks(worktree, context.blocks, owned_blocks),
     )
 
 
-def _apply_hub_blocks(
+# --- Managed context blocks --------------------------------------------------
+
+
+def _apply_context_blocks(
     worktree: Path,
     patches: Mapping[PurePosixPath, str],
     owned: Mapping[PurePosixPath, str],
@@ -160,7 +195,9 @@ def _apply_hub_blocks(
             if relative in owned:
                 raise ServiceError(f"managed context is missing: {relative}") from None
             separator = "" if not content or content.endswith("\n\n") else "\n"
-            target.write_text(content + separator + block, encoding="utf-8", newline="\n")
+            target.write_text(
+                content + separator + block, encoding="utf-8", newline="\n"
+            )
             created[relative] = _digest(block.encode())
             continue
         if relative not in owned:
@@ -168,6 +205,9 @@ def _apply_hub_blocks(
         if _digest(content[start:end].encode()) != owned[relative]:
             raise ServiceError(f"managed context was modified: {relative}")
     return created
+
+
+# --- File safety and content checks -----------------------------------------
 
 
 def _remove_empty_parents(worktree: Path, files: tuple[PurePosixPath, ...]) -> None:
@@ -213,7 +253,7 @@ def _digest(content: bytes) -> str:
 
 def _block_range(content: str, relative: PurePosixPath) -> tuple[int, int]:
     try:
-        bounds = managed_range(content, HUB_CONTEXT_MARKERS)
+        bounds = managed_range(content, CONTEXT_MARKERS)
     except ValueError as error:
         raise ServiceError(f"invalid managed context: {relative}") from error
     if bounds is None:
@@ -221,27 +261,28 @@ def _block_range(content: str, relative: PurePosixPath) -> tuple[int, int]:
     return bounds
 
 
-def load(path: Path) -> HarnessState | None:
+# --- State persistence -------------------------------------------------------
+
+
+def _load(path: Path) -> _AgentState | None:
     if not path.exists():
         return None
     try:
         data = yaml.safe_load(path.read_text())
         files = data["files"]
-        if data.get("schema_version") not in {1, 2, 3} or not isinstance(files, dict):
+        if data.get("schema_version") != 3 or not isinstance(files, dict):
             raise ValueError("invalid schema")
         parsed = {PurePosixPath(name): digest for name, digest in files.items()}
-        blocks = data.get("blocks", data.get("patches", {}))
+        blocks = data.get("blocks")
         if not isinstance(blocks, dict):
             raise ValueError("invalid blocks")
-        parsed_blocks = {
-            PurePosixPath(name): digest for name, digest in blocks.items()
-        }
+        parsed_blocks = {PurePosixPath(name): digest for name, digest in blocks.items()}
         if any(
             path.is_absolute() or ".." in path.parts
             for path in (*parsed, *parsed_blocks)
         ):
             raise ValueError("files must be relative")
-        return HarnessState(
+        return _AgentState(
             data["project"],
             data["task_id"],
             Path(data["worktree"]),
@@ -249,10 +290,10 @@ def load(path: Path) -> HarnessState | None:
             parsed_blocks,
         )
     except (KeyError, OSError, TypeError, ValueError, yaml.YAMLError) as error:
-        raise ServiceError(f"invalid Agent harness state: {path}: {error}") from error
+        raise ServiceError(f"invalid Agent state: {path}: {error}") from error
 
 
-def save(path: Path, state: HarnessState) -> None:
+def _save(path: Path, state: _AgentState) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = {
         "schema_version": 3,
@@ -272,6 +313,6 @@ def save(path: Path, state: HarnessState) -> None:
     os.replace(temporary_path, path)
 
 
-def _validate(state: HarnessState, project: str, task_id: str, worktree: Path) -> None:
+def _validate(state: _AgentState, project: str, task_id: str, worktree: Path) -> None:
     if (state.project, state.task_id, state.worktree) != (project, task_id, worktree):
-        raise ServiceError("Agent harness state does not match the registered worktree")
+        raise ServiceError("Agent state does not match the registered worktree")

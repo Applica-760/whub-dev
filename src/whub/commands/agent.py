@@ -9,7 +9,7 @@ import click
 from whub.commands import get_manifest
 from whub.core.context import current_context
 from whub.models import project_names
-from whub.services.agent.harness import close_harness, open_harness
+from whub.services.agent.agent import close_agent, open_agent
 from whub.services.errors import ServiceError
 
 
@@ -28,7 +28,7 @@ def open(
 ) -> None:
     """Prepare PROJECT/TASK and attach its Agent shell."""
     try:
-        session = open_harness(
+        session = open_agent(
             get_manifest(ctx),
             current_context().workspace_root,
             project,
@@ -47,7 +47,7 @@ def open(
 def close(ctx: click.Context, project: str, task: str) -> None:
     """Stop PROJECT/TASK's Agent shell and remove owned configuration."""
     try:
-        close_harness(
+        close_agent(
             get_manifest(ctx), current_context().workspace_root, project, task
         )
     except (OSError, ServiceError) as error:
