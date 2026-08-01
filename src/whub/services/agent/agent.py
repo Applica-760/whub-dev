@@ -11,7 +11,7 @@ from whub.services.agent.auth import (
     resolve_agent_auth,
     resolve_variables,
 )
-from whub.services.agent.hub_context import render_hub_context
+from whub.services.agent.context import render_context
 from whub.services.agent.session import (
     TmuxSession,
     close_tmux_session,
@@ -50,7 +50,7 @@ def open_agent(
         registered.definition.task_id,
         registered.destination,
         files,
-        render_hub_context(workspace_root),
+        render_context(workspace_root),
     )
     return open_tmux_session(
         project,

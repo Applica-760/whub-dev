@@ -1,4 +1,4 @@
-"""Render Hub-owned context for an Agent worktree."""
+"""Render Agent context for an Agent worktree."""
 
 from __future__ import annotations
 
@@ -10,38 +10,38 @@ from whub.services.errors import ServiceError
 from whub.utils.managed_block import format_block
 
 
-HUB_CONTEXT_MARKERS = (
-    "<!-- whub:harness:context:start -->",
-    "<!-- whub:harness:context:end -->",
+CONTEXT_MARKERS = (
+    "<!-- whub:agent:context:start -->",
+    "<!-- whub:agent:context:end -->",
 )
 HUB_AGENTS_PATH = "AGENTS.md"
 HUB_SKILLS_PATH = ".agents/skills"
 
 
 @dataclass(frozen=True)
-class HubContext:
-    """Hub rules and Skills rendered for one worktree."""
+class AgentContext:
+    """Agent context rendered for one worktree."""
 
     files: Mapping[PurePosixPath, str]
     blocks: Mapping[PurePosixPath, str]
 
 
-def render_hub_context(workspace_root: Path) -> HubContext:
-    """Snapshot Hub-owned context without materializing it."""
+def render_context(workspace_root: Path) -> AgentContext:
+    """Snapshot Hub-owned Agent context without materializing it."""
     rules = workspace_root / HUB_AGENTS_PATH
     if not rules.is_file():
-        return HubContext({}, {})
-    return HubContext(
+        return AgentContext({}, {})
+    return AgentContext(
         _skill_files(workspace_root / HUB_SKILLS_PATH),
         {
             PurePosixPath(HUB_AGENTS_PATH): format_block(
-                HUB_CONTEXT_MARKERS,
+                CONTEXT_MARKERS,
                 "# Hub common rules\n"
                 f"Relative paths in this block are relative to Hub root: {workspace_root}\n\n"
                 f"{rules.read_text().rstrip()}\n",
             ),
             PurePosixPath(".claude/CLAUDE.md"): format_block(
-                HUB_CONTEXT_MARKERS, "@../AGENTS.md"
+                CONTEXT_MARKERS, "@../AGENTS.md"
             ),
         },
     )

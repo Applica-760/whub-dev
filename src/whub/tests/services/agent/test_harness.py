@@ -12,10 +12,10 @@ from whub.models.agent.auth import (
 from whub.services.agent.adapters.codex import CodexRenderPlan
 from whub.services.agent.agent import close_agent, open_agent
 from whub.services.agent.auth import resolve_variables
-from whub.services.agent.hub_context import render_hub_context
+from whub.services.agent.context import render_context
 from whub.services.agent.session import open_tmux_session
 from whub.services.errors import ServiceError
-from whub.services.agent.state import cleanup, load, prepare, state_path
+from whub.services.agent.state import _state_path, cleanup, prepare
 
 
 def _plan(content: str = 'sandbox_mode = "workspace-write"\n') -> CodexRenderPlan:
@@ -27,7 +27,7 @@ def test_state_creates_and_cleans_owned_config(tmp_path: Path) -> None:
 
     path = tmp_path / ".codex/config.toml"
     assert path.read_text() == 'sandbox_mode = "workspace-write"\n'
-    assert state_path(tmp_path, "whub-dev", "TASK-095").exists()
+    assert _state_path(tmp_path, "whub-dev", "TASK-095").exists()
     cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
     assert not path.exists()
     assert not (tmp_path / ".codex").exists()
@@ -63,7 +63,7 @@ def test_state_does_not_claim_matching_existing_json_config(tmp_path: Path) -> N
     )
 
     assert path.exists()
-    assert not state_path(tmp_path, "whub-dev", "TASK-095").exists()
+    assert not _state_path(tmp_path, "whub-dev", "TASK-095").exists()
 
 
 def test_state_does_not_claim_matching_existing_text_config(tmp_path: Path) -> None:
@@ -75,7 +75,7 @@ def test_state_does_not_claim_matching_existing_text_config(tmp_path: Path) -> N
     cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
 
     assert path.exists()
-    assert not state_path(tmp_path, "whub-dev", "TASK-095").exists()
+    assert not _state_path(tmp_path, "whub-dev", "TASK-095").exists()
 
 
 def test_state_preserves_modified_owned_config_and_state(tmp_path: Path) -> None:
@@ -89,7 +89,7 @@ def test_state_preserves_modified_owned_config_and_state(tmp_path: Path) -> None
         cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
 
     assert path.read_text() == "# user change\n"
-    assert state_path(tmp_path, "whub-dev", "TASK-095").exists()
+    assert _state_path(tmp_path, "whub-dev", "TASK-095").exists()
 
 
 def test_state_removes_generic_empty_parent_directories(tmp_path: Path) -> None:
@@ -121,13 +121,13 @@ def test_state_injects_and_cleans_owned_block_from_existing_file(tmp_path: Path)
     path = worktree / "AGENTS.md"
     path.write_text("# Project rules\n")
 
-    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_hub_context(hub))
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_context(hub))
 
     assert "Hub rules" in path.read_text()
     cleanup(hub, "whub-dev", "TASK-095", worktree)
 
     assert path.read_text() == "# Project rules\n"
-    assert not state_path(hub, "whub-dev", "TASK-095").exists()
+    assert not _state_path(hub, "whub-dev", "TASK-095").exists()
 
 
 def test_state_preserves_external_edits_when_cleaning_owned_block(tmp_path: Path) -> None:
@@ -138,7 +138,7 @@ def test_state_preserves_external_edits_when_cleaning_owned_block(tmp_path: Path
     worktree.mkdir()
     path = worktree / "AGENTS.md"
     path.write_text("# Project rules\n")
-    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_hub_context(hub))
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_context(hub))
     path.write_text(path.read_text() + "\n# User note\n")
 
     cleanup(hub, "whub-dev", "TASK-095", worktree)
@@ -154,7 +154,7 @@ def test_state_rejects_changed_owned_block(tmp_path: Path) -> None:
     worktree.mkdir()
     path = worktree / "AGENTS.md"
     path.write_text("# Project rules\n")
-    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_hub_context(hub))
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_context(hub))
     path.write_text(path.read_text().replace("Hub rules", "Changed rules"))
 
     with pytest.raises(ServiceError, match="managed context was modified"):
@@ -167,7 +167,7 @@ def test_state_removes_owned_block_file_when_it_is_empty(tmp_path: Path) -> None
     (hub / "AGENTS.md").write_text("Hub rules\n")
     worktree = tmp_path / "worktree"
     worktree.mkdir()
-    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_hub_context(hub))
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_context(hub))
 
     cleanup(hub, "whub-dev", "TASK-095", worktree)
 
@@ -175,7 +175,7 @@ def test_state_removes_owned_block_file_when_it_is_empty(tmp_path: Path) -> None
     assert not (worktree / ".claude").exists()
 
 
-def test_prepare_projects_hub_context(tmp_path: Path) -> None:
+def test_prepare_projects_context(tmp_path: Path) -> None:
     (tmp_path / "AGENTS.md").write_text("# Hub rules\n")
     skill = tmp_path / ".agents/skills/issue-log"
     skill.mkdir(parents=True)
@@ -191,7 +191,7 @@ def test_prepare_projects_hub_context(tmp_path: Path) -> None:
         "TASK-095",
         worktree,
         {},
-        render_hub_context(tmp_path),
+        render_context(tmp_path),
     )
 
     assert (worktree / ".agents/skills/issue-log/SKILL.md").read_text() == (
@@ -202,9 +202,9 @@ def test_prepare_projects_hub_context(tmp_path: Path) -> None:
     )
     assert "# Hub rules" in (worktree / "AGENTS.md").read_text()
     assert (worktree / ".claude/CLAUDE.md").read_text() == (
-        "<!-- whub:harness:context:start -->\n"
+        "<!-- whub:agent:context:start -->\n"
         "@../AGENTS.md\n"
-        "<!-- whub:harness:context:end -->\n"
+        "<!-- whub:agent:context:end -->\n"
     )
 
     cleanup(tmp_path, "whub-dev", "TASK-095", worktree)
@@ -212,23 +212,6 @@ def test_prepare_projects_hub_context(tmp_path: Path) -> None:
     assert (worktree / "AGENTS.md").read_text() == "# Project rules\n"
     assert not (worktree / ".agents").exists()
     assert not (worktree / ".claude").exists()
-
-
-def test_state_loads_v1_without_patches(tmp_path: Path) -> None:
-    path = state_path(tmp_path, "whub-dev", "TASK-095")
-    path.parent.mkdir(parents=True)
-    path.write_text(
-        "schema_version: 1\n"
-        "project: whub-dev\n"
-        "task_id: TASK-095\n"
-        "worktree: /tmp/worktree\n"
-        "files: {}\n"
-    )
-
-    state = load(path)
-
-    assert state is not None
-    assert state.blocks == {}
 
 
 def test_state_rejects_symlinked_config_directory(tmp_path: Path) -> None:
@@ -337,7 +320,7 @@ def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
     assert start.call_args.args == ("whub-dev", "TASK-095", tmp_path, tmp_path)
 
 
-def test_open_agent_projects_hub_context_without_agent_specific_logic(
+def test_open_agent_projects_context_without_agent_specific_logic(
     tmp_path: Path,
 ) -> None:
     (tmp_path / "AGENTS.md").write_text("# Hub rules\n")
@@ -414,7 +397,7 @@ def test_close_without_tmux_cleans_state_and_is_idempotent(tmp_path: Path) -> No
 
     assert run.call_count == 2
     assert not (worktree / ".codex/config.toml").exists()
-    assert not state_path(tmp_path, "whub-dev", "TASK-095").exists()
+    assert not _state_path(tmp_path, "whub-dev", "TASK-095").exists()
 
 
 def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
@@ -442,7 +425,7 @@ def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
         close_agent(None, tmp_path, "whub-dev", "TASK-095")
 
     assert (worktree / ".codex/config.toml").exists()
-    assert state_path(tmp_path, "whub-dev", "TASK-095").exists()
+    assert _state_path(tmp_path, "whub-dev", "TASK-095").exists()
 
 
 def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> None:
@@ -479,7 +462,7 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
         ) as run,
     ):
         first = open_agent(None, tmp_path, "whub-dev", "TASK-095", ())
-        saved_state = state_path(tmp_path, "whub-dev", "TASK-095").read_text()
+        saved_state = _state_path(tmp_path, "whub-dev", "TASK-095").read_text()
         second = open_agent(None, tmp_path, "whub-dev", "TASK-095", ())
 
     assert first == second
@@ -487,4 +470,4 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
     assert (worktree / ".codex/config.toml").read_text() == (
         'sandbox_mode = "workspace-write"\n'
     )
-    assert state_path(tmp_path, "whub-dev", "TASK-095").read_text() == saved_state
+    assert _state_path(tmp_path, "whub-dev", "TASK-095").read_text() == saved_state
