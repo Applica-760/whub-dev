@@ -1,0 +1,106 @@
+schema_version: 1
+task:
+  id: TASK-100
+  state: completed
+  title: ターミナル表示と再接続を改善する
+  objective: Web appのTerminalページで入力内容を視認でき、再読み込み後も端末へ再接続でき、他ページの応答を阻害しない状態にする。
+  approach:
+  - 入力表示と再接続ライフサイクルを独立Phaseで再現・根因修正し、最後にブラウザ実機と自動テストで回帰検証する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 入力文字列を視認できるようにする
+    acceptance: []
+    steps:
+    - description: 入力中の文字列が画面に描画されない条件を再現し、xterm.js・PTY・tmuxのechoおよび配色設定を調査して根本原因を修正する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        symptom: 'ユーザー報告: Terminalページで入力中の文字列が見えない。例えばlsと入力したとき、`ks`という文字列が見えない一方、Enter後の実行結果は表示される。'
+      deleted: false
+    deleted: true
+  - title: 再読み込み後の再接続とアプリ応答を修正する
+    acceptance: []
+    steps:
+    - description: Terminalページの再読み込みで再接続に失敗し、他ページも応答停止する条件を再現し、WebSocket・PTY読み取り・cleanupのライフサイクルを調査して根本原因を修正する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        symptom: 'ユーザー報告: Terminalページでブラウザを再読み込みすると端末への再接続に失敗し、その後Overviewなど他ページも応答を停止する。'
+      deleted: false
+    deleted: true
+  - title: 回帰検証する
+    acceptance: []
+    steps:
+    - description: 入力表示、再接続、ページ遷移、複数回の再読み込みを自動テストとブラウザ実機で検証し、他APIの応答が維持されることを確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: PTY入出力ライフサイクルを根本修正する
+    acceptance: []
+    steps:
+    - description: 入力と出力が競合したときにPTYのechoが失われ、読み取りworkerが残留する条件を自動テストで再現し、入力受信とPTY出力を独立した長寿命pumpへ分離してworker
+        threadを消費しない実装へ修正する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: PTY入出力を独立した長寿命pumpへ分離し、cancel不能なos.read workerを除去。echo、数字入力、切断cleanup、event
+          loop応答性の回帰テストを含むbackend 533件が通過した。
+      deleted: false
+    deleted: false
+  - title: 入力frameと再接続契約を堅牢化する
+    acceptance: []
+    steps:
+    - description: Terminal入力を構造化WebSocket frameへ統一し、socket状態、frame検証、controller lease解放、PTY
+        attachment終了を明示してraw入力と制御JSONの曖昧さを除去する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 切断直後の再接続でcontrollerを再取得できることを統合テストし、lease解放との競合が残る場合に限り、強制奪取を行わない有界な再試行を実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 確定したWebSocket frame、切断cleanup、再接続の契約をdocs/development/agent-workspace/terminal-bridge.mdへ反映する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: client入力をstrict JSON frameへ統一し、socket状態・lease解放・PTY終了を明示。即時再接続テストが通過したため再試行は追加せず、通信契約をterminal-bridge.mdへ反映した。
+      deleted: false
+    deleted: false
+  - title: 回帰検証する
+    acceptance: []
+    steps:
+    - description: 入力表示、数字を含む入力、切断直後の再接続、ページ遷移、複数回の再読み込みと並行API応答をbackend・frontend自動テストおよびdevブラウザ実機で検証する
+      state: skipped
+      skip_reason: devサーバー実機ではWebSocketがnetwork connection lostとなり確認不能。ユーザー判断によりリリース環境での検証へ持ち越す。
+      deleted: false
+    log:
+    - value:
+        verification: backend 533件、frontend 28件、typecheck、production buildは通過。devブラウザではws://127.0.0.1:8712/api/terminals/whub-dev/TASK-100がnetwork
+          connection lostとなったため、入力表示・再読み込みの実機確認は未完了のままリリース後へ持ち越した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: 静的解析により、入力非表示と再接続後の応答停止がPTY読み取りTaskのcancelでは停止しないos.readに由来する同一ライフサイクル問題である可能性が高く、raw入力とJSON制御の曖昧さも同じ接続境界で解消する計画へ統合するため
+cancellation: null
+result:
+  summary: Terminal bridgeのcancel不能なPTY読取を長寿命pumpへ置換し、構造化入力frame・即時lease解放・非ブロッキングcleanupを実装。backend
+    533件、frontend 28件、typecheck、production build通過。dev実機WebSocket確認はリリース後へ持ち越し。
