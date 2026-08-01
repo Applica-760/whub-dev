@@ -1,19 +1,23 @@
 # Agent adapters
 
-Agent authの意味論は`services/agent/auth.py`が扱う。Agent固有adapterは`EffectiveAuth`を変更せず、
-相対パスと内容からなるrender planを返す。Stateがplanを対象worktreeへ安全に配置し、新規作成した
-fileだけをcontrol planeへ記録する。harnessはStateとtmux sessionのlifecycleを調整する。
+`services/agent/`は、Agent sessionの準備・終了を次の責務へ分ける。依存方向は`agent`から各サービスへ
+向かい、各サービス間で相手の意味論を解釈しない。
 
-Hub context rendererはHub rootの`AGENTS.md`と`.agents/skills`をsnapshot renderし、Stateへ渡す。
-Stateはadapterの生成物とHub contextをworktreeへ投影する。
-既存`AGENTS.md`と`.claude/CLAUDE.md`にはHarness所有の管理blockだけを追加し、Skillsは新規fileだけを
-所有する。Stateは生成fileと管理blockのhashを一つのrecordに保存し、`close`時は未変更の所有物だけを
-除去する。Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。Harness自身はHub
-contextの内容を解釈しない。
+- `agent.py`: `whub agent`が呼ぶ公開 API。登録済みworktreeを解決し、auth、context、state、sessionを順に調整する。
+- `auth.py`: 権限・拡張機能・変数を解決する。Agent固有adapterは`EffectiveAuth`を変更せず、相対パスと内容からなる
+  render planを返す。
+- `context.py`: Hub rootの`AGENTS.md`と`.agents/skills`をsnapshot renderする。
+- `state.py`: authのrender planとcontextを対象worktreeへ安全に具体化し、所有物を記録・cleanupする。
+- `session.py`: tmux sessionの開始・停止だけを扱う。
+
+`state.prepare`はauthを具体化してからcontextを具体化し、両方の所有情報を一つのstate recordとして保存する。
+既存`AGENTS.md`と`.claude/CLAUDE.md`にはAgent所有の管理blockだけを追加し、Skillsは新規fileだけを所有する。
+Stateは生成fileと管理blockのhashを一つのrecordに保存し、`close`時は未変更の所有物だけを除去する。
+Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。
 
 ## Execution context
 
-HarnessがAgentへ渡す指示は、Hub共通、Role、Session固有の三層と、worktreeにもともとあるProject固有
+Agent serviceがAgentへ渡す指示は、Hub共通、Role、Session固有の三層と、worktreeにもともとあるProject固有
 指示から構成する。優先順は、明示的な利用者指示、Sessionの安全境界、Project固有指示、Role、Hub共通
 とする。下位層は上位層の対象範囲または安全制約を緩和しない。
 
@@ -25,10 +29,10 @@ HarnessがAgentへ渡す指示は、Hub共通、Role、Session固有の三層と
   親Projectのcheckout・`main`・他Taskのworktreeを変更先にしない。未完了TaskのSSOTはHub側
   `wflow/tasks/<project>/`であり、Task YAMLの直接編集ではなく、束縛済みProject/Taskへの`wflow task`
   操作を使う。
-- Project固有指示はHarnessが生成しない既存内容であり、管理blockの外側を変更・削除しない。
+- Project固有指示はAgent serviceが生成しない既存内容であり、管理blockの外側を変更・削除しない。
 
-Hub context、Role context、Session contextを含む管理blockと、Harnessが新規作成したSkill・adapter設定は
-Harnessが所有する。`close`はStateに記録した未変更の所有物だけを除去し、Project固有指示、Agentまたは
+Hub context、Role context、Session contextを含む管理blockと、Agent serviceが新規作成したSkill・adapter設定は
+Agent serviceが所有する。`close`はStateに記録した未変更の所有物だけを除去し、Project固有指示、Agentまたは
 利用者が変更した内容、Task・worktree・branchは除去しない。このcontextはAgentへの説明であり、実行時の
 認可境界ではない。Hookによるblock条件とlifecycle検証は別契約で定義する。
 
@@ -58,7 +62,7 @@ pathとbranchを検査する。両者が同じ操作を二重実行しないよ�
 変更済みfileは削除せずエラーにして、利用者の手動復旧を待つ。
 
 現MVPは設定生成、tmux lifecycle、生成物cleanupまでを扱う。adapterが表現するruntime authorizationは
-まだharnessで強制しておらず、filesystem・process network・Task YAML操作の強制は後続Taskの対象である。
+まだAgent serviceで強制しておらず、filesystem・process network・Task YAML操作の強制は後続Taskの対象である。
 
 ## Codex
 
@@ -78,7 +82,7 @@ Claude Code adapterは .claude/settings.json、PreToolUse hook、.mcp.json をre
 hookはBash commandを解決済みのexact/prefix argvと照合し、登録済みExtensionToolのMCP toolだけを許可する。
 パイプ・リダイレクト・command substitutionなど単一argvとして解釈できないBash構文は拒否する。
 
-filesystemとprocess networkはhookでは完全に強制できない。harnessによるruntime guardは後続Taskで実装する。
+filesystemとprocess networkはhookでは完全に強制できない。Agent serviceによるruntime guardは後続Taskで実装する。
 Claude Codeのproject settings・hook・MCP仕様は
 [Settings](https://code.claude.com/docs/en/settings)、
 [Hooks](https://code.claude.com/docs/en/hooks)、
