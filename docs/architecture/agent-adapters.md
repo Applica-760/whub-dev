@@ -11,6 +11,49 @@ Stateはadapterの生成物とHub contextをworktreeへ投影する。
 除去する。Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。Harness自身はHub
 contextの内容を解釈しない。
 
+## Execution context
+
+HarnessがAgentへ渡す指示は、Hub共通、Role、Session固有の三層と、worktreeにもともとあるProject固有
+指示から構成する。優先順は、明示的な利用者指示、Sessionの安全境界、Project固有指示、Role、Hub共通
+とする。下位層は上位層の対象範囲または安全制約を緩和しない。
+
+- Hub共通は全Projectで再利用する手順とSkillだけを扱う。Hub rootを前提にした相対パスをそのまま
+  copyせず、render時にHub rootまたはworktreeのどちらを基準とするかを明示する。
+- Roleは実行者の責務と許可されたTask操作を扱う。`description.md`がある選択済みextension roleだけを
+  Sessionへ渡し、権限定義そのものはagent authを正本とする。
+- Session固有は登録済みのProject、Task、worktreeを束縛する。implementerの変更先はこのworktreeだけであり、
+  親Projectのcheckout・`main`・他Taskのworktreeを変更先にしない。未完了TaskのSSOTはHub側
+  `wflow/tasks/<project>/`であり、Task YAMLの直接編集ではなく、束縛済みProject/Taskへの`wflow task`
+  操作を使う。
+- Project固有指示はHarnessが生成しない既存内容であり、管理blockの外側を変更・削除しない。
+
+Hub context、Role context、Session contextを含む管理blockと、Harnessが新規作成したSkill・adapter設定は
+Harnessが所有する。`close`はStateに記録した未変更の所有物だけを除去し、Project固有指示、Agentまたは
+利用者が変更した内容、Task・worktree・branchは除去しない。このcontextはAgentへの説明であり、実行時の
+認可境界ではない。Hookによるblock条件とlifecycle検証は別契約で定義する。
+
+## Worktree runtime guard
+
+Task YAMLはHubのwflow層が一元管理するため、Hub runtime hookはTask操作の場所を制限しない。worktree
+runtime guardは、Agent sessionを開く際に解決した`ResolvedProjectWorktree`を唯一の実行対象とする。
+branch名は再計算せず、`whub worktree create`と同じ`WorktreeDefinition.branch`を使う。定義の`tasks/<task-number>`
+規則とGit worktreeの実branchの一致は既存のworktree検査で確認する。
+
+CodexとClaude Codeへ渡すguard policyには、登録済みworktreeの絶対pathとbranchを含める。両adapterは同じ
+policy rendererを使い、実行前に少なくとも次をblockする。
+
+- session cwdまたはGit top-levelが登録済みworktreeと一致しない操作。
+- 現在branchが登録済みのtask branchと一致しない操作。親Projectのcheckout、`main`、他Taskのworktreeは
+  この条件で対象外となる。
+- worktree外を指定するfile edit、または検証不能なshell構文による境界回避。
+
+guardの対象外であるTask YAML操作は、中央storageを正本とする既存の`wflow task`契約に委ねる。hookは
+filesystem・process全体を完全に隔離する仕組みではないため、adapterが表現できるsandbox境界と併用する。
+
+Hub hookはAgent open/closeとbuild・verify・releaseの前提・結果を確認する。worktree hookは実行対象の
+pathとbranchを検査する。両者が同じ操作を二重実行しないよう、Hubはlifecycle、worktreeは対象境界だけを
+担当する。
+
 `whub agent close`はtmux sessionを停止してから、記録済みかつ内容hashが一致するfileだけを削除する。
 変更済みfileは削除せずエラーにして、利用者の手動復旧を待つ。
 
