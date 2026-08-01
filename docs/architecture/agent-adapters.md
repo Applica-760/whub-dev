@@ -6,13 +6,15 @@
 - `agent.py`: `whub agent`が呼ぶ公開 API。登録済みworktreeを解決し、auth、context、state、sessionを順に調整する。
 - `auth.py`: 権限・拡張機能・変数を解決する。Agent固有adapterは`EffectiveAuth`を変更せず、相対パスと内容からなる
   render planを返す。
-- `context.py`: Hub rootの`AGENTS.md`と`.agents/skills`をsnapshot renderする。
+- `context.py`: Hub rootの`AGENTS.md`、`.agents/skills`、baseと選択されたRoleの指示をsnapshot renderする。
 - `state.py`: authのrender planとcontextを対象worktreeへ安全に具体化し、所有物を記録・cleanupする。
 - `session.py`: tmux sessionの開始・停止だけを扱う。
 
 `state.prepare`はauthを具体化してからcontextを具体化し、両方の所有情報を一つのstate recordとして保存する。
-既存`AGENTS.md`と`.claude/CLAUDE.md`にはAgent所有の管理blockだけを追加し、Skillsは新規fileだけを所有する。
-Stateは生成fileと管理blockのhashを一つのrecordに保存し、`close`時は未変更の所有物だけを除去する。
+contextはHub共通指示とRole指示を`.agents/AGENTS_context.md`へ生成し、既存`AGENTS.md`にはその参照だけを
+Agent所有の管理blockとして追加する。`.claude/CLAUDE.md`はworktreeの`AGENTS.md`を参照し、Skillsは新規fileだけを
+所有する。Stateは生成fileと管理blockのhashを一つのrecordに保存し、`close`時は全所有物を検証してから管理block、
+生成fileの順に未変更の所有物だけを除去する。
 Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。
 
 ## Execution context
@@ -31,10 +33,10 @@ Agent serviceがAgentへ渡す指示は、Hub共通、Role、Session固有の三
   操作を使う。
 - Project固有指示はAgent serviceが生成しない既存内容であり、管理blockの外側を変更・削除しない。
 
-Hub context、Role context、Session contextを含む管理blockと、Agent serviceが新規作成したSkill・adapter設定は
-Agent serviceが所有する。`close`はStateに記録した未変更の所有物だけを除去し、Project固有指示、Agentまたは
-利用者が変更した内容、Task・worktree・branchは除去しない。このcontextはAgentへの説明であり、実行時の
-認可境界ではない。Hookによるblock条件とlifecycle検証は別契約で定義する。
+Hub contextとRole contextを含む`.agents/AGENTS_context.md`、その参照管理block、Agent serviceが新規作成した
+Skill・adapter設定はAgent serviceが所有する。`close`はStateに記録した未変更の所有物だけを除去し、Project固有
+指示、Agentまたは利用者が変更した内容、Task・worktree・branchは除去しない。このcontextはAgentへの説明であり、
+実行時の認可境界ではない。Hookによるblock条件とlifecycle検証は別契約で定義する。
 
 ## Worktree runtime guard
 
