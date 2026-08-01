@@ -96,13 +96,15 @@ def create_task(
     objective: str,
     approaches: tuple[str, ...] = (),
     now: datetime | None = None,
+    id_roots: tuple[Path, ...] = (),
 ) -> tuple[Path, TaskDocument]:
     if root.exists() and not root.is_dir():
         raise WflowError(f"task path is not a directory: {root}")
     root.mkdir(parents=True, exist_ok=True)
     numbers = [
         int(task_id.removeprefix("TASK-"))
-        for path in iter_task_paths(root)
+        for task_root in (root, *id_roots)
+        for path in iter_task_paths(task_root)
         if (task_id := _task_id(path)) is not None
     ]
     number = max(numbers, default=0) + 1

@@ -1,6 +1,6 @@
 schema_version: 1
 task:
-  id: TASK-094
+  id: TASK-098
   state: completed
   title: Web terminal backend foundation
   objective: Web appから既存Agent tmux sessionへ安全に接続するバックエンド基盤を整備する。

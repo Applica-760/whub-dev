@@ -59,6 +59,54 @@ def test_task_init_and_check_use_hub_storage(tmp_path: Path, monkeypatch) -> Non
     assert not (project_root / "docs/tasks").exists()
 
 
+def test_task_init_uses_project_task_history_for_id_allocation(
+    tmp_path: Path, monkeypatch
+) -> None:
+    hub_root, project_root, context, manifest = _task_environment(tmp_path)
+    history_root = project_root / "docs/tasks/done"
+    history_root.mkdir(parents=True)
+    archived = yaml.safe_load(_TASK_PATH.read_text())
+    archived["task"]["id"] = "TASK-014"
+    history_root.joinpath("archived.yaml").write_text(
+        yaml.safe_dump(archived, allow_unicode=True)
+    )
+    monkeypatch.chdir(hub_root)
+
+    with (
+        patch("whub.wflow.commands.task.load_manifest", return_value=manifest),
+        patch("whub.services.task.current_context", return_value=context),
+    ):
+        result = CliRunner().invoke(
+            main,
+            ["task", "--project", "local", "init", "Task", "Objective"],
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code == 0, result.output
+    assert "initialized TASK-015:" in result.output
+
+
+def test_task_init_stops_when_remote_project_is_unavailable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    hub_root, _, context, manifest = _task_environment(tmp_path)
+    monkeypatch.chdir(hub_root)
+
+    with (
+        patch("whub.wflow.commands.task.load_manifest", return_value=manifest),
+        patch("whub.services.task.current_context", return_value=context),
+    ):
+        result = CliRunner().invoke(
+            main,
+            ["task", "--project", "remote", "init", "Task", "Objective"],
+            catch_exceptions=False,
+        )
+
+    assert result.exit_code != 0
+    assert "project resource is not available: remote" in result.output
+    assert not list((hub_root / "wflow/tasks/remote").glob("*.yaml"))
+
+
 def test_task_terminal_transitions_archive_to_project(
     tmp_path: Path, monkeypatch
 ) -> None:

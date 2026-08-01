@@ -34,6 +34,12 @@ def resolve_project_task_root(manifest: Manifest, project: str) -> Path:
     return task_root
 
 
+def resolve_project_task_history_root(manifest: Manifest, project: str) -> Path | None:
+    """Resolve PROJECT's Task history directory for ID allocation."""
+    root = resolve_project_content_root(manifest, project) / "docs/tasks"
+    return root if root.exists() else None
+
+
 def project_task_root(manifest: Manifest, project: str) -> Path | None:
     """Return PROJECT's active Hub Task directory, when it exists."""
     task_root = resolve_project_task_root(manifest, project)

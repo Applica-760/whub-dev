@@ -9,7 +9,11 @@ import click
 
 from whub.models import ManifestError, load_manifest, project_names
 from whub.services.errors import ServiceError
-from whub.services.task import archive_project_task, resolve_project_task_root
+from whub.services.task import (
+    archive_project_task,
+    resolve_project_task_history_root,
+    resolve_project_task_root,
+)
 from whub.utils.render import render_table
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.services import (
@@ -76,7 +80,16 @@ def task(ctx: click.Context, project: str) -> None:
 def init(title: str, objective: str, approaches: tuple[str, ...]) -> None:
     """Create a draft Task execution record."""
     try:
-        path, record = create_task(Path("."), title, objective, approaches)
+        history_root = resolve_project_task_history_root(
+            load_manifest(), click.get_current_context().meta["task_project"]
+        )
+        path, record = create_task(
+            Path("."),
+            title,
+            objective,
+            approaches,
+            id_roots=(history_root,) if history_root is not None else (),
+        )
     except (ServiceError, WflowError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"initialized {record.task.id}: {path}")
