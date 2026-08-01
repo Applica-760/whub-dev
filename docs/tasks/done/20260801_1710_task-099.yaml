@@ -1,0 +1,91 @@
+schema_version: 1
+task:
+  id: TASK-099
+  state: completed
+  title: Define terminal bridge contract
+  objective: localhost上のWeb appからTask対応tmux sessionへ接続するterminal bridgeの契約を文書化する。
+  approach:
+  - viewerと単一controllerを定義し、強制奪取なし、切断時即時失効、Task単位のtmux session接続を契約化する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 端末対象の取得経路を整備する
+    acceptance: []
+    steps:
+    - description: 既存のworktree一覧APIとフロントエンドの返却項目を確認し、Terminal画面がproject/task_idを選択できるよう不足分だけ読み取りAPIを追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: GET /api/worktrees は parent_project と task_id を返し、app の useWorktrees
+          がその型を利用しているため、端末対象取得用のサービス・API追加は不要と確認した。
+      deleted: false
+    deleted: false
+  - title: Terminal画面の骨格を実装する
+    acceptance: []
+    steps:
+    - description: Terminal feature、/terminalルート、OverviewとTaskの間のTerminalタブを追加し、OverviewFrameを流用した上段＋3列レイアウトを用意する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Terminal feature、/terminalルート、OverviewとTaskの間のタブ、既存OverviewFrameによる上段＋3列レイアウト、およびworktree初期選択を追加した。TerminalPage.test.tsx、npm
+          run typecheck、対象ファイルのPrettier確認が成功した。
+      deleted: false
+    deleted: false
+  - title: 単一端末を接続・表示する
+    acceptance: []
+    steps:
+    - description: 選択したworktreeのproject/task_idで既存Terminal WebSocketへ接続するxterm.js端末を実装し、接続・リサイズ・切断時の破棄を扱う
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: 実行中release 0.1.0+g88e673c9ではAPIWebSocketRouteは登録済みだが、依存定義がuvicorn本体のみでwebsockets/wsprotoが未導入。Uvicornのws_protocol_classはNoneで、実WebSocket
+          UpgradeはHTTP 404となるため接続不能。フロントURL・route不一致やworktree diagnosticではなく、WebSocket
+          protocol実装の欠落が根本原因。WebSocket handshakeの統合テストも未実装。
+      deleted: false
+    - value:
+        result: UvicornのWebSocket protocol実装としてwebsockets>=13.0をruntime依存へ追加し、uv.lockを更新した。実Uvicorn
+          listenerと本番同一pathを使うWebSocket Upgrade回帰テストを追加し、対象テスト6件が成功した。
+      deleted: false
+    deleted: false
+  - title: 検証する
+    acceptance: []
+    steps:
+    - description: Terminalタブ、worktree選択、WebSocket端末のライフサイクルをテストし、appのテスト・ビルドおよび必要なバックエンドテストを実行する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 'uv run pytest: 528 passed、uv run ruff check .: 成功、app npm test:
+          27 passed、npm run build: 成功、Terminal関連Prettier: 成功、git diff --check: 成功。全app
+          format:checkは今回未変更の既存5ファイルだけで失敗したため変更せず記録した。'
+      deleted: false
+    - value:
+        release: release 0.1.0+g8d8d6364をbuild・verify・apply。~/.local/bin/whubはcommit
+          8d8d6364を報告し、health 200、新release process起動を確認。一時tmux sessionで本番ws://127.0.0.1:8710/api/terminals/whub-dev/TASK-099へ接続し端末出力を受信後、sessionを停止した。
+      deleted: false
+    - value:
+        pending: ユーザー環境での確認前にcompleteしない。TASK-099 worktreeを再作成し、implementer authでagent
+          open後detach。GET /api/worktreesへの掲載、worktree diagnostic ok、tmux session稼働を確認し、ブラウザ確認待ち。
+      deleted: false
+    - value:
+        user_verification: ユーザーがブラウザからTASK-099端末の表示・接続を確認。入力文字が見えない問題と、Terminalページ再読み込み後に再接続失敗して他ページも応答停止する問題は、後続の新規Taskへ分離する。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: Terminalタブ、worktree選択、WebSocket端末接続を実装し、release 0.1.0+g8d8d6364へ適用。ユーザーがブラウザ表示・接続を確認し、表示品質と再接続問題は後続Taskへ分離した。
