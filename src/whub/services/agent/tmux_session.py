@@ -1,4 +1,4 @@
-"""tmux lifecycle for one Agent worktree session."""
+"""Manage tmux lifecycle for one Agent worktree session."""
 
 from __future__ import annotations
 

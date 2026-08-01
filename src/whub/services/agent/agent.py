@@ -12,7 +12,7 @@ from whub.services.agent.auth import (
     resolve_variables,
 )
 from whub.services.agent.context import render_context
-from whub.services.agent.session import (
+from whub.services.agent.tmux_session import (
     TmuxSession,
     close_tmux_session,
     open_tmux_session,

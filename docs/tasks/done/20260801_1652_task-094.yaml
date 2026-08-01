@@ -1,0 +1,40 @@
+schema_version: 1
+task:
+  id: TASK-094
+  state: completed
+  title: Web terminal backend foundation
+  objective: Web appから既存Agent tmux sessionへ安全に接続するバックエンド基盤を整備する。
+  approach:
+  - 既存agent.session serviceを拡張してsession解決を共有し、agent.terminalのモデルとserviceでlocalhost限定の接続・入力権契約を実装する。契約文書を整備する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Module naming
+    acceptance: []
+    steps:
+    - description: 既存のagent session serviceをtmux_sessionへ改名し、参照とテストを更新する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: agent.terminal_bridgeの空のmodel moduleを作成する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: agent harness 23 tests passed; terminal bridge model and service
+          modules created
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: Renamed the Agent tmux session service and created terminal bridge model
+    and service modules.

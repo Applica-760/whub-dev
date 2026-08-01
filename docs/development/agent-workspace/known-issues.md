@@ -20,3 +20,13 @@ Agent Harnessの現状で確認している課題を、今後の設計・実装�
 
 - Agentの実行コンテキストを、worktree、Task SSOT、権限境界、許可済み操作として明示する。
 - xterm.jsを使うWeb UIでtmux sessionを操作・監督し、入力操作と視認性を改善する。
+
+## Roadmap to Web UI
+
+1. Task、worktree、tmux sessionの一意な対応と、Agentの起動・再接続・終了を確定する。
+2. Agent adapterとlifecycle hooksから、状態・質問・権限要求をcontrol planeへ正規化して保存する。
+3. tmux接続ブリッジを実装する。認証、単一の入力権、WebSocket、resize、切断後の再接続を扱う。
+4. xterm.jsの単体画面で、既存tmux sessionへの入出力を検証する。
+5. whub Web appから、Task、worktree、依頼文、状態に対応する端末を開けるようにする。
+6. 監督画面で`input_requested`と`approval_requested`を優先表示する。
+7. スマホには閲覧、質問への回答、通知を限定して追加する。

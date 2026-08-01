@@ -13,7 +13,7 @@ from whub.services.agent.adapters.codex import CodexRenderPlan
 from whub.services.agent.agent import close_agent, open_agent
 from whub.services.agent.auth import resolve_variables
 from whub.services.agent.context import AGENTS_CONTEXT_PATH, render_context
-from whub.services.agent.session import open_tmux_session
+from whub.services.agent.tmux_session import open_tmux_session
 from whub.services.errors import ServiceError
 from whub.services.agent.state import _state_path, cleanup, prepare
 
@@ -273,7 +273,7 @@ def test_resolve_variables_uses_registered_project_and_worktree() -> None:
 
 def test_start_tmux_session_creates_codex_from_hub_root(tmp_path: Path) -> None:
     with patch(
-        "whub.services.agent.session.subprocess.run",
+        "whub.services.agent.tmux_session.subprocess.run",
         side_effect=[
             CompletedProcess([], 1, "", "missing"),
             CompletedProcess([], 0, "", ""),
@@ -310,7 +310,7 @@ def test_start_stops_before_tmux_when_worktree_validation_fails(tmp_path: Path) 
                 "worktree definition not found: whub-dev/TASK-095"
             ),
         ),
-        patch("whub.services.agent.session.subprocess.run") as run,
+        patch("whub.services.agent.tmux_session.subprocess.run") as run,
         pytest.raises(ServiceError, match="worktree definition not found"),
     ):
         open_agent(None, tmp_path, "whub-dev", "TASK-095", None)
@@ -418,7 +418,7 @@ def test_close_without_tmux_cleans_state_and_is_idempotent(tmp_path: Path) -> No
             return_value=registered,
         ),
         patch(
-            "whub.services.agent.session.subprocess.run",
+            "whub.services.agent.tmux_session.subprocess.run",
             return_value=CompletedProcess([], 1, "", "missing"),
         ) as run,
     ):
@@ -444,7 +444,7 @@ def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
             return_value=registered,
         ),
         patch(
-            "whub.services.agent.session.subprocess.run",
+            "whub.services.agent.tmux_session.subprocess.run",
             side_effect=[
                 CompletedProcess([], 0, "", ""),
                 CompletedProcess([], 1, "", "kill failed"),
@@ -483,7 +483,7 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
             return_value=empty_plan,
         ),
         patch(
-            "whub.services.agent.session.subprocess.run",
+            "whub.services.agent.tmux_session.subprocess.run",
             side_effect=[
                 CompletedProcess([], 1, "", "missing"),
                 CompletedProcess([], 0, "", ""),
