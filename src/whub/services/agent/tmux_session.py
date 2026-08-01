@@ -19,6 +19,21 @@ class TmuxSession:
     attach_command: tuple[str, ...]
 
 
+def resolve_tmux_session(project: str, task_id: str) -> TmuxSession:
+    """Return an existing Agent tmux session without creating one."""
+    name = session_name(project, task_id)
+    target = session_target(name)
+    try:
+        result = subprocess.run(
+            tmux_command("has-session", "-t", target), capture_output=True, text=True
+        )
+    except OSError as error:
+        raise ServiceError(f"tmux is unavailable: {error}") from error
+    if result.returncode:
+        raise ServiceError(f"Agent tmux session is unavailable: {project}/{task_id}")
+    return TmuxSession(name, tuple(tmux_command("attach-session", "-t", target)))
+
+
 def open_tmux_session(
     project: str, task_id: str, worktree: Path, workspace_root: Path
 ) -> TmuxSession:
