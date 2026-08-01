@@ -9,10 +9,17 @@ import {
 } from "../overview/OverviewFrame";
 import type { WorktreeItem } from "../worktrees/api";
 import { useWorktrees } from "../worktrees/useWorktrees";
+import { TerminalWidget } from "./TerminalWidget";
 
-function terminalWorktrees(worktrees: WorktreeItem[]) {
+type TerminalWorktree = WorktreeItem & {
+  parent_project: string;
+  task_id: string;
+};
+
+function terminalWorktrees(worktrees: WorktreeItem[]): TerminalWorktree[] {
   return worktrees.filter(
-    (worktree) => worktree.parent_project !== null && worktree.task_id !== null,
+    (worktree): worktree is TerminalWorktree =>
+      worktree.parent_project !== null && worktree.task_id !== null,
   );
 }
 
@@ -24,6 +31,9 @@ export function TerminalPage() {
   const { error, loading, worktrees } = useWorktrees();
   const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
+  const selectedWorktree = terminals.find(
+    (worktree) => worktreeValue(worktree) === selectedTerminal,
+  );
 
   useEffect(() => {
     setSelectedTerminal((current) => {
@@ -64,11 +74,16 @@ export function TerminalPage() {
       </OverviewWide>
       <OverviewColumn>
         <WidgetFrame title="Terminal">
-          <Text c="dimmed" p="md">
-            {selectedTerminal
-              ? "端末を接続する準備ができました。"
-              : "表示できる端末はありません。"}
-          </Text>
+          {selectedWorktree ? (
+            <TerminalWidget
+              project={selectedWorktree.parent_project}
+              taskId={selectedWorktree.task_id}
+            />
+          ) : (
+            <Text c="dimmed" p="md">
+              表示できる端末はありません。
+            </Text>
+          )}
         </WidgetFrame>
       </OverviewColumn>
       <OverviewColumn>

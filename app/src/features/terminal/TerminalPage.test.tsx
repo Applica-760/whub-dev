@@ -4,6 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalPage } from "./TerminalPage";
 
+vi.mock("./TerminalWidget", () => ({
+  TerminalWidget: ({
+    project,
+    taskId,
+  }: {
+    project: string;
+    taskId: string;
+  }) => <div>{`${project} / ${taskId}`}</div>,
+}));
+
 beforeEach(() => {
   vi.stubGlobal(
     "matchMedia",
@@ -54,7 +64,7 @@ describe("TerminalPage", () => {
     );
 
     expect(await screen.findByDisplayValue("whub-dev / TASK-099")).toBeTruthy();
-    expect(screen.getByText("端末を接続する準備ができました。")).toBeTruthy();
+    expect(screen.getAllByText("whub-dev / TASK-099")).toHaveLength(2);
     expect(
       screen.getByText("Session情報は後続のPhaseで追加します。"),
     ).toBeTruthy();
