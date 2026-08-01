@@ -1,6 +1,6 @@
 import os
 import subprocess
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 
 import pytest
 
@@ -9,7 +9,9 @@ from whub.services.agent.terminal_bridge import (
     TerminalAccessError,
     TerminalAccessRegistry,
     TerminalAttachment,
+    attach,
 )
+from whub.services.agent.tmux_session import TmuxSession
 
 
 def test_controller_is_explicit_and_unique() -> None:
@@ -70,3 +72,24 @@ def test_attachment_close_kills_process_that_ignores_terminate() -> None:
     process.kill.assert_called_once_with()
     assert process.wait.call_args_list == [call(timeout=1), call()]
     os.close(peer_fd)
+
+
+def test_attach_overrides_dumb_terminal_for_xterm_client() -> None:
+    master_fd, slave_fd = os.pipe()
+    process = Mock(poll=Mock(return_value=0))
+    session = TmuxSession(
+        name="whub-whub-dev-TASK-101",
+        attach_command=("tmux", "attach-session", "-t", "=whub-whub-dev-TASK-101"),
+    )
+
+    with (
+        patch.dict(os.environ, {"TERM": "dumb", "COLORTERM": ""}),
+        patch("whub.services.agent.terminal_bridge.pty.openpty", return_value=(master_fd, slave_fd)),
+        patch("whub.services.agent.terminal_bridge.subprocess.Popen", return_value=process) as popen,
+    ):
+        attachment = attach(session)
+
+    environment = popen.call_args.kwargs["env"]
+    assert environment["TERM"] == "xterm-256color"
+    assert environment["COLORTERM"] == "truecolor"
+    attachment.close()

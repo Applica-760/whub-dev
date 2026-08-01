@@ -94,9 +94,15 @@ class TerminalAttachment:
 def attach(session: TmuxSession) -> TerminalAttachment:
     """Attach a PTY client to an existing tmux session."""
     master, slave = pty.openpty()
+    environment = os.environ.copy()
+    environment.update(TERM="xterm-256color", COLORTERM="truecolor")
     try:
         process = subprocess.Popen(
-            session.attach_command, stdin=slave, stdout=slave, stderr=slave
+            session.attach_command,
+            stdin=slave,
+            stdout=slave,
+            stderr=slave,
+            env=environment,
         )
     finally:
         os.close(slave)
