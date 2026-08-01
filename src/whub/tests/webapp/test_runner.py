@@ -5,8 +5,15 @@ from __future__ import annotations
 import json
 import os
 import signal
+import socket
+import time
 from pathlib import Path
+from threading import Thread
 from unittest.mock import Mock, call, patch
+
+import uvicorn
+from fastapi import WebSocket
+from websockets.sync.client import connect
 
 from whub.webapp.runner import (
     AppProcessRecord,
@@ -16,6 +23,7 @@ from whub.webapp.runner import (
     serve,
     write_pid_record,
 )
+from whub.webapp.server import create_api_app
 
 
 def test_pid_record_round_trip(tmp_path: Path) -> None:
@@ -69,6 +77,41 @@ def test_serve_removes_its_pid_record_after_shutdown(tmp_path: Path) -> None:
         serve(tmp_path / "dist", 8710, pid_path)
 
     assert not pid_path.exists()
+
+
+def test_uvicorn_accepts_terminal_websocket_upgrade() -> None:
+    async def terminal_probe(websocket: WebSocket, project: str, task_id: str) -> None:
+        await websocket.accept()
+        await websocket.send_text(f"{project}/{task_id}")
+        await websocket.close()
+
+    with patch("whub.webapp.server.terminal", terminal_probe):
+        app = create_api_app()
+
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    port = listener.getsockname()[1]
+    server = uvicorn.Server(
+        uvicorn.Config(app, log_level="error", lifespan="off", access_log=False)
+    )
+    thread = Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
+    thread.start()
+    try:
+        deadline = time.monotonic() + 5
+        while not server.started and thread.is_alive() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert server.started
+
+        with connect(
+            f"ws://127.0.0.1:{port}/api/terminals/whub-dev/TASK-099"
+        ) as socket_client:
+            assert socket_client.recv() == "whub-dev/TASK-099"
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5)
+        listener.close()
+
+    assert not thread.is_alive()
 
 
 def test_stop_process_group_terminates_all_children() -> None:
