@@ -6,7 +6,7 @@ import subprocess
 import fcntl
 import struct
 import termios
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from whub.services.agent.tmux_session import TmuxSession
 
@@ -69,11 +69,26 @@ class TerminalAccessRegistry:
 class TerminalAttachment:
     master_fd: int
     process: subprocess.Popen[bytes]
+    _closed: bool = field(default=False, init=False)
 
     def close(self) -> None:
-        os.close(self.master_fd)
+        if self._closed:
+            return
+        self._closed = True
+        if self.master_fd >= 0:
+            master_fd = self.master_fd
+            self.master_fd = -1
+            os.close(master_fd)
         if self.process.poll() is None:
-            self.process.terminate()
+            try:
+                self.process.terminate()
+            except ProcessLookupError:
+                pass
+            try:
+                self.process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
 
 
 def attach(session: TmuxSession) -> TerminalAttachment:

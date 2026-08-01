@@ -1,6 +1,7 @@
 """Models for Agent terminal bridge access."""
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,10 +26,22 @@ class TerminalLease(TerminalBridgeModel):
     mode: TerminalAccessMode
 
 
+class TerminalClaim(TerminalBridgeModel):
+    type: Literal["claim"]
+
+
+class TerminalRelease(TerminalBridgeModel):
+    type: Literal["release"]
+
+
 class TerminalInput(TerminalBridgeModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=False)
+
+    type: Literal["input"]
     data: str
 
 
 class TerminalResize(TerminalBridgeModel):
-    columns: int = Field(ge=1)
-    rows: int = Field(ge=1)
+    type: Literal["resize"]
+    columns: int = Field(ge=1, le=1000)
+    rows: int = Field(ge=1, le=1000)

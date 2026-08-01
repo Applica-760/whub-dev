@@ -4,10 +4,19 @@ import asyncio
 import json
 import os
 
+import anyio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from pydantic import ValidationError
 
-from whub.models.agent.terminal_bridge import TerminalSessionRef
+from whub.models.agent.terminal_bridge import (
+    TerminalClaim,
+    TerminalInput,
+    TerminalRelease,
+    TerminalResize,
+    TerminalSessionRef,
+)
 from whub.services.agent.terminal_bridge import (
+    TerminalAttachment,
     TerminalAccessError,
     TerminalAccessRegistry,
     attach,
@@ -17,6 +26,57 @@ from whub.services.agent.tmux_session import resolve_tmux_session
 
 router = APIRouter(prefix="/api/terminals")
 access = TerminalAccessRegistry()
+
+
+async def _forward_output(websocket: WebSocket, master_fd: int) -> None:
+    while True:
+        await anyio.wait_readable(master_fd)
+        data = os.read(master_fd, 4096)
+        if not data:
+            return
+        await websocket.send_text(data.decode(errors="replace"))
+
+
+async def _receive_input(
+    websocket: WebSocket,
+    session: TerminalSessionRef,
+    connection_id: str,
+    attachment: TerminalAttachment,
+) -> None:
+    while True:
+        message = await websocket.receive()
+        if message.get("type") == "websocket.disconnect":
+            return
+        text = message.get("text")
+        if text is None:
+            continue
+        try:
+            control = json.loads(text)
+        except json.JSONDecodeError:
+            control = None
+        if not isinstance(control, dict):
+            await websocket.send_json({"type": "error", "detail": "invalid frame"})
+            continue
+        try:
+            match control.get("type"):
+                case "claim":
+                    TerminalClaim.model_validate(control)
+                    access.claim(session, connection_id)
+                case "release":
+                    TerminalRelease.model_validate(control)
+                    access.release(session, connection_id)
+                case "input":
+                    frame = TerminalInput.model_validate(control)
+                    access.require_controller(session, connection_id)
+                    os.write(attachment.master_fd, frame.data.encode())
+                case "resize":
+                    frame = TerminalResize.model_validate(control)
+                    access.require_controller(session, connection_id)
+                    resize(attachment, frame.columns, frame.rows)
+                case _:
+                    raise ValueError("unknown frame")
+        except (ValidationError, ValueError):
+            await websocket.send_json({"type": "error", "detail": "invalid frame"})
 
 
 @router.websocket("/{project}/{task_id}")
@@ -31,38 +91,25 @@ async def terminal(websocket: WebSocket, project: str, task_id: str) -> None:
     connection_id = str(id(websocket))
     attachment = attach(resolve_tmux_session(session.project, session.task_id))
     await websocket.accept()
+    incoming = asyncio.create_task(
+        _receive_input(
+            websocket,
+            session,
+            connection_id,
+            attachment,
+        )
+    )
+    output = asyncio.create_task(_forward_output(websocket, attachment.master_fd))
+    pumps = {incoming, output}
     try:
-        while True:
-            incoming = asyncio.create_task(websocket.receive())
-            output = asyncio.create_task(asyncio.to_thread(os.read, attachment.master_fd, 4096))
-            done, pending = await asyncio.wait({incoming, output}, return_when=asyncio.FIRST_COMPLETED)
-            for task in pending:
-                task.cancel()
-            if output in done:
-                await websocket.send_text(output.result().decode(errors="replace"))
-            if incoming in done:
-                message = incoming.result()
-                if message.get("text") is not None:
-                    text = message["text"]
-                    try:
-                        control = json.loads(text)
-                    except json.JSONDecodeError:
-                        access.require_controller(session, connection_id)
-                        os.write(attachment.master_fd, text.encode())
-                    else:
-                        if control == {"type": "claim"}:
-                            access.claim(session, connection_id)
-                        elif control == {"type": "release"}:
-                            access.release(session, connection_id)
-                        elif control.get("type") == "resize":
-                            access.require_controller(session, connection_id)
-                            resize(attachment, int(control["columns"]), int(control["rows"]))
-                        else:
-                            await websocket.send_json({"type": "error", "detail": "unknown control"})
-                elif message.get("type") == "websocket.receive" and message.get("bytes") is None:
-                    pass
-    except (TerminalAccessError, WebSocketDisconnect):
+        done, _ = await asyncio.wait(pumps, return_when=asyncio.FIRST_COMPLETED)
+        for pump in done:
+            pump.result()
+    except (OSError, TerminalAccessError, WebSocketDisconnect):
         pass
     finally:
+        for pump in pumps:
+            pump.cancel()
+        await asyncio.gather(*pumps, return_exceptions=True)
         access.disconnect(connection_id)
-        attachment.close()
+        await anyio.to_thread.run_sync(attachment.close)

@@ -23,8 +23,22 @@ controllerが存在する間、別接続はcontrollerを強制的に奪取でき
 ## Lease lifecycle
 
 - controllerの接続が切断された時点で、入力権は即時に失効する。
+- clientはunmount時に`release`を送信する。送信できない切断でもserverが接続単位で入力権を解放する。
 - Web appの再起動時は、すべての接続と入力権を失効する。
 - 再接続した利用者は、空いている入力権を改めて取得する。
+
+## WebSocket protocol
+
+clientからserverへのメッセージは、次のJSON text frameとする。
+
+- `{"type":"claim"}`: controller leaseを取得する。
+- `{"type":"release"}`: controller leaseを解放する。
+- `{"type":"input","data":"..."}`: terminal入力を送信する。`data`の空白文字は保持する。
+- `{"type":"resize","columns":120,"rows":40}`: PTYをresizeする。`columns`と`rows`は1以上1000以下とする。
+
+serverからclientへのPTY出力はUTF-8 text frameとする。不正なclient frameは`{"type":"error","detail":"invalid frame"}`で通知する。入力とresizeはcontrollerだけが実行できる。
+
+接続時は同一hostのHTTPまたはHTTPS Originだけを許可する。
 
 ## Bridge boundary
 
@@ -32,6 +46,8 @@ controllerが存在する間、別接続はcontrollerを強制的に奪取でき
 - `agent.terminal_bridge`は解決済みsessionへのPTY attach、terminal入出力の中継、access mode、controller lease、resize制御を担う。
 - Web appのWebSocket endpointは接続を受け付けて`agent.terminal_bridge`を呼び出すadapterとし、tmux操作や入力権の判断を持たない。
 
-## Pending protocol details
+## PTY lifecycle
 
-WebSocketのメッセージ形式、localhost接続におけるOrigin検証の具体的な方法、PTYの実装方式は、terminal bridge実装Taskで決定する。
+接続ごとにPTY attachを一つ作成し、WebSocket入力とPTY出力をそれぞれ一つの長寿命pumpで処理する。片方が終了した時点でもう片方をcancelし、controller leaseを解放してPTY attachmentを閉じる。
+
+PTY読取はfile descriptorのreadable状態を待ってからevent loop上で行う。cancel不能なblocking readをworker threadへ投入しない。process終了待ちはevent loop外で行う。

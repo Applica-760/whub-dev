@@ -28,6 +28,8 @@ export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
     const terminal = new Terminal({ cursorBlink: true, fontSize: 14 });
     const fitAddon = new FitAddon();
     const socket = new WebSocket(terminalUrl(project, taskId));
+    let disposed = false;
+    setError(null);
     terminal.loadAddon(fitAddon);
     terminal.open(element);
 
@@ -44,7 +46,11 @@ export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
       }
     };
     const resizeObserver = new ResizeObserver(resize);
-    const input = terminal.onData((data) => socket.send(data));
+    const input = terminal.onData((data) => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "input", data }));
+      }
+    });
 
     socket.addEventListener("open", () => {
       socket.send(JSON.stringify({ type: "claim" }));
@@ -53,16 +59,24 @@ export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
     });
     socket.addEventListener("message", (event) => terminal.write(event.data));
     socket.addEventListener("error", () => {
-      setError("端末へ接続できませんでした。");
+      if (!disposed) {
+        setError("端末へ接続できませんでした。");
+      }
     });
     socket.addEventListener("close", () => {
-      setError((current) => current ?? "端末接続が切断されました。");
+      if (!disposed) {
+        setError((current) => current ?? "端末接続が切断されました。");
+      }
     });
     resizeObserver.observe(element);
 
     return () => {
+      disposed = true;
       input.dispose();
       resizeObserver.disconnect();
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "release" }));
+      }
       socket.close();
       terminal.dispose();
     };
