@@ -1,0 +1,51 @@
+schema_version: 1
+task:
+  id: TASK-106
+  state: completed
+  title: ページ別折りたたみ状態とOperatorトグルの改善
+  objective: overviewとterminalで折りたたみ状態を分離し、Operator制御を簡素で収まるトグルUIへ改善する
+  approach:
+  - 既存の状態管理とUI構成を調査し、ページ固有の永続化キーまたは状態スコープへ分離する。既存のOperator状態表示を保ちながら、アクセシブルでコンパクトなトグルへ置換し、対象画面で検証する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 状態分離
+    acceptance: []
+    steps:
+    - description: overviewとterminalの折りたたみ状態をページ単位で分離し、ヘッダー操作を現在ページの状態へ接続する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Operatorのバッジを、ONは緑・OFFは赤のラベルとノブ位置で状態を示すコンパクトなトグルへ置換し、開始・停止と停止確認を維持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: Operator Switchをmdへ調整し、対象テストと型検査が成功
+      deleted: false
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: 状態の独立性、トグルによる開始・停止、既存レイアウトを対象テスト・型検査・フロントエンドビルドで検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: Vitest 34件、uv run pytest 543件、typecheck、production build、変更対象のPrettier
+          checkが成功
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: overviewとterminalの折りたたみ状態を分離し、OperatorをON/OFF表示付きコンパクトトグルへ置換した。
