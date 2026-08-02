@@ -1,25 +1,94 @@
-.terminal-frame {
-  grid-template-columns:
-    minmax(13rem, 0.75fr) minmax(32rem, 2fr)
-    minmax(16rem, 1fr);
+.terminal-page {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
 }
 
-.terminal-frame[data-collapse-left="true"] {
-  grid-template-columns: minmax(32rem, 2fr) minmax(16rem, 1fr);
+.terminal-layout,
+.terminal-diff-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
+  min-height: 22rem;
 }
 
-.terminal-frame[data-collapse-right="true"] {
-  grid-template-columns: minmax(13rem, 0.75fr) minmax(32rem, 2fr);
+.diff-tree-node {
+  cursor: pointer;
 }
 
-.terminal-frame[data-collapse-left="true"][data-collapse-right="true"] {
-  grid-template-columns: minmax(0, 1fr);
+.diff-tree-chevron {
+  transition: transform 120ms ease;
 }
 
-@media (max-width: 63.99rem) {
-  .terminal-frame,
-  .terminal-frame[data-collapse-left="true"],
-  .terminal-frame[data-collapse-right="true"] {
+.diff-tree-chevron[data-expanded="true"] {
+  transform: rotate(90deg);
+}
+
+.diff-tree-file-icon {
+  color: var(--mantine-color-blue-6);
+}
+
+.diff-tree-node [data-selected="true"] {
+  color: var(--mantine-color-blue-filled);
+  font-weight: 600;
+}
+
+.diff-content {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.5;
+  margin: 0;
+  min-width: max-content;
+  padding: 0.75rem;
+}
+
+.diff-line {
+  display: grid;
+  grid-template-columns: 2.75rem 2.75rem 1.25rem minmax(max-content, 1fr);
+  min-height: 1.5em;
+}
+
+.diff-line-number,
+.diff-line-prefix {
+  color: var(--whub-color-text-subtle);
+  text-align: right;
+  user-select: none;
+}
+
+.diff-line-number {
+  border-right: 1px solid var(--whub-color-border);
+  padding-right: 0.25rem;
+}
+
+.diff-line-prefix {
+  padding-right: 0.25rem;
+}
+
+.diff-meta {
+  border-bottom: 1px solid var(--whub-color-border);
+  font-family: var(--mantine-font-family-monospace);
+  overflow-wrap: anywhere;
+}
+
+.diff-addition {
+  background: color-mix(in srgb, var(--mantine-color-green-6) 20%, transparent);
+  color: var(--mantine-color-green-9);
+}
+.diff-deletion {
+  background: color-mix(in srgb, var(--mantine-color-red-6) 18%, transparent);
+  color: var(--mantine-color-red-9);
+}
+.diff-hunk {
+  background: color-mix(in srgb, var(--mantine-color-blue-5) 18%, transparent);
+  color: var(--mantine-color-blue-8);
+}
+.diff-file {
+  color: var(--mantine-color-dimmed);
+}
+
+@media (max-width: 48rem) {
+  .terminal-layout,
+  .terminal-diff-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 }

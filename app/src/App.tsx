@@ -9,7 +9,6 @@ import { OverviewPage } from "./features/overview/OverviewPage";
 import { useOverviewCollapse } from "./features/overview/useOverviewCollapse";
 import { ResourceStatusPage } from "./features/status/ResourceStatusPage";
 import { TerminalPage } from "./features/terminal/TerminalPage";
-import { useTerminalCollapse } from "./features/terminal/useTerminalCollapse";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { TasksPage } from "./features/tasks/TasksPage";
 import {
@@ -57,9 +56,6 @@ const navigation: NavigationItem[] = [
 export function App() {
   const location = useLocation();
   const overviewCollapse = useOverviewCollapse();
-  const terminalCollapse = useTerminalCollapse();
-  const pageCollapse =
-    location.pathname === TERMINAL_PATH ? terminalCollapse : overviewCollapse;
 
   return (
     <AppShell header={{ height: 47 }} padding={0}>
@@ -89,10 +85,10 @@ export function App() {
             })}
           </div>
           <div className="whub-header-actions">
-            {[OVERVIEW_PATH, TERMINAL_PATH].includes(location.pathname) && (
+            {location.pathname === OVERVIEW_PATH && (
               <OverviewCollapseToggles
-                collapsed={pageCollapse.collapsed}
-                onToggle={pageCollapse.toggle}
+                collapsed={overviewCollapse.collapsed}
+                onToggle={overviewCollapse.toggle}
               />
             )}
             <ColorSchemeToggle />
@@ -116,10 +112,7 @@ export function App() {
             <Route element={<BacklogPage />} path="/backlog" />
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
-            <Route
-              element={<TerminalPage collapsed={terminalCollapse.collapsed} />}
-              path={TERMINAL_PATH}
-            />
+            <Route element={<TerminalPage />} path={TERMINAL_PATH} />
             <Route element={<TasksPage />} path="/tasks" />
             <Route element={<TaskDetailPage />} path={TASK_DETAIL_PATH} />
             <Route

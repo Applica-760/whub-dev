@@ -21,6 +21,7 @@ from whub.services.worktree import (
 )
 from whub.services.worktree.operation import _create_worktree, _require_worktree_parent
 from whub.services.worktree.operation import ResolvedProjectWorktree
+from whub.services.worktree.diff import list_changed_files, read_changed_file_diff
 from whub.tests.helpers import manifest_data
 
 
@@ -152,6 +153,82 @@ def test_resolve_project_worktree_requires_git_base_branch(tmp_path: Path) -> No
         )
 
 
+def test_list_changed_files_parses_rename_and_regular_statuses(tmp_path: Path) -> None:
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=tmp_path / "worktree",
+        base_branch="main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            return_value=subprocess.CompletedProcess(
+                [],
+                0,
+                stdout="M\0README.md\0R100\0old.py\0new.py\0",
+            ),
+        ) as git,
+    ):
+        files = list_changed_files(
+            Manifest.model_validate(manifest_data()), tmp_path, "local", "TASK-072"
+        )
+
+    assert len(files) == 2
+    assert files[0].path == "README.md"
+    assert files[0].status == "M"
+    assert files[0].previous_path is None
+    assert files[1].path == "new.py"
+    assert files[1].status == "R"
+    assert files[1].previous_path == "old.py"
+    git.assert_called_once_with(
+        resolved.destination,
+        "diff",
+        "--name-status",
+        "-z",
+        "main",
+    )
+
+
+def test_read_changed_file_diff_rejects_path_outside_change_set(tmp_path: Path) -> None:
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=tmp_path / "worktree",
+        base_branch="main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            return_value=subprocess.CompletedProcess([], 0, stdout="M\0README.md\0"),
+        ) as git,
+        pytest.raises(ServiceError, match="changed file not found: pyproject.toml"),
+    ):
+        read_changed_file_diff(
+            Manifest.model_validate(manifest_data()),
+            tmp_path,
+            "local",
+            "TASK-072",
+            "pyproject.toml",
+        )
+
+    git.assert_called_once_with(
+        resolved.destination,
+        "diff",
+        "--name-status",
+        "-z",
+        "main",
+    )
+
+
 def test_create_pull_request_returns_existing_open_pr(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()
@@ -177,7 +254,9 @@ def test_create_pull_request_returns_existing_open_pr(tmp_path: Path) -> None:
         ) as git,
         patch(
             "whub.services.worktree.operation.run_gh",
-            return_value=subprocess.CompletedProcess([], 0, stdout="https://example/pr/72\n"),
+            return_value=subprocess.CompletedProcess(
+                [], 0, stdout="https://example/pr/72\n"
+            ),
         ) as gh,
     ):
         url = create_project_pull_request(
@@ -767,12 +846,17 @@ def test_merge_pull_request_reports_merge_failure(tmp_path: Path) -> None:
         definition, tmp_path / "source", tmp_path / definition.workspace_path, "main"
     )
     with (
-        patch("whub.services.worktree.operation.resolve_project_worktree", return_value=resolved),
+        patch(
+            "whub.services.worktree.operation.resolve_project_worktree",
+            return_value=resolved,
+        ),
         patch("whub.services.worktree.operation._require_clean_worktree"),
         patch(
             "whub.services.worktree.operation.run_gh",
             side_effect=[
-                subprocess.CompletedProcess([], 0, stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]'),
+                subprocess.CompletedProcess(
+                    [], 0, stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]'
+                ),
                 subprocess.CompletedProcess([], 1, stderr="review required"),
             ],
         ),
@@ -792,12 +876,17 @@ def test_merge_pull_request_reports_cleanup_failure_after_merge(tmp_path: Path) 
         definition, tmp_path / "source", tmp_path / definition.workspace_path, "main"
     )
     with (
-        patch("whub.services.worktree.operation.resolve_project_worktree", return_value=resolved),
+        patch(
+            "whub.services.worktree.operation.resolve_project_worktree",
+            return_value=resolved,
+        ),
         patch("whub.services.worktree.operation._require_clean_worktree"),
         patch(
             "whub.services.worktree.operation.run_gh",
             side_effect=[
-                subprocess.CompletedProcess([], 0, stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]'),
+                subprocess.CompletedProcess(
+                    [], 0, stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]'
+                ),
                 subprocess.CompletedProcess([], 0),
                 subprocess.CompletedProcess([], 0, stdout="MERGED\n"),
             ],
