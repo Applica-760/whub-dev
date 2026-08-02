@@ -194,6 +194,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/operator-terminal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Operator Terminal */
+        get: operations["get_operator_terminal_api_operator_terminal_get"];
+        put?: never;
+        /** Start Operator Terminal */
+        post: operations["start_operator_terminal_api_operator_terminal_post"];
+        /** Stop Operator Terminal */
+        delete: operations["stop_operator_terminal_api_operator_terminal_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vault/tree": {
         parameters: {
             query?: never;
@@ -356,6 +375,20 @@ export interface components {
             /** Filename */
             filename: string;
         };
+        /**
+         * OperatorTerminal
+         * @description The current lifecycle state of the Operator Terminal.
+         */
+        OperatorTerminal: {
+            state: components["schemas"]["OperatorTerminalState"];
+            /** Operator Id */
+            operator_id?: string | null;
+        };
+        /**
+         * OperatorTerminalState
+         * @enum {string}
+         */
+        OperatorTerminalState: "off" | "on";
         /** PhaseLog */
         PhaseLog: {
             /** Value */
@@ -1053,6 +1086,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_operator_terminal_api_operator_terminal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorTerminal"];
+                };
+            };
+        };
+    };
+    start_operator_terminal_api_operator_terminal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorTerminal"];
+                };
+            };
+        };
+    };
+    stop_operator_terminal_api_operator_terminal_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorTerminal"];
                 };
             };
         };

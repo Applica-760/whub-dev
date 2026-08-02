@@ -6,10 +6,12 @@ import type { XtermViewHandle } from "../../components/XtermView";
 import { useTerminalConnection } from "./useTerminalConnection";
 
 type TerminalWidgetProps = {
-  project: string;
   resizeSignal: string;
-  taskId: string;
-};
+} &
+  (
+    | { endpoint: string; label: string; project?: never; taskId?: never }
+    | { endpoint?: never; label?: never; project: string; taskId: string }
+  );
 
 function openWebLink(event: MouseEvent, uri: string) {
   if (!event.metaKey && !event.ctrlKey) {
@@ -27,6 +29,8 @@ function openWebLink(event: MouseEvent, uri: string) {
 }
 
 export function TerminalWidget({
+  endpoint,
+  label,
   project,
   resizeSignal,
   taskId,
@@ -40,10 +44,10 @@ export function TerminalWidget({
     xtermRef.current?.write(data);
   }, []);
   const { error, sendInput, sendResize } = useTerminalConnection({
+    endpoint:
+      endpoint ?? `/api/terminals/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}`,
     onConnected: handleConnected,
     onOutput: handleOutput,
-    project,
-    taskId,
   });
 
   return (
@@ -61,7 +65,7 @@ export function TerminalWidget({
         resizeSignal={resizeSignal}
       />
       <Text c="dimmed" px="md" pb="md" size="sm">
-        {project} / {taskId}
+        {label ?? `${project} / ${taskId}`}
       </Text>
     </>
   );

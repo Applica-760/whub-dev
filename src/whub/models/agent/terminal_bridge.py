@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from whub.models.operator_terminal import OperatorTerminalRef
+
 
 class TerminalBridgeModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -21,7 +23,7 @@ class TerminalSessionRef(TerminalBridgeModel):
 
 
 class TerminalLease(TerminalBridgeModel):
-    session: TerminalSessionRef
+    session: TerminalSessionRef | OperatorTerminalRef
     connection_id: str = Field(min_length=1)
     mode: TerminalAccessMode
 

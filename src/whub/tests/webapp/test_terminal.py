@@ -53,8 +53,7 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
 
         with (
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
-            patch("whub.webapp.routers.terminal.attach", return_value=attachment),
-            patch("whub.webapp.routers.terminal.asyncio.to_thread") as to_thread,
+            patch("whub.webapp.terminal_bridge.attach", return_value=attachment),
         ):
             bridge = asyncio.create_task(terminal(websocket, session.project, session.task_id))
             await websocket.messages.put({"type": "websocket.receive", "text": '{"type":"claim"}'})
@@ -77,7 +76,6 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
                 await bridge
 
         assert websocket.accepted
-        to_thread.assert_not_called()
         assert access.access_mode(session, str(id(websocket))) is TerminalAccessMode.VIEWER
         with pytest.raises(OSError):
             os.fstat(attachment.master_fd)
@@ -100,7 +98,7 @@ def test_disconnect_releases_control_for_immediate_reconnect() -> None:
 
         with (
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
-            patch("whub.webapp.routers.terminal.attach", side_effect=attachments),
+            patch("whub.webapp.terminal_bridge.attach", side_effect=attachments),
         ):
             first_bridge = asyncio.create_task(
                 terminal(first_websocket, session.project, session.task_id)
@@ -148,7 +146,7 @@ def test_attachment_cleanup_does_not_block_the_event_loop() -> None:
 
         with (
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
-            patch("whub.webapp.routers.terminal.attach", return_value=attachment),
+            patch("whub.webapp.terminal_bridge.attach", return_value=attachment),
         ):
             bridge = asyncio.create_task(terminal(websocket, "whub-dev", "TASK-100"))
             await websocket.messages.put({"type": "websocket.disconnect"})

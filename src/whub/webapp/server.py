@@ -13,6 +13,10 @@ from whub.services.errors import NotFoundError, ServiceError
 from whub.webapp.routers.backlog import router as backlog_router
 from whub.webapp.routers.daily import router as daily_router
 from whub.webapp.routers.inbox import router as inbox_router
+from whub.webapp.routers.operator_terminal import (
+    operator_terminal_socket,
+    router as operator_terminal_router,
+)
 from whub.webapp.routers.projects import router as projects_router
 from whub.webapp.routers.status import router as status_router
 from whub.webapp.routers.tasks import router as tasks_router
@@ -75,6 +79,10 @@ def create_api_app() -> FastAPI:
     app.include_router(status_router)
     app.include_router(tasks_router)
     app.add_api_websocket_route("/api/terminals/{project}/{task_id}", terminal)
+    app.include_router(operator_terminal_router)
+    app.add_api_websocket_route(
+        "/api/operator-terminals/{operator_id}", operator_terminal_socket
+    )
     app.include_router(vault_router)
     app.include_router(worktrees_router)
 
