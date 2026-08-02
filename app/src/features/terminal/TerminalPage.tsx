@@ -1,18 +1,13 @@
 import { Alert, Group, Switch, Text } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { requestJson } from "../../api/client";
 import { GroupedListRow } from "../../components/GroupedList";
 import { WidgetFrame } from "../../components/WidgetFrame";
-import {
-  OverviewColumn,
-  OverviewFrame,
-  OverviewSide,
-} from "../overview/OverviewFrame";
 import type { WorktreeItem } from "../worktrees/api";
 import { useWorktrees } from "../worktrees/useWorktrees";
+import { DiffPane } from "./DiffPane";
 import { TerminalWidget } from "./TerminalWidget";
-import type { TerminalCollapseState } from "./useTerminalCollapse";
-import { requestJson } from "../../api/client";
 
 import "./terminal.css";
 
@@ -20,15 +15,7 @@ type TerminalWorktree = WorktreeItem & {
   parent_project: string;
   task_id: string;
 };
-
-type TerminalPageProps = {
-  collapsed: TerminalCollapseState;
-};
-
-type OperatorTerminal = {
-  operator_id: string | null;
-  state: "off" | "on";
-};
+type OperatorTerminal = { operator_id: string | null; state: "off" | "on" };
 
 function terminalWorktrees(worktrees: WorktreeItem[]): TerminalWorktree[] {
   return worktrees.filter(
@@ -41,7 +28,7 @@ function worktreeValue(worktree: WorktreeItem) {
   return `${worktree.parent_project}/${worktree.task_id}`;
 }
 
-export function TerminalPage({ collapsed }: TerminalPageProps) {
+export function TerminalPage() {
   const { error, loading, worktrees } = useWorktrees();
   const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
@@ -49,23 +36,21 @@ export function TerminalPage({ collapsed }: TerminalPageProps) {
   const [operatorError, setOperatorError] = useState<string | null>(null);
   const [operatorPending, setOperatorPending] = useState(false);
   const selectedWorktree = terminals.find(
-    (worktree) => worktreeValue(worktree) === selectedTerminal,
+    (item) => worktreeValue(item) === selectedTerminal,
   );
+  const operatorRunning =
+    operator?.state === "on" && operator.operator_id !== null;
 
   useEffect(() => {
     setSelectedTerminal((current) => {
-      if (current === "operator" && operator?.state === "on") {
-        return current;
-      }
-      if (
-        current &&
-        terminals.some((worktree) => worktreeValue(worktree) === current)
-      ) {
-        return current;
-      }
-      return terminals[0] ? worktreeValue(terminals[0]) : null;
+      if (current === "operator" && operatorRunning) return current;
+      return terminals.some((item) => worktreeValue(item) === current)
+        ? current
+        : terminals[0]
+          ? worktreeValue(terminals[0])
+          : null;
     });
-  }, [operator?.state, terminals]);
+  }, [operatorRunning, terminals]);
 
   const refreshOperator = useCallback(async () => {
     try {
@@ -85,62 +70,41 @@ export function TerminalPage({ collapsed }: TerminalPageProps) {
     void refreshOperator();
   }, [refreshOperator]);
 
-  const startOperator = useCallback(async () => {
-    setOperatorPending(true);
-    setOperatorError(null);
-    try {
-      const started = await requestJson<OperatorTerminal>(
-        "/api/operator-terminal",
-        {
-          method: "POST",
-        },
-      );
-      setOperator(started);
-      setSelectedTerminal("operator");
-    } catch (requestError) {
-      setOperatorError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Operator Terminalを開始できませんでした。",
-      );
-    } finally {
-      setOperatorPending(false);
-    }
-  }, []);
-
-  const stopOperator = useCallback(async () => {
-    if (!window.confirm("Operator Terminalを停止しますか？")) {
+  const toggleOperator = useCallback(async () => {
+    if (operatorRunning && !window.confirm("Operator Terminalを停止しますか？"))
       return;
-    }
     setOperatorPending(true);
     setOperatorError(null);
     try {
-      const stopped = await requestJson<OperatorTerminal>(
+      const updated = await requestJson<OperatorTerminal>(
         "/api/operator-terminal",
         {
-          method: "DELETE",
+          method: operatorRunning ? "DELETE" : "POST",
         },
       );
-      setOperator(stopped);
-      setSelectedTerminal(terminals[0] ? worktreeValue(terminals[0]) : null);
+      setOperator(updated);
+      setSelectedTerminal(
+        updated.state === "on"
+          ? "operator"
+          : terminals[0]
+            ? worktreeValue(terminals[0])
+            : null,
+      );
     } catch (requestError) {
       setOperatorError(
         requestError instanceof Error
           ? requestError.message
-          : "Operator Terminalを停止できませんでした。",
+          : "Operator Terminalを更新できませんでした。",
       );
     } finally {
       setOperatorPending(false);
     }
-  }, [terminals]);
-
-  const operatorRunning =
-    operator?.state === "on" && operator.operator_id !== null;
+  }, [operatorRunning, terminals]);
 
   return (
-    <OverviewFrame className="terminal-frame" collapsed={collapsed}>
-      <OverviewSide collapsed={collapsed.left} side="left">
-        <WidgetFrame title="Terminal">
+    <main className="terminal-page">
+      <section className="terminal-layout">
+        <WidgetFrame title={<Text fw={600}>Explorer</Text>}>
           <Group justify="space-between" m="md">
             <Text fw={500}>Operator</Text>
             <Switch
@@ -148,19 +112,9 @@ export function TerminalPage({ collapsed }: TerminalPageProps) {
               checked={operatorRunning}
               disabled={operatorPending}
               offLabel="OFF"
-              onChange={() => {
-                void (operatorRunning ? stopOperator() : startOperator());
-              }}
+              onChange={() => void toggleOperator()}
               onLabel="ON"
               size="md"
-              styles={{
-                track: {
-                  backgroundColor: operatorRunning
-                    ? "var(--mantine-color-green-6)"
-                    : "var(--mantine-color-red-6)",
-                  borderColor: "transparent",
-                },
-              }}
             />
           </Group>
           {operatorRunning && (
@@ -181,44 +135,34 @@ export function TerminalPage({ collapsed }: TerminalPageProps) {
               worktreeがありません
             </Text>
           ) : (
-            terminals.map((worktree, index) => {
-              const value = worktreeValue(worktree);
-              return (
-                <GroupedListRow
-                  key={value}
-                  onClick={() => setSelectedTerminal(value)}
-                  selected={value === selectedTerminal}
-                  subtitle={worktree.task_id}
-                  title={worktree.parent_project}
-                  withDivider={index < terminals.length - 1}
-                />
-              );
-            })
+            terminals.map((worktree, index) => (
+              <GroupedListRow
+                key={worktreeValue(worktree)}
+                onClick={() => setSelectedTerminal(worktreeValue(worktree))}
+                selected={worktreeValue(worktree) === selectedTerminal}
+                subtitle={worktree.task_id}
+                title={worktree.parent_project}
+                withDivider={index < terminals.length - 1}
+              />
+            ))
           )}
-          {error && (
+          {(error || operatorError) && (
             <Alert color="red" m="md">
-              {error}
-            </Alert>
-          )}
-          {operatorError && (
-            <Alert color="red" m="md">
-              {operatorError}
+              {error ?? operatorError}
             </Alert>
           )}
         </WidgetFrame>
-      </OverviewSide>
-      <OverviewColumn>
-        <WidgetFrame title="Terminal">
+        <WidgetFrame title={<Text fw={600}>Terminal</Text>}>
           {operatorRunning && selectedTerminal === "operator" ? (
             <TerminalWidget
               endpoint={`/api/operator-terminals/${encodeURIComponent(operator?.operator_id ?? "")}`}
               label="Operator / workspace-hub"
-              resizeSignal={`${collapsed.left}:${collapsed.right}`}
+              resizeSignal={selectedTerminal}
             />
           ) : selectedWorktree ? (
             <TerminalWidget
               project={selectedWorktree.parent_project}
-              resizeSignal={`${collapsed.left}:${collapsed.right}`}
+              resizeSignal={selectedTerminal ?? ""}
               taskId={selectedWorktree.task_id}
             />
           ) : (
@@ -227,19 +171,11 @@ export function TerminalPage({ collapsed }: TerminalPageProps) {
             </Text>
           )}
         </WidgetFrame>
-      </OverviewColumn>
-      <OverviewSide collapsed={collapsed.right} side="right">
-        <WidgetFrame title="Session">
-          <Text c="dimmed" p="md">
-            Session情報は後続のPhaseで追加します。
-          </Text>
-        </WidgetFrame>
-        <WidgetFrame title="Activity">
-          <Text c="dimmed" p="md">
-            Activity情報は後続のPhaseで追加します。
-          </Text>
-        </WidgetFrame>
-      </OverviewSide>
-    </OverviewFrame>
+      </section>
+      <DiffPane
+        project={selectedWorktree?.parent_project}
+        taskId={selectedWorktree?.task_id}
+      />
+    </main>
   );
 }

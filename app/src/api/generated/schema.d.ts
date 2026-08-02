@@ -264,6 +264,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/worktrees/{project}/{task_id}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Changed Files */
+        get: operations["get_changed_files_api_worktrees__project___task_id__changes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/worktrees/{project}/{task_id}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Worktree Diff */
+        get: operations["get_worktree_diff_api_worktrees__project___task_id__diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -317,6 +351,20 @@ export interface components {
         ChangeRequest: {
             /** Reason */
             reason: string;
+        };
+        /** ChangedFileListResponse */
+        ChangedFileListResponse: {
+            /** Files */
+            files: components["schemas"]["ChangedFileResponse"][];
+        };
+        /** ChangedFileResponse */
+        ChangedFileResponse: {
+            /** Path */
+            path: string;
+            /** Status */
+            status: string;
+            /** Previous Path */
+            previous_path?: string | null;
         };
         /** CompleteTodoRequest */
         CompleteTodoRequest: {
@@ -656,6 +704,13 @@ export interface components {
         VaultTreeResponse: {
             /** Nodes */
             nodes: components["schemas"]["VaultNode"][];
+        };
+        /** WorktreeDiffResponse */
+        WorktreeDiffResponse: {
+            /** Path */
+            path: string;
+            /** Content */
+            content: string;
         };
         /** WorktreeListResponse */
         WorktreeListResponse: {
@@ -1217,6 +1272,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorktreeListResponse"];
+                };
+            };
+        };
+    };
+    get_changed_files_api_worktrees__project___task_id__changes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangedFileListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worktree_diff_api_worktrees__project___task_id__diff_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                project: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorktreeDiffResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

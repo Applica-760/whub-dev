@@ -30,6 +30,7 @@ from whub.models import ResourceStatus, StatusReport, WorktreeStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminalState
 from whub.services.task import ProjectTasks
 from whub.services.vault import VaultNode
+from whub.services.worktree.diff import ChangedFile, WorktreeDiff
 from whub.tests.helpers import manifest
 from whub.webapp.server import create_app
 from whub.wflow.models.task import TaskDocument, TaskSummary
@@ -155,7 +156,10 @@ def test_operator_terminal_endpoints_delegate_to_its_lifecycle_service(
             "whub.webapp.routers.operator_terminal.operator_terminal.stop",
             return_value=stopped,
         ) as mock_stop,
-        patch("whub.webapp.routers.operator_terminal.current_context", return_value=context),
+        patch(
+            "whub.webapp.routers.operator_terminal.current_context",
+            return_value=context,
+        ),
     ):
         get_response = client.get("/api/operator-terminal")
         start_response = client.post("/api/operator-terminal")
@@ -440,6 +444,39 @@ def test_get_worktrees_returns_status_report_entries(
         ]
     }
     mock_collect.assert_called_once_with(m, tmp_path)
+
+
+def test_worktree_diff_endpoints_use_registered_worktree_services(
+    client: TestClient, tmp_path: Path
+) -> None:
+    m = manifest()
+    files = [ChangedFile(path="src/main.py", status="M")]
+    diff = WorktreeDiff(path="src/main.py", content="@@ -1 +1 @@\n-old\n+new\n")
+    context = type("Context", (), {"workspace_root": tmp_path})()
+    with (
+        patch("whub.webapp.routers.worktree_diff.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.worktree_diff.current_context", return_value=context
+        ),
+        patch(
+            "whub.webapp.routers.worktree_diff.list_changed_files", return_value=files
+        ) as mock_files,
+        patch(
+            "whub.webapp.routers.worktree_diff.read_changed_file_diff",
+            return_value=diff,
+        ) as mock_diff,
+    ):
+        files_response = client.get("/api/worktrees/local/TASK-072/changes")
+        diff_response = client.get(
+            "/api/worktrees/local/TASK-072/diff", params={"path": "src/main.py"}
+        )
+
+    assert files_response.json() == {
+        "files": [{"path": "src/main.py", "status": "M", "previous_path": None}]
+    }
+    assert diff_response.json() == {"path": "src/main.py", "content": diff.content}
+    mock_files.assert_called_once_with(m, tmp_path, "local", "TASK-072")
+    mock_diff.assert_called_once_with(m, tmp_path, "local", "TASK-072", "src/main.py")
 
 
 def test_vault_endpoints_use_services(client: TestClient) -> None:

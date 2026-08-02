@@ -10,7 +10,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "generate:types": "uv run --project .. python -m whub.webapp.openapi > openapi.json && openapi-typescript openapi.json -o src/api/generated/schema.d.ts"
+    "generate:types": "PYTHONPATH=../src uv run --project .. python -m whub.webapp.openapi > openapi.json && openapi-typescript openapi.json -o src/api/generated/schema.d.ts"
   },
   "dependencies": {
     "@mantine/core": "^8.3.0",

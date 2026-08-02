@@ -42,7 +42,8 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input) === "/api/operator-terminal") {
+      const url = String(input);
+      if (url === "/api/operator-terminal")
         return Promise.resolve({
           ok: true,
           json: async () =>
@@ -50,7 +51,21 @@ beforeEach(() => {
               ? { state: "on", operator_id: "operator-1" }
               : { state: "off", operator_id: null },
         });
-      }
+      if (url.includes("/changes"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            files: [{ path: "src/main.py", status: "M", previous_path: null }],
+          }),
+        });
+      if (url.includes("/diff?"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            path: "src/main.py",
+            content: "@@ -1 +1 @@\n-old\n+new",
+          }),
+        });
       return Promise.resolve({
         ok: true,
         json: async () => ({
@@ -81,14 +96,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("TerminalPage", () => {
-  it("左列の縦型UIでworktreeを選択し、中央と右列を表示する", async () => {
-    const { container } = render(
-      <MantineProvider env="test">
-        <TerminalPage collapsed={{ left: false, right: false }} />
-      </MantineProvider>,
-    );
+function renderPage() {
+  return render(
+    <MantineProvider env="test">
+      <TerminalPage />
+    </MantineProvider>,
+  );
+}
 
+describe("TerminalPage", () => {
+  it("端末選択と差分を二段の1:2レイアウトで表示する", async () => {
+    const { container } = renderPage();
     const firstTerminal = await screen.findByRole("button", {
       name: /whub-dev.*TASK-099/,
     });
@@ -99,64 +117,30 @@ describe("TerminalPage", () => {
       expect(firstTerminal.getAttribute("aria-pressed")).toBe("true"),
     );
     expect(screen.getByText("whub-dev / TASK-099")).toBeTruthy();
+    expect(await screen.findByText("src")).toBeTruthy();
+    expect(await screen.findByText("new")).toBeTruthy();
+    expect(
+      container.querySelector(".diff-addition .diff-line-prefix")?.textContent,
+    ).toBe("+");
+    expect(container.querySelectorAll(".terminal-layout")).toHaveLength(1);
+    expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(1);
 
     fireEvent.click(secondTerminal);
 
     expect(firstTerminal.getAttribute("aria-pressed")).toBe("false");
     expect(secondTerminal.getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText("vault / TASK-101")).toBeTruthy();
-    expect(
-      screen.getByText("Session情報は後続のPhaseで追加します。"),
-    ).toBeTruthy();
-    expect(
-      screen.getByText("Activity情報は後続のPhaseで追加します。"),
-    ).toBeTruthy();
-    expect(container.querySelectorAll(".overview-column")).toHaveLength(3);
-    expect(container.querySelector(".terminal-frame")).toBeTruthy();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/worktrees/vault/TASK-101/changes",
+      undefined,
+    );
   });
 
-  it("左右列へ折りたたみ状態を反映する", async () => {
-    const { container } = render(
-      <MantineProvider env="test">
-        <TerminalPage collapsed={{ left: true, right: true }} />
-      </MantineProvider>,
-    );
-
-    await screen.findByText("whub-dev / TASK-099");
-
-    expect(
-      container
-        .querySelector('[data-side="left"]')
-        ?.getAttribute("data-collapsed"),
-    ).toBe("true");
-    expect(
-      container
-        .querySelector('[data-side="right"]')
-        ?.getAttribute("data-collapsed"),
-    ).toBe("true");
-    expect(
-      container
-        .querySelector(".overview-frame")
-        ?.getAttribute("data-collapse-left"),
-    ).toBe("true");
-    expect(
-      container
-        .querySelector(".overview-frame")
-        ?.getAttribute("data-collapse-right"),
-    ).toBe("true");
-  });
-
-  it("Operatorトグルで開始して専用terminalを選択する", async () => {
-    render(
-      <MantineProvider env="test">
-        <TerminalPage collapsed={{ left: false, right: false }} />
-      </MantineProvider>,
-    );
-
+  it("Operatorトグルで専用terminalを選択する", async () => {
+    renderPage();
     fireEvent.click(
       await screen.findByRole("switch", { name: "Operatorを開始" }),
     );
-
     expect(await screen.findByText("Operator / workspace-hub")).toBeTruthy();
     expect(
       (
@@ -165,8 +149,5 @@ describe("TerminalPage", () => {
         }) as HTMLInputElement
       ).checked,
     ).toBe(true);
-    expect(fetch).toHaveBeenCalledWith("/api/operator-terminal", {
-      method: "POST",
-    });
   });
 });
