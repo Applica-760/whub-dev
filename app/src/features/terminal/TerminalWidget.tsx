@@ -3,10 +3,11 @@ import "@xterm/xterm/css/xterm.css";
 import { Alert, Text } from "@mantine/core";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type TerminalWidgetProps = {
   project: string;
+  resizeSignal: string;
   taskId: string;
 };
 
@@ -15,9 +16,36 @@ function terminalUrl(project: string, taskId: string) {
   return `${protocol}//${window.location.host}/api/terminals/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}`;
 }
 
-export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
+export function TerminalWidget({
+  project,
+  resizeSignal,
+  taskId,
+}: TerminalWidgetProps) {
   const elementRef = useRef<HTMLDivElement>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const terminalRef = useRef<Terminal | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const resize = useCallback(() => {
+    const fitAddon = fitAddonRef.current;
+    const socket = socketRef.current;
+    const terminal = terminalRef.current;
+    if (!fitAddon || !socket || !terminal) {
+      return;
+    }
+
+    fitAddon.fit();
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(
+        JSON.stringify({
+          type: "resize",
+          columns: terminal.cols,
+          rows: terminal.rows,
+        }),
+      );
+    }
+  }, []);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -29,22 +57,13 @@ export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
     const fitAddon = new FitAddon();
     const socket = new WebSocket(terminalUrl(project, taskId));
     let disposed = false;
+    fitAddonRef.current = fitAddon;
+    socketRef.current = socket;
+    terminalRef.current = terminal;
     setError(null);
     terminal.loadAddon(fitAddon);
     terminal.open(element);
 
-    const resize = () => {
-      fitAddon.fit();
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(
-          JSON.stringify({
-            type: "resize",
-            columns: terminal.cols,
-            rows: terminal.rows,
-          }),
-        );
-      }
-    };
     const resizeObserver = new ResizeObserver(resize);
     const input = terminal.onData((data) => {
       if (socket.readyState === WebSocket.OPEN) {
@@ -79,8 +98,16 @@ export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
       }
       socket.close();
       terminal.dispose();
+      fitAddonRef.current = null;
+      socketRef.current = null;
+      terminalRef.current = null;
     };
-  }, [project, taskId]);
+  }, [project, resize, taskId]);
+
+  useEffect(() => {
+    const animationFrame = requestAnimationFrame(resize);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [resize, resizeSignal]);
 
   return (
     <>
@@ -89,7 +116,7 @@ export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
           {error}
         </Alert>
       )}
-      <div ref={elementRef} style={{ height: "32rem", padding: "0.5rem" }} />
+      <div ref={elementRef} style={{ height: "64rem", padding: "0.5rem" }} />
       <Text c="dimmed" px="md" pb="md" size="sm">
         {project} / {taskId}
       </Text>

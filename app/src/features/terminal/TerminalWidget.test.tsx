@@ -6,6 +6,7 @@ import { TerminalWidget } from "./TerminalWidget";
 
 const terminalMocks = vi.hoisted(() => ({
   dispose: vi.fn(),
+  fit: vi.fn(),
   focus: vi.fn(),
   inputDispose: vi.fn(),
   inputHandler: undefined as ((data: string) => void) | undefined,
@@ -32,7 +33,7 @@ vi.mock("@xterm/xterm", () => ({
 
 vi.mock("@xterm/addon-fit", () => ({
   FitAddon: class {
-    fit() {}
+    fit = terminalMocks.fit;
   },
 }));
 
@@ -101,6 +102,14 @@ beforeEach(() => {
       disconnect() {}
     },
   );
+  vi.stubGlobal(
+    "requestAnimationFrame",
+    vi.fn((callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    }),
+  );
+  vi.stubGlobal("cancelAnimationFrame", vi.fn());
 });
 
 afterEach(() => {
@@ -112,7 +121,11 @@ describe("TerminalWidget", () => {
   it("接続中の入力を捨て、接続後は構造化frameを送り、破棄時にleaseを解放する", () => {
     const view = render(
       <MantineProvider env="test">
-        <TerminalWidget project="whub-dev" taskId="TASK-100" />
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="false:false"
+          taskId="TASK-100"
+        />
       </MantineProvider>,
     );
     const socket = FakeWebSocket.instances[0];
@@ -136,5 +149,41 @@ describe("TerminalWidget", () => {
     expect(JSON.parse(socket.sent.at(-1) ?? "{}")).toEqual({ type: "release" });
     expect(socket.readyState).toBe(FakeWebSocket.CLOSED);
     expect(screen.queryByText("端末接続が切断されました。")).toBeNull();
+  });
+
+  it("親layoutの変更後に再fitしてtmuxへresizeを送る", () => {
+    const view = render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="false:false"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+    const socket = FakeWebSocket.instances[0];
+    act(() => socket.open());
+    terminalMocks.fit.mockClear();
+
+    view.rerender(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="true:true"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(terminalMocks.fit).toHaveBeenCalledOnce();
+    expect(JSON.parse(socket.sent.at(-1) ?? "{}")).toEqual({
+      type: "resize",
+      columns: 80,
+      rows: 24,
+    });
+    expect(
+      view.container.querySelector('div[style*="height: 64rem"]'),
+    ).toBeTruthy();
   });
 });

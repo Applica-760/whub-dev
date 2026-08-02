@@ -82,6 +82,7 @@ export function TerminalPage({ collapsed }: TerminalPageProps) {
           {selectedWorktree ? (
             <TerminalWidget
               project={selectedWorktree.parent_project}
+              resizeSignal={`${collapsed.left}:${collapsed.right}`}
               taskId={selectedWorktree.task_id}
             />
           ) : (
