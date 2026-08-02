@@ -1,0 +1,76 @@
+schema_version: 1
+task:
+  id: TASK-105
+  state: completed
+  title: Browser Terminal下部でworktree差分を確認する
+  objective: Browser Terminalで選択中のworktreeのGit差分を確認し、agentを閉じずに差分レビューと追加指示を繰り返してからPR作成へ進めるようにする。
+  approach:
+  - Terminal画面の下部に、選択中worktreeと連動するDiffパネルを配置する。
+  - agentを自走させながら差分を確認し、気になる点を見つけた時点で同じ画面のterminalへ追加指示を送れるようにする。
+  - PR作成前のagent close・再接続の往復と、Web appから外部ページへ遷移して差分を確認する負担を減らす。
+  - 最小版はread-onlyのgit diff表示に限定し、PR作成、GitHub連携、レビューコメント投稿は対象外とする。
+  - Diffパネルの初期表示、更新方式、自動更新の要否、ファイル単位表示と高さ調整は実装前に調査して決定する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: PR差分取得APIを実装する
+    acceptance: []
+    steps:
+    - description: 登録済みworktreeとOperatorのworkspace-hubを安全に解決し、main...HEADの変更ファイル一覧とファイル単位unified
+        diffを返すAPIを実装・テストする
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: 登録worktreeの未コミット差分を安全に取得するAPIとテストを実装
+      deleted: false
+    deleted: false
+  - title: Git Diff表示を実装する
+    acceptance: []
+    steps:
+    - description: Vault Explorerの小型Tree UIを参照して変更ファイル一覧、選択ファイルのGitHub風unified diff、追加・削除・hunk表示、空・読込・エラー状態を実装・テストする
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: Explorerと行番号付きunified diff UI、空・読込・エラー状態を実装
+      deleted: false
+    deleted: false
+  - title: Terminal画面を二段の1:2レイアウトへ再構成する
+    acceptance: []
+    steps:
+    - description: Session・Activity列と右側折りたたみを除去し、上段の端末選択:Terminalと下段の変更ファイル:Diffをそれぞれ1:2の独立レイアウトとして実装する。端末選択とDiff対象を同期する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: Terminalを二段1:2レイアウトへ再構成し、Terminal用折りたたみ列を除去
+      deleted: false
+    deleted: false
+  - title: 統合検証を行う
+    acceptance: []
+    steps:
+    - description: backend API・frontend UIの自動テスト、型検査、build、Prettierを実行し、Task worktreeの開発アプリでTerminal切替・Operator・Diff色・レイアウトを実機確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: Python 546件、frontend 33件、typecheck、build成功。Prettier全体はTask外の既存6ファイルが未整形のため非成功、Task対象は整形済み。開発版で確認済み
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: 'PR #8 merged with merge method; Task worktree and registration cleaned
+    up; parent repository fast-forward synced; development servers stopped.'
