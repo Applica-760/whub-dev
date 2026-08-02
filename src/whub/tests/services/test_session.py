@@ -11,7 +11,6 @@ import pytest
 
 from whub.services.errors import ServiceError
 from whub.services.remote.session import (
-    _HANDOFF,
     clean_session,
     get_session,
     list_sessions,
@@ -21,9 +20,19 @@ from whub.services.remote.session import (
 from whub.tests.helpers import manifest
 
 
+def operation_script(name: str) -> str:
+    return files("whub").joinpath("assets", "session", "operations", name).read_text()
+
+
 def run_handoff_script(root: Path, payload: dict) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, "-c", _HANDOFF, str(root), payload["run_id"]],
+        [
+            sys.executable,
+            "-c",
+            operation_script("handoff.py"),
+            str(root),
+            payload["run_id"],
+        ],
         input=json.dumps(payload),
         capture_output=True,
         text=True,
@@ -56,7 +65,9 @@ def test_reserve_uses_ssh_and_normalizes_task_id() -> None:
     completed = subprocess.CompletedProcess(
         ["ssh"], 0, stdout="TASK-030-r001\n", stderr=""
     )
-    with patch("whub.services.remote.session.run_ssh_command", return_value=completed) as run:
+    with patch(
+        "whub.services.remote.session.run_ssh_command", return_value=completed
+    ) as run:
         run_id = reserve_session(manifest(), "remote", "30")
     assert run_id == "TASK-030-r001"
     payload = json.loads(run.call_args.kwargs["input"])
@@ -76,7 +87,9 @@ def test_list_validates_remote_descriptors() -> None:
 
 def test_clean_delegates_to_remote_operation() -> None:
     completed = subprocess.CompletedProcess(["ssh"], 0, stdout="", stderr="")
-    with patch("whub.services.remote.session.run_ssh_command", return_value=completed) as run:
+    with patch(
+        "whub.services.remote.session.run_ssh_command", return_value=completed
+    ) as run:
         clean_session(manifest(), "remote", "TASK-030-r001")
     assert "TASK-030-r001" in run.call_args.args[1]
 
@@ -86,7 +99,9 @@ def test_handoff_sends_command_as_json_over_ssh() -> None:
         "PATH=\"$PWD/.venv/bin:$PATH\" uv run python - <<'PY'\nprint(`value`)\nPY\n"
     )
     completed = subprocess.CompletedProcess(["ssh"], 0, stdout="", stderr="")
-    with patch("whub.services.remote.session.run_ssh_command", return_value=completed) as run:
+    with patch(
+        "whub.services.remote.session.run_ssh_command", return_value=completed
+    ) as run:
         write_session_handoff(
             manifest(),
             "remote",
@@ -210,7 +225,13 @@ def test_handoff_script_serializes_concurrent_updates(tmp_path: Path) -> None:
             "timestamp": f"2026-07-21 12:34:{number:02} JST",
         }
         process = subprocess.Popen(
-            [sys.executable, "-c", _HANDOFF, str(tmp_path), payload["run_id"]],
+            [
+                sys.executable,
+                "-c",
+                operation_script("handoff.py"),
+                str(tmp_path),
+                payload["run_id"],
+            ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -255,5 +276,12 @@ def test_packaged_launcher_has_valid_bash_syntax() -> None:
 
 def test_packaged_launcher_helper_has_valid_python_syntax() -> None:
     resource = files("whub").joinpath("assets/session/launcher.py")
+    source = resource.read_text()
+    compile(source, str(resource), "exec")
+
+
+@pytest.mark.parametrize("name", ["reserve.py", "list.py", "clean.py", "handoff.py"])
+def test_packaged_operation_has_valid_python_syntax(name: str) -> None:
+    resource = files("whub").joinpath("assets", "session", "operations", name)
     source = resource.read_text()
     compile(source, str(resource), "exec")
