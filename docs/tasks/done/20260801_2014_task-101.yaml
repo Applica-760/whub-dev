@@ -1,0 +1,76 @@
+schema_version: 1
+task:
+  id: TASK-101
+  state: completed
+  title: リリース版Terminal bridgeを動作確認する
+  objective: release 0.1.0+g56de0b9fのTerminalページで入力を視認でき、再読み込み後も再接続でき、他ページの応答が維持されることを実機で確認する。
+  approach:
+  - TASK-101のAgent sessionへproduction Web appから接続し、文字・数字入力、複数回の再読み込み、ページ遷移を順に確認して結果を記録する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: リリース版Terminalを実機検証する
+    acceptance: []
+    steps:
+    - description: production Web appからTASK-101のTerminalへ接続し、文字・数字の入力表示と実行結果、切断直後の再接続、複数回の再読み込み、ページ遷移後の他API応答を確認して結果を記録する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        failure: 'release 0.1.0+g56de0b9fのTerminalでTASK-101へ接続すると open terminal failed:
+          terminal does not support clear と表示され、実機確認を継続できない。'
+      deleted: false
+    deleted: true
+  - title: Project mainでTerminal環境契約を修正する
+    acceptance: []
+    steps:
+    - description: Project main上でTERM=dumbによるtmux attach拒否を回帰テスト化し、Terminal bridgeがxterm.js互換のTERMとCOLORTERMを明示するよう修正して自動テストする
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: production appがTERM=dumbを継承しtmux attachがclear能力不足で拒否される根因を確認。Terminal
+          bridgeがTERM=xterm-256colorとCOLORTERM=truecolorを明示する回帰テストを追加し、Terminal関連9件、Ruff、Python全体534件が通過した。
+      deleted: false
+    deleted: false
+  - title: 検証用worktreeで実機確認する
+    acceptance: []
+    steps:
+    - description: 現在のProject mainからTASK-101 worktreeを作成し、implementer authでagent openしてdev
+        Terminalの接続・入力・再読み込みを実機確認する。失敗時はAgent closeとworktree削除後にmainで再修正し、この検証を繰り返す
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: ユーザー実機確認により、dev Terminalで入力が追従しない問題とリロード後に停止する問題の両方が解消した。
+      deleted: false
+    deleted: false
+  - title: 安定版をリリースする
+    acceptance: []
+    steps:
+    - description: 自動テストとworktree実機確認が安定したcommitをbuild・verify・applyし、production Terminalでも接続・入力・再読み込み・他画面応答を確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: operation release 0.1.0 (commit bd97f444) がcurrentへ適用済みでmainと一致することをCLIで再確認。production
+          Terminalの実機確認は前回完了済みで、ユーザーが記録漏れを確認した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: 動作が安定するまでProject mainへ直接修正し、各実機検証時だけTASK-101 worktreeとAgent sessionを作り直す反復運用へ変更するため
+cancellation: null
+result:
+  summary: Terminal bridgeのTERM/COLORTERM契約を修正し、自動テスト、dev実機確認、operation release適用後のproduction実機確認を完了した。
