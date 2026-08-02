@@ -1,0 +1,103 @@
+schema_version: 1
+task:
+  id: TASK-103
+  state: completed
+  title: BrowserからHub Operator Terminalを操作する
+  objective: BrowserのWeb appからworkspace rootをcwdとする永続Hub sessionへ接続し、ユーザーがTask・worktree・Agent
+    lifecycleなどの基本操作を行えるようにする。
+  approach:
+  - Task Agent sessionとは独立した固定Hub sessionを設け、agent openを準備操作、attachを明示操作へ分離した上で、Browser
+    TerminalからHub sessionを選択・接続できるようにする。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Hub Operator Terminalの要件を確定する
+    acceptance: []
+    steps:
+    - description: '[確定仕様] Task非依存のOperator Terminalを追加する。workspace-hub直下をCWDとするlogin
+        shellを、ONで一意ID・専用tmux session・controller leaseとともに生成する。OFFは確認後にtmux session・WebSocket接続・lease・session
+        recordを完全削除する。Browserの切断・再読み込みではsessionを維持する。Phase 1はactive Terminalを1個に限定し、Task
+        Terminal/Agent lifecycleは変更しない。'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: '[実装] Operator ID、状態遷移、tmux生成・削除、WebSocket接続、controller leaseの境界をTask
+        Terminalから分離する。停止後の接続を拒否し、次回起動では新IDを発行する。'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: '[実装] Terminal画面に単一Operatorの選択・状態とON/OFF操作を追加する。OFFは確認を要求し、開始・停止処理中の重複操作を防ぐ。'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: '[検証・文書] lifecycle、lease解放、再接続、停止後拒否、新ID再起動、UI操作の自動テストを追加し、関連契約を更新する。'
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: User approved an independent Operator Terminal lifecycle API at
+          /api/operator-terminal and WebSocket endpoint /api/operator-terminals/{operator_id};
+          Task Terminal and Agent lifecycle remain separate.
+      deleted: false
+    - value:
+        verification: Operator lifecycle, stale-ID rejection, lease behavior, API/UI
+          tests, Ruff, frontend typecheck/build, and the full Python suite passed.
+      deleted: false
+    deleted: false
+  - title: Operator Terminalのlifecycle契約を実装する
+    acceptance: []
+    steps:
+    - description: '[確定仕様] Task非依存のOperator Terminalを追加する。workspace-hub直下をCWDとするlogin
+        shellを、ONで一意ID・専用tmux session・controller leaseとともに生成する。OFFは確認後にtmux session・WebSocket接続・lease・session
+        recordを完全削除する。Browserの切断・再読み込みではsessionを維持する。Phase 1はactive Terminalを1個に限定し、Task
+        Terminal/Agent lifecycleは変更しない。'
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: Operator Terminalの堅牢性を補強する
+    acceptance: []
+    steps:
+    - description: Persist and reconcile the Operator runtime record across web-process
+        reloads; recover stale tmux state and permit a new ON after external session
+        loss.
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Extract the shared WebSocket bridge lifecycle and make Task and
+        Operator adapters use it without diverging controller behavior.
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Make TerminalWidget props mutually exclusive and add lifecycle,
+        reload recovery, stale-session, and bridge parity tests.
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: Persistent tmux-reconciled runtime record, shared terminal bridge,
+          mutually exclusive UI props, full Python regression, Ruff, frontend typecheck,
+          focused UI tests, and production build passed.
+      deleted: false
+    - value:
+        pull_request: 'Agent session closed; PR #7 created: https://github.com/Applica-760/whub/pull/7'
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: Independent review found missing persistent Operator runtime recovery, stale
+    tmux reconciliation, and duplicated WebSocket bridge responsibilities.
+cancellation: null
+result:
+  summary: 'PR #7 merged with merge method; worktree cleanup and parent repository
+    synchronization verified.'
