@@ -15,6 +15,10 @@ from whub.models.agent.terminal_bridge import (
     TerminalLease,
     TerminalSessionRef,
 )
+from whub.models.operator_terminal import OperatorTerminalRef
+
+
+TerminalConnectionRef = TerminalSessionRef | OperatorTerminalRef
 
 
 class TerminalAccessError(Exception):
@@ -28,17 +32,19 @@ class TerminalAccessRegistry:
         self._controllers: dict[tuple[str, str], str] = {}
 
     @staticmethod
-    def _key(session: TerminalSessionRef) -> tuple[str, str]:
+    def _key(session: TerminalConnectionRef) -> tuple[str, str]:
+        if isinstance(session, OperatorTerminalRef):
+            return "operator", session.operator_id
         return session.project, session.task_id
 
     def access_mode(
-        self, session: TerminalSessionRef, connection_id: str
+        self, session: TerminalConnectionRef, connection_id: str
     ) -> TerminalAccessMode:
         if self._controllers.get(self._key(session)) == connection_id:
             return TerminalAccessMode.CONTROLLER
         return TerminalAccessMode.VIEWER
 
-    def claim(self, session: TerminalSessionRef, connection_id: str) -> TerminalLease:
+    def claim(self, session: TerminalConnectionRef, connection_id: str) -> TerminalLease:
         key = self._key(session)
         controller = self._controllers.get(key)
         if controller is not None and controller != connection_id:
@@ -50,7 +56,7 @@ class TerminalAccessRegistry:
             mode=TerminalAccessMode.CONTROLLER,
         )
 
-    def release(self, session: TerminalSessionRef, connection_id: str) -> None:
+    def release(self, session: TerminalConnectionRef, connection_id: str) -> None:
         key = self._key(session)
         if self._controllers.get(key) == connection_id:
             del self._controllers[key]
@@ -60,7 +66,7 @@ class TerminalAccessRegistry:
             if controller == connection_id:
                 del self._controllers[session]
 
-    def require_controller(self, session: TerminalSessionRef, connection_id: str) -> None:
+    def require_controller(self, session: TerminalConnectionRef, connection_id: str) -> None:
         if self.access_mode(session, connection_id) is not TerminalAccessMode.CONTROLLER:
             raise TerminalAccessError("terminal controller is required")
 

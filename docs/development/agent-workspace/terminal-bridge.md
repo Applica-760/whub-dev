@@ -11,6 +11,12 @@ whub Web appから、Taskに対応する既存のAgent tmux sessionへ接続す�
 - browserからtmux socket、session名、任意のcommandを指定しない。`agent.tmux_session`が登録済みworktreeから接続先を解決する。
 - terminal bridgeはtmux session、shell、Agent processを作成または終了しない。
 
+Operator TerminalはこのTask Terminalとは別の境界である。`/api/operator-terminal`
+が単一のtask非依存terminalをON/OFFし、ONごとに新しいOperator ID、workspace-hub
+rootをCWDとするlogin shell、専用tmux sessionを作る。OFFはtmux sessionとruntime
+recordを削除し、`/api/operator-terminals/{operator_id}` の接続を以後拒否する。
+Browserの切断・再読み込みはOperator sessionを停止しない。
+
 ## Access modes
 
 一つのtmux sessionには複数の接続を許可する。
@@ -45,6 +51,8 @@ serverからclientへのPTY出力はUTF-8 text frameとする。不正なclient 
 - `agent.tmux_session`はAgent tmux sessionの作成、存在確認、終了、attach先解決を担う。
 - `agent.terminal_bridge`は解決済みsessionへのPTY attach、terminal入出力の中継、access mode、controller lease、resize制御を担う。
 - Web appのWebSocket endpointは接続を受け付けて`agent.terminal_bridge`を呼び出すadapterとし、tmux操作や入力権の判断を持たない。
+- Operator TerminalはTask Terminalとは別のcontroller lease registryを持つ。ただしPTY
+  attach・resize・frame形式は同じterminal bridge契約を利用する。
 
 ## PTY lifecycle
 

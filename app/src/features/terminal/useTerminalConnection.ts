@@ -3,22 +3,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { XtermDimensions } from "../../components/XtermView";
 
 type UseTerminalConnectionOptions = {
+  endpoint: string;
   onConnected: () => void;
   onOutput: (data: string) => void;
-  project: string;
-  taskId: string;
 };
 
-function terminalUrl(project: string, taskId: string) {
+export function terminalUrl(path: string) {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/api/terminals/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}`;
+  return `${protocol}//${window.location.host}${path}`;
 }
 
 export function useTerminalConnection({
+  endpoint,
   onConnected,
   onOutput,
-  project,
-  taskId,
 }: UseTerminalConnectionOptions) {
   const socketRef = useRef<WebSocket | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +39,7 @@ export function useTerminalConnection({
   );
 
   useEffect(() => {
-    const socket = new WebSocket(terminalUrl(project, taskId));
+    const socket = new WebSocket(terminalUrl(endpoint));
     let disposed = false;
     socketRef.current = socket;
     setError(null);
@@ -79,7 +77,7 @@ export function useTerminalConnection({
         socketRef.current = null;
       }
     };
-  }, [onConnected, onOutput, project, taskId]);
+  }, [endpoint, onConnected, onOutput]);
 
   return { error, sendInput, sendResize };
 }

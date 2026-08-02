@@ -12,12 +12,14 @@ import { TerminalPage } from "./TerminalPage";
 
 vi.mock("./TerminalWidget", () => ({
   TerminalWidget: ({
+    label,
     project,
     taskId,
   }: {
+    label?: string;
     project: string;
     taskId: string;
-  }) => <div>{`${project} / ${taskId}`}</div>,
+  }) => <div>{label ?? `${project} / ${taskId}`}</div>,
 }));
 
 beforeEach(() => {
@@ -39,26 +41,37 @@ beforeEach(() => {
   );
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        worktrees: [
-          {
-            parent_project: "whub-dev",
-            task_id: "TASK-099",
-            branch: "tasks/099",
-            workspace_path: "projects/worktrees/whub-dev-099",
-            diagnostics: [],
-          },
-          {
-            parent_project: "vault",
-            task_id: "TASK-101",
-            branch: "tasks/101",
-            workspace_path: "projects/worktrees/vault-101",
-            diagnostics: [],
-          },
-        ],
-      }),
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/operator-terminal") {
+        return Promise.resolve({
+          ok: true,
+          json: async () =>
+            init?.method === "POST"
+              ? { state: "on", operator_id: "operator-1" }
+              : { state: "off", operator_id: null },
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          worktrees: [
+            {
+              parent_project: "whub-dev",
+              task_id: "TASK-099",
+              branch: "tasks/099",
+              workspace_path: "projects/worktrees/whub-dev-099",
+              diagnostics: [],
+            },
+            {
+              parent_project: "vault",
+              task_id: "TASK-101",
+              branch: "tasks/101",
+              workspace_path: "projects/worktrees/vault-101",
+              diagnostics: [],
+            },
+          ],
+        }),
+      });
     }),
   );
 });
@@ -131,5 +144,21 @@ describe("TerminalPage", () => {
         .querySelector(".overview-frame")
         ?.getAttribute("data-collapse-right"),
     ).toBe("true");
+  });
+
+  it("Operatorを開始して専用terminalを選択する", async () => {
+    render(
+      <MantineProvider env="test">
+        <TerminalPage collapsed={{ left: false, right: false }} />
+      </MantineProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "ON" }));
+
+    expect(await screen.findByText("Operator / workspace-hub")).toBeTruthy();
+    expect(screen.getByText("ON")).toBeTruthy();
+    expect(fetch).toHaveBeenCalledWith("/api/operator-terminal", {
+      method: "POST",
+    });
   });
 });
