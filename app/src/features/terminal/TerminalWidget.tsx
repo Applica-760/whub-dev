@@ -1,5 +1,4 @@
 import { Alert, Text } from "@mantine/core";
-import type { ITerminalOptions } from "@xterm/xterm";
 import { useCallback, useRef } from "react";
 
 import { XtermView } from "../../components/XtermView";
@@ -12,8 +11,20 @@ type TerminalWidgetProps = {
   taskId: string;
 };
 
-const XTERM_OPTIONS: ITerminalOptions = { cursorBlink: true, fontSize: 14 };
-const XTERM_STYLE = { height: "64rem", padding: "0.5rem" };
+function openWebLink(event: MouseEvent, uri: string) {
+  if (!event.metaKey && !event.ctrlKey) {
+    return;
+  }
+
+  try {
+    const url = new URL(uri);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      window.open(url.href, "_blank", "noopener,noreferrer");
+    }
+  } catch {
+    return;
+  }
+}
 
 export function TerminalWidget({
   project,
@@ -44,11 +55,10 @@ export function TerminalWidget({
       )}
       <XtermView
         onData={sendInput}
+        onLink={openWebLink}
         onResize={sendResize}
-        options={XTERM_OPTIONS}
         ref={xtermRef}
         resizeSignal={resizeSignal}
-        style={XTERM_STYLE}
       />
       <Text c="dimmed" px="md" pb="md" size="sm">
         {project} / {taskId}

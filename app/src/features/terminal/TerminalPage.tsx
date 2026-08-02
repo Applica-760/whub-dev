@@ -1,6 +1,7 @@
-import { Alert, Select, Text } from "@mantine/core";
+import { Alert, Text } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
 
+import { GroupedListRow } from "../../components/GroupedList";
 import { WidgetFrame } from "../../components/WidgetFrame";
 import {
   OverviewColumn,
@@ -11,6 +12,8 @@ import type { OverviewCollapseState } from "../overview/useOverviewCollapse";
 import type { WorktreeItem } from "../worktrees/api";
 import { useWorktrees } from "../worktrees/useWorktrees";
 import { TerminalWidget } from "./TerminalWidget";
+
+import "./terminal.css";
 
 type TerminalWorktree = WorktreeItem & {
   parent_project: string;
@@ -53,23 +56,32 @@ export function TerminalPage({ collapsed }: TerminalPageProps) {
   }, [terminals]);
 
   return (
-    <OverviewFrame collapsed={collapsed}>
+    <OverviewFrame className="terminal-frame" collapsed={collapsed}>
       <OverviewSide collapsed={collapsed.left} side="left">
         <WidgetFrame title="Terminal">
-          <Select
-            aria-label="Terminalのworktreeを選択"
-            data={terminals.map((worktree) => ({
-              label: `${worktree.parent_project} / ${worktree.task_id}`,
-              value: worktreeValue(worktree),
-            }))}
-            disabled={loading || terminals.length === 0}
-            onChange={setSelectedTerminal}
-            p="md"
-            placeholder={
-              loading ? "worktreeを読み込んでいます…" : "worktreeがありません"
-            }
-            value={selectedTerminal}
-          />
+          {loading ? (
+            <Text c="dimmed" p="md">
+              worktreeを読み込んでいます…
+            </Text>
+          ) : terminals.length === 0 ? (
+            <Text c="dimmed" p="md">
+              worktreeがありません
+            </Text>
+          ) : (
+            terminals.map((worktree, index) => {
+              const value = worktreeValue(worktree);
+              return (
+                <GroupedListRow
+                  key={value}
+                  onClick={() => setSelectedTerminal(value)}
+                  selected={value === selectedTerminal}
+                  subtitle={worktree.task_id}
+                  title={worktree.parent_project}
+                  withDivider={index < terminals.length - 1}
+                />
+              );
+            })
+          )}
           {error && (
             <Alert color="red" m="md">
               {error}

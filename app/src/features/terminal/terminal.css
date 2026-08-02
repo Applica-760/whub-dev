@@ -1,0 +1,25 @@
+.terminal-frame {
+  grid-template-columns:
+    minmax(13rem, 0.75fr) minmax(32rem, 2fr)
+    minmax(16rem, 1fr);
+}
+
+.terminal-frame[data-collapse-left="true"] {
+  grid-template-columns: minmax(32rem, 2fr) minmax(16rem, 1fr);
+}
+
+.terminal-frame[data-collapse-right="true"] {
+  grid-template-columns: minmax(13rem, 0.75fr) minmax(32rem, 2fr);
+}
+
+.terminal-frame[data-collapse-left="true"][data-collapse-right="true"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 63.99rem) {
+  .terminal-frame,
+  .terminal-frame[data-collapse-left="true"],
+  .terminal-frame[data-collapse-right="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

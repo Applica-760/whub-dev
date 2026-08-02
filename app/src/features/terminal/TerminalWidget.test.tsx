@@ -10,6 +10,9 @@ const terminalMocks = vi.hoisted(() => ({
   focus: vi.fn(),
   inputDispose: vi.fn(),
   inputHandler: undefined as ((data: string) => void) | undefined,
+  linkHandler: undefined as
+    ((event: MouseEvent, uri: string) => void) | undefined,
+  options: undefined as unknown,
   write: vi.fn(),
 }));
 
@@ -17,6 +20,10 @@ vi.mock("@xterm/xterm", () => ({
   Terminal: class {
     cols = 80;
     rows = 24;
+
+    constructor(options: unknown) {
+      terminalMocks.options = options;
+    }
 
     dispose = terminalMocks.dispose;
     focus = terminalMocks.focus;
@@ -34,6 +41,14 @@ vi.mock("@xterm/xterm", () => ({
 vi.mock("@xterm/addon-fit", () => ({
   FitAddon: class {
     fit = terminalMocks.fit;
+  },
+}));
+
+vi.mock("@xterm/addon-web-links", () => ({
+  WebLinksAddon: class {
+    constructor(handler: (event: MouseEvent, uri: string) => void) {
+      terminalMocks.linkHandler = handler;
+    }
   },
 }));
 
@@ -85,6 +100,8 @@ class FakeWebSocket {
 beforeEach(() => {
   FakeWebSocket.instances = [];
   terminalMocks.inputHandler = undefined;
+  terminalMocks.linkHandler = undefined;
+  terminalMocks.options = undefined;
   vi.clearAllMocks();
   vi.stubGlobal("WebSocket", FakeWebSocket);
   vi.stubGlobal(
@@ -110,6 +127,7 @@ beforeEach(() => {
     }),
   );
   vi.stubGlobal("cancelAnimationFrame", vi.fn());
+  vi.stubGlobal("open", vi.fn());
 });
 
 afterEach(() => {
@@ -182,8 +200,46 @@ describe("TerminalWidget", () => {
       columns: 80,
       rows: 24,
     });
-    expect(
-      view.container.querySelector('div[style*="height: 64rem"]'),
-    ).toBeTruthy();
+    expect(view.container.querySelector(".xterm-view")).toBeTruthy();
+  });
+
+  it("修飾キー付きHTTP linkだけを開く", () => {
+    render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="false:false"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+
+    act(() =>
+      terminalMocks.linkHandler?.(
+        new MouseEvent("click"),
+        "https://example.com/plain",
+      ),
+    );
+    expect(window.open).not.toHaveBeenCalled();
+
+    act(() =>
+      terminalMocks.linkHandler?.(
+        new MouseEvent("click", { metaKey: true }),
+        "https://example.com/codex",
+      ),
+    );
+    expect(window.open).toHaveBeenCalledWith(
+      "https://example.com/codex",
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    act(() =>
+      terminalMocks.linkHandler?.(
+        new MouseEvent("click", { ctrlKey: true }),
+        "file:///tmp/secret",
+      ),
+    );
+    expect(window.open).toHaveBeenCalledOnce();
   });
 });

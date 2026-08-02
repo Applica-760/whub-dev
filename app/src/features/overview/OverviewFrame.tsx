@@ -8,6 +8,7 @@ import type {
 import "./overview.css";
 
 type OverviewFrameProps = {
+  className?: string;
   collapsed: OverviewCollapseState;
   children: ReactNode;
 };
@@ -26,10 +27,14 @@ type OverviewSideProps = {
   children: ReactNode;
 };
 
-export function OverviewFrame({ collapsed, children }: OverviewFrameProps) {
+export function OverviewFrame({
+  className,
+  collapsed,
+  children,
+}: OverviewFrameProps) {
   return (
     <main
-      className="overview-frame"
+      className={`overview-frame${className ? ` ${className}` : ""}`}
       data-collapse-left={collapsed.left}
       data-collapse-right={collapsed.right}
     >

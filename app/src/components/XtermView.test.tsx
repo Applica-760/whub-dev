@@ -11,7 +11,11 @@ const xtermMocks = vi.hoisted(() => ({
   focus: vi.fn(),
   inputDispose: vi.fn(),
   inputHandler: undefined as ((data: string) => void) | undefined,
+  linkHandler: undefined as
+    ((event: MouseEvent, uri: string) => void) | undefined,
+  loadAddon: vi.fn(),
   open: vi.fn(),
+  options: undefined as unknown,
   write: vi.fn(),
 }));
 
@@ -20,12 +24,16 @@ vi.mock("@xterm/xterm", () => ({
     cols = 120;
     rows = 40;
 
+    constructor(options: unknown) {
+      xtermMocks.options = options;
+    }
+
     dispose = xtermMocks.dispose;
     focus = xtermMocks.focus;
+    loadAddon = xtermMocks.loadAddon;
     open = xtermMocks.open;
     write = xtermMocks.write;
 
-    loadAddon() {}
     onData(handler: (data: string) => void) {
       xtermMocks.inputHandler = handler;
       return { dispose: xtermMocks.inputDispose };
@@ -39,8 +47,18 @@ vi.mock("@xterm/addon-fit", () => ({
   },
 }));
 
+vi.mock("@xterm/addon-web-links", () => ({
+  WebLinksAddon: class {
+    constructor(handler: (event: MouseEvent, uri: string) => void) {
+      xtermMocks.linkHandler = handler;
+    }
+  },
+}));
+
 beforeEach(() => {
   xtermMocks.inputHandler = undefined;
+  xtermMocks.linkHandler = undefined;
+  xtermMocks.options = undefined;
   vi.clearAllMocks();
   vi.stubGlobal(
     "ResizeObserver",
@@ -57,6 +75,27 @@ beforeEach(() => {
     }),
   );
   vi.stubGlobal("cancelAnimationFrame", vi.fn());
+  vi.stubGlobal(
+    "getComputedStyle",
+    vi.fn(
+      () =>
+        ({
+          getPropertyValue: (name: string) =>
+            ({
+              "--xterm-font-family": '"SFMono-Regular", Menlo, monospace',
+              "--xterm-font-size": "14",
+              "--xterm-line-height": "1.25",
+              "--xterm-minimum-contrast": "4.5",
+              "--xterm-background": "#0d1117",
+              "--xterm-foreground": "#c9d1d9",
+              "--xterm-red": "#ff7b72",
+              "--xterm-green": "#7ee787",
+              "--xterm-bright-yellow": "#f2cc60",
+              "--xterm-bright-blue": "#79c0ff",
+            })[name] ?? "",
+        }) as CSSStyleDeclaration,
+    ),
+  );
 });
 
 afterEach(() => {
@@ -68,10 +107,12 @@ describe("XtermView", () => {
   it("xtermの入出力・fit・focus・破棄をcomponent内で管理する", () => {
     const handle = createRef<XtermViewHandle>();
     const onData = vi.fn();
+    const onLink = vi.fn();
     const onResize = vi.fn();
     const view = render(
       <XtermView
         onData={onData}
+        onLink={onLink}
         onResize={onResize}
         ref={handle}
         resizeSignal="initial"
@@ -79,6 +120,8 @@ describe("XtermView", () => {
     );
 
     act(() => xtermMocks.inputHandler?.("input"));
+    const linkEvent = new MouseEvent("click", { metaKey: true });
+    act(() => xtermMocks.linkHandler?.(linkEvent, "https://example.com"));
     act(() => handle.current?.write("output"));
     act(() => handle.current?.focus());
     xtermMocks.fit.mockClear();
@@ -86,6 +129,23 @@ describe("XtermView", () => {
     act(() => handle.current?.fit());
 
     expect(onData).toHaveBeenCalledWith("input");
+    expect(onLink).toHaveBeenCalledWith(linkEvent, "https://example.com");
+    expect(xtermMocks.loadAddon).toHaveBeenCalledTimes(2);
+    expect(xtermMocks.options).toMatchObject({
+      cursorBlink: true,
+      fontFamily: '"SFMono-Regular", Menlo, monospace',
+      fontSize: 14,
+      lineHeight: 1.25,
+      minimumContrastRatio: 4.5,
+      theme: {
+        background: "#0d1117",
+        foreground: "#c9d1d9",
+        red: "#ff7b72",
+        green: "#7ee787",
+        brightYellow: "#f2cc60",
+        brightBlue: "#79c0ff",
+      },
+    });
     expect(xtermMocks.write).toHaveBeenCalledWith("output");
     expect(xtermMocks.focus).toHaveBeenCalledOnce();
     expect(xtermMocks.fit).toHaveBeenCalledOnce();
