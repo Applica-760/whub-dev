@@ -76,6 +76,10 @@ class WhubContext:
     def app_dev_pid_path(self) -> Path:
         return self.directory / "app-dev.pid"
 
+    @property
+    def operator_terminal_path(self) -> Path:
+        return self.directory / "runtime" / "operator-terminal.json"
+
     def read_manifest_text(self) -> str:
         return self.manifest_path.read_text()
 

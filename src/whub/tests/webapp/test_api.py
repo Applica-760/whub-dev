@@ -165,9 +165,9 @@ def test_operator_terminal_endpoints_delegate_to_its_lifecycle_service(
     assert start_response.status_code == 201
     assert start_response.json() == {"state": "on", "operator_id": "operator-1"}
     assert stop_response.json() == {"state": "off", "operator_id": None}
-    mock_status.assert_called_once_with()
-    mock_start.assert_called_once_with(tmp_path)
-    mock_stop.assert_called_once_with()
+    mock_status.assert_called_once_with(context)
+    mock_start.assert_called_once_with(context)
+    mock_stop.assert_called_once_with(context)
 
 
 def test_backlog_endpoints_use_services(client: TestClient) -> None:
