@@ -1,40 +1,34 @@
 # Worktree operation
 
-Taskのworktree lifecycleを扱う反復手順。worktreeの識別・PR・mergeの事実契約は
-[worktree reference](../reference/worktree.md)を正本とする。
+Taskのworktree lifecycleを扱う。コマンドは[CLI reference](../reference/cli.md)、
+識別・PR・mergeの事実契約は[worktree reference](../reference/worktree.md)を正本とする。
 
-## 新規Task
+## 作成
 
-1. `wflow task --project <project> init`でdraftを作成する。
-2. ユーザーにworktreeを作成するか確認する。
-3. 作成する場合は`whub worktree create <project> <TASK-ID>`を実行し、そのworktreeで作業する。
-4. 作成しない軽微Taskは、親Projectで通常どおり作業する。
+- 作成前に親repoで統合先ブランチをcheckoutし、`git status --short --branch`を確認する。
+- cleanかつremoteと同期済みなら作成へ進む。
+- aheadなら、PR差分への混入を防ぐためpushが必要なことを説明し、ユーザーの承認後にpushする。
+- behindなら、ユーザーの承認後に`git pull --ff-only`を実行する。
+- dirtyまたはdivergedなら作成せず、状態を報告する。
+- 同期後にTask worktreeを作成する。
 
 ## 再開
 
-`whub worktree check`で登録済みworktreeとdiagnosticを確認する。対象Project・Taskの
-worktreeがあればそこで作業し、なければユーザーに新規作成の要否を確認する。
+- worktree checkで登録とdiagnosticを確認する。
+- 対象のTask worktreeがあればそこで作業する。
+- 登録がなければユーザーに作成の要否を確認する。
 
-## 完了
+## 統合
 
-worktreeなしのTaskは、全Stepの検証と通常のcommit後に`wflow task --project <project> complete`
-で完了する。
+- PR作成前にTask worktreeをcleanにする。
+- Task branchをpushしてPRを作成する。
+- 通常は、検証済みcommitを保持する`merge`を選ぶ。
+- `squash`は試行錯誤のcommitをまとめる場合、`rebase`はcommit SHAの変更を許容する場合だけ選ぶ。
+- 成功時はTask worktreeと定義YAMLが削除されたことを確認する。Task branchは削除されない。
+- merge失敗時はTask worktreeを保持する。
+- merge成功後のcleanup失敗時はmergeを再実行せず、残存状態を報告する。
 
-登録済みworktreeのTaskは、全Stepの検証後にユーザーへPR作成を依頼する。PR作成は
-`whub worktree pull-request <project> <TASK-ID>`、mergeはユーザーが指定した方式で
-`whub worktree merge <project> <TASK-ID> --method <method>`を実行する。
+## 親repo同期
 
-### Project側との同期
-
-`whub worktree pull-request`がpushするのはworktree branchだけであり、Project側の`main`に
-あるcommitはpushしない。Taskの再開記録など、Project側で作られたcommitはPR作成前に
-`git push origin main`で反映する。
-
-1. Project側のTask記録をcommitし、`git push origin main`する。
-2. `whub worktree pull-request <project> <TASK-ID>`でworktree branchをpushしてPRを作成する。
-3. ユーザー指定の方式で`whub worktree merge <project> <TASK-ID> --method <method>`を実行する。
-4. cleanup後、Project側で`git pull --ff-only`を実行する。
-5. `wflow task --project <project> complete`でTaskを完了し、生成されたTask YAMLをcommit・pushする。
-
-`git pull --ff-only`が失敗した場合は、Project側に未push commitが残っているため、merge前に
-Project側のcommit/pushを完了してから同期する。
+- merge後に親repoで`git pull --ff-only`を実行する。
+- 失敗時は分岐を解決するまで次へ進まない。

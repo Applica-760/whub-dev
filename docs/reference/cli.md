@@ -1,91 +1,93 @@
 # CLI reference
 
-`whub` はMac上でworkspaceのProjectとResourceを操作するCLIである。通常の操作contextは `~/.whub` に固定する。
+`whub`と`wflow`の公開コマンド構文、引数、直接の挙動を定める。通常の実行contextは
+`~/.whub`に固定する。実行順序・判断・復旧は各operationを参照する。
+
+引数とoptionの全一覧は各commandの`--help`を正とする。
+
+## Task workflow
+
+| コマンド | 直接の挙動 |
+|---|---|
+| `wflow check [WORKFLOW]` | 指定したWorkflow、または組み込みTask Workflowを検証 |
+| `wflow task --project <PROJECT> {ls,check,show}` | Taskの一覧・整合性・進捗を表示 |
+| `wflow task --project <PROJECT> {init,update,acceptance,depends,plan}` | draftまたは進行中Taskを編集 |
+| `wflow task --project <PROJECT> {transition,done,skip,log,accept}` | 状態・Step・log・受入結果を記録 |
+| `wflow task --project <PROJECT> {log-update,log-delete,log-restore}` | 構造化Phase logを修正 |
+| `wflow task --project <PROJECT> {interrupt,resume}` | Taskの割り込み・再開を操作 |
+| `wflow task --project <PROJECT> complete <TASK-REF>` | Taskを完了しProjectの`docs/tasks/done/`へアーカイブ |
+
+未完了TaskはHub側で管理する。Task操作では`--project`を明示する。Taskを跨ぐ運用は
+[Task development](../operations/task-development.md)を参照する。
 
 ## ProjectとResource
 
-```sh
-whub ls
-whub status
-whub link
-whub remote mount [PROJECT] [-a]
-whub remote unmount [--force]
-whub cd <PROJECT>
-whub remote run <PROJECT> <CMD...>
-whub remote cleanup-appledouble <PROJECT> [--apply]
-```
+| コマンド | 直接の挙動 |
+|---|---|
+| `whub init --workspace-root <PATH> [--force]` | 固定contextへworkspace rootを設定 |
+| `whub ls` | Project名、Resource type、workspace pathを表示 |
+| `whub status` | Resourceと登録済みworktreeの状態を診断 |
+| `whub link` | manifestのlocal Resourceをworkspaceへsymlink |
+| `whub cd <PROJECT> [--plain]` | local Resourceへ移動、またはremote ResourceへSSH接続 |
+| `whub remote mount [PROJECT] [-a]` | remote hostをsshfs mountし、Resourceのworkspace symlinkを作成 |
+| `whub remote unmount [--force]` | remote mountと対応するworkspace symlinkを撤去 |
+| `whub remote run [--tty] <PROJECT> <COMMAND...>` | remote Resource直下でcommandを実行 |
+| `whub remote cleanup-appledouble <PROJECT> [--apply]` | AppleDouble sidecarを検証し、指定時だけ削除 |
+| `whub remote get <PATH-or-PROJECT:PATH>` | remoteの単一fileを`remote_files/`へ取得 |
+| `whub remote put <LOCAL-NAME>` | 取得済みfileを元のremote pathへ書き戻し |
+| `whub remote rm <LOCAL-NAME>` | 取得済みfileと対応metadataを削除 |
 
-- local Resourceはsymlink、remote Resourceはsshfs mountで参照・編集する。
-- `link` は `.codegraph/`、`.DS_Store`、`._*`、`.AppleDouble/` だけをmarker付きの`.gitignore` blockで管理する。Project symlink、`AGENTS.md`、Agent設定は管理・ignoreしない。
-- remoteの走査・長時間処理は対象host上で実行する。ワンショットは `remote run`、対話的作業は `cd` を使う。
-- `remote cleanup-appledouble` はremote host上でAppleDouble sidecarを検証して一覧表示し、`--apply`指定時だけ削除する。SSHFS mountは走査しない。
-- `remote mount` はhost単位でsshfsを1本だけ接続する。無引数では `auto_mount: true` のhostだけを対象にし、`-a` またはProject指定ではこの制限を外す。
-- `remote unmount` はmountが作成したworkspace symlinkも撤去する。`status` の `slow` は正常系であり、`stale` と `unreadable` だけを対処対象とする。
-- `status` はResource状態に加えて登録済みworktreeを診断する。正常時は登録数と`ok`を表示し、worktree diagnosticがあれば対象と理由を表示して非0で終了する。worktreeの詳細一覧は `worktree check` を使う。
+- `link`が`.gitignore`で管理するのは`.codegraph/`、`.DS_Store`、`._*`、`.AppleDouble/`だけとする。
+- remote Resourceの参照・編集・実行・復旧は[Remote resource operation](../operations/remote.md)を参照する。
 
 ## Worktree
 
-```sh
-whub worktree create <PROJECT> <TASK-ID>
-whub worktree check
-whub worktree remove <PROJECT> <TASK-ID>
-whub worktree pull-request <PROJECT> <TASK-ID>
-whub worktree merge <PROJECT> <TASK-ID> --method {merge,squash,rebase}
-```
+| コマンド | 直接の挙動 |
+|---|---|
+| `whub worktree create <PROJECT> <TASK-ID>` | 未完了TaskからTask branchとpathを導出し、worktreeを登録・作成 |
+| `whub worktree check` | 全登録のidentityとdiagnosticを読み取り専用で表示 |
+| `whub worktree remove <PROJECT> <TASK-ID>` | cleanかつ整合したTask worktreeと定義YAMLを削除 |
+| `whub worktree pull-request <PROJECT> <TASK-ID>` | Task branchをpushし、既存PRを返すかPRを作成 |
+| `whub worktree merge <PROJECT> <TASK-ID> --method {merge,squash,rebase}` | 一致するPRをmergeし、確認後にTask worktreeをcleanup |
 
-- `create` は、親Projectとその`docs/tasks/`に存在するTask YAMLからbranch・workspace pathを導出して登録・作成する。同じProject・Taskの登録は上書きせず拒否する。成功時は親Project、Task、branch、workspace pathを表示し、失敗時は非0で終了する。
-- `check` は、すべての登録済みworktreeを親Project、Task、branch、workspace path、diagnosticとともに表示する。Git・YAMLは変更せず、diagnosticが一つでもあれば非0で終了する。
-- `remove` は親Project・Taskで一つの登録を選択し、cleanかつ整合したGit worktreeだけを削除する。Git worktreeと定義YAMLのみを削除し、branchは残す。`--force`、commit・push・branch削除、不整合の自動修復は行わない。
-- `pull-request` はGitHubの`gh`を用いるGitHub専用操作である。対象worktreeのtask branchをpushし、`manifest.git.branch`を統合先とするPRを作成する。PRのタイトルは`TASK-ID`とし、作業内容は対応するTask YAMLを正本とする。
-- `merge` は`--method`でmerge方式を明示する。GitHubのPR review、branch protection、required checksを満たさない場合はGitHub側で拒否される。CLIは承認を記録・代行しない。merge成功後だけ既存の`remove`を呼び、失敗時はworktreeと定義を残す。PR merge・cleanupのいずれもtask branchを削除しない。
-- remote Resourceを親にするworktreeは未実装であり、明示的にエラーとなる。
+- 詳細は[Worktree reference](worktree.md)、運用は[Worktree operation](../operations/worktree.md)を参照する。
 
 ## Agent
 
-```sh
-whub agent open <PROJECT> <TASK-ID> --auth <AUTH> [--auth <AUTH>]
-whub agent close <PROJECT> <TASK-ID>
-```
+| コマンド | 直接の挙動 |
+|---|---|
+| `whub agent open <PROJECT> <TASK-ID> --auth <AUTH> [--auth <AUTH>]` | Agent設定を生成し、Taskのtmux sessionへ接続または新規作成 |
+| `whub agent close <PROJECT> <TASK-ID>` | tmux sessionを停止し、未変更のHarness所有設定を削除 |
 
-- `open` は登録済みworktreeを検証し、選択したauthからAgent設定を生成してtmux sessionへattachする。sessionがなければ新規作成する。
-- `close` は対応sessionを停止し、whubが生成してStateへ記録した未変更の設定だけを削除する。worktree、branch、Task状態は変更しない。
-- 詳細なlifecycleと変更済み設定の復旧は[Agent harness operation](../operations/agent.md)を参照する。
+詳細は[Agent harness operation](../operations/agent.md)を参照する。
 
 ## 作業支援
 
-```sh
-whub todo
-whub backlog <TEXT> [--project PROJECT]
-whub codegraph
-whub remote get <PATH>
-whub remote put <LOCAL_NAME>
-whub remote rm <LOCAL_NAME>
-whub shell-init [--shell zsh]
-```
-
-- `backlog` はProjectの `docs/backlog.md` に未整理メモを追記する。
-- `codegraph` はmanifestで有効化したResourceだけを初期化する。
-- `remote get` はremoteの単一fileをworkspace rootの `remote_files/` へ取得し、`remote put` はその取得元へ書き戻す。
-- `remote rm` は管理済みの `remote_files/` 配下fileと対応メタデータを削除する。`whub remote get` で取得していないfileは削除しない。
+| コマンド | 直接の挙動 |
+|---|---|
+| `whub todo [-a] [COMMAND]` | 個人Todoの表示・追加・完了・削除 |
+| `whub backlog <TEXT> [--project <PROJECT>]` | Projectの`docs/backlog.md`へ未整理memoを追記 |
+| `whub codegraph` | `codegraph: true`のResourceでCodeGraphを初期化 |
+| `whub shell-init [--shell zsh]` | shell functionと補完設定を出力 |
 
 ## Web appとRemote GUI session
 
-```sh
-whub app
-whub app down
-whub remote session <COMMAND>
-```
+| コマンド | 直接の挙動 |
+|---|---|
+| `whub app [--port <PORT>]` | managed Web app serverを起動 |
+| `whub app dev` | HMRとAPI reloadを有効にしてWeb appを起動 |
+| `whub app down` | managed Web app serverを停止 |
+| `whub remote session <COMMAND>` | remote GUI sessionを予約・観測・削除 |
 
-Web appは読み取り用の派生ビューであり、Task YAMLは更新しない。Remote GUI sessionの予約・handoff・観測・削除は[operations/session.md](../operations/session.md)を参照する。
-
-`/worktrees` は `GET /api/worktrees` を用いる読み取り専用一覧である。親Project、Task、branch、workspace path、diagnosticを表示し、作成・削除・session操作は提供しない。
+Web appはTask YAMLを更新しない。`/worktrees`は登録済みworktreeの読み取り専用表示とする。
+Remote GUI sessionの運用は[Remote GUI session](../operations/session.md)を参照する。
 
 ## Operation release
 
-```sh
-whub release build --source PATH
-whub release verify RELEASE_ID
-whub release apply RELEASE_ID
-```
+| コマンド | 直接の挙動 |
+|---|---|
+| `whub release build --source <PATH>` | 開発checkoutからwheelをstagingへ作成 |
+| `whub release verify <RELEASE-ID>` | staged releaseを検証しrelease recordを作成 |
+| `whub release apply <RELEASE-ID>` | 検証済みreleaseをcurrentへ切り替え、appを再起動 |
 
-releaseの停止・復旧・検証条件は[operations/releace.md](../operations/releace.md)を正とする。
+releaseの順序・停止・復旧条件は[Operation release](../operations/releace.md)を参照する。

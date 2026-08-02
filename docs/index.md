@@ -1,6 +1,6 @@
 # Documentation index
 
-現在の設計・開発・運用の正本を短く案内する。文書の分類・配置規約はworkspace-hubの`docs/documentation.md`を参照する。
+現在の設計・開発・運用の正本を短く案内する。文書の分類・配置規約はworkspace-hubの`docs/meta-documentation.md`を参照する。
 
 ## architecture
 
@@ -15,6 +15,7 @@
 
 ## operations
 
+- [Task development](operations/task-development.md) — Task起票からAgent作業、PR、merge、完了までのsession横断手順。
 - [Agent harness](operations/agent.md) — Agent sessionのopen/closeと生成物cleanupの手順。
 - [Worktree operation](operations/worktree.md) — worktreeの作成、PR、merge、cleanupの運用手順。
 - [Operation release](operations/releace.md) — build、verify、applyのrelease手順と復旧条件。

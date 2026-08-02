@@ -3,6 +3,12 @@
 remote resourceの参照・編集・実行・探索に使う手順。CLIの引数とresource契約は
 [CLI reference](../reference/cli.md)を正本とする。
 
+## Mount
+
+- remote hostごとにsshfsを1本接続する。
+- 無引数では`auto_mount: true`のhostだけを対象にする。
+- Project指定または`--all`では`auto_mount: false`のhostも対象にする。
+
 ## 参照・編集・実行
 
 - 参照・編集はmount経由で行う。

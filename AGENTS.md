@@ -1,6 +1,6 @@
 ## 参照先
 
-- コマンド一覧・セットアップは`README.md`、詳細は`docs/reference/`
+- コマンド一覧・詳細は`docs/reference/cli.md`
 - 実装構造・開発規約は`docs/architecture/`と`docs/development/`
 - Remote GUI sessionの運用は`docs/operations/session.md`
 
