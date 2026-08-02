@@ -5,8 +5,9 @@ import { WidgetFrame } from "../../components/WidgetFrame";
 import {
   OverviewColumn,
   OverviewFrame,
-  OverviewWide,
+  OverviewSide,
 } from "../overview/OverviewFrame";
+import type { OverviewCollapseState } from "../overview/useOverviewCollapse";
 import type { WorktreeItem } from "../worktrees/api";
 import { useWorktrees } from "../worktrees/useWorktrees";
 import { TerminalWidget } from "./TerminalWidget";
@@ -14,6 +15,10 @@ import { TerminalWidget } from "./TerminalWidget";
 type TerminalWorktree = WorktreeItem & {
   parent_project: string;
   task_id: string;
+};
+
+type TerminalPageProps = {
+  collapsed: OverviewCollapseState;
 };
 
 function terminalWorktrees(worktrees: WorktreeItem[]): TerminalWorktree[] {
@@ -27,7 +32,7 @@ function worktreeValue(worktree: WorktreeItem) {
   return `${worktree.parent_project}/${worktree.task_id}`;
 }
 
-export function TerminalPage() {
+export function TerminalPage({ collapsed }: TerminalPageProps) {
   const { error, loading, worktrees } = useWorktrees();
   const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
@@ -48,8 +53,8 @@ export function TerminalPage() {
   }, [terminals]);
 
   return (
-    <OverviewFrame collapsed={{ left: false, right: false }}>
-      <OverviewWide>
+    <OverviewFrame collapsed={collapsed}>
+      <OverviewSide collapsed={collapsed.left} side="left">
         <WidgetFrame title="Terminal">
           <Select
             aria-label="Terminalのworktreeを選択"
@@ -71,7 +76,7 @@ export function TerminalPage() {
             </Alert>
           )}
         </WidgetFrame>
-      </OverviewWide>
+      </OverviewSide>
       <OverviewColumn>
         <WidgetFrame title="Terminal">
           {selectedWorktree ? (
@@ -86,20 +91,18 @@ export function TerminalPage() {
           )}
         </WidgetFrame>
       </OverviewColumn>
-      <OverviewColumn>
+      <OverviewSide collapsed={collapsed.right} side="right">
         <WidgetFrame title="Session">
           <Text c="dimmed" p="md">
             Session情報は後続のPhaseで追加します。
           </Text>
         </WidgetFrame>
-      </OverviewColumn>
-      <OverviewColumn>
         <WidgetFrame title="Activity">
           <Text c="dimmed" p="md">
             Activity情報は後続のPhaseで追加します。
           </Text>
         </WidgetFrame>
-      </OverviewColumn>
+      </OverviewSide>
     </OverviewFrame>
   );
 }

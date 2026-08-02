@@ -59,7 +59,7 @@ describe("TerminalPage", () => {
   it("worktreeを初期選択し、上段と3列の骨格を表示する", async () => {
     const { container } = render(
       <MantineProvider env="test">
-        <TerminalPage />
+        <TerminalPage collapsed={{ left: false, right: false }} />
       </MantineProvider>,
     );
 
@@ -72,5 +72,36 @@ describe("TerminalPage", () => {
       screen.getByText("Activity情報は後続のPhaseで追加します。"),
     ).toBeTruthy();
     expect(container.querySelectorAll(".overview-column")).toHaveLength(3);
+  });
+
+  it("左右列へ折りたたみ状態を反映する", async () => {
+    const { container } = render(
+      <MantineProvider env="test">
+        <TerminalPage collapsed={{ left: true, right: true }} />
+      </MantineProvider>,
+    );
+
+    await screen.findAllByText("whub-dev / TASK-099");
+
+    expect(
+      container
+        .querySelector('[data-side="left"]')
+        ?.getAttribute("data-collapsed"),
+    ).toBe("true");
+    expect(
+      container
+        .querySelector('[data-side="right"]')
+        ?.getAttribute("data-collapsed"),
+    ).toBe("true");
+    expect(
+      container
+        .querySelector(".overview-frame")
+        ?.getAttribute("data-collapse-left"),
+    ).toBe("true");
+    expect(
+      container
+        .querySelector(".overview-frame")
+        ?.getAttribute("data-collapse-right"),
+    ).toBe("true");
   });
 });

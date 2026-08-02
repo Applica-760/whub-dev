@@ -39,10 +39,11 @@ type NavigationItem = {
 };
 
 const OVERVIEW_PATH = "/";
+const TERMINAL_PATH = "/terminal";
 
 const navigation: NavigationItem[] = [
   { label: "Overview", to: OVERVIEW_PATH },
-  { label: "Terminal", to: "/terminal" },
+  { label: "Terminal", to: TERMINAL_PATH },
   { label: "Task", to: TASKS_PATH, isActive: isTasksRoute },
   { label: "Backlog", to: "/backlog" },
   { label: "Vault", to: "/vault" },
@@ -84,7 +85,7 @@ export function App() {
             })}
           </div>
           <div className="whub-header-actions">
-            {location.pathname === OVERVIEW_PATH && (
+            {[OVERVIEW_PATH, TERMINAL_PATH].includes(location.pathname) && (
               <OverviewCollapseToggles
                 collapsed={collapsed}
                 onToggle={toggle}
@@ -111,7 +112,10 @@ export function App() {
             <Route element={<BacklogPage />} path="/backlog" />
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
-            <Route element={<TerminalPage />} path="/terminal" />
+            <Route
+              element={<TerminalPage collapsed={collapsed} />}
+              path={TERMINAL_PATH}
+            />
             <Route element={<TasksPage />} path="/tasks" />
             <Route element={<TaskDetailPage />} path={TASK_DETAIL_PATH} />
             <Route
