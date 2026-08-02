@@ -6,9 +6,13 @@ import { TerminalWidget } from "./TerminalWidget";
 
 const terminalMocks = vi.hoisted(() => ({
   dispose: vi.fn(),
+  fit: vi.fn(),
   focus: vi.fn(),
   inputDispose: vi.fn(),
   inputHandler: undefined as ((data: string) => void) | undefined,
+  linkHandler: undefined as
+    ((event: MouseEvent, uri: string) => void) | undefined,
+  options: undefined as unknown,
   write: vi.fn(),
 }));
 
@@ -16,6 +20,10 @@ vi.mock("@xterm/xterm", () => ({
   Terminal: class {
     cols = 80;
     rows = 24;
+
+    constructor(options: unknown) {
+      terminalMocks.options = options;
+    }
 
     dispose = terminalMocks.dispose;
     focus = terminalMocks.focus;
@@ -32,7 +40,15 @@ vi.mock("@xterm/xterm", () => ({
 
 vi.mock("@xterm/addon-fit", () => ({
   FitAddon: class {
-    fit() {}
+    fit = terminalMocks.fit;
+  },
+}));
+
+vi.mock("@xterm/addon-web-links", () => ({
+  WebLinksAddon: class {
+    constructor(handler: (event: MouseEvent, uri: string) => void) {
+      terminalMocks.linkHandler = handler;
+    }
   },
 }));
 
@@ -84,6 +100,8 @@ class FakeWebSocket {
 beforeEach(() => {
   FakeWebSocket.instances = [];
   terminalMocks.inputHandler = undefined;
+  terminalMocks.linkHandler = undefined;
+  terminalMocks.options = undefined;
   vi.clearAllMocks();
   vi.stubGlobal("WebSocket", FakeWebSocket);
   vi.stubGlobal(
@@ -101,6 +119,15 @@ beforeEach(() => {
       disconnect() {}
     },
   );
+  vi.stubGlobal(
+    "requestAnimationFrame",
+    vi.fn((callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    }),
+  );
+  vi.stubGlobal("cancelAnimationFrame", vi.fn());
+  vi.stubGlobal("open", vi.fn());
 });
 
 afterEach(() => {
@@ -112,7 +139,11 @@ describe("TerminalWidget", () => {
   it("接続中の入力を捨て、接続後は構造化frameを送り、破棄時にleaseを解放する", () => {
     const view = render(
       <MantineProvider env="test">
-        <TerminalWidget project="whub-dev" taskId="TASK-100" />
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="false:false"
+          taskId="TASK-100"
+        />
       </MantineProvider>,
     );
     const socket = FakeWebSocket.instances[0];
@@ -136,5 +167,79 @@ describe("TerminalWidget", () => {
     expect(JSON.parse(socket.sent.at(-1) ?? "{}")).toEqual({ type: "release" });
     expect(socket.readyState).toBe(FakeWebSocket.CLOSED);
     expect(screen.queryByText("端末接続が切断されました。")).toBeNull();
+  });
+
+  it("親layoutの変更後に再fitしてtmuxへresizeを送る", () => {
+    const view = render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="false:false"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+    const socket = FakeWebSocket.instances[0];
+    act(() => socket.open());
+    terminalMocks.fit.mockClear();
+
+    view.rerender(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="true:true"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(terminalMocks.fit).toHaveBeenCalledOnce();
+    expect(JSON.parse(socket.sent.at(-1) ?? "{}")).toEqual({
+      type: "resize",
+      columns: 80,
+      rows: 24,
+    });
+    expect(view.container.querySelector(".xterm-view")).toBeTruthy();
+  });
+
+  it("修飾キー付きHTTP linkだけを開く", () => {
+    render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="false:false"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+
+    act(() =>
+      terminalMocks.linkHandler?.(
+        new MouseEvent("click"),
+        "https://example.com/plain",
+      ),
+    );
+    expect(window.open).not.toHaveBeenCalled();
+
+    act(() =>
+      terminalMocks.linkHandler?.(
+        new MouseEvent("click", { metaKey: true }),
+        "https://example.com/codex",
+      ),
+    );
+    expect(window.open).toHaveBeenCalledWith(
+      "https://example.com/codex",
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    act(() =>
+      terminalMocks.linkHandler?.(
+        new MouseEvent("click", { ctrlKey: true }),
+        "file:///tmp/secret",
+      ),
+    );
+    expect(window.open).toHaveBeenCalledOnce();
   });
 });

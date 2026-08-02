@@ -1,19 +1,27 @@
-import { Alert, Select, Text } from "@mantine/core";
+import { Alert, Text } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
 
+import { GroupedListRow } from "../../components/GroupedList";
 import { WidgetFrame } from "../../components/WidgetFrame";
 import {
   OverviewColumn,
   OverviewFrame,
-  OverviewWide,
+  OverviewSide,
 } from "../overview/OverviewFrame";
+import type { OverviewCollapseState } from "../overview/useOverviewCollapse";
 import type { WorktreeItem } from "../worktrees/api";
 import { useWorktrees } from "../worktrees/useWorktrees";
 import { TerminalWidget } from "./TerminalWidget";
 
+import "./terminal.css";
+
 type TerminalWorktree = WorktreeItem & {
   parent_project: string;
   task_id: string;
+};
+
+type TerminalPageProps = {
+  collapsed: OverviewCollapseState;
 };
 
 function terminalWorktrees(worktrees: WorktreeItem[]): TerminalWorktree[] {
@@ -27,7 +35,7 @@ function worktreeValue(worktree: WorktreeItem) {
   return `${worktree.parent_project}/${worktree.task_id}`;
 }
 
-export function TerminalPage() {
+export function TerminalPage({ collapsed }: TerminalPageProps) {
   const { error, loading, worktrees } = useWorktrees();
   const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
@@ -48,35 +56,45 @@ export function TerminalPage() {
   }, [terminals]);
 
   return (
-    <OverviewFrame collapsed={{ left: false, right: false }}>
-      <OverviewWide>
+    <OverviewFrame className="terminal-frame" collapsed={collapsed}>
+      <OverviewSide collapsed={collapsed.left} side="left">
         <WidgetFrame title="Terminal">
-          <Select
-            aria-label="Terminalのworktreeを選択"
-            data={terminals.map((worktree) => ({
-              label: `${worktree.parent_project} / ${worktree.task_id}`,
-              value: worktreeValue(worktree),
-            }))}
-            disabled={loading || terminals.length === 0}
-            onChange={setSelectedTerminal}
-            p="md"
-            placeholder={
-              loading ? "worktreeを読み込んでいます…" : "worktreeがありません"
-            }
-            value={selectedTerminal}
-          />
+          {loading ? (
+            <Text c="dimmed" p="md">
+              worktreeを読み込んでいます…
+            </Text>
+          ) : terminals.length === 0 ? (
+            <Text c="dimmed" p="md">
+              worktreeがありません
+            </Text>
+          ) : (
+            terminals.map((worktree, index) => {
+              const value = worktreeValue(worktree);
+              return (
+                <GroupedListRow
+                  key={value}
+                  onClick={() => setSelectedTerminal(value)}
+                  selected={value === selectedTerminal}
+                  subtitle={worktree.task_id}
+                  title={worktree.parent_project}
+                  withDivider={index < terminals.length - 1}
+                />
+              );
+            })
+          )}
           {error && (
             <Alert color="red" m="md">
               {error}
             </Alert>
           )}
         </WidgetFrame>
-      </OverviewWide>
+      </OverviewSide>
       <OverviewColumn>
         <WidgetFrame title="Terminal">
           {selectedWorktree ? (
             <TerminalWidget
               project={selectedWorktree.parent_project}
+              resizeSignal={`${collapsed.left}:${collapsed.right}`}
               taskId={selectedWorktree.task_id}
             />
           ) : (
@@ -86,20 +104,18 @@ export function TerminalPage() {
           )}
         </WidgetFrame>
       </OverviewColumn>
-      <OverviewColumn>
+      <OverviewSide collapsed={collapsed.right} side="right">
         <WidgetFrame title="Session">
           <Text c="dimmed" p="md">
             Session情報は後続のPhaseで追加します。
           </Text>
         </WidgetFrame>
-      </OverviewColumn>
-      <OverviewColumn>
         <WidgetFrame title="Activity">
           <Text c="dimmed" p="md">
             Activity情報は後続のPhaseで追加します。
           </Text>
         </WidgetFrame>
-      </OverviewColumn>
+      </OverviewSide>
     </OverviewFrame>
   );
 }

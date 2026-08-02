@@ -1,86 +1,50 @@
-import "@xterm/xterm/css/xterm.css";
-
 import { Alert, Text } from "@mantine/core";
-import { FitAddon } from "@xterm/addon-fit";
-import { Terminal } from "@xterm/xterm";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
+
+import { XtermView } from "../../components/XtermView";
+import type { XtermViewHandle } from "../../components/XtermView";
+import { useTerminalConnection } from "./useTerminalConnection";
 
 type TerminalWidgetProps = {
   project: string;
+  resizeSignal: string;
   taskId: string;
 };
 
-function terminalUrl(project: string, taskId: string) {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/api/terminals/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}`;
+function openWebLink(event: MouseEvent, uri: string) {
+  if (!event.metaKey && !event.ctrlKey) {
+    return;
+  }
+
+  try {
+    const url = new URL(uri);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      window.open(url.href, "_blank", "noopener,noreferrer");
+    }
+  } catch {
+    return;
+  }
 }
 
-export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
-  const elementRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return;
-    }
-
-    const terminal = new Terminal({ cursorBlink: true, fontSize: 14 });
-    const fitAddon = new FitAddon();
-    const socket = new WebSocket(terminalUrl(project, taskId));
-    let disposed = false;
-    setError(null);
-    terminal.loadAddon(fitAddon);
-    terminal.open(element);
-
-    const resize = () => {
-      fitAddon.fit();
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(
-          JSON.stringify({
-            type: "resize",
-            columns: terminal.cols,
-            rows: terminal.rows,
-          }),
-        );
-      }
-    };
-    const resizeObserver = new ResizeObserver(resize);
-    const input = terminal.onData((data) => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "input", data }));
-      }
-    });
-
-    socket.addEventListener("open", () => {
-      socket.send(JSON.stringify({ type: "claim" }));
-      resize();
-      terminal.focus();
-    });
-    socket.addEventListener("message", (event) => terminal.write(event.data));
-    socket.addEventListener("error", () => {
-      if (!disposed) {
-        setError("端末へ接続できませんでした。");
-      }
-    });
-    socket.addEventListener("close", () => {
-      if (!disposed) {
-        setError((current) => current ?? "端末接続が切断されました。");
-      }
-    });
-    resizeObserver.observe(element);
-
-    return () => {
-      disposed = true;
-      input.dispose();
-      resizeObserver.disconnect();
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "release" }));
-      }
-      socket.close();
-      terminal.dispose();
-    };
-  }, [project, taskId]);
+export function TerminalWidget({
+  project,
+  resizeSignal,
+  taskId,
+}: TerminalWidgetProps) {
+  const xtermRef = useRef<XtermViewHandle>(null);
+  const handleConnected = useCallback(() => {
+    xtermRef.current?.fit();
+    xtermRef.current?.focus();
+  }, []);
+  const handleOutput = useCallback((data: string) => {
+    xtermRef.current?.write(data);
+  }, []);
+  const { error, sendInput, sendResize } = useTerminalConnection({
+    onConnected: handleConnected,
+    onOutput: handleOutput,
+    project,
+    taskId,
+  });
 
   return (
     <>
@@ -89,7 +53,13 @@ export function TerminalWidget({ project, taskId }: TerminalWidgetProps) {
           {error}
         </Alert>
       )}
-      <div ref={elementRef} style={{ height: "32rem", padding: "0.5rem" }} />
+      <XtermView
+        onData={sendInput}
+        onLink={openWebLink}
+        onResize={sendResize}
+        ref={xtermRef}
+        resizeSignal={resizeSignal}
+      />
       <Text c="dimmed" px="md" pb="md" size="sm">
         {project} / {taskId}
       </Text>

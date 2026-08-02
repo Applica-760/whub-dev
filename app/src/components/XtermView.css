@@ -1,0 +1,33 @@
+.xterm-view {
+  --xterm-font-family:
+    "SFMono-Regular", "SF Mono", "Noto Sans Mono CJK JP", "Noto Sans Mono",
+    Menlo, Monaco, Consolas, monospace;
+  --xterm-font-size: 15;
+  --xterm-line-height: 1.25;
+  --xterm-minimum-contrast: 4.5;
+  --xterm-background: #0d1117;
+  --xterm-foreground: #c9d1d9;
+  --xterm-cursor: #58a6ff;
+  --xterm-cursor-accent: #0d1117;
+  --xterm-selection: #1f6feb80;
+  --xterm-selection-inactive: #1f6feb40;
+  --xterm-black: #484f58;
+  --xterm-red: #ff7b72;
+  --xterm-green: #7ee787;
+  --xterm-yellow: #d29922;
+  --xterm-blue: #58a6ff;
+  --xterm-magenta: #bc8cff;
+  --xterm-cyan: #39c5cf;
+  --xterm-white: #b1bac4;
+  --xterm-bright-black: #6e7681;
+  --xterm-bright-red: #ffa198;
+  --xterm-bright-green: #56d364;
+  --xterm-bright-yellow: #f2cc60;
+  --xterm-bright-blue: #79c0ff;
+  --xterm-bright-magenta: #d2a8ff;
+  --xterm-bright-cyan: #56d4dd;
+  --xterm-bright-white: #f0f6fc;
+
+  height: 64rem;
+  padding: 0.5rem;
+}
