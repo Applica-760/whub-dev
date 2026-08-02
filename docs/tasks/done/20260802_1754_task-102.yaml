@@ -1,0 +1,155 @@
+schema_version: 1
+task:
+  id: TASK-102
+  state: completed
+  title: Browser Terminalのデザインを改善する
+  objective: worktree版Web appをHMRで確認しながら、Browser Terminalの視認性と操作性を改善する。
+  approach:
+  - 最新mainからTask worktreeを作成し、worktree自身のwhub app devでTerminal接続を実機確認した後、デザイン要件を確定して実装・回帰検証する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: worktree開発環境を検証する
+    acceptance: []
+    steps:
+    - description: 作成したTask worktreeからwhub app devを起動し、Vite・API health・Terminal接続を確認する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: デザイン要件を確定する
+    acceptance: []
+    steps:
+    - description: 現行Terminalを実機で観察し、変更対象と受け入れ条件をユーザーと確定する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: Terminalデザインを実装・検証する
+    acceptance: []
+    steps:
+    - description: 承認済みのデザインを実装し、frontend自動テストとBrowser Terminal実機確認で回帰検証する
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: ユーザー提示課題と実装境界を確定する
+    acceptance: []
+    steps:
+    - description: '[ユーザー提示] xterm.js表示部品のcomponent層への分離、font指定、Terminalの中央列配置、terminal選択UIの左列配置、白一色ではない視認性の高い色表現を実現対象として確認する'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: '[ユーザー合意] Prompt composerと引用符・#・code span等の意味的着色はTASK-102の対象外とし、known-issues.mdへ後続Task候補として残す'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: '[意思決定] 実装前にfont family・font size・ANSI palette・URL link表現・左列選択UIの具体案を提示し、ユーザー承認を得る'
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: TASK-102 worktree自身からwhub app devを起動し、ユーザーがApp.tsxの一時的なTaskタブ非表示をHMRで確認した。一時変更は復元済み。
+      deleted: false
+    - value:
+        decision: font・14px・GitHub Dark系ANSI palette・修飾キー付きURL link・左列縦型選択UI・中央Terminal・右列情報表示の具体案をユーザーが承認した
+      deleted: false
+    - value:
+        finding: known issuesへCodex PermissionRequest Hookを用いた承認待ちイベント連携を追記。whub Web
+          appでのbadge・Terminal強調枠・固定banner・browser notification、PostToolUseまたは有効期限による解除を記録。厳密な状態同期とWeb内承認はCodex
+          App Server統合を後続検討とした。
+      deleted: false
+    deleted: false
+  - title: Terminalの表示領域を先に確保する
+    acceptance: []
+    steps:
+    - description: '[ユーザー指示・最優先] Overviewと同じ左右列折りたたみボタンをTerminalページに表示し、左のterminal選択列・右のSession/Activity列を個別に折りたためるよう実装・自動テストする'
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: frontend 13 suites・30 tests、typecheck、production build、Prettier、git
+          diff --checkが成功した
+      deleted: false
+    - value:
+        verification: 折りたたみstate変更後にrequestAnimationFrameでxterm fitとtmux resizeを再送し、Terminal高を32remから64remへ拡大。frontend
+          13 suites・31 tests、typecheck、production build、Prettierが成功した
+      deleted: false
+    deleted: false
+  - title: 解決案に基づき表示責務を分離する
+    acceptance: []
+    steps:
+    - description: '[解決案] xterm.jsの生成・破棄・fit・resize・font・theme・入出力通知だけを担う汎用XtermViewをcomponentsへ抽出し、project/task/WebSocket/controller
+        leaseはTerminal featureのhookとWidgetへ残す'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: '[解決案] 責務分離前後でWebSocket claim・input・resize・release・cleanup契約を維持し、componentとfeatureの自動テストで固定する'
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: XtermView componentとuseTerminalConnectionへ責務を分離し、claim・input・resize・release・cleanup契約をcomponent・featureテストで固定。frontend
+          14 suites・32 tests、typecheck、production build、Prettier、git diff --checkが成功した
+      deleted: false
+    deleted: false
+  - title: 解決案に基づきlayoutと視認性を改善する
+    acceptance: []
+    steps:
+    - description: '[解決案] 上部Selectを左列の縦型terminal選択UIへ置換し、選択中Terminalを中央列、Session・Activity情報を右列へ配置する'
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: '[解決案] 承認済みfont設定とxterm themeでforeground・background・ANSI 16色・bright色・cursor・selectionを調整し、URLはlink
+        providerで識別可能かつ操作可能にする'
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 左列を縦型terminal選択UIへ変更し、中央優先の3列layoutとresponsive配置を追加。font・ANSI
+          16色・bright色・cursor・selectionをCSS変数で定義しXtermViewがcanvas themeへ解決、HTTP/HTTPSをCmd/Ctrl+clickで開くWebLinks
+          addonを追加。frontend 14 suites・33 tests、typecheck、production build、Prettier、git
+          diff --checkが成功した
+      deleted: false
+    - value:
+        finding: Terminal typographyを微調整。xterm font sizeを14pxから15pxへ拡大し、SF Monoを優先、Noto
+          Sans Mono CJK JP/Noto Sans Monoをフォールバックに追加。等幅を維持して桁崩れを防止。対象test 4件、typecheck、production
+          build成功。
+      deleted: false
+    deleted: false
+  - title: 自動テストとBrowser実機で回帰検証する
+    acceptance: []
+    steps:
+    - description: '[検証] frontend test・typecheck・production buildを実行し、worktree版whub
+        app devでterminal選択、接続、入力、resize、再読み込み、HMR、3列layout、font・theme・URL linkをBrowser実機確認する'
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: ユーザーがBrowserでの動作確認を実施済みと確認。コードレビューは指摘なし、関連Vitest 7件と型検査、Release build・verify・applyが成功。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: ユーザー提示課題とAgent向け解決案を明確に分離し、Prompt composerと意味的着色を後続Taskへ切り出した実行計画へ詳細化するため
+- reason: 表示領域が狭いため、ユーザー指示によりTerminalページの左右列折りたたみを実装の最優先Stepとして追加する
+cancellation: null
+result:
+  summary: 'PR #5 を merge し、Release 0.1.0+ge9591538 を build・verify・apply済み。worktree
+    cleanup 完了。'
