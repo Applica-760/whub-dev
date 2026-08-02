@@ -9,6 +9,7 @@ import { OverviewPage } from "./features/overview/OverviewPage";
 import { useOverviewCollapse } from "./features/overview/useOverviewCollapse";
 import { ResourceStatusPage } from "./features/status/ResourceStatusPage";
 import { TerminalPage } from "./features/terminal/TerminalPage";
+import { useTerminalCollapse } from "./features/terminal/useTerminalCollapse";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { TasksPage } from "./features/tasks/TasksPage";
 import {
@@ -55,7 +56,10 @@ const navigation: NavigationItem[] = [
 
 export function App() {
   const location = useLocation();
-  const { collapsed, toggle } = useOverviewCollapse();
+  const overviewCollapse = useOverviewCollapse();
+  const terminalCollapse = useTerminalCollapse();
+  const pageCollapse =
+    location.pathname === TERMINAL_PATH ? terminalCollapse : overviewCollapse;
 
   return (
     <AppShell header={{ height: 47 }} padding={0}>
@@ -87,8 +91,8 @@ export function App() {
           <div className="whub-header-actions">
             {[OVERVIEW_PATH, TERMINAL_PATH].includes(location.pathname) && (
               <OverviewCollapseToggles
-                collapsed={collapsed}
-                onToggle={toggle}
+                collapsed={pageCollapse.collapsed}
+                onToggle={pageCollapse.toggle}
               />
             )}
             <ColorSchemeToggle />
@@ -106,14 +110,14 @@ export function App() {
         >
           <Routes>
             <Route
-              element={<OverviewPage collapsed={collapsed} />}
+              element={<OverviewPage collapsed={overviewCollapse.collapsed} />}
               path={OVERVIEW_PATH}
             />
             <Route element={<BacklogPage />} path="/backlog" />
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
             <Route
-              element={<TerminalPage collapsed={collapsed} />}
+              element={<TerminalPage collapsed={terminalCollapse.collapsed} />}
               path={TERMINAL_PATH}
             />
             <Route element={<TasksPage />} path="/tasks" />

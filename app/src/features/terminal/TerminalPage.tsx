@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Group, Text } from "@mantine/core";
+import { Alert, Group, Switch, Text } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { GroupedListRow } from "../../components/GroupedList";
@@ -8,10 +8,10 @@ import {
   OverviewFrame,
   OverviewSide,
 } from "../overview/OverviewFrame";
-import type { OverviewCollapseState } from "../overview/useOverviewCollapse";
 import type { WorktreeItem } from "../worktrees/api";
 import { useWorktrees } from "../worktrees/useWorktrees";
 import { TerminalWidget } from "./TerminalWidget";
+import type { TerminalCollapseState } from "./useTerminalCollapse";
 import { requestJson } from "../../api/client";
 
 import "./terminal.css";
@@ -22,7 +22,7 @@ type TerminalWorktree = WorktreeItem & {
 };
 
 type TerminalPageProps = {
-  collapsed: OverviewCollapseState;
+  collapsed: TerminalCollapseState;
 };
 
 type OperatorTerminal = {
@@ -143,19 +143,26 @@ export function TerminalPage({ collapsed }: TerminalPageProps) {
         <WidgetFrame title="Terminal">
           <Group justify="space-between" m="md">
             <Text fw={500}>Operator</Text>
-            <Badge color={operatorRunning ? "green" : "gray"}>
-              {operatorRunning ? "ON" : "OFF"}
-            </Badge>
+            <Switch
+              aria-label={operatorRunning ? "Operatorを停止" : "Operatorを開始"}
+              checked={operatorRunning}
+              disabled={operatorPending}
+              offLabel="OFF"
+              onChange={() => {
+                void (operatorRunning ? stopOperator() : startOperator());
+              }}
+              onLabel="ON"
+              size="md"
+              styles={{
+                track: {
+                  backgroundColor: operatorRunning
+                    ? "var(--mantine-color-green-6)"
+                    : "var(--mantine-color-red-6)",
+                  borderColor: "transparent",
+                },
+              }}
+            />
           </Group>
-          <Button
-            color={operatorRunning ? "red" : "blue"}
-            fullWidth
-            loading={operatorPending}
-            m="md"
-            onClick={operatorRunning ? stopOperator : startOperator}
-          >
-            {operatorRunning ? "OFF" : "ON"}
-          </Button>
           {operatorRunning && (
             <GroupedListRow
               onClick={() => setSelectedTerminal("operator")}

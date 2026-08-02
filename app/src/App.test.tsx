@@ -4,6 +4,8 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
+import { OVERVIEW_COLLAPSE_KEY } from "./features/overview/useOverviewCollapse";
+import { TERMINAL_COLLAPSE_KEY } from "./features/terminal/useTerminalCollapse";
 
 vi.mock("./features/terminal/TerminalPage", () => ({
   TerminalPage: ({
@@ -31,7 +33,10 @@ afterEach(() => {
 });
 
 describe("App Terminal route", () => {
-  it("左右列の折りたたみボタンでTerminalへ状態を渡す", () => {
+  it("Terminal固有の折りたたみ状態だけを操作する", () => {
+    localStorage.setItem(OVERVIEW_COLLAPSE_KEY, '{"left":true,"right":false}');
+    localStorage.setItem(TERMINAL_COLLAPSE_KEY, '{"left":false,"right":false}');
+
     render(
       <MantineProvider env="test">
         <MemoryRouter initialEntries={["/terminal"]}>
@@ -49,5 +54,11 @@ describe("App Terminal route", () => {
     expect(
       screen.getByRole("button", { name: "左サイドを展開する" }),
     ).toBeTruthy();
+    expect(localStorage.getItem(OVERVIEW_COLLAPSE_KEY)).toBe(
+      '{"left":true,"right":false}',
+    );
+    expect(localStorage.getItem(TERMINAL_COLLAPSE_KEY)).toBe(
+      '{"left":true,"right":false}',
+    );
   });
 });

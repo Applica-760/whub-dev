@@ -146,17 +146,25 @@ describe("TerminalPage", () => {
     ).toBe("true");
   });
 
-  it("Operatorを開始して専用terminalを選択する", async () => {
+  it("Operatorトグルで開始して専用terminalを選択する", async () => {
     render(
       <MantineProvider env="test">
         <TerminalPage collapsed={{ left: false, right: false }} />
       </MantineProvider>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "ON" }));
+    fireEvent.click(
+      await screen.findByRole("switch", { name: "Operatorを開始" }),
+    );
 
     expect(await screen.findByText("Operator / workspace-hub")).toBeTruthy();
-    expect(screen.getByText("ON")).toBeTruthy();
+    expect(
+      (
+        screen.getByRole("switch", {
+          name: "Operatorを停止",
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
     expect(fetch).toHaveBeenCalledWith("/api/operator-terminal", {
       method: "POST",
     });
