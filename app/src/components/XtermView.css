@@ -1,7 +1,8 @@
 .xterm-view {
   --xterm-font-family:
-    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  --xterm-font-size: 14;
+    "SFMono-Regular", "SF Mono", "Noto Sans Mono CJK JP", "Noto Sans Mono",
+    Menlo, Monaco, Consolas, monospace;
+  --xterm-font-size: 15;
   --xterm-line-height: 1.25;
   --xterm-minimum-contrast: 4.5;
   --xterm-background: #0d1117;

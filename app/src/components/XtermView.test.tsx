@@ -82,8 +82,9 @@ beforeEach(() => {
         ({
           getPropertyValue: (name: string) =>
             ({
-              "--xterm-font-family": '"SFMono-Regular", Menlo, monospace',
-              "--xterm-font-size": "14",
+              "--xterm-font-family":
+                '"SFMono-Regular", "SF Mono", "Noto Sans Mono CJK JP", "Noto Sans Mono", Menlo, Monaco, Consolas, monospace',
+              "--xterm-font-size": "15",
               "--xterm-line-height": "1.25",
               "--xterm-minimum-contrast": "4.5",
               "--xterm-background": "#0d1117",
@@ -133,8 +134,9 @@ describe("XtermView", () => {
     expect(xtermMocks.loadAddon).toHaveBeenCalledTimes(2);
     expect(xtermMocks.options).toMatchObject({
       cursorBlink: true,
-      fontFamily: '"SFMono-Regular", Menlo, monospace',
-      fontSize: 14,
+      fontFamily:
+        '"SFMono-Regular", "SF Mono", "Noto Sans Mono CJK JP", "Noto Sans Mono", Menlo, Monaco, Consolas, monospace',
+      fontSize: 15,
       lineHeight: 1.25,
       minimumContrastRatio: 4.5,
       theme: {
