@@ -71,8 +71,8 @@ def test_render_generates_project_rules_and_mcp_config() -> None:
     assert config["approvals_reviewer"] == "user"
     assert config["sandbox_workspace_write"] == {
         "network_access": False,
-        "exclude_tmpdir_env_var": True,
-        "exclude_slash_tmp": True,
+        "exclude_tmpdir_env_var": False,
+        "exclude_slash_tmp": False,
     }
     assert config["mcp_servers"] == {
         "codegraph": {

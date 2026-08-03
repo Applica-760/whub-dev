@@ -97,8 +97,8 @@ def _render_config(auth: EffectiveAuth, tools: Sequence[ExtensionTool]) -> str:
         "",
         "[sandbox_workspace_write]",
         f"network_access = {_toml_bool(_network_access(auth))}",
-        "exclude_tmpdir_env_var = true",
-        "exclude_slash_tmp = true",
+        "exclude_tmpdir_env_var = false",
+        "exclude_slash_tmp = false",
     ]
     for tool in tools:
         lines.extend(
