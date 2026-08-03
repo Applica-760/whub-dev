@@ -58,7 +58,7 @@ function resolveOptions(
       .filter(([, value]) => value),
   ) as ITheme;
   const resolved: ITerminalOptions = {
-    cursorBlink: true,
+    cursorBlink: false,
     ...options,
     theme: { ...options?.theme, ...theme },
   };

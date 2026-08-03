@@ -133,7 +133,7 @@ describe("XtermView", () => {
     expect(onLink).toHaveBeenCalledWith(linkEvent, "https://example.com");
     expect(xtermMocks.loadAddon).toHaveBeenCalledTimes(2);
     expect(xtermMocks.options).toMatchObject({
-      cursorBlink: true,
+      cursorBlink: false,
       fontFamily:
         '"SFMono-Regular", "SF Mono", "Noto Sans Mono CJK JP", "Noto Sans Mono", Menlo, Monaco, Consolas, monospace',
       fontSize: 15,
