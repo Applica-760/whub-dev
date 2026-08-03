@@ -32,6 +32,24 @@ def build(source: Path) -> None:
 
 
 @release.command()
+@click.option(
+    "--source",
+    type=click.Path(path_type=Path, exists=True, file_okay=False),
+    required=True,
+    help="Path to the whub development checkout.",
+)
+def deploy(source: Path) -> None:
+    """Build, verify, and apply one operation release."""
+    try:
+        built = build_release(source)
+        verify_release(built.release_id)
+        result = apply_release(built.release_id)
+    except ServiceError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"deployed {result.release_id}: {result.release_path}")
+
+
+@release.command()
 @click.argument("release_id")
 def verify(release_id: str) -> None:
     """Verify one staged release."""

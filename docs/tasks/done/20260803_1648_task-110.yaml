@@ -1,0 +1,60 @@
+schema_version: 1
+task:
+  id: TASK-110
+  state: completed
+  title: release deploy コマンドを追加
+  objective: buildで生成したrelease IDを内部で引き継ぎ、verify・applyまでを単一コマンドで実行できるようにする。
+  approach:
+  - 既存のreleaseサービスを順次呼び出すdeployサブコマンドを追加し、CLI・サービス・ドキュメントをテストで検証する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 実装
+    acceptance: []
+    steps:
+    - description: release_id を内部で引き継ぐ deploy サブコマンドとサービス処理を追加し、失敗時の既存復旧動作を維持する
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: CLI・サービスの単体テストを追加し、build・verify・apply の呼出順と release_id の伝播を検証する
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: CLI リファレンスと release 運用手順を deploy コマンドに更新し、関連テストを実行する
+      state: pending
+      skip_reason: null
+      deleted: true
+    log: []
+    deleted: false
+  - title: CLI実装
+    acceptance: []
+    steps:
+    - description: deployサブコマンドで既存のbuild・verify・applyサービスをrelease_idを引き継いで順に呼び出す
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: CLIテストでbuild・verify・applyの呼出順とrelease_id伝播を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: CLIリファレンスとrelease運用手順をdeployコマンドへ更新し、Ruffとpytestで検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: uv run ruff check . と uv run pytest が成功（568 passed）
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: release deployをCLI層に追加し、build・verify・applyを同一release-idで順次実行。サービス層は変更せず、Ruffとpytest（568
+    passed）で検証。

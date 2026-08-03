@@ -1,0 +1,53 @@
+schema_version: 1
+task:
+  id: TASK-109
+  state: completed
+  title: Implementerの検証コマンドをsandbox内で自動実行する
+  objective: whub agent open のImplementerでは、agent-auth.yamlにuv run pytestおよびuv run
+    ruffのprefix grantがある一方、Codex adapterが全prefixをdecision = promptのruleへ変換するため、対象ファイルを指定したテスト・Ruffのたびに承認が求められる。Codex
+    ruleのallowはsandbox外での無承認実行を意味するため採用せず、workspace-writeかつnetwork denyのsandbox内で検証コマンドを自動実行できるようにする。
+  approach:
+  - Codex adapterがverification用grantをprompt ruleとして出力する経路を見直し、通常のsandbox実行を妨げない設定へ変更する。uvがsandbox外のcache・venv・一時領域へ書き込む場合は、実際の拒否理由を検証して必要な領域だけをworktree内へ収める。pytest/Ruffの対象指定実行、sandbox外アクセスの承認維持、既存adapterテストを受け入れ条件とする。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 設定修正
+    acceptance: []
+    steps:
+    - description: Codex設定の一時領域除外を解除し、ネットワーク制限を維持する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 生成設定の一時領域アクセスを検証するテストを更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: Codex設定レンダリングの対象pytest 6件とRuffが成功
+      deleted: false
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: Ruffとpytestを実行し、生成設定と回帰がないことを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: uv run ruff check . と uv run pytest が成功（567 passed）
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: Codex workspace-write sandboxでTMPDIRと/tmpを除外せず、Ruffとpytestの一時ファイルを承認なしで扱える設定へ修正。uv
+    run ruff check . と uv run pytest（567 passed）を完了。

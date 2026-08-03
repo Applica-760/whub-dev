@@ -87,6 +87,7 @@ Remote GUI sessionの運用は[Remote GUI session](../operations/session.md)を�
 | コマンド | 直接の挙動 |
 |---|---|
 | `whub release build --source <PATH>` | 開発checkoutからwheelをstagingへ作成 |
+| `whub release deploy --source <PATH>` | build・verify・applyを同一release-idで順に実行 |
 | `whub release verify <RELEASE-ID>` | staged releaseを検証しrelease recordを作成 |
 | `whub release apply <RELEASE-ID>` | 検証済みreleaseをcurrentへ切り替え、appを再起動 |
 

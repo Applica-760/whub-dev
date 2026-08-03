@@ -18,10 +18,13 @@ release操作だけは、古い`current` releaseの実装に依存しないよ�
 
 ```sh
 source=/path/to/whub
-PYTHONPATH="$source/src" uv run --project "$source" python -m whub release build --source "$source"
-PYTHONPATH="$source/src" uv run --project "$source" python -m whub release verify <release-id>
-PYTHONPATH="$source/src" uv run --project "$source" python -m whub release apply <release-id>
+PYTHONPATH="$source/src" uv run --project "$source" python -m whub release deploy --source "$source"
 ```
+
+## `whub release deploy --source <path>`
+
+- build、verify、applyを順に実行し、buildで決定したrelease-idを後続処理へ引き継ぐ。
+- 各処理の停止・復旧条件は、それぞれの単独コマンドと同じである。
 
 ## `whub release build --source <path>`
 
