@@ -68,6 +68,24 @@ pathとbranchを検査する。両者が同じ操作を二重実行しないよ�
 `whub agent close`はtmux sessionを停止してから、記録済みかつ内容hashが一致するfileだけを削除する。
 変更済みfileは削除せずエラーにして、利用者の手動復旧を待つ。
 
+## Codex approval attention hook
+
+Codexのuser-level `~/.codex/hooks.json`は、`PermissionRequest`と`PostToolUse`の両方から固定の
+`~/.local/bin/whub agent attention-hook`を呼ぶ。これはAgent openが生成・更新する設定ではなく、利用者が
+`/hooks`で一度だけ定義を確認して信頼する任意の通知連携である。
+
+hookはstdinのJSONから`hook_event_name`、`session_id`、`cwd`、`turn_id`、`tool_name`だけをcontrol planeへ
+送る。`tool_input`や出力は送らない。`cwd`が登録済みAgent worktreeの絶対pathと文字列として完全一致する場合だけ、
+backendはそのworktreeに対応する`(project, task_id)`を解決する。登録外・不正な入力は状態を変更せず拒否する。
+
+`PermissionRequest`はその`(project, task_id)`のattentionを最新の要求で置換する。`PostToolUse`は同じ
+`tool_name`と`turn_id`を持つ最新要求だけを解除する。Codex Hookの入力にはPermissionRequestを一意に対応付ける
+識別子がないため、同一worktreeで複数の要求が来た場合は最新の未解決要求だけを表示対象とする。対応する完了eventが
+得られない拒否・中断は既存の10分TTLで失効し、Agent close時はtask全体を解除する。
+
+hook subcommandは、stdin不正・backend未起動・通信失敗・HTTPエラーのいずれでも成功終了し、stdoutへ判断結果を
+返さない。したがってHookは通常のCodex承認フローを許可・拒否・中断しない。
+
 現MVPは設定生成、tmux lifecycle、生成物cleanupまでを扱う。adapterが表現するruntime authorizationは
 まだAgent serviceで強制しておらず、filesystem・process network・Task YAML操作の強制は後続Taskの対象である。
 

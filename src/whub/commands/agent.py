@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+from collections.abc import Mapping
 
 import click
 
@@ -11,6 +13,7 @@ from whub.core.context import current_context
 from whub.models import project_names
 from whub.services.agent.agent import close_agent, open_agent
 from whub.services.errors import ServiceError
+from whub.webapp.agent_attention_control import submit as submit_attention_hook
 from whub.webapp.agent_codex_control import start as start_app_server
 from whub.webapp.agent_codex_control import stop as stop_app_server
 
@@ -65,3 +68,15 @@ def close(ctx: click.Context, project: str, task: str) -> None:
     if control_error is not None:
         raise click.ClickException(str(control_error))
     click.echo(f"closed {project}/{task}")
+
+
+@agent.command(name="attention-hook")
+def attention_hook() -> None:
+    """Forward one Codex Hook event without affecting its approval flow."""
+    try:
+        event = json.load(click.get_text_stream("stdin"))
+        if not isinstance(event, Mapping):
+            return
+        submit_attention_hook(current_context(), event)
+    except (OSError, ServiceError, TypeError, json.JSONDecodeError):
+        return

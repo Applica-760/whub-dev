@@ -19,6 +19,25 @@ def test_attention_lifecycle_requires_matching_tool_and_turn() -> None:
     assert store.list(started) == ()
 
 
+def test_attention_lifecycle_requires_matching_session() -> None:
+    store = ApprovalAttentionStore()
+    started = datetime(2026, 8, 3, tzinfo=UTC)
+
+    store.request(
+        "whub-dev", "TASK-104", "Bash", "turn-1", started, "session-1"
+    )
+    store.clear(
+        "whub-dev", "TASK-104", "Bash", "turn-1", started, "session-2"
+    )
+
+    assert len(store.list(started)) == 1
+
+    store.clear(
+        "whub-dev", "TASK-104", "Bash", "turn-1", started, "session-1"
+    )
+    assert store.list(started) == ()
+
+
 def test_attention_expires_after_ten_minutes() -> None:
     store = ApprovalAttentionStore()
     started = datetime(2026, 8, 3, tzinfo=UTC)

@@ -109,6 +109,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent-attention/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Hook Event */
+        post: operations["record_hook_event_api_agent_attention_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent-codex/{project}/{task_id}/session": {
         parameters: {
             query?: never;
@@ -599,6 +616,22 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HookEvent */
+        HookEvent: {
+            /**
+             * Hook Event Name
+             * @enum {string}
+             */
+            hook_event_name: "PermissionRequest" | "PostToolUse";
+            /** Session Id */
+            session_id: string;
+            /** Cwd */
+            cwd: string;
+            /** Turn Id */
+            turn_id: string;
+            /** Tool Name */
+            tool_name: string;
         };
         /** InboxResponse */
         InboxResponse: {
@@ -1171,6 +1204,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApprovalAttentionResponse"] | null;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_hook_event_api_agent_attention_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HookEvent"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
