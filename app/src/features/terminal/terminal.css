@@ -8,15 +8,39 @@
 .terminal-diff-layout {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr);
   min-height: 22rem;
 }
 
+.terminal-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
+}
+
+.terminal-diff-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+}
+
+.terminal-explorer {
+  order: -1;
+}
+
+.terminal-task-detail {
+  order: 1;
+}
+
 .terminal-layout[data-explorer-collapsed="true"] {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+}
+
+.terminal-layout[data-task-collapsed="true"] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+}
+
+.terminal-layout[data-explorer-collapsed="true"][data-task-collapsed="true"] {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.terminal-explorer[data-collapsed="true"] {
+.terminal-explorer[data-collapsed="true"],
+.terminal-task-detail[data-collapsed="true"] {
   display: none;
 }
 

@@ -1,0 +1,21 @@
+schema_version: 1
+task:
+  id: TASK-108
+  state: cancelled
+  title: Codex Agent Terminalの会話・承認UXを改善する
+  objective: Codex App Serverの単一threadで、ストリーミング応答と送信済みユーザーメッセージを正しく会話表示し、コマンド承認要求のWeb通知・許可/拒否・解決を実機で検証できるようにする。会話状態はApp
+    Server稼働中のセッションに限定し、永続化しない。
+  approach:
+  - App Serverのitem lifecycleを正としてdeltaをitemId単位で組み立て、ユーザーとAgentの会話をセッション状態として返す。既存のattention・Agentパネル・Explorer・非表示タブ通知を承認要求から解決まで一貫して検証する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation:
+  reason: 誤作成
+  actor: user
+result: null

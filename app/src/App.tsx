@@ -97,8 +97,8 @@ export function App() {
               <OverviewCollapseToggles
                 collapsed={terminalCollapse.collapsed}
                 onToggle={terminalCollapse.toggle}
-                sideLabels={{ left: "Explorer" }}
-                sides={["left"]}
+                sideLabels={{ left: "Explorer", right: "Task" }}
+                sides={["left", "right"]}
               />
             )}
             <ColorSchemeToggle />

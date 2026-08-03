@@ -114,6 +114,26 @@ beforeEach(() => {
                   error: agentError,
                 },
         });
+      if (url.startsWith("/api/tasks/"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            schema_version: 1,
+            task: {
+              id: url.includes("TASK-101") ? "TASK-101" : "TASK-099",
+              state: "in_progress",
+              title: "Terminal task",
+              approach: [],
+              depends_on: [],
+            },
+            plan: { phases: [] },
+          }),
+        });
+      if (url.startsWith("/api/tasks?"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ tasks: [] }),
+        });
       if (url.includes("/changes"))
         return Promise.resolve({
           ok: true,
@@ -168,7 +188,7 @@ function renderPage() {
 }
 
 describe("TerminalPage", () => {
-  it("端末選択と差分を二段の1:3レイアウトで表示する", async () => {
+  it("Task詳細・端末・ExplorerとGit差分を表示する", async () => {
     const { container } = renderPage();
     const firstTerminal = await screen.findByRole("button", {
       name: /whub-dev.*TASK-099/,
@@ -180,6 +200,7 @@ describe("TerminalPage", () => {
       expect(firstTerminal.getAttribute("aria-pressed")).toBe("true"),
     );
     expect(screen.getByText("whub-dev / TASK-099")).toBeTruthy();
+    expect(await screen.findByText("Task ID: TASK-099")).toBeTruthy();
     expect(await screen.findByText("src")).toBeTruthy();
     expect(await screen.findByText("new")).toBeTruthy();
     expect(
@@ -348,7 +369,9 @@ describe("TerminalPage", () => {
   it("Codex promptをJSONとして送信する", async () => {
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Agent" }));
+    const agent = await screen.findByRole("button", { name: "Agent" });
+    await waitFor(() => expect(agent.getAttribute("disabled")).toBeNull());
+    fireEvent.click(agent);
     fireEvent.change(await screen.findByPlaceholderText("Codexへ依頼…"), {
       target: { value: "こんにちは" },
     });
