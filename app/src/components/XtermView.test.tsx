@@ -151,7 +151,7 @@ describe("XtermView", () => {
     expect(xtermMocks.write).toHaveBeenCalledWith("output");
     expect(xtermMocks.focus).toHaveBeenCalledOnce();
     expect(xtermMocks.fit).toHaveBeenCalledOnce();
-    expect(onResize).toHaveBeenCalledWith({ columns: 120, rows: 40 });
+    expect(onResize).not.toHaveBeenCalled();
 
     view.unmount();
 

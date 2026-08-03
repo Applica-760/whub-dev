@@ -8,12 +8,37 @@
 .terminal-diff-layout {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
+  grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr);
   min-height: 22rem;
+}
+
+.terminal-layout[data-explorer-collapsed="true"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.terminal-explorer[data-collapsed="true"] {
+  display: none;
 }
 
 .diff-tree-node {
   cursor: pointer;
+}
+
+.diff-tree-node[data-changed="true"] {
+  color: var(--mantine-color-orange-7);
+}
+
+.diff-tree-node[data-new="true"] {
+  color: var(--mantine-color-green-7);
+}
+
+.diff-tree-node[data-changed="true"]::after {
+  background: currentColor;
+  border-radius: 50%;
+  content: "";
+  height: 0.4rem;
+  margin-left: auto;
+  width: 0.4rem;
 }
 
 .diff-tree-chevron {

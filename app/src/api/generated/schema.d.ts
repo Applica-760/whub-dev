@@ -297,20 +297,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/operator-terminal": {
+    "/api/operator-terminals": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Operator Terminal */
-        get: operations["get_operator_terminal_api_operator_terminal_get"];
+        /** List Operator Terminals */
+        get: operations["list_operator_terminals_api_operator_terminals_get"];
         put?: never;
         /** Start Operator Terminal */
-        post: operations["start_operator_terminal_api_operator_terminal_post"];
+        post: operations["start_operator_terminal_api_operator_terminals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/operator-terminals/{operator_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
         /** Stop Operator Terminal */
-        delete: operations["stop_operator_terminal_api_operator_terminal_delete"];
+        delete: operations["stop_operator_terminal_api_operator_terminals__operator_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -591,18 +607,20 @@ export interface components {
         };
         /**
          * OperatorTerminal
-         * @description The current lifecycle state of the Operator Terminal.
+         * @description One running workspace-wide terminal selected by its identifier.
          */
         OperatorTerminal: {
-            state: components["schemas"]["OperatorTerminalState"];
             /** Operator Id */
-            operator_id?: string | null;
+            operator_id: string;
         };
         /**
-         * OperatorTerminalState
-         * @enum {string}
+         * OperatorTerminals
+         * @description The active workspace-wide terminals in display order.
          */
-        OperatorTerminalState: "off" | "on";
+        OperatorTerminals: {
+            /** Terminals */
+            terminals: components["schemas"]["OperatorTerminal"][];
+        };
         /** PhaseLog */
         PhaseLog: {
             /** Value */
@@ -1533,7 +1551,7 @@ export interface operations {
             };
         };
     };
-    get_operator_terminal_api_operator_terminal_get: {
+    list_operator_terminals_api_operator_terminals_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1548,12 +1566,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OperatorTerminal"];
+                    "application/json": components["schemas"]["OperatorTerminals"];
                 };
             };
         };
     };
-    start_operator_terminal_api_operator_terminal_post: {
+    start_operator_terminal_api_operator_terminals_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1573,22 +1591,31 @@ export interface operations {
             };
         };
     };
-    stop_operator_terminal_api_operator_terminal_delete: {
+    stop_operator_terminal_api_operator_terminals__operator_id__delete: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                operator_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OperatorTerminal"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

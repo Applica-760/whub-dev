@@ -20,6 +20,9 @@ let approvalAttention = [
   },
 ];
 let agentError: string | null = null;
+let operationStarts = 0;
+let changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
+let clipboardWrite = vi.fn();
 
 vi.mock("./TerminalWidget", () => ({
   TerminalWidget: ({
@@ -28,13 +31,20 @@ vi.mock("./TerminalWidget", () => ({
     taskId,
   }: {
     label?: string;
-    project: string;
-    taskId: string;
+    project?: string;
+    taskId?: string;
   }) => <div>{label ?? `${project} / ${taskId}`}</div>,
 }));
 
 beforeEach(() => {
   agentError = null;
+  operationStarts = 0;
+  changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
+  clipboardWrite = vi.fn();
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: clipboardWrite },
+  });
   approvalAttention = [
     {
       project: "vault",
@@ -61,16 +71,20 @@ beforeEach(() => {
     },
   );
   vi.stubGlobal(
+    "confirm",
+    vi.fn(() => true),
+  );
+  vi.stubGlobal(
     "fetch",
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === "/api/operator-terminal")
+      if (url === "/api/operator-terminals")
         return Promise.resolve({
           ok: true,
           json: async () =>
             init?.method === "POST"
-              ? { state: "on", operator_id: "operator-1" }
-              : { state: "off", operator_id: null },
+              ? { operator_id: `operator-${++operationStarts}` }
+              : { terminals: [] },
         });
       if (url === "/api/agent-attention")
         return Promise.resolve({
@@ -104,7 +118,7 @@ beforeEach(() => {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            files: [{ path: "src/main.py", status: "M", previous_path: null }],
+            files: changedFiles,
           }),
         });
       if (url.includes("/diff?"))
@@ -154,7 +168,7 @@ function renderPage() {
 }
 
 describe("TerminalPage", () => {
-  it("端末選択と差分を二段の1:2レイアウトで表示する", async () => {
+  it("端末選択と差分を二段の1:3レイアウトで表示する", async () => {
     const { container } = renderPage();
     const firstTerminal = await screen.findByRole("button", {
       name: /whub-dev.*TASK-099/,
@@ -185,19 +199,59 @@ describe("TerminalPage", () => {
     );
   });
 
-  it("Operatorトグルで専用terminalを選択する", async () => {
-    renderPage();
-    fireEvent.click(
-      await screen.findByRole("switch", { name: "Operatorを開始" }),
-    );
-    expect(await screen.findByText("Operator / workspace-hub")).toBeTruthy();
+  it("Git Explorerを初期折りたたみで表示し、状態と右クリックコピーを反映する", async () => {
+    changedFiles = [
+      { path: "src/main.py", status: "M", previous_path: null },
+      { path: "draft.txt", status: "A", previous_path: null },
+    ];
+    const { container } = renderPage();
+
+    const source = await screen.findByText("src");
     expect(
-      (
-        screen.getByRole("switch", {
-          name: "Operatorを停止",
-        }) as HTMLInputElement
-      ).checked,
-    ).toBe(true);
+      container
+        .querySelector(".diff-tree-chevron")
+        ?.getAttribute("data-expanded"),
+    ).toBeNull();
+    expect(container.querySelector('[data-changed="true"]')).toBeTruthy();
+    expect(container.querySelector('[data-new="true"]')).toBeTruthy();
+
+    fireEvent.click(source);
+    expect(await screen.findByText("main.py")).toBeTruthy();
+    expect(
+      container
+        .querySelector(".diff-tree-chevron")
+        ?.getAttribute("data-expanded"),
+    ).toBe("true");
+    fireEvent.contextMenu(screen.getByText("main.py"));
+    expect(clipboardWrite).toHaveBeenCalledWith(
+      "projects/worktrees/whub-dev-099/src/main.py",
+    );
+  });
+
+  it("複数Operationを起動・選択・個別終了できる", async () => {
+    renderPage();
+    const start = await screen.findByRole("button", {
+      name: "Operationを起動",
+    });
+    fireEvent.click(start);
+    expect(await screen.findByText("Operation / workspace-hub")).toBeTruthy();
+
+    fireEvent.click(start);
+    expect(
+      await screen.findByRole("switch", { name: "Operation operator-2を停止" }),
+    ).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Operation operator-1を停止" }),
+    );
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith("/api/operator-terminals/operator-1", {
+        method: "DELETE",
+      }),
+    );
+    expect(
+      screen.queryByRole("switch", { name: "Operation operator-1を停止" }),
+    ).toBeNull();
   });
 
   it("承認待ちのTerminalをバッジと導線で示す", async () => {

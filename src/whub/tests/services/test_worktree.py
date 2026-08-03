@@ -21,7 +21,11 @@ from whub.services.worktree import (
 )
 from whub.services.worktree.operation import _create_worktree, _require_worktree_parent
 from whub.services.worktree.operation import ResolvedProjectWorktree
-from whub.services.worktree.diff import list_changed_files, read_changed_file_diff
+from whub.services.worktree.diff import (
+    WorktreeDiff,
+    list_changed_files,
+    read_changed_file_diff,
+)
 from whub.tests.helpers import manifest_data
 
 
@@ -153,7 +157,7 @@ def test_resolve_project_worktree_requires_git_base_branch(tmp_path: Path) -> No
         )
 
 
-def test_list_changed_files_parses_rename_and_regular_statuses(tmp_path: Path) -> None:
+def test_list_changed_files_returns_full_tree_with_git_statuses(tmp_path: Path) -> None:
     resolved = ResolvedProjectWorktree(
         definition=worktree_definition(),
         parent=tmp_path / "source",
@@ -167,34 +171,56 @@ def test_list_changed_files_parses_rename_and_regular_statuses(tmp_path: Path) -
         ),
         patch(
             "whub.services.worktree.diff.run_git",
-            return_value=subprocess.CompletedProcess(
-                [],
-                0,
-                stdout="M\0README.md\0R100\0old.py\0new.py\0",
-            ),
+            side_effect=[
+                subprocess.CompletedProcess(
+                    [], 0, stdout="README.md\0new.py\0unchanged.py\0draft.py\0"
+                ),
+                subprocess.CompletedProcess(
+                    [], 0, stdout="M\0README.md\0R100\0old.py\0new.py\0"
+                ),
+                subprocess.CompletedProcess([], 0, stdout="draft.py\0"),
+            ],
         ) as git,
     ):
         files = list_changed_files(
             Manifest.model_validate(manifest_data()), tmp_path, "local", "TASK-072"
         )
 
-    assert len(files) == 2
+    assert len(files) == 4
+    assert [item.path for item in files] == [
+        "README.md",
+        "draft.py",
+        "new.py",
+        "unchanged.py",
+    ]
     assert files[0].path == "README.md"
     assert files[0].status == "M"
     assert files[0].previous_path is None
-    assert files[1].path == "new.py"
-    assert files[1].status == "R"
-    assert files[1].previous_path == "old.py"
-    git.assert_called_once_with(
-        resolved.destination,
-        "diff",
-        "--name-status",
-        "-z",
-        "main",
-    )
+    assert files[1].status == "A"
+    assert files[2].status == "R"
+    assert files[2].previous_path == "old.py"
+    assert files[3].status == ""
+    assert git.call_args_list == [
+        call(
+            resolved.destination,
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ),
+        call(resolved.destination, "diff", "--name-status", "-z", "main"),
+        call(
+            resolved.destination,
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ),
+    ]
 
 
-def test_read_changed_file_diff_rejects_path_outside_change_set(tmp_path: Path) -> None:
+def test_read_changed_file_diff_rejects_path_outside_worktree(tmp_path: Path) -> None:
     resolved = ResolvedProjectWorktree(
         definition=worktree_definition(),
         parent=tmp_path / "source",
@@ -208,9 +234,9 @@ def test_read_changed_file_diff_rejects_path_outside_change_set(tmp_path: Path) 
         ),
         patch(
             "whub.services.worktree.diff.run_git",
-            return_value=subprocess.CompletedProcess([], 0, stdout="M\0README.md\0"),
+            return_value=subprocess.CompletedProcess([], 0, stdout="README.md\0"),
         ) as git,
-        pytest.raises(ServiceError, match="changed file not found: pyproject.toml"),
+        pytest.raises(ServiceError, match="worktree file not found: pyproject.toml"),
     ):
         read_changed_file_diff(
             Manifest.model_validate(manifest_data()),
@@ -222,10 +248,55 @@ def test_read_changed_file_diff_rejects_path_outside_change_set(tmp_path: Path) 
 
     git.assert_called_once_with(
         resolved.destination,
-        "diff",
-        "--name-status",
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
         "-z",
-        "main",
+    )
+
+
+def test_read_changed_file_diff_reads_untracked_file(tmp_path: Path) -> None:
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=tmp_path / "worktree",
+        base_branch="main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            side_effect=[
+                subprocess.CompletedProcess([], 0, stdout="draft.py\0"),
+                subprocess.CompletedProcess([], 0, stdout="draft.py\0"),
+                subprocess.CompletedProcess(
+                    [], 1, stdout="@@ -0,0 +1 @@\n+draft\n"
+                ),
+            ],
+        ) as git,
+    ):
+        diff = read_changed_file_diff(
+            Manifest.model_validate(manifest_data()),
+            tmp_path,
+            "local",
+            "TASK-072",
+            "draft.py",
+        )
+
+    assert diff == WorktreeDiff(path="draft.py", content="@@ -0,0 +1 @@\n+draft\n")
+    assert git.call_args_list[-1] == call(
+        resolved.destination,
+        "diff",
+        "--no-index",
+        "--no-ext-diff",
+        "--unified=3",
+        "--",
+        "/dev/null",
+        "draft.py",
     )
 
 

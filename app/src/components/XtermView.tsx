@@ -82,7 +82,7 @@ export type XtermDimensions = {
 };
 
 export type XtermViewHandle = {
-  fit: () => void;
+  fit: (forceResize?: boolean) => void;
   focus: () => void;
   write: (data: string) => void;
 };
@@ -102,6 +102,7 @@ export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
     const onDataRef = useRef(onData);
     const onLinkRef = useRef(onLink);
     const onResizeRef = useRef(onResize);
+    const lastDimensionsRef = useRef<XtermDimensions | null>(null);
     const terminalRef = useRef<Terminal | null>(null);
     const linksEnabled = onLink !== undefined;
 
@@ -111,7 +112,7 @@ export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
       onResizeRef.current = onResize;
     }, [onData, onLink, onResize]);
 
-    const fit = useCallback(() => {
+    const fit = useCallback((forceResize = false) => {
       const fitAddon = fitAddonRef.current;
       const terminal = terminalRef.current;
       if (!fitAddon || !terminal) {
@@ -119,7 +120,16 @@ export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
       }
 
       fitAddon.fit();
-      onResizeRef.current({ columns: terminal.cols, rows: terminal.rows });
+      const dimensions = { columns: terminal.cols, rows: terminal.rows };
+      if (
+        !forceResize &&
+        lastDimensionsRef.current?.columns === dimensions.columns &&
+        lastDimensionsRef.current.rows === dimensions.rows
+      ) {
+        return;
+      }
+      lastDimensionsRef.current = dimensions;
+      onResizeRef.current(dimensions);
     }, []);
 
     useImperativeHandle(
@@ -151,7 +161,7 @@ export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
       terminal.open(element);
 
       const input = terminal.onData((data) => onDataRef.current(data));
-      const resizeObserver = new ResizeObserver(fit);
+      const resizeObserver = new ResizeObserver(() => fit());
       resizeObserver.observe(element);
 
       return () => {
@@ -164,7 +174,7 @@ export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
     }, [fit, linksEnabled, options]);
 
     useEffect(() => {
-      const animationFrame = requestAnimationFrame(fit);
+      const animationFrame = requestAnimationFrame(() => fit());
       return () => cancelAnimationFrame(animationFrame);
     }, [fit, resizeSignal]);
 

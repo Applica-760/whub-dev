@@ -59,6 +59,7 @@ class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
 
   readonly sent: string[] = [];
+  binaryType: BinaryType = "blob";
   readyState = FakeWebSocket.CONNECTING;
   private readonly listeners = new Map<string, Array<(event: Event) => void>>();
 
@@ -86,7 +87,7 @@ class FakeWebSocket {
     this.dispatch("open", new Event("open"));
   }
 
-  message(data: string) {
+  message(data: ArrayBuffer) {
     this.dispatch("message", new MessageEvent("message", { data }));
   }
 
@@ -153,7 +154,7 @@ describe("TerminalWidget", () => {
 
     act(() => socket.open());
     act(() => terminalMocks.inputHandler?.("1"));
-    act(() => socket.message("echo"));
+    act(() => socket.message(new TextEncoder().encode("echo").buffer));
 
     expect(socket.sent.map((frame) => JSON.parse(frame))).toEqual([
       { type: "claim" },
@@ -169,6 +170,27 @@ describe("TerminalWidget", () => {
     expect(screen.queryByText("端末接続が切断されました。")).toBeNull();
   });
 
+  it("分割されたUTF-8バイナリフレームを一文字として表示する", () => {
+    render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="initial"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+    const socket = FakeWebSocket.instances[0];
+    const bytes = new TextEncoder().encode("あ");
+
+    act(() => socket.open());
+    act(() => socket.message(bytes.slice(0, 1).buffer));
+    act(() => socket.message(bytes.slice(1).buffer));
+
+    expect(socket.binaryType).toBe("arraybuffer");
+    expect(terminalMocks.write).toHaveBeenLastCalledWith("あ");
+  });
+
   it("親layoutの変更後に再fitしてtmuxへresizeを送る", () => {
     const view = render(
       <MantineProvider env="test">
@@ -182,6 +204,7 @@ describe("TerminalWidget", () => {
     const socket = FakeWebSocket.instances[0];
     act(() => socket.open());
     terminalMocks.fit.mockClear();
+    const framesBeforeRerender = socket.sent.length;
 
     view.rerender(
       <MantineProvider env="test">
@@ -195,6 +218,7 @@ describe("TerminalWidget", () => {
 
     expect(FakeWebSocket.instances).toHaveLength(1);
     expect(terminalMocks.fit).toHaveBeenCalledOnce();
+    expect(socket.sent).toHaveLength(framesBeforeRerender);
     expect(JSON.parse(socket.sent.at(-1) ?? "{}")).toEqual({
       type: "resize",
       columns: 80,

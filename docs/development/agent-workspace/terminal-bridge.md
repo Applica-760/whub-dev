@@ -11,11 +11,12 @@ whub Web appから、Taskに対応する既存のAgent tmux sessionへ接続す�
 - browserからtmux socket、session名、任意のcommandを指定しない。`agent.tmux_session`が登録済みworktreeから接続先を解決する。
 - terminal bridgeはtmux session、shell、Agent processを作成または終了しない。
 
-Operator TerminalはこのTask Terminalとは別の境界である。`/api/operator-terminal`
-が単一のtask非依存terminalをON/OFFし、ONごとに新しいOperator ID、workspace-hub
-rootをCWDとするlogin shell、専用tmux sessionを作る。OFFはtmux sessionとruntime
-recordを削除し、`/api/operator-terminals/{operator_id}` の接続を以後拒否する。
-Browserの切断・再読み込みはOperator sessionを停止しない。
+Operator TerminalはこのTask Terminalとは別の境界である。
+`/api/operator-terminals`はtask非依存terminalを一覧・起動し、起動ごとに新しい
+Operator ID、workspace-hub rootをCWDとするlogin shell、専用tmux sessionを作る。
+`/api/operator-terminals/{operator_id}`のDELETEは指定sessionだけを停止・runtime
+recordから除外し、同じIDへの接続を以後拒否する。Browserの切断・再読み込みは
+Operator sessionを停止しない。
 
 ## Access modes
 
@@ -42,7 +43,9 @@ clientからserverへのメッセージは、次のJSON text frameとする。
 - `{"type":"input","data":"..."}`: terminal入力を送信する。`data`の空白文字は保持する。
 - `{"type":"resize","columns":120,"rows":40}`: PTYをresizeする。`columns`と`rows`は1以上1000以下とする。
 
-serverからclientへのPTY出力はUTF-8 text frameとする。不正なclient frameは`{"type":"error","detail":"invalid frame"}`で通知する。入力とresizeはcontrollerだけが実行できる。
+serverからclientへのPTY出力はbinary frameとする。clientはストリームとしてUTF-8を
+decodeし、frame境界で分割された文字を保持する。不正なclient frameは
+`{"type":"error","detail":"invalid frame"}`で通知する。入力とresizeはcontrollerだけが実行できる。
 
 接続時は同一hostのHTTPまたはHTTPS Originだけを許可する。
 
@@ -52,7 +55,8 @@ serverからclientへのPTY出力はUTF-8 text frameとする。不正なclient 
 - `agent.terminal_bridge`は解決済みsessionへのPTY attach、terminal入出力の中継、access mode、controller lease、resize制御を担う。
 - Web appのWebSocket endpointは接続を受け付けて`agent.terminal_bridge`を呼び出すadapterとし、tmux操作や入力権の判断を持たない。
 - Operator TerminalはTask Terminalとは別のcontroller lease registryを持つ。ただしPTY
-  attach・resize・frame形式は同じterminal bridge契約を利用する。
+  attach・resize・frame形式は同じterminal bridge契約を利用する。resizeは接続ごとに
+  最後に適用したcolumns/rowsと異なる場合だけtmuxへ中継する。
 
 ## PTY lifecycle
 

@@ -10,6 +10,7 @@ import { DiffPane } from "./DiffPane";
 import { CodexPanel } from "./CodexPanel";
 import { TerminalWidget } from "./TerminalWidget";
 import { useApprovalAttention } from "./useApprovalAttention";
+import type { TerminalCollapseState } from "./useTerminalCollapse";
 
 import "./terminal.css";
 
@@ -17,7 +18,8 @@ type TerminalWorktree = WorktreeItem & {
   parent_project: string;
   task_id: string;
 };
-type OperatorTerminal = { operator_id: string | null; state: "off" | "on" };
+type OperatorTerminal = { operator_id: string };
+type OperatorTerminals = { terminals: OperatorTerminal[] };
 type PanelMode = "terminal" | "agent";
 
 function terminalWorktrees(worktrees: WorktreeItem[]): TerminalWorktree[] {
@@ -31,12 +33,22 @@ function worktreeValue(worktree: WorktreeItem) {
   return `${worktree.parent_project}/${worktree.task_id}`;
 }
 
-export function TerminalPage() {
+function operatorValue(operatorId: string) {
+  return `operator/${operatorId}`;
+}
+
+type TerminalPageProps = {
+  collapsed?: TerminalCollapseState;
+};
+
+export function TerminalPage({
+  collapsed = { left: false, right: false },
+}: TerminalPageProps) {
   const { error, loading, worktrees } = useWorktrees();
   const { acknowledge, attention } = useApprovalAttention();
   const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
-  const [operator, setOperator] = useState<OperatorTerminal | null>(null);
+  const [operators, setOperators] = useState<OperatorTerminal[]>([]);
   const [operatorError, setOperatorError] = useState<string | null>(null);
   const [operatorPending, setOperatorPending] = useState(false);
   const [panelMode, setPanelMode] = useState<PanelMode>("terminal");
@@ -44,8 +56,9 @@ export function TerminalPage() {
     (item) => worktreeValue(item) === selectedTerminal,
   );
   const pendingAttention = attention.filter((item) => !item.acknowledged);
-  const operatorRunning =
-    operator?.state === "on" && operator.operator_id !== null;
+  const selectedOperator = operators.find(
+    (operator) => operatorValue(operator.operator_id) === selectedTerminal,
+  );
 
   const acknowledgeTerminal = useCallback(
     (value: string) => {
@@ -72,14 +85,22 @@ export function TerminalPage() {
 
   useEffect(() => {
     setSelectedTerminal((current) => {
-      if (current === "operator" && operatorRunning) return current;
+      if (loading) return current;
+      if (
+        operators.some(
+          (operator) => operatorValue(operator.operator_id) === current,
+        )
+      )
+        return current;
       return terminals.some((item) => worktreeValue(item) === current)
         ? current
-        : terminals[0]
-          ? worktreeValue(terminals[0])
-          : null;
+        : operators[0]
+          ? operatorValue(operators[0].operator_id)
+          : terminals[0]
+            ? worktreeValue(terminals[0])
+            : null;
     });
-  }, [operatorRunning, terminals]);
+  }, [loading, operators, terminals]);
 
   useEffect(() => {
     if (!selectedWorktree) setPanelMode("terminal");
@@ -87,8 +108,17 @@ export function TerminalPage() {
 
   const refreshOperator = useCallback(async () => {
     try {
-      setOperator(
-        await requestJson<OperatorTerminal>("/api/operator-terminal"),
+      const listed = await requestJson<OperatorTerminals>(
+        "/api/operator-terminals",
+      );
+      setOperators((current) =>
+        current.length === listed.terminals.length &&
+        current.every(
+          (operator, index) =>
+            operator.operator_id === listed.terminals[index]?.operator_id,
+        )
+          ? current
+          : listed.terminals,
       );
     } catch (requestError) {
       setOperatorError(
@@ -103,26 +133,16 @@ export function TerminalPage() {
     void refreshOperator();
   }, [refreshOperator]);
 
-  const toggleOperator = useCallback(async () => {
-    if (operatorRunning && !window.confirm("Operator Terminalを停止しますか？"))
-      return;
+  const startOperator = useCallback(async () => {
     setOperatorPending(true);
     setOperatorError(null);
     try {
-      const updated = await requestJson<OperatorTerminal>(
-        "/api/operator-terminal",
-        {
-          method: operatorRunning ? "DELETE" : "POST",
-        },
+      const created = await requestJson<OperatorTerminal>(
+        "/api/operator-terminals",
+        { method: "POST" },
       );
-      setOperator(updated);
-      setSelectedTerminal(
-        updated.state === "on"
-          ? "operator"
-          : terminals[0]
-            ? worktreeValue(terminals[0])
-            : null,
-      );
+      setOperators((current) => [...current, created]);
+      setSelectedTerminal(operatorValue(created.operator_id));
     } catch (requestError) {
       setOperatorError(
         requestError instanceof Error
@@ -132,7 +152,31 @@ export function TerminalPage() {
     } finally {
       setOperatorPending(false);
     }
-  }, [operatorRunning, terminals]);
+  }, []);
+
+  const stopOperator = useCallback(
+    async (operatorId: string) => {
+      if (!window.confirm("Operationを終了しますか？")) return;
+      setOperatorPending(true);
+      setOperatorError(null);
+      try {
+        await requestJson<void>(
+          `/api/operator-terminals/${encodeURIComponent(operatorId)}`,
+          { method: "DELETE" },
+        );
+        setOperators((current) => current.filter((item) => item.operator_id !== operatorId));
+      } catch (requestError) {
+        setOperatorError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Operationを終了できませんでした。",
+        );
+      } finally {
+        setOperatorPending(false);
+      }
+    },
+    [],
+  );
 
   return (
     <main className="terminal-page">
@@ -160,29 +204,51 @@ export function TerminalPage() {
           </Group>
         </Alert>
       )}
-      <section className="terminal-layout">
+      <section
+        className="terminal-layout"
+        data-explorer-collapsed={collapsed.left || undefined}
+      >
+        <aside
+          className="terminal-explorer"
+          data-collapsed={collapsed.left || undefined}
+        >
         <WidgetFrame title={<Text fw={600}>Explorer</Text>}>
           <Group justify="space-between" m="md">
-            <Text fw={500}>Operator</Text>
-            <Switch
-              aria-label={operatorRunning ? "Operatorを停止" : "Operatorを開始"}
-              checked={operatorRunning}
+            <Text fw={500}>Operations</Text>
+            <Button
+              aria-label="Operationを起動"
               disabled={operatorPending}
-              offLabel="OFF"
-              onChange={() => void toggleOperator()}
-              onLabel="ON"
-              size="md"
-            />
+              onClick={() => void startOperator()}
+              size="xs"
+            >
+              起動
+            </Button>
           </Group>
-          {operatorRunning && (
+          {operators.map((operator, index) => (
             <GroupedListRow
-              onClick={() => setSelectedTerminal("operator")}
-              selected={selectedTerminal === "operator"}
+              key={operator.operator_id}
+              onClick={() => setSelectedTerminal(operatorValue(operator.operator_id))}
+              rightSection={
+                <Switch
+                  aria-label={`Operation ${operator.operator_id}を停止`}
+                  checked
+                  color="green"
+                  disabled={operatorPending}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                  }}
+                  onChange={() => void stopOperator(operator.operator_id)}
+                  offLabel="OFF"
+                  onLabel="ON"
+                  size="md"
+                />
+              }
+              selected={selectedTerminal === operatorValue(operator.operator_id)}
               subtitle="workspace-hub"
-              title="Operator Terminal"
-              withDivider={terminals.length > 0}
+              title={`Operation ${index + 1}`}
+              withDivider={operators.length > 1 || terminals.length > 0}
             />
-          )}
+          ))}
           {loading ? (
             <Text c="dimmed" p="md">
               worktreeを読み込んでいます…
@@ -220,6 +286,7 @@ export function TerminalPage() {
             </Alert>
           )}
         </WidgetFrame>
+        </aside>
         <WidgetFrame
           action={
             <Group gap={4}>
@@ -257,11 +324,11 @@ export function TerminalPage() {
               project={selectedWorktree.parent_project}
               taskId={selectedWorktree.task_id}
             />
-          ) : operatorRunning && selectedTerminal === "operator" ? (
+          ) : selectedOperator ? (
             <TerminalWidget
-              endpoint={`/api/operator-terminals/${encodeURIComponent(operator?.operator_id ?? "")}`}
-              label="Operator / workspace-hub"
-              resizeSignal={selectedTerminal}
+              endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
+              label="Operation / workspace-hub"
+              resizeSignal={selectedTerminal ?? ""}
             />
           ) : selectedWorktree ? (
             <TerminalWidget
@@ -279,6 +346,7 @@ export function TerminalPage() {
       <DiffPane
         project={selectedWorktree?.parent_project}
         taskId={selectedWorktree?.task_id}
+        workspacePath={selectedWorktree?.workspace_path}
       />
     </main>
   );

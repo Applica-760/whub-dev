@@ -1,5 +1,4 @@
 import { Alert, Box, Group, Loader, ScrollArea, Text } from "@mantine/core";
-import type { TreeNodeData } from "@mantine/core";
 import {
   IconChevronRight,
   IconFile,
@@ -17,37 +16,39 @@ import type { ChangedFile } from "./diffApi";
 type DiffPaneProps = {
   project: string | undefined;
   taskId: string | undefined;
+  workspacePath: string | null | undefined;
 };
 
-function treeData(files: ChangedFile[]): TreeNodeData[] {
-  type Node = TreeNodeData & { children: Node[] };
-  const root: Node[] = [];
+type ExplorerNode = {
+  children: ExplorerNode[];
+  label: string;
+  path: string;
+  status: string;
+};
+
+function treeData(files: ChangedFile[]): ExplorerNode[] {
+  const root: ExplorerNode[] = [];
   for (const file of files) {
     const parts = file.path.split("/");
     let nodes = root;
     for (const [index, part] of parts.entries()) {
       const existing = nodes.find((node) => node.label === part);
       const node = existing ?? {
-        value: parts.slice(0, index + 1).join("/"),
+        path: parts.slice(0, index + 1).join("/"),
         label: part,
         children: [],
+        status: "",
       };
       if (!existing) nodes.push(node);
-      if (index === parts.length - 1) node.value = file.path;
+      if (index === parts.length - 1) node.status = file.status;
       nodes = node.children;
     }
   }
   return root;
 }
 
-function directoryValues(nodes: TreeNodeData[]): Set<string> {
-  return new Set(
-    nodes.flatMap((node) =>
-      node.children?.length
-        ? [node.value, ...directoryValues(node.children)]
-        : [],
-    ),
-  );
+function hasChanges(node: ExplorerNode): boolean {
+  return Boolean(node.status) || node.children.some(hasChanges);
 }
 
 type RenderedDiffLine = {
@@ -128,7 +129,7 @@ function changeCount(content: string) {
   );
 }
 
-export function DiffPane({ project, taskId }: DiffPaneProps) {
+export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
   const [files, setFiles] = useState<ChangedFile[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [content, setContent] = useState("");
@@ -151,7 +152,7 @@ export function DiffPane({ project, taskId }: DiffPaneProps) {
         if (!cancelled) {
           setFiles(response.files);
           setSelectedPath(response.files[0]?.path ?? null);
-          setExpanded(directoryValues(treeData(response.files)));
+          setExpanded(new Set());
         }
       })
       .catch(
@@ -185,26 +186,37 @@ export function DiffPane({ project, taskId }: DiffPaneProps) {
 
   const data = useMemo(() => treeData(files), [files]);
   const changes = useMemo(() => changeCount(content), [content]);
-  const renderTree = (nodes: TreeNodeData[], depth = 0): ReactNode =>
+  const copyPath = (path: string) => {
+    const relativePath = workspacePath ? `${workspacePath}/${path}` : path;
+    void navigator.clipboard?.writeText(relativePath);
+  };
+  const renderTree = (nodes: ExplorerNode[], depth = 0): ReactNode =>
     nodes.map((node) => {
-      const directory = Boolean(node.children?.length);
-      const open = expanded.has(node.value);
+      const directory = node.children.length > 0;
+      const open = expanded.has(node.path);
+      const changed = hasChanges(node);
       return (
-        <Box key={node.value}>
+        <Box key={node.path}>
           <Group
             className="diff-tree-node"
+            data-changed={changed || undefined}
+            data-new={node.status === "A" || undefined}
             gap={6}
             onClick={() =>
               directory
                 ? setExpanded((current) => {
                     const next = new Set(current);
-                    next.has(node.value)
-                      ? next.delete(node.value)
-                      : next.add(node.value);
+                    next.has(node.path)
+                      ? next.delete(node.path)
+                      : next.add(node.path);
                     return next;
                   })
-                : setSelectedPath(node.value)
+                : setSelectedPath(node.path)
             }
+            onContextMenu={(event) => {
+              event.preventDefault();
+              copyPath(node.path);
+            }}
             py={3}
             style={{ paddingInlineStart: 8 + depth * 16 }}
             wrap="nowrap"
@@ -233,7 +245,7 @@ export function DiffPane({ project, taskId }: DiffPaneProps) {
               />
             )}
             <Text
-              data-selected={node.value === selectedPath || undefined}
+              data-selected={node.path === selectedPath || undefined}
               size="sm"
             >
               {node.label}

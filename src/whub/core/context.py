@@ -80,6 +80,10 @@ class WhubContext:
     def operator_terminal_path(self) -> Path:
         return self.directory / "runtime" / "operator-terminal.json"
 
+    @property
+    def operator_terminals_path(self) -> Path:
+        return self.directory / "runtime" / "operator-terminals.json"
+
     def read_manifest_text(self) -> str:
         return self.manifest_path.read_text()
 

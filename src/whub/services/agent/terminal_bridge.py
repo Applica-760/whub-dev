@@ -76,6 +76,7 @@ class TerminalAttachment:
     master_fd: int
     process: subprocess.Popen[bytes]
     _closed: bool = field(default=False, init=False)
+    _dimensions: tuple[int, int] | None = field(default=None, init=False)
 
     def close(self) -> None:
         if self._closed:
@@ -116,4 +117,12 @@ def attach(session: TmuxSession) -> TerminalAttachment:
 
 
 def resize(attachment: TerminalAttachment, columns: int, rows: int) -> None:
-    fcntl.ioctl(attachment.master_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, columns, 0, 0))
+    dimensions = columns, rows
+    if attachment._dimensions == dimensions:
+        return
+    fcntl.ioctl(
+        attachment.master_fd,
+        termios.TIOCSWINSZ,
+        struct.pack("HHHH", rows, columns, 0, 0),
+    )
+    attachment._dimensions = dimensions

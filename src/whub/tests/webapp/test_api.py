@@ -29,7 +29,7 @@ from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.agent.codex.attention import ApprovalAttentionStore
 from whub.models import ResourceStatus, StatusReport, WorktreeStatus
-from whub.models.operator_terminal import OperatorTerminal, OperatorTerminalState
+from whub.models.operator_terminal import OperatorTerminal, OperatorTerminals
 from whub.services.task import ProjectTasks
 from whub.services.vault import VaultNode
 from whub.services.worktree.diff import ChangedFile, WorktreeDiff
@@ -213,41 +213,38 @@ def test_get_projects_returns_manifest_names(client: TestClient) -> None:
 def test_operator_terminal_endpoints_delegate_to_its_lifecycle_service(
     client: TestClient, tmp_path: Path
 ) -> None:
-    running = OperatorTerminal(
-        state=OperatorTerminalState.ON,
-        operator_id="operator-1",
-    )
-    stopped = OperatorTerminal(state=OperatorTerminalState.OFF)
+    running = OperatorTerminal(operator_id="operator-1")
+    listed = OperatorTerminals(terminals=[running])
     context = Mock(workspace_root=tmp_path)
     with (
         patch(
-            "whub.webapp.routers.operator_terminal.operator_terminal.status",
-            return_value=stopped,
-        ) as mock_status,
+            "whub.webapp.routers.operator_terminal.operator_terminal.list",
+            return_value=listed,
+        ) as mock_list,
         patch(
             "whub.webapp.routers.operator_terminal.operator_terminal.start",
             return_value=running,
         ) as mock_start,
         patch(
             "whub.webapp.routers.operator_terminal.operator_terminal.stop",
-            return_value=stopped,
+            return_value=OperatorTerminals(terminals=[]),
         ) as mock_stop,
         patch(
             "whub.webapp.routers.operator_terminal.current_context",
             return_value=context,
         ),
     ):
-        get_response = client.get("/api/operator-terminal")
-        start_response = client.post("/api/operator-terminal")
-        stop_response = client.delete("/api/operator-terminal")
+        get_response = client.get("/api/operator-terminals")
+        start_response = client.post("/api/operator-terminals")
+        stop_response = client.delete("/api/operator-terminals/operator-1")
 
-    assert get_response.json() == {"state": "off", "operator_id": None}
+    assert get_response.json() == {"terminals": [{"operator_id": "operator-1"}]}
     assert start_response.status_code == 201
-    assert start_response.json() == {"state": "on", "operator_id": "operator-1"}
-    assert stop_response.json() == {"state": "off", "operator_id": None}
-    mock_status.assert_called_once_with(context)
+    assert start_response.json() == {"operator_id": "operator-1"}
+    assert stop_response.status_code == 204
+    mock_list.assert_called_once_with(context)
     mock_start.assert_called_once_with(context)
-    mock_stop.assert_called_once_with(context)
+    mock_stop.assert_called_once_with(context, "operator-1")
 
 
 def test_backlog_endpoints_use_services(client: TestClient) -> None:
