@@ -9,6 +9,7 @@ import { OverviewPage } from "./features/overview/OverviewPage";
 import { useOverviewCollapse } from "./features/overview/useOverviewCollapse";
 import { ResourceStatusPage } from "./features/status/ResourceStatusPage";
 import { TerminalPage } from "./features/terminal/TerminalPage";
+import { useTerminalCollapse } from "./features/terminal/useTerminalCollapse";
 import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { TasksPage } from "./features/tasks/TasksPage";
 import {
@@ -56,6 +57,7 @@ const navigation: NavigationItem[] = [
 export function App() {
   const location = useLocation();
   const overviewCollapse = useOverviewCollapse();
+  const terminalCollapse = useTerminalCollapse();
 
   return (
     <AppShell header={{ height: 47 }} padding={0}>
@@ -91,6 +93,14 @@ export function App() {
                 onToggle={overviewCollapse.toggle}
               />
             )}
+            {location.pathname === TERMINAL_PATH && (
+              <OverviewCollapseToggles
+                collapsed={terminalCollapse.collapsed}
+                onToggle={terminalCollapse.toggle}
+                sideLabels={{ left: "Explorer" }}
+                sides={["left"]}
+              />
+            )}
             <ColorSchemeToggle />
           </div>
         </Group>
@@ -112,7 +122,10 @@ export function App() {
             <Route element={<BacklogPage />} path="/backlog" />
             <Route element={<VaultPage />} path="/vault" />
             <Route element={<TodosPage />} path="/todos" />
-            <Route element={<TerminalPage />} path={TERMINAL_PATH} />
+            <Route
+              element={<TerminalPage collapsed={terminalCollapse.collapsed} />}
+              path={TERMINAL_PATH}
+            />
             <Route element={<TasksPage />} path="/tasks" />
             <Route element={<TaskDetailPage />} path={TASK_DETAIL_PATH} />
             <Route

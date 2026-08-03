@@ -10,6 +10,7 @@ import { DiffPane } from "./DiffPane";
 import { CodexPanel } from "./CodexPanel";
 import { TerminalWidget } from "./TerminalWidget";
 import { useApprovalAttention } from "./useApprovalAttention";
+import type { TerminalCollapseState } from "./useTerminalCollapse";
 
 import "./terminal.css";
 
@@ -36,7 +37,13 @@ function operatorValue(operatorId: string) {
   return `operator/${operatorId}`;
 }
 
-export function TerminalPage() {
+type TerminalPageProps = {
+  collapsed?: TerminalCollapseState;
+};
+
+export function TerminalPage({
+  collapsed = { left: false, right: false },
+}: TerminalPageProps) {
   const { error, loading, worktrees } = useWorktrees();
   const { acknowledge, attention } = useApprovalAttention();
   const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
@@ -89,9 +96,9 @@ export function TerminalPage() {
         ? current
         : operators[0]
           ? operatorValue(operators[0].operator_id)
-        : terminals[0]
-          ? worktreeValue(terminals[0])
-          : null;
+          : terminals[0]
+            ? worktreeValue(terminals[0])
+            : null;
     });
   }, [loading, operators, terminals]);
 
@@ -197,7 +204,14 @@ export function TerminalPage() {
           </Group>
         </Alert>
       )}
-      <section className="terminal-layout">
+      <section
+        className="terminal-layout"
+        data-explorer-collapsed={collapsed.left || undefined}
+      >
+        <aside
+          className="terminal-explorer"
+          data-collapsed={collapsed.left || undefined}
+        >
         <WidgetFrame title={<Text fw={600}>Explorer</Text>}>
           <Group justify="space-between" m="md">
             <Text fw={500}>Operations</Text>
@@ -272,6 +286,7 @@ export function TerminalPage() {
             </Alert>
           )}
         </WidgetFrame>
+        </aside>
         <WidgetFrame
           action={
             <Group gap={4}>

@@ -14,6 +14,8 @@ import type {
 type OverviewCollapseTogglesProps = {
   collapsed: OverviewCollapseState;
   onToggle: (side: OverviewSideName) => void;
+  sides?: OverviewSideName[];
+  sideLabels?: Partial<Record<OverviewSideName, string>>;
 };
 
 const SIDES: OverviewSideName[] = ["left", "right"];
@@ -37,11 +39,13 @@ const SIDE_ICON = {
 export function OverviewCollapseToggles({
   collapsed,
   onToggle,
+  sides = SIDES,
+  sideLabels = {},
 }: OverviewCollapseTogglesProps) {
-  return SIDES.map((side) => {
+  return sides.map((side) => {
     const isCollapsed = collapsed[side];
     const Icon = SIDE_ICON[side][isCollapsed ? "expand" : "collapse"];
-    const label = `${SIDE_LABEL[side]}を${isCollapsed ? "展開する" : "折りたたむ"}`;
+    const label = `${sideLabels[side] ?? SIDE_LABEL[side]}を${isCollapsed ? "展開する" : "折りたたむ"}`;
 
     return (
       <ActionIcon
