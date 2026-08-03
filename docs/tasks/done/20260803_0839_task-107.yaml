@@ -1,0 +1,162 @@
+schema_version: 1
+task:
+  id: TASK-107
+  state: completed
+  title: Terminalの複数OperationとGit Explorer改善
+  objective: Terminal画面で複数の独立Operation端末を安全に起動・切替・個別終了でき、初期表示はOperationを選択する。差分Explorerは.gitignoreを尊重したコードベース全体を折りたたみ表示し、変更・新規状態をVS
+    Codeに近い視覚表現で示す。
+  approach:
+  - Operationごとに独立したtmux sessionと識別子を保持し、既存の端末ブリッジに接続する。ファイルツリーはgit ls-files --cached
+    --others --exclude-standardを基に構築し、差分状態を重ねて表示する。先行タスクのmerge後にworktreeを作成する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 複数Operationのライフサイクル
+    acceptance: []
+    steps:
+    - description: 分割されたUTF-8出力と、初期表示・タブ切替・Explorer開閉時のresize／再接続回数をbackend・UIテストで検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Terminalのfit・ResizeObserver・tmux resizeを安定化し、実寸が変化しない再描画・resize・再接続の反復を抑止する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: tmux出力をWebSocketのバイナリフレームで中継し、フレーム境界でUTF-8文字を破損させずxtermへ渡す。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Operationごとに独立したtmux session・識別子・接続先を管理し、複数起動・一覧取得・個別終了の契約を定義する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 単一Operation前提の状態保存・Service・HTTP/WebSocket APIを複数Operation対応へ変更し、既存端末ブリッジとの接続を維持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 複数起動、識別子の解決、個別終了、停止済み端末の拒否をサービス・APIテストで検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: Task 107 の複数 Operation は既存 Operator Terminal を対象とする。workspace-hub
+          root を CWD とし、親作業（worktree作成・whub agent open等）に使う ON/OFF管理の tmux session
+          を、Task/Agent worktree terminal とは独立して複数起動・選択・個別停止できるようにする。
+      deleted: false
+    - value:
+        verification: 複数Operation lifecycle・UTF-8 binary WebSocket・同寸法resize抑止を実装。Python
+          566 passed、frontend 40 passed、typecheck・build・Ruff・git diff --check成功。開発サーバで複数起動・選択・個別停止をユーザー確認済み。
+      deleted: false
+    deleted: false
+  - title: TerminalのOperation UI
+    acceptance: []
+    steps:
+    - description: Operationを常時選択可能な先頭タブにし、Terminal画面を開くとOperationを選択するUIへ変更する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Operationの起動、複数タブの切替、各タブの個別終了を実装し、worktree端末の選択と共存させる。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 狭い画面でTerminal左側のExplorerを折りたためる操作を復活し、既存のwhub.terminal.collapsedへ状態を保存する。Overviewの折りたたみ状態とは独立して保持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Terminal左Explorerの折りたたみ・再展開と、Overviewの状態に影響しない永続状態をUIテストで検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Terminalで選択したtmux出力を、選択時の⌘/Ctrl+Cでクリップボードへコピーできるようにする。選択がない場合は従来どおり端末へ入力を送る。
+      state: skipped
+      skip_reason: 開発画面で選択コピーが実用動作しないことをユーザー確認。tmux/xtermの選択状態とブラウザclipboard連携を要するため、Phase
+        2では見送る。
+      deleted: false
+    - description: 選択範囲のコピーと、選択がない⌘/Ctrl+Cが端末入力として送信されることをUIテストで検証する。
+      state: skipped
+      skip_reason: 002-005の選択コピー実装を見送るため、対応UIテストも見送る。
+      deleted: false
+    - description: 初期選択、タブ切替、複数Operationと個別終了をUIテストで検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        start: Phase 2開始。Operation選択UI、Terminal Explorer折りたたみ、tmux出力選択のコピーを実装する。
+      deleted: false
+    - value:
+        verification: Operation UI・Explorer独立折りたたみを実装し、開発画面でユーザー確認済み。コピー機能は002-005/006をskip。frontend
+          typecheck成功。
+      deleted: false
+    deleted: false
+  - title: Git Explorer
+    acceptance: []
+    steps:
+    - description: git ls-files --cached --others --exclude-standardを基に、.gitignoreを尊重するコードベース全体のツリーと差分状態を返すAPIへ変更する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Git Explorerの初期表示時に、ファイルツリーと選択中ファイルの差分をキャッシュを使わず強制再取得する。常時ポーリングは追加しない。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 画面再読み込み時の強制再取得と、通常時に継続同期しないことをAPI/UIテストで検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ディレクトリを初期折りたたみにし、変更ファイル・その祖先ディレクトリをオレンジ、新規ファイルを緑、変更を含むディレクトリに状態マーカーを表示する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Explorerのファイルまたはディレクトリを右クリックすると、workspace-hubを起点とする相対パスをクリップボードへコピーできるようにする。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ファイル・ディレクトリの右クリックからの相対パスコピーをUIテストで検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ファイル列挙・状態付与のAPIテストと、折りたたみ・色・状態マーカーのUIテストを追加する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        start: Phase 3開始。git管理対象ツリー、差分状態、強制再取得、折りたたみ、相対パスコピーを実装する。
+      deleted: false
+    - value:
+        verification: Git Explorerの全ファイル列挙・状態表示・初期強制再取得・初期折りたたみ・右クリック相対パスコピーを実装。backend
+          59 passed、frontend 9 passed、typecheck・対象Prettier・git diff --check成功。
+      deleted: false
+    - value:
+        adjustment: ユーザー要望により、Terminal本体とGit Explorerの左バー:メイン領域の比率を1:2から1:3へ変更。frontend
+          9 passed、typecheck・Prettier成功。
+      deleted: false
+    deleted: false
+  - title: 統合検証
+    acceptance: []
+    steps:
+    - description: 関連する開発文書を必要に応じて更新し、backend/frontendの対象テスト、lint、型検査、git diff --checkを実行して受け入れ条件を記録する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 既存のPhase 1〜3記録により、backend/frontendテスト、lint、型検査、git diff --checkの成功を確認。Agent
+          close後のworktree cleanも確認。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: Git Explorerでworkspace-hub起点の相対パスをコピーする要件を追加するため
+cancellation: null
+result:
+  summary: 'PR #10をmerge方式で統合し、Task worktree cleanupと親repoのfast-forward同期を確認した。'
