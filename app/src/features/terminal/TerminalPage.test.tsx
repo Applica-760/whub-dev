@@ -22,6 +22,17 @@ let approvalAttention = [
 let agentError: string | null = null;
 let operationStarts = 0;
 let changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
+let worktreeFile: {
+  path: string;
+  content: string | null;
+  diff: string;
+  state: string;
+} = {
+  path: "src/main.py",
+  content: "new\nunchanged\n",
+  diff: "@@ -1 +1 @@\n-old\n+new",
+  state: "text",
+};
 let clipboardWrite = vi.fn();
 
 vi.mock("./TerminalWidget", () => ({
@@ -40,6 +51,12 @@ beforeEach(() => {
   agentError = null;
   operationStarts = 0;
   changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
+  worktreeFile = {
+    path: "src/main.py",
+    content: "new\nunchanged\n",
+    diff: "@@ -1 +1 @@\n-old\n+new",
+    state: "text",
+  };
   clipboardWrite = vi.fn();
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
@@ -144,10 +161,7 @@ beforeEach(() => {
       if (url.includes("/diff?"))
         return Promise.resolve({
           ok: true,
-          json: async () => ({
-            path: "src/main.py",
-            content: "@@ -1 +1 @@\n-old\n+new",
-          }),
+          json: async () => worktreeFile,
         });
       return Promise.resolve({
         ok: true,
@@ -206,6 +220,7 @@ describe("TerminalPage", () => {
     expect(
       container.querySelector(".diff-addition .diff-line-prefix")?.textContent,
     ).toBe("+");
+    expect(screen.getByText("unchanged")).toBeTruthy();
     expect(container.querySelectorAll(".terminal-layout")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(1);
 
@@ -224,6 +239,7 @@ describe("TerminalPage", () => {
     changedFiles = [
       { path: "src/main.py", status: "M", previous_path: null },
       { path: "draft.txt", status: "A", previous_path: null },
+      { path: "a.txt", status: "", previous_path: null },
     ];
     const { container } = renderPage();
 
@@ -247,6 +263,65 @@ describe("TerminalPage", () => {
     expect(clipboardWrite).toHaveBeenCalledWith(
       "projects/worktrees/whub-dev-099/src/main.py",
     );
+  });
+
+  it("ディレクトリを各階層でファイルより先に名前順で表示する", async () => {
+    changedFiles = [
+      { path: "z.txt", status: "", previous_path: null },
+      { path: "src/z.py", status: "", previous_path: null },
+      { path: "a.txt", status: "", previous_path: null },
+      { path: "src/a.py", status: "", previous_path: null },
+    ];
+    const { container } = renderPage();
+
+    await screen.findByText("src");
+    const rootLabels = Array.from(
+      container.querySelectorAll(".diff-tree-node"),
+    ).map((node) => node.textContent?.trim());
+    expect(rootLabels).toEqual(["src", "a.txt", "z.txt"]);
+
+    fireEvent.click(screen.getByText("src"));
+    const labels = Array.from(
+      container.querySelectorAll(".diff-tree-node"),
+    ).map((node) => node.textContent?.trim());
+    expect(labels).toEqual(["src", "a.py", "z.py", "a.txt", "z.txt"]);
+  });
+
+  it("バイナリファイルの本文を表示しない", async () => {
+    worktreeFile = {
+      path: "src/main.py",
+      content: null,
+      diff: "",
+      state: "binary",
+    };
+    renderPage();
+
+    expect(
+      await screen.findByText("バイナリファイルは表示できません。"),
+    ).toBeTruthy();
+  });
+
+  it.each([
+    {
+      content: "",
+      message: "空のファイルです。",
+      state: "text",
+    },
+    {
+      content: null,
+      message: "ファイルを読み込めません。",
+      state: "unreadable",
+    },
+  ])("$stateファイルの表示状態を示す", async ({ content, message, state }) => {
+    worktreeFile = {
+      path: "src/main.py",
+      content,
+      diff: "",
+      state,
+    };
+    renderPage();
+
+    expect(await screen.findByText(message)).toBeTruthy();
   });
 
   it("複数Operationを起動・選択・個別終了できる", async () => {

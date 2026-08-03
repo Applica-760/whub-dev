@@ -49,7 +49,7 @@
 }
 
 .diff-tree-node[data-changed="true"] {
-  color: var(--mantine-color-orange-7);
+  color: var(--mantine-color-green-7);
 }
 
 .diff-tree-node[data-new="true"] {

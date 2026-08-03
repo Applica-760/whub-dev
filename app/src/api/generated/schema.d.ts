@@ -932,7 +932,11 @@ export interface components {
             /** Path */
             path: string;
             /** Content */
-            content: string;
+            content: string | null;
+            /** Diff */
+            diff: string;
+            /** State */
+            state: string;
         };
         /** WorktreeListResponse */
         WorktreeListResponse: {
