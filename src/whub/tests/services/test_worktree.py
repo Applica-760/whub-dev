@@ -351,6 +351,105 @@ def test_read_changed_file_diff_excludes_binary_content(tmp_path: Path) -> None:
     )
 
 
+def test_read_changed_file_diff_rejects_symlink(tmp_path: Path) -> None:
+    destination = tmp_path / "worktree"
+    destination.mkdir()
+    outside = tmp_path / "secret.txt"
+    outside.write_text("secret\n")
+    (destination / "secret-link").symlink_to(outside)
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=destination,
+        base_branch="main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            return_value=subprocess.CompletedProcess([], 0, stdout="secret-link\0"),
+        ) as git,
+    ):
+        diff = read_changed_file_diff(
+            Manifest.model_validate(manifest_data()),
+            tmp_path,
+            "local",
+            "TASK-072",
+            "secret-link",
+        )
+
+    assert diff == WorktreeDiff(
+        path="secret-link", content=None, diff="", state="unreadable"
+    )
+    git.assert_called_once_with(
+        destination,
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "-z",
+    )
+
+
+def test_read_changed_file_diff_rejects_symlink_replaced_after_lstat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "worktree"
+    destination.mkdir()
+    inside = destination / "inside.txt"
+    inside.write_text("inside\n")
+    outside = tmp_path / "secret.txt"
+    outside.write_text("secret\n")
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=destination,
+        base_branch="main",
+    )
+    original_lstat = Path.lstat
+
+    def replace_after_lstat(candidate: Path):
+        result = original_lstat(candidate)
+        if candidate == inside:
+            inside.unlink()
+            inside.symlink_to(outside)
+        return result
+
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            return_value=subprocess.CompletedProcess([], 0, stdout="inside.txt\0"),
+        ) as git,
+    ):
+        monkeypatch.setattr(Path, "lstat", replace_after_lstat)
+        diff = read_changed_file_diff(
+            Manifest.model_validate(manifest_data()),
+            tmp_path,
+            "local",
+            "TASK-072",
+            "inside.txt",
+        )
+
+    assert diff == WorktreeDiff(
+        path="inside.txt", content=None, diff="", state="unreadable"
+    )
+    git.assert_called_once_with(
+        destination,
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "-z",
+    )
+
+
 def test_create_pull_request_returns_existing_open_pr(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()

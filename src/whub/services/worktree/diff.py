@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
+import stat
 
 from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
@@ -132,8 +134,18 @@ def _list_untracked_paths(destination: Path) -> set[str]:
 
 
 def _read_worktree_text(destination: Path, path: str) -> tuple[str | None, str]:
+    target = destination / path
     try:
-        content = (destination / path).read_bytes()
+        if not stat.S_ISREG(target.lstat().st_mode):
+            return None, "unreadable"
+        descriptor = os.open(target, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    except OSError:
+        return None, "unreadable"
+    try:
+        with os.fdopen(descriptor, "rb") as file:
+            if not stat.S_ISREG(os.fstat(file.fileno()).st_mode):
+                return None, "unreadable"
+            content = file.read()
     except OSError:
         return None, "unreadable"
     if b"\0" in content:
