@@ -1,0 +1,109 @@
+schema_version: 1
+task:
+  id: TASK-113
+  state: completed
+  title: Terminal Explorerで全文と差分を統合表示する
+  objective: Terminalページ下部のExplorerで、テキストファイルの全文を常時閲覧可能にし、変更箇所にはGit差分を埋め込んで表示する。各階層ではディレクトリを先、ファイルを後に並べる。
+  approach:
+  - 登録済みworktreeの全テキストファイルを安全に読み取り、現在の全文とbase branchとの差分を行単位で統合して表示する。バイナリは本文表示対象外とする。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: ファイル内容・差分取得を整備する
+    acceptance: []
+    steps:
+    - description: 登録済みworktree内の対象パスを検証し、テキストファイルの現在の全文とbase branchとの差分を、行位置を保って取得できるAPI契約を定義・実装する。バイナリは本文表示対象から除外する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: 削除済みファイルは現在の本文が存在しないため、Explorer・本文表示の対象から除外する
+      deleted: false
+    - value:
+        result: テキスト本文・unified diff・text/binary/unreadable状態を返すAPI契約を実装し、pytest 61件が成功
+      deleted: false
+    deleted: false
+  - title: Explorerの表示を統合する
+    acceptance: []
+    steps:
+    - description: Explorerを各階層でディレクトリ優先・名前順に整列し、未変更テキストは全文、変更テキストは現在の全文の該当行へ既存のGit差分表示を挿入して表示する。空・読めない・バイナリの表示状態も明確にする。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 全ファイルのExplorer表示、ディレクトリ優先整列、本文への行位置対応差分、表示状態、および変更ノードの緑色化を実装
+      deleted: false
+    deleted: false
+  - title: 契約と表示を検証する
+    acceptance: []
+    steps:
+    - description: サービス・API・UIのテストで、未変更テキストの全文、変更テキストの行内差分、バイナリ除外、階層ごとのディレクトリ優先整列を検証し、OpenAPI型生成と関連テスト・ビルドを実行する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: pytest 574件、Vitest 46件、型生成・型検査・production buildが成功。全体Prettierは未変更の既存6ファイルで失敗するが、対象ファイルは成功
+      deleted: false
+    deleted: false
+  - title: Explorerの階層を視認しやすくする
+    acceptance: []
+    steps:
+    - description: 展開したディレクトリの配下に、深さごとの薄い縦ガイド線を表示して階層を視認しやすくする。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: ガイド線を絶対配置にして既存の字下げを維持。TerminalPageテスト14件と型検査が成功
+      deleted: false
+    deleted: false
+  - title: 非通常ファイルの読込境界を保護する
+    acceptance: []
+    steps:
+    - description: lstatで通常ファイルだけを許可し、symlink・非通常ファイルをunreadableとして返す。回帰テストを追加する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 対象テストを実行し、push前レビューを再実施する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: pytest 40件とruff checkが成功し、Terra再レビューはfindingsなし
+      deleted: false
+    - value:
+        release: '2026-08-03: agent close succeeded, task worktree clean and diff
+          check passed; PR #12 created after push.'
+      deleted: false
+    - value:
+        merge: '2026-08-03: PR #12 merged with method merge. Git worktree cleanup
+          failed because app/.vite/deps/{package.json,_metadata.json} remained; no
+          merge retry performed.'
+      deleted: false
+    - value:
+        cleanup: '2026-08-03: residual app/.vite cache and empty task directory removed
+          by user authorization; worktree registration YAML removed. whub worktree
+          check no longer lists TASK-113.'
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: 展開したディレクトリの階層を視認しやすくするため、Explorerツリーへ列方向のガイド線を追加する。
+- reason: Push前レビューでsymlink・非通常ファイルを追従してworktree外の内容を返し得るP1を検出したため
+- reason: P1修正Phaseの挿入がCLI形式不備で拒否されたため、正しい計画を反映する
+cancellation: null
+result:
+  summary: 'PR #12をmergeし、cleanup・親repo同期後にrelease 0.1.0+g4bbc00f5を適用した。'
