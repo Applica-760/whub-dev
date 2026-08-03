@@ -20,6 +20,7 @@ class ApprovalAttention:
     turn_id: str
     requested_at: datetime
     acknowledged: bool = False
+    session_id: str = ""
 
 
 class ApprovalAttentionStore:
@@ -36,9 +37,12 @@ class ApprovalAttentionStore:
         tool_name: str,
         turn_id: str,
         now: datetime | None = None,
+        session_id: str = "",
     ) -> ApprovalAttention:
         requested_at = _now() if now is None else now
-        item = ApprovalAttention(project, task_id, tool_name, turn_id, requested_at)
+        item = ApprovalAttention(
+            project, task_id, tool_name, turn_id, requested_at, False, session_id
+        )
         with self._lock:
             self._expire(requested_at)
             self._items[(project, task_id)] = item
@@ -51,13 +55,19 @@ class ApprovalAttentionStore:
         tool_name: str,
         turn_id: str,
         now: datetime | None = None,
+        session_id: str = "",
     ) -> None:
         current = _now() if now is None else now
         with self._lock:
             self._expire(current)
             key = (project, task_id)
             item = self._items.get(key)
-            if item is not None and (item.tool_name, item.turn_id) == (
+            if item is not None and (
+                item.session_id,
+                item.tool_name,
+                item.turn_id,
+            ) == (
+                session_id,
                 tool_name,
                 turn_id,
             ):
@@ -80,6 +90,7 @@ class ApprovalAttentionStore:
                 item.turn_id,
                 item.requested_at,
                 acknowledged=True,
+                session_id=item.session_id,
             )
             self._items[key] = acknowledged
             return acknowledged

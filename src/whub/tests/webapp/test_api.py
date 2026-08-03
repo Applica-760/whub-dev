@@ -90,6 +90,53 @@ def test_agent_attention_has_no_external_event_producer(client: TestClient) -> N
     assert acknowledged.json()["acknowledged"] is True
 
 
+def test_hook_events_require_localhost_and_an_exact_registered_worktree(
+    client: TestClient, tmp_path: Path
+) -> None:
+    body = {
+        "hook_event_name": "PermissionRequest",
+        "session_id": "session-1",
+        "cwd": "/workspace/projects/worktrees/whub-dev-104",
+        "turn_id": "turn-1",
+        "tool_name": "Bash",
+    }
+    assert client.post("/api/agent-attention/events", json=body).status_code == 403
+
+    store = ApprovalAttentionStore()
+    local_client = TestClient(client.app, client=("127.0.0.1", 50000))
+    context = Mock(workspace_root=Path("/workspace"))
+    inspection = SimpleNamespace(
+        definition=SimpleNamespace(
+            parent_project="whub-dev",
+            task_id="TASK-104",
+            workspace_path="projects/worktrees/whub-dev-104",
+        ),
+        diagnostics=(),
+    )
+    with (
+        patch(
+            "whub.webapp.routers.agent_attention.current_context",
+            return_value=context,
+        ),
+        patch("whub.webapp.routers.agent_attention.load_manifest"),
+        patch(
+            "whub.webapp.routers.agent_attention.inspect_worktrees",
+            return_value=[inspection],
+        ),
+        patch("whub.webapp.routers.agent_attention.attention", store),
+    ):
+        assert local_client.post("/api/agent-attention/events", json=body).status_code == 204
+        assert len(store.list()) == 1
+        body["hook_event_name"] = "PostToolUse"
+        assert local_client.post("/api/agent-attention/events", json=body).status_code == 204
+        body["cwd"] = "/workspace/projects/worktrees/not-registered"
+        assert local_client.post("/api/agent-attention/events", json=body).status_code == 404
+        body.pop("tool_name")
+        assert local_client.post("/api/agent-attention/events", json=body).status_code == 422
+
+    assert store.list() == ()
+
+
 def test_agent_codex_session_is_owned_by_the_local_web_backend(
     client: TestClient, tmp_path: Path
 ) -> None:
