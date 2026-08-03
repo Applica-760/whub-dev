@@ -257,10 +257,13 @@ def test_read_changed_file_diff_rejects_path_outside_worktree(tmp_path: Path) ->
 
 
 def test_read_changed_file_diff_reads_untracked_file(tmp_path: Path) -> None:
+    destination = tmp_path / "worktree"
+    destination.mkdir()
+    (destination / "draft.py").write_text("draft\n")
     resolved = ResolvedProjectWorktree(
         definition=worktree_definition(),
         parent=tmp_path / "source",
-        destination=tmp_path / "worktree",
+        destination=destination,
         base_branch="main",
     )
     with (
@@ -287,7 +290,12 @@ def test_read_changed_file_diff_reads_untracked_file(tmp_path: Path) -> None:
             "draft.py",
         )
 
-    assert diff == WorktreeDiff(path="draft.py", content="@@ -0,0 +1 @@\n+draft\n")
+    assert diff == WorktreeDiff(
+        path="draft.py",
+        content="draft\n",
+        diff="@@ -0,0 +1 @@\n+draft\n",
+        state="text",
+    )
     assert git.call_args_list[-1] == call(
         resolved.destination,
         "diff",
@@ -297,6 +305,47 @@ def test_read_changed_file_diff_reads_untracked_file(tmp_path: Path) -> None:
         "--",
         "/dev/null",
         "draft.py",
+    )
+
+
+def test_read_changed_file_diff_excludes_binary_content(tmp_path: Path) -> None:
+    destination = tmp_path / "worktree"
+    destination.mkdir()
+    (destination / "image.bin").write_bytes(b"\0binary")
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=destination,
+        base_branch="main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            return_value=subprocess.CompletedProcess([], 0, stdout="image.bin\0"),
+        ) as git,
+    ):
+        diff = read_changed_file_diff(
+            Manifest.model_validate(manifest_data()),
+            tmp_path,
+            "local",
+            "TASK-072",
+            "image.bin",
+        )
+
+    assert diff == WorktreeDiff(
+        path="image.bin", content=None, diff="", state="binary"
+    )
+    git.assert_called_once_with(
+        destination,
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "-z",
     )
 
 
