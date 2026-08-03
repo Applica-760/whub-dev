@@ -298,7 +298,12 @@ def test_start_tmux_session_creates_codex_from_hub_root(tmp_path: Path) -> None:
         "whub-whub-dev-TASK-095",
         "-c",
         str(tmp_path),
-        f"cd {tmp_path / 'worktree'} && exec $SHELL -l",
+        (
+            f"cd {tmp_path / 'worktree'} && "
+            "printf '%s\\n' 'whub: use the Web Agent panel to start Codex; "
+            "this tmux session remains available for general shell commands.' && "
+            "exec $SHELL -l"
+        ),
     ]
 
 
@@ -339,6 +344,7 @@ def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
         patch("whub.services.agent.agent.render_codex", return_value=plan),
         patch("whub.services.agent.agent.render_claude_code", return_value=plan),
         patch("whub.services.agent.agent.prepare"),
+        patch("whub.services.agent.agent.prepare_codex_trust") as trust,
         patch(
             "whub.services.agent.agent.open_tmux_session", return_value=session
         ) as start,
@@ -346,6 +352,7 @@ def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
         assert open_agent(None, tmp_path, "whub-dev", "TASK-095", ()) is session
 
     assert start.call_args.args == ("whub-dev", "TASK-095", tmp_path, tmp_path)
+    assert trust.call_args.args == (tmp_path, "whub-dev", "TASK-095", tmp_path)
 
 
 def test_open_agent_projects_context_without_agent_specific_logic(
@@ -377,6 +384,7 @@ def test_open_agent_projects_context_without_agent_specific_logic(
         ),
         patch("whub.services.agent.agent.render_codex", return_value=plan),
         patch("whub.services.agent.agent.render_claude_code", return_value=plan),
+        patch("whub.services.agent.agent.prepare_codex_trust"),
         patch("whub.services.agent.agent.open_tmux_session", return_value=session),
     ):
         assert open_agent(None, tmp_path, "whub-dev", "TASK-095", ()) is session
@@ -397,10 +405,12 @@ def test_close_stops_tmux_before_state_cleanup(tmp_path: Path) -> None:
             return_value=registered,
         ),
         patch("whub.services.agent.agent.close_tmux_session") as stop,
+        patch("whub.services.agent.agent.cleanup_codex_trust") as trust_clean,
         patch("whub.services.agent.agent.cleanup") as clean,
     ):
         close_agent(None, tmp_path, "whub-dev", "TASK-095")
     assert stop.call_count == 1
+    assert trust_clean.call_count == 1
     assert clean.call_count == 1
 
 
@@ -421,6 +431,7 @@ def test_close_without_tmux_cleans_state_and_is_idempotent(tmp_path: Path) -> No
             "whub.services.agent.tmux_session.subprocess.run",
             return_value=CompletedProcess([], 1, "", "missing"),
         ) as run,
+        patch("whub.services.agent.agent.cleanup_codex_trust"),
     ):
         close_agent(None, tmp_path, "whub-dev", "TASK-095")
         close_agent(None, tmp_path, "whub-dev", "TASK-095")
@@ -450,12 +461,14 @@ def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
                 CompletedProcess([], 1, "", "kill failed"),
             ],
         ),
+        patch("whub.services.agent.agent.cleanup_codex_trust") as trust_clean,
         pytest.raises(ServiceError, match="failed to stop tmux session: kill failed"),
     ):
         close_agent(None, tmp_path, "whub-dev", "TASK-095")
 
     assert (worktree / ".codex/config.toml").exists()
     assert _state_path(tmp_path, "whub-dev", "TASK-095").exists()
+    trust_clean.assert_not_called()
 
 
 def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> None:
@@ -491,6 +504,7 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
                 CompletedProcess([], 0, "", ""),
             ],
         ) as run,
+        patch("whub.services.agent.agent.prepare_codex_trust"),
     ):
         first = open_agent(None, tmp_path, "whub-dev", "TASK-095", ())
         saved_state = _state_path(tmp_path, "whub-dev", "TASK-095").read_text()

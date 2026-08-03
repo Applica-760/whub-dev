@@ -12,6 +12,8 @@ from whub.services.agent.auth import (
     resolve_variables,
 )
 from whub.services.agent.context import render_context
+from whub.services.agent.codex_trust import cleanup as cleanup_codex_trust
+from whub.services.agent.codex_trust import prepare as prepare_codex_trust
 from whub.services.agent.tmux_session import (
     TmuxSession,
     close_tmux_session,
@@ -52,6 +54,12 @@ def open_agent(
         files,
         render_context(workspace_root, auth_names, registered.definition.branch),
     )
+    prepare_codex_trust(
+        workspace_root,
+        project,
+        registered.definition.task_id,
+        registered.destination,
+    )
     return open_tmux_session(
         project,
         registered.definition.task_id,
@@ -66,6 +74,12 @@ def close_agent(
     """Stop PROJECT/TASK's session and clean its owned configuration."""
     registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
     close_tmux_session(project, registered.definition.task_id)
+    cleanup_codex_trust(
+        workspace_root,
+        project,
+        registered.definition.task_id,
+        registered.destination,
+    )
     cleanup(
         workspace_root, project, registered.definition.task_id, registered.destination
     )

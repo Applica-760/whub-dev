@@ -50,7 +50,12 @@ def open_tmux_session(
     if existing.returncode == 0:
         return TmuxSession(name, attach_command)
 
-    command = f"cd {shlex.quote(str(worktree))} && exec $SHELL -l"
+    command = (
+        f"cd {shlex.quote(str(worktree))} && "
+        "printf '%s\\n' 'whub: use the Web Agent panel to start Codex; "
+        "this tmux session remains available for general shell commands.' && "
+        "exec $SHELL -l"
+    )
     try:
         created = subprocess.run(
             tmux_command(

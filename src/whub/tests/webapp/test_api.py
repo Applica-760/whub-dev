@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
 import pytest
@@ -26,6 +27,7 @@ from fastapi.testclient import TestClient
 from whub.models import ManifestError
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
+from whub.services.agent.attention import ApprovalAttentionStore
 from whub.models import ResourceStatus, StatusReport, WorktreeStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminalState
 from whub.services.task import ProjectTasks
@@ -73,6 +75,80 @@ def test_get_todos_returns_service_display_order(client: TestClient) -> None:
     assert response.status_code == 200
     assert [item["id"] for item in response.json()["pending"]] == [2, 1]
     assert [item["id"] for item in response.json()["completed"]] == [3]
+
+
+def test_agent_attention_has_no_external_event_producer(client: TestClient) -> None:
+    store = ApprovalAttentionStore()
+    store.request("whub-dev", "TASK-104", "Bash", "turn-1")
+
+    with patch("whub.webapp.routers.agent_attention.attention", store):
+        listed = client.get("/api/agent-attention")
+        acknowledged = client.post("/api/agent-attention/whub-dev/TASK-104/acknowledge")
+
+    assert client.post("/api/agent-attention", json={}).status_code == 405
+    assert listed.json()["attention"][0]["acknowledged"] is False
+    assert acknowledged.json()["acknowledged"] is True
+
+
+def test_agent_codex_session_is_owned_by_the_local_web_backend(
+    client: TestClient, tmp_path: Path
+) -> None:
+    assert client.post("/api/agent-codex/whub-dev/TASK-104/session").status_code == 403
+
+    dist_dir = tmp_path / "local-dist"
+    dist_dir.mkdir()
+    (dist_dir / "index.html").write_text("<main>whub</main>")
+    local_client = TestClient(create_app(dist_dir), client=("127.0.0.1", 50000))
+    context = Mock(workspace_root=tmp_path)
+    registered = SimpleNamespace(destination=Path("/workspace/worktree"))
+    with (
+        patch(
+            "whub.webapp.routers.agent_codex.current_context",
+            return_value=context,
+        ),
+        patch(
+            "whub.webapp.routers.agent_codex.load_manifest",
+            return_value=manifest(),
+        ),
+        patch(
+            "whub.webapp.routers.agent_codex.resolve_project_worktree",
+            return_value=registered,
+        ),
+        patch("whub.webapp.routers.agent_codex.app_servers.open") as open_server,
+        patch("whub.webapp.routers.agent_codex.app_servers.close") as close_server,
+    ):
+        assert (
+            local_client.post("/api/agent-codex/whub-dev/TASK-104/session").status_code
+            == 204
+        )
+        assert (
+            local_client.delete(
+                "/api/agent-codex/whub-dev/TASK-104/session"
+            ).status_code
+            == 204
+        )
+
+    open_server.assert_called_once_with(
+        "whub-dev", "TASK-104", Path("/workspace/worktree")
+    )
+    close_server.assert_called_once_with("whub-dev", "TASK-104")
+
+
+def test_agent_codex_state_returns_app_server_errors(client: TestClient) -> None:
+    session = Mock()
+    session.snapshot.return_value = {
+        "thread_id": None,
+        "active_turn_id": None,
+        "messages": [],
+        "approvals": [],
+        "error": "Codex App Server returned invalid JSON",
+    }
+
+    with patch("whub.webapp.routers.agent_codex.app_servers.get", return_value=session):
+        response = client.get("/api/agent-codex/whub-dev/TASK-104")
+
+    assert response.status_code == 200
+    assert response.json()["error"] == "Codex App Server returned invalid JSON"
 
 
 def test_todo_mutations_use_services(client: TestClient) -> None:
