@@ -168,7 +168,7 @@ function renderPage() {
 }
 
 describe("TerminalPage", () => {
-  it("端末選択と差分を二段の1:2レイアウトで表示する", async () => {
+  it("端末選択と差分を二段の1:3レイアウトで表示する", async () => {
     const { container } = renderPage();
     const firstTerminal = await screen.findByRole("button", {
       name: /whub-dev.*TASK-099/,

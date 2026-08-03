@@ -8,7 +8,7 @@
 .terminal-diff-layout {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
+  grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr);
   min-height: 22rem;
 }
 
