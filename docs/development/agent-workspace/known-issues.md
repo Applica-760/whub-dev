@@ -33,7 +33,7 @@ Agent Harnessの現状で確認している課題を、今後の設計・実装�
 - URLとANSI paletteを超えて、引用符・`#`・code spanなどを意味的に着色する場合は、PTY出力を直接装飾せず、Terminalとは別のtranscript／Markdown表示として後続Taskで設計する。
 - worktreeごとの`git diff`をWeb app内の専用タブで確認できるようにする。PR作成前にコードレビューと修正を完結させ、Web appと外部サイトを往復する負担を減らす。
 - Codexがコマンド実行の承認を求める直前に発火する`PermissionRequest` Hookを使い、`session_id`・`cwd`・`turn_id`・tool情報をwhubのcontrol planeへ送る。PTYの特定文字列には依存せず、セッション一覧の承認待ちbadge、Terminalの強調枠、固定banner、対象Terminalへの導線として表示する。[Codex Hooks](https://learn.chatgpt.com/docs/hooks#permissionrequest)に入力情報と通常の承認promptを継続できる契約が記載されている。
-- 承認待ち中にWeb appのtabが非表示ならbrowser notificationを送り、判断待ちを見落とさないようにする。実行後は`PostToolUse`で表示を解除し、拒否・放置時に完了eventが得られない場合は有効期限で解除する。厳密な状態同期とWeb app内での承認操作は、`item/permissions/requestApproval`を提供する[Codex App Server](https://learn.chatgpt.com/docs/app-server#api-overview)との統合を後続検討とする。
+- 承認待ちはExplorerの該当Terminal行バッジと、Safariでも識別できるbrowser tab titleのベル未読マークで示す。faviconは補助表示とし、OS notificationは使わない。実行後は`PostToolUse`で表示を解除し、拒否・放置時に完了eventが得られない場合は有効期限で解除する。厳密な状態同期とWeb app内での承認操作は、`item/permissions/requestApproval`を提供する[Codex App Server](https://learn.chatgpt.com/docs/app-server#api-overview)との統合を後続検討とする。
 
 ## Direction
 

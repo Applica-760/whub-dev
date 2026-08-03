@@ -254,15 +254,15 @@ describe("TerminalPage", () => {
     ).toBeNull();
   });
 
-  it("承認待ちのTerminalをバッジと導線で示す", async () => {
+  it("承認待ちのTerminalをExplorerバッジと選択行で示す", async () => {
     renderPage();
 
-    expect(
-      await screen.findByText("承認待ちのTerminalがあります"),
-    ).toBeTruthy();
-    expect(screen.getByText("承認待ち")).toBeTruthy();
+    expect(await screen.findByText("承認待ち")).toBeTruthy();
+    expect(screen.queryByText("承認待ちのTerminalがあります")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Terminalを開く" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /vault.*TASK-101/ }),
+    );
 
     expect(await screen.findByText("vault / TASK-101")).toBeTruthy();
     await waitFor(() =>
@@ -271,6 +271,16 @@ describe("TerminalPage", () => {
         { method: "POST" },
       ),
     );
+  });
+
+  it("承認待ちをブラウザタブのタイトルとfaviconで示す", async () => {
+    renderPage();
+
+    await waitFor(() => expect(document.title).toBe("🔔 (1) whub"));
+    const icon = document.head.querySelector<HTMLLinkElement>(
+      'link[data-whub-attention-icon="true"]',
+    );
+    expect(icon?.href.endsWith("/attention-favicon.svg")).toBe(true);
   });
 
   it("既に選択済みのTerminalへ新着の承認待ちが来ても既読化しない", async () => {
@@ -325,10 +335,13 @@ describe("TerminalPage", () => {
     expect(terminal.getAttribute("aria-pressed")).toBe("true");
     expect(agent.getAttribute("aria-pressed")).toBe("false");
     expect(screen.queryByPlaceholderText("Codexへ依頼…")).toBeNull();
+    await waitFor(() => expect(agent.getAttribute("disabled")).toBeNull());
 
     fireEvent.click(agent);
 
-    expect(agent.getAttribute("aria-pressed")).toBe("true");
+    await waitFor(() =>
+      expect(agent.getAttribute("aria-pressed")).toBe("true"),
+    );
     expect(await screen.findByPlaceholderText("Codexへ依頼…")).toBeTruthy();
   });
 
@@ -357,7 +370,10 @@ describe("TerminalPage", () => {
     agentError = "Codex App Server returned invalid JSON";
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Agent" }));
+    await screen.findByRole("button", { name: "Terminal" });
+    const agent = screen.getByRole("button", { name: "Agent" });
+    await waitFor(() => expect(agent.getAttribute("disabled")).toBeNull());
+    fireEvent.click(agent);
 
     expect(
       await screen.findByText("Codex App Server returned invalid JSON"),

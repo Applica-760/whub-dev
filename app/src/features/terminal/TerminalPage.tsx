@@ -180,30 +180,6 @@ export function TerminalPage({
 
   return (
     <main className="terminal-page">
-      {pendingAttention.length > 0 && (
-        <Alert
-          color="yellow"
-          title="承認待ちのTerminalがあります"
-          variant="light"
-        >
-          <Group justify="space-between">
-            <Text size="sm">
-              {pendingAttention[0].project} / {pendingAttention[0].task_id}
-            </Text>
-            <Button
-              onClick={() => {
-                openTerminal(
-                  `${pendingAttention[0].project}/${pendingAttention[0].task_id}`,
-                );
-              }}
-              size="xs"
-              variant="light"
-            >
-              Terminalを開く
-            </Button>
-          </Group>
-        </Alert>
-      )}
       <section
         className="terminal-layout"
         data-explorer-collapsed={collapsed.left || undefined}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   acknowledgeApprovalAttention,
@@ -7,37 +7,34 @@ import {
 import type { ApprovalAttention } from "./attentionApi";
 
 const POLL_INTERVAL_MS = 5_000;
+const DEFAULT_TITLE = "whub";
+const ATTENTION_ICON = "/attention-favicon.svg";
 
-function attentionKey(item: ApprovalAttention) {
-  return `${item.project}/${item.task_id}/${item.tool_name}/${item.requested_at}`;
-}
-
-function notify(item: ApprovalAttention) {
-  if (
-    document.hidden &&
-    typeof Notification !== "undefined" &&
-    Notification.permission === "granted"
-  ) {
-    new Notification("whub: 承認待ち", {
-      body: `${item.project} / ${item.task_id} が承認を待っています。`,
-    });
+function setTabAttention(attention: ApprovalAttention[]) {
+  const count = attention.filter((item) => !item.acknowledged).length;
+  document.title = count ? `🔔 (${count}) ${DEFAULT_TITLE}` : DEFAULT_TITLE;
+  const selector = 'link[data-whub-attention-icon="true"]';
+  const existing = document.head.querySelector<HTMLLinkElement>(selector);
+  if (!count) {
+    existing?.remove();
+    return;
   }
+  const icon = existing ?? document.createElement("link");
+  icon.rel = "icon";
+  icon.type = "image/svg+xml";
+  icon.dataset.whubAttentionIcon = "true";
+  icon.href = ATTENTION_ICON;
+  if (!existing) document.head.append(icon);
 }
 
 export function useApprovalAttention() {
   const [attention, setAttention] = useState<ApprovalAttention[]>([]);
-  const known = useRef(new Set<string>());
 
   const refresh = useCallback(async () => {
     try {
       const response = await listApprovalAttention();
-      for (const item of response.attention) {
-        const key = attentionKey(item);
-        if (!item.acknowledged && !known.current.has(key)) notify(item);
-        known.current.add(key);
-      }
-      known.current = new Set(response.attention.map(attentionKey));
       setAttention(response.attention);
+      setTabAttention(response.attention);
     } catch {
       // Approval attention is supplementary; retain the latest visible state.
     }
@@ -46,7 +43,10 @@ export function useApprovalAttention() {
   useEffect(() => {
     void refresh();
     const interval = window.setInterval(() => void refresh(), POLL_INTERVAL_MS);
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      setTabAttention([]);
+    };
   }, [refresh]);
 
   const acknowledge = useCallback(async (project: string, taskId: string) => {
