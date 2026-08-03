@@ -1,0 +1,259 @@
+schema_version: 1
+task:
+  id: TASK-104
+  state: completed
+  title: Web Terminalの承認待ちをworktree選択へ通知する
+  objective: 複数のBrowser Terminalを並行利用する際、ユーザー入力または権限承認を待つworktreeを選択UIの通知マークで識別し、確認が必要なterminalへ能動的に移動できるようにする。
+  approach:
+  - MVPはWeb appのworktree選択ボタンに未確認の待機マークを表示し、terminal接続の状態変化と連動させる。
+  - 待機検出は表示出力のパターン検出とharness由来の構造化状態を比較し、誤検知・実装範囲・将来のagent互換性から実装前に決定する。
+  - 通知はWeb app内の視覚表示に限定し、OS通知・音声通知・外部Pushは対象外とする。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 実装方針を調査して確定する
+    acceptance: []
+    steps:
+    - description: 今回の調査で確認した Codex PermissionRequest hook の発火条件、入力項目、信頼確認、および通知設定の制約を記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: tmux画面の監視・出力パターン解析ではなく、Codex PermissionRequest hook と whub の連携で承認要求を検知する方針を記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 現時点の案として、hookからlocalhostのwhub backendへattention eventを送信し、Web appがSSEまたはWebSocketで受信してworktree選択行へ未確認マークを反映する構成を比較・検証する。イベントの既読化、認証、再接続とhook失敗時の扱いは実装前に決定する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log: []
+    deleted: true
+  - title: Hook と Agent Harness を接続する
+    acceptance: []
+    steps:
+    - description: PermissionRequest と PostToolUse の最小イベント契約（worktree の同定、tool・時刻・10分の有効期限）を定義する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: Codex adapter と Harness に、hook スクリプト・設定・cleanup を追加し、hook の通常の承認動作を妨げないことを確認する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 登録済みworktreeだけをCodex trusted projectとしてopen時に登録し、close時はwhub所有かつ未変更の登録だけを削除する。Codex起動後に/hooksでhookを利用者が明示承認する案内を出力する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: 2026-08-03 結合検証で、生成済み .codex/config.toml に PermissionRequest/PostToolUse
+          hook が存在しても、使い捨て worktree が Codex の trusted project に未登録のため project-local
+          config が読み込まれず、/hooks で No hooks for this request となることを確認。worktreeごとに再発するため、Harness
+          が trust と hook 承認を安全に導く恒久対応を要調査。
+      deleted: false
+    - value:
+        verification: 新実装で agent close/open を実行。~/.codex/config.toml に whub所有の対象worktree限定
+          trusted entry が追加され、.codex/hooks/whub_attention.py と PermissionRequest/PostToolUse
+          設定の生成を確認。Codex /hooks での利用者承認と承認待ちUIの実機確認が残る。
+      deleted: false
+    deleted: true
+  - title: Control plane に承認待ちを保持する
+    acceptance: []
+    steps:
+    - description: localhost 限定の承認待ちイベントを受信・保存する API を実装する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: PostToolUse の解除、10分の有効期限、無効な worktree・入力の拒否を実装し、状態は approval_requested
+        と attention の最小表現に留める。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: localhost attention API、期限・解除、worktree入力検証を実装し、Python全体テスト564件で確認。
+      deleted: false
+    deleted: false
+  - title: Web UI とブラウザ通知を実装する
+    acceptance: []
+    steps:
+    - description: Explorer の承認待ちバッジ、固定バナー、対象 Terminal への導線を実装する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 状態取得は単純な短間隔 polling とし、tab 非表示時だけ Browser Notification を出す。Terminal
+        を開いたら attention を acknowledged にする。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: Explorer badge、banner、対象Terminal導線、polling、Browser Notification実装を追加。Browser
+          Notificationの実機permission確認はユーザー判断でdefer。
+      deleted: false
+    deleted: false
+  - title: 検証して引き継ぐ
+    acceptance: []
+    steps:
+    - description: hook・状態 API・期限／解除・UI 表示・Browser Notification の自動テストを追加する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    - description: 実際の Agent worktree で、承認要求、UI／非表示タブ通知、承認後の解除を通して確認し、Task に結果を記録する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: 実機sessionのJSONLを調査。pytest実行はCodex native execではなく custom_tool_call
+          の exec（Code Mode executor）として実行され、nested executorの権限promptは表示されるがouter Codex
+          lifecycle hookのPermissionRequest/PostToolUseを通過しない。このためhook設定が有効でもWeb attentionは発火しない。project
+          trust・生成時刻・TOML schema・feature・event名は確認済み。根治候補はCodex App Serverの権限request通知購読であり、hook方式はnative
+          tool path限定となる。
+      deleted: false
+    deleted: true
+  - title: Codex App Server を権限イベント源として接続する
+    acceptance: []
+    steps:
+    - description: Codex App Serverの権限要求通知を調査し、Agent session・Task worktree・control
+        planeの対応、接続／再接続／終了時の責務を定義する。
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: 登録済みworktreeのAgent sessionからApp Serverを起動・監視し、requestApprovalの開始・解決を既存attention
+        APIへ正規化する。hook方式の生成と依存を削除または置換する。
+      state: pending
+      skip_reason: null
+      deleted: true
+    log: []
+    deleted: false
+  - title: worktree Agent が実装・自動検証して引き継ぐ
+    acceptance: []
+    steps:
+    - description: worktree AgentがApp Server経路の単体・結合テストを追加し、実装とテストをcommitしてTaskの進捗・引継ぎ情報を記録する。
+      state: pending
+      skip_reason: null
+      deleted: true
+    log: []
+    deleted: false
+  - title: repo session が最終結合検証を引き継ぐ
+    acceptance: []
+    steps:
+    - description: このrepo sessionがworktreeのcommitと引継ぎ記録を確認後、実際のAgent worktreeで権限要求、UI既読化、解決、Browser
+        Notification、cleanupを検証し、Taskへ結果を記録する。
+      state: pending
+      skip_reason: null
+      deleted: true
+    log: []
+    deleted: false
+  - title: Codex App Server の承認契約を定義する
+    acceptance: []
+    steps:
+    - description: App Serverの item/commandExecution/requestApproval を shell 承認の唯一の入力と定義し、serverRequest/resolved・item/completed
+        までの状態遷移、thread・turn・request と worktree の対応、再接続時の復元条件を記録する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Agent open が対象worktreeを cwd とする App Server を起動・監視し、endpoint・thread・turn
+        の識別子を管理する。Agent close は停止・cleanupする。tmux は Codex 実行系から独立した任意コマンド用の汎用 shell
+        として維持する。
+      state: pending
+      skip_reason: null
+      deleted: true
+    - description: 既存 attention API と Web UI を App Server の承認要求へ接続する。worktree 対象の単一
+        thread で、最小のプロンプト入力・送信・ストリーミング応答表示、承認内容表示、allow/deny 応答、解決後の既読化までを実装する。本格的な会話
+        UI は後続 Task とする。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Web backend を App Server の所有者とし、Agent open は worktree 設定・tmux 準備後に
+        localhost control API で backend へ対象worktreeの App Server 起動を依頼する。Agent close
+        は同 API へ停止を依頼する。backend は UI の prompt・承認 API と同一プロセスで session を保持する。tmux は任意コマンド用の汎用
+        shell として維持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: ユーザー承認により、tmuxはCodex実行系から独立した汎用shellとして維持し、Task 104はworktreeごとの単一threadに最小のプロンプト送信・応答表示・allow/denyを実装する。本格的な会話UIは後続Taskとする。
+      deleted: false
+    - value:
+        verification: App Serverプロセス所有境界、状態API、既存attention storeへの接続、Terminal会話パネルを追加。pytest
+          22件、ruff、TerminalPage Vitest 3件、TypeScript型検査、対象Prettierを通過。実機App Server結合は未実施。
+      deleted: false
+    - value:
+        verification: Web backend所有のApp Server、localhost control API、唯一のrequestApproval入力、protocol
+          error表示、prompt応答、右ペインAgent UIを実装。Python564件、Vitest39件、typecheck、Ruff、Prettierで確認。
+      deleted: false
+    deleted: false
+  - title: worktree Agent が実装・自動検証して引き継ぐ
+    acceptance: []
+    steps:
+    - description: worktree Agent は Task YAML を再読込して App Server 経路を実装する。単体・結合テストを追加し、実装・テストを
+        commit して、設計判断・制約・再現手順を Task に引き継ぐ。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: '2026-08-03 hardening: removed legacy Codex PermissionRequest/PostToolUse
+          hook generation, asset, and attention event endpoint; App Server requestApproval
+          remains the sole producer. Project trust remains because App Server must
+          load the generated worktree sandbox and approval configuration. Explicit
+          Terminal navigation alone acknowledges attention; close clears task attention;
+          App Server JSON-RPC/protocol/process errors are returned by the state API
+          and shown in the UI. Automated verification: focused pytest 36 passed, full
+          pytest 564 passed, TerminalPage Vitest 8 passed, full Vitest 39 passed,
+          typecheck, Ruff, Prettier, and git diff --check passed. Browser verification
+          was not run.'
+      deleted: false
+    - value:
+        verification: Terraによる承認安全性レビュー修正（旧hooks撤去、明示既読化、close cleanup、error状態）とテストを完了。
+      deleted: false
+    deleted: false
+  - title: repo session が最終結合検証を引き継ぐ
+    acceptance: []
+    steps:
+    - description: repo session は worktree の commit と引継ぎ記録を確認してから、実際の Agent worktree
+        で turn 開始、強いコマンドの承認要求、UI表示・allow/deny・既読化、非表示タブ通知、close cleanup を最終結合検証し、結果を
+        Task に記録する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: '2026-08-03 実機結合検証: agent close、app dev、agent open は実行でき、tmux とAgentパネルは表示された。しかし
+          GET /api/agent-codex/whub-dev/TASK-104 は 400 Codex App Server is not running
+          となり prompt は送信不能。原因は agent open CLI process の app_servers registry と app
+          dev API process の registry が別メモリであり、App Server session を共有していないこと。App Serverの所有・IPC/状態境界を実装し直すまでブラウザ検証を中断。'
+      deleted: false
+    - value:
+        verification: 実機でagent close/open、Web Agentパネル、prompt送信・応答、Terminal/Agent切替を確認。allow/deny、Browser
+          Notificationはユーザー判断でdeferし、PRへ進む。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: 使い捨てworktreeのCodex project trust未登録によりhookが未読込となることが結合検証で判明したため、worktree限定のtrust
+    lifecycleとhook承認案内を追加する
+- reason: 実機でCode Mode executorの権限要求はCodex lifecycle hookを発火しないことが判明したため、hook方式をCodex
+    App Serverの権限通知購読へ置換し、実装と最終結合検証を別sessionへ分離する
+- reason: Codex App Serverが承認要求を所有するため、具体イベント、session lifecycle、最小クライアント、Worktree実装とrepo
+    session最終検証を明記する
+- reason: 論理削除済みの旧Phaseは完了扱いとなるため、App Server実装・Worktree引継ぎ・repo最終検証を新規Phaseへ記録する
+- reason: 実機検証で agent open CLI と app dev API が別プロセスのためApp Server registryを共有できないことを確認。Web
+    backendをApp Server所有者に変更する。
+cancellation: null
+result:
+  summary: 'Codex App Serverによるworktree単位のprompt・応答・承認attention UIを実装し、PR #9をmerge。allow/denyとBrowser
+    Notificationの実機確認はdeferとして記録。'
