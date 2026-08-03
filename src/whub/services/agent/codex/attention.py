@@ -1,4 +1,4 @@
-"""Keep short-lived Agent approval attention for the local web app."""
+"""Keep short-lived Codex approval attention for the local web app."""
 
 from __future__ import annotations
 

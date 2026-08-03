@@ -5,7 +5,7 @@ import tomllib
 
 import pytest
 
-from whub.services.agent.codex_trust import cleanup, prepare
+from whub.services.agent.codex.trust import cleanup, prepare
 from whub.services.errors import ServiceError
 
 

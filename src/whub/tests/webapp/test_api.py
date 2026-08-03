@@ -27,7 +27,7 @@ from fastapi.testclient import TestClient
 from whub.models import ManifestError
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
-from whub.services.agent.attention import ApprovalAttentionStore
+from whub.services.agent.codex.attention import ApprovalAttentionStore
 from whub.models import ResourceStatus, StatusReport, WorktreeStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminalState
 from whub.services.task import ProjectTasks

@@ -1,8 +1,17 @@
 """tmux session naming and remote shell snippet builders."""
 
 from __future__ import annotations
+from dataclasses import dataclass
 import shlex
 from pathlib import Path
+
+
+@dataclass(frozen=True)
+class TmuxSession:
+    """One running or resumable tmux session."""
+
+    name: str
+    attach_command: tuple[str, ...]
 
 
 def session_name(*parts: str) -> str:

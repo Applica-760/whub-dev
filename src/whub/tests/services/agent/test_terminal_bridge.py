@@ -4,6 +4,7 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 
+from whub.core.tmux import TmuxSession
 from whub.models.agent.terminal_bridge import TerminalAccessMode, TerminalSessionRef
 from whub.services.agent.terminal_bridge import (
     TerminalAccessError,
@@ -11,7 +12,6 @@ from whub.services.agent.terminal_bridge import (
     TerminalAttachment,
     attach,
 )
-from whub.services.agent.tmux_session import TmuxSession
 
 
 def test_controller_is_explicit_and_unique() -> None:

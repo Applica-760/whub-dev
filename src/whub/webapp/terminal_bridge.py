@@ -9,6 +9,7 @@ import anyio
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
+from whub.core.tmux import TmuxSession
 from whub.models.agent.terminal_bridge import (
     TerminalClaim,
     TerminalInput,
@@ -22,7 +23,6 @@ from whub.services.agent.terminal_bridge import (
     attach,
     resize,
 )
-from whub.services.agent.tmux_session import TmuxSession
 from whub.services.errors import ServiceError
 
 

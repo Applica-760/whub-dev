@@ -8,7 +8,7 @@ import struct
 import termios
 from dataclasses import dataclass, field
 
-from whub.services.agent.tmux_session import TmuxSession
+from whub.core.tmux import TmuxSession
 
 from whub.models.agent.terminal_bridge import (
     TerminalAccessMode,

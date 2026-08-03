@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from whub.core.context import current_context
 from whub.models import load_manifest
-from whub.services.agent.app_server import app_servers
+from whub.services.agent.codex.app_server import app_servers
 from whub.services.worktree.operation import resolve_project_worktree
 
 

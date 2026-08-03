@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from whub.core.tmux import TmuxSession
 from whub.models import Manifest
 from whub.services.agent.adapters.claude_code import render as render_claude_code
-from whub.services.agent.adapters.codex import render as render_codex
+from whub.services.agent.codex.config import render as render_codex
 from whub.services.agent.auth import (
     resolve_agent_auth,
     resolve_variables,
 )
 from whub.services.agent.context import render_context
-from whub.services.agent.codex_trust import cleanup as cleanup_codex_trust
-from whub.services.agent.codex_trust import prepare as prepare_codex_trust
+from whub.services.agent.codex.trust import cleanup as cleanup_codex_trust
+from whub.services.agent.codex.trust import prepare as prepare_codex_trust
 from whub.services.agent.tmux_session import (
-    TmuxSession,
     close_tmux_session,
     open_tmux_session,
 )

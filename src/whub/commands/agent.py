@@ -10,9 +10,9 @@ from whub.commands import get_manifest
 from whub.core.context import current_context
 from whub.models import project_names
 from whub.services.agent.agent import close_agent, open_agent
-from whub.services.agent.app_server_control import start as start_app_server
-from whub.services.agent.app_server_control import stop as stop_app_server
 from whub.services.errors import ServiceError
+from whub.webapp.agent_codex_control import start as start_app_server
+from whub.webapp.agent_codex_control import stop as stop_app_server
 
 
 @click.group()

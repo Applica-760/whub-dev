@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from whub.core.tmux import (
+    TmuxSession,
     build_shell_command,
     session_name,
     session_target,
@@ -29,6 +30,13 @@ from whub.core.tmux import (
 
 
 class TestTmuxSpec:
+    def test_tmux_session_is_an_immutable_connection_value(self) -> None:
+        session = TmuxSession("whub-project", ("tmux", "attach-session"))
+
+        assert session.name == "whub-project"
+        with pytest.raises(AttributeError):
+            session.name = "other"
+
     def test_session_name_adds_prefix(self) -> None:
         # ケース1
         assert session_name("project") == "whub-project"

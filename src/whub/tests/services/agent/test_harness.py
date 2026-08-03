@@ -9,7 +9,7 @@ from whub.models.agent.auth import (
     RegisteredProjectVariable,
     RegisteredTaskWorktreeVariable,
 )
-from whub.services.agent.adapters.codex import CodexRenderPlan
+from whub.services.agent.codex.config import CodexRenderPlan
 from whub.services.agent.agent import close_agent, open_agent
 from whub.services.agent.auth import resolve_variables
 from whub.services.agent.context import AGENTS_CONTEXT_PATH, render_context

@@ -10,8 +10,8 @@ from pathlib import Path
 from threading import Lock, Thread
 from typing import Any, TextIO
 
+from whub.services.agent.codex.attention import approval_attention
 from whub.services.errors import ServiceError
-from whub.services.agent.attention import approval_attention
 
 
 @dataclass(frozen=True)

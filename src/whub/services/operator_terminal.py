@@ -8,13 +8,12 @@ import subprocess
 from threading import Lock
 from uuid import uuid4
 
-from whub.core.tmux import session_name, session_target, tmux_command
+from whub.core.tmux import TmuxSession, session_name, session_target, tmux_command
 from whub.core.context import WhubContext
 from whub.models.operator_terminal import (
     OperatorTerminal,
     OperatorTerminalState,
 )
-from whub.services.agent.tmux_session import TmuxSession
 from whub.services.errors import ServiceError
 
 

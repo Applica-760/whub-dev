@@ -2,21 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 import shlex
 import subprocess
 
-from whub.core.tmux import session_name, session_target, tmux_command
+from whub.core.tmux import TmuxSession, session_name, session_target, tmux_command
 from whub.services.errors import ServiceError
-
-
-@dataclass(frozen=True)
-class TmuxSession:
-    """One running or resumable tmux session for an Agent worktree."""
-
-    name: str
-    attach_command: tuple[str, ...]
 
 
 def resolve_tmux_session(project: str, task_id: str) -> TmuxSession:

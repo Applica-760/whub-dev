@@ -7,12 +7,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from whub.services.agent.app_server import (
+from whub.services.agent.codex.app_server import (
     AppServerRegistry,
     AppServerSession,
     _codex_executable,
 )
-from whub.services.agent.attention import approval_attention
+from whub.services.agent.codex.attention import approval_attention
 from whub.services.errors import ServiceError
 
 
@@ -51,7 +51,7 @@ def test_codex_executable_skips_broken_path_entries(tmp_path: Path) -> None:
             clear=False,
         ),
         patch(
-            "whub.services.agent.app_server.subprocess.run",
+            "whub.services.agent.codex.app_server.subprocess.run",
             side_effect=[
                 CompletedProcess([str(broken), "--version"], 1),
                 CompletedProcess([str(working), "--version"], 0),

@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from whub.services.agent.attention import approval_attention
+from whub.services.agent.codex.attention import approval_attention
 
 
 router = APIRouter(prefix="/api/agent-attention")

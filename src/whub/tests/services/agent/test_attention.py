@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from whub.services.agent.attention import ATTENTION_TTL, ApprovalAttentionStore
+from whub.services.agent.codex.attention import ATTENTION_TTL, ApprovalAttentionStore
 
 
 def test_attention_lifecycle_requires_matching_tool_and_turn() -> None:

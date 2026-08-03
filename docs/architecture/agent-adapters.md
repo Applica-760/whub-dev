@@ -8,7 +8,12 @@
   render planを返す。
 - `context.py`: Hub rootの`AGENTS.md`、`.agents/skills`、baseと選択されたRoleの指示をsnapshot renderする。
 - `state.py`: authのrender planとcontextを対象worktreeへ安全に具体化し、所有物を記録・cleanupする。
-- `session.py`: tmux sessionの開始・停止だけを扱う。
+- `tmux_session.py`: tmux sessionの開始・停止だけを扱う。
+- `codex/config.py`: `EffectiveAuth`をCodex project configとrulesのrender planへ変換する。
+- `codex/trust.py`: worktreeごとのCodex trust entryを所有・cleanupする。
+- `codex/app_server.py`: worktreeごとのCodex App Server processとJSON-RPC状態を所有する。
+- `codex/attention.py`: Codex approval requestの短期in-memory状態を保持する。
+- `webapp/agent_codex_control.py`: `whub agent`からlocal web backendを起動・停止するcontrol clientであり、Codex App Server protocolは扱わない。
 
 `state.prepare`はauthを具体化してからcontextを具体化し、両方の所有情報を一つのstate recordとして保存する。
 contextはHub共通指示とRole指示を`.agents/AGENTS_context.md`へ生成し、既存`AGENTS.md`にはその参照だけを
