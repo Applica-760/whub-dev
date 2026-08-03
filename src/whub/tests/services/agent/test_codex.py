@@ -94,6 +94,22 @@ def test_render_generates_sandbox_config_without_extension_tools() -> None:
     assert "mcp_servers" not in config
 
 
+def test_render_never_generates_legacy_attention_hooks() -> None:
+    variables = {
+        "project": "whub-dev",
+        "current_worktree.project": "whub-dev",
+        "current_worktree.task": "TASK-104",
+        "current_worktree.path": "/workspace/worktree",
+    }
+
+    plan = render(_auth(), [_codegraph()], variables)
+
+    config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])
+    assert "features" not in config
+    assert "hooks" not in config
+    assert PurePosixPath(".codex/hooks/whub_attention.py") not in plan.files
+
+
 def test_render_derives_codex_permissions_from_effective_auth() -> None:
     grants = _auth().grants.model_copy(
         update={
