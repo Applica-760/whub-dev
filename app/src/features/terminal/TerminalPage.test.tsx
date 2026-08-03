@@ -259,6 +259,12 @@ describe("TerminalPage", () => {
         .querySelector(".diff-tree-chevron")
         ?.getAttribute("data-expanded"),
     ).toBe("true");
+    expect(
+      container.querySelector(".diff-tree-children")?.getAttribute("style"),
+    ).toBeNull();
+    expect(
+      container.querySelector(".diff-tree-guide")?.getAttribute("style"),
+    ).toContain("inset-inline-start: 22px");
     fireEvent.contextMenu(screen.getByText("main.py"));
     expect(clipboardWrite).toHaveBeenCalledWith(
       "projects/worktrees/whub-dev-099/src/main.py",

@@ -48,6 +48,18 @@
   cursor: pointer;
 }
 
+.diff-tree-children {
+  position: relative;
+}
+
+.diff-tree-guide {
+  border-inline-start: 1px solid var(--whub-color-border);
+  bottom: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+}
+
 .diff-tree-node[data-changed="true"] {
   color: var(--mantine-color-green-7);
 }

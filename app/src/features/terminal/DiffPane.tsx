@@ -262,7 +262,15 @@ export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
               {node.label}
             </Text>
           </Group>
-          {directory && open && renderTree(node.children ?? [], depth + 1)}
+          {directory && open && (
+            <Box className="diff-tree-children">
+              <Box
+                className="diff-tree-guide"
+                style={{ insetInlineStart: 22 + depth * 16 }}
+              />
+              {renderTree(node.children, depth + 1)}
+            </Box>
+          )}
         </Box>
       );
     });
