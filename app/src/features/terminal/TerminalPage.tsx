@@ -346,6 +346,7 @@ export function TerminalPage({
       <DiffPane
         project={selectedWorktree?.parent_project}
         taskId={selectedWorktree?.task_id}
+        workspacePath={selectedWorktree?.workspace_path}
       />
     </main>
   );

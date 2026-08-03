@@ -24,6 +24,23 @@
   cursor: pointer;
 }
 
+.diff-tree-node[data-changed="true"] {
+  color: var(--mantine-color-orange-7);
+}
+
+.diff-tree-node[data-new="true"] {
+  color: var(--mantine-color-green-7);
+}
+
+.diff-tree-node[data-changed="true"]::after {
+  background: currentColor;
+  border-radius: 50%;
+  content: "";
+  height: 0.4rem;
+  margin-left: auto;
+  width: 0.4rem;
+}
+
 .diff-tree-chevron {
   transition: transform 120ms ease;
 }
