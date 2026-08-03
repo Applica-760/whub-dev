@@ -29,7 +29,9 @@ class ChangedFileListResponse(BaseModel):
 
 class WorktreeDiffResponse(BaseModel):
     path: str
-    content: str
+    content: str | None
+    diff: str
+    state: str
 
 
 def _changed_file_response(item: ChangedFile) -> ChangedFileResponse:
@@ -64,4 +66,9 @@ def get_worktree_diff(project: str, task_id: str, path: str) -> WorktreeDiffResp
         task_id,
         path,
     )
-    return WorktreeDiffResponse(path=diff.path, content=diff.content)
+    return WorktreeDiffResponse(
+        path=diff.path,
+        content=diff.content,
+        diff=diff.diff,
+        state=diff.state,
+    )

@@ -571,7 +571,12 @@ def test_worktree_diff_endpoints_use_registered_worktree_services(
 ) -> None:
     m = manifest()
     files = [ChangedFile(path="src/main.py", status="M")]
-    diff = WorktreeDiff(path="src/main.py", content="@@ -1 +1 @@\n-old\n+new\n")
+    diff = WorktreeDiff(
+        path="src/main.py",
+        content="new\n",
+        diff="@@ -1 +1 @@\n-old\n+new\n",
+        state="text",
+    )
     context = type("Context", (), {"workspace_root": tmp_path})()
     with (
         patch("whub.webapp.routers.worktree_diff.load_manifest", return_value=m),
@@ -594,7 +599,12 @@ def test_worktree_diff_endpoints_use_registered_worktree_services(
     assert files_response.json() == {
         "files": [{"path": "src/main.py", "status": "M", "previous_path": None}]
     }
-    assert diff_response.json() == {"path": "src/main.py", "content": diff.content}
+    assert diff_response.json() == {
+        "path": "src/main.py",
+        "content": diff.content,
+        "diff": diff.diff,
+        "state": diff.state,
+    }
     mock_files.assert_called_once_with(m, tmp_path, "local", "TASK-072")
     mock_diff.assert_called_once_with(m, tmp_path, "local", "TASK-072", "src/main.py")
 

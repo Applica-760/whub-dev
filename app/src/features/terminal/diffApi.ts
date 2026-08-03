@@ -7,6 +7,7 @@ type WorktreeDiffResponse =
   paths["/api/worktrees/{project}/{task_id}/diff"]["get"]["responses"][200]["content"]["application/json"];
 
 export type ChangedFile = ChangedFilesResponse["files"][number];
+export type WorktreeFile = WorktreeDiffResponse;
 
 export async function fetchChangedFiles(project: string, taskId: string) {
   return requestJson<ChangedFilesResponse>(

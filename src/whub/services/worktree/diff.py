@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
+import stat
 
 from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
@@ -22,10 +24,12 @@ class ChangedFile:
 
 @dataclass(frozen=True)
 class WorktreeDiff:
-    """The unified diff for one changed file."""
+    """The display inputs for one current worktree file."""
 
     path: str
-    content: str
+    content: str | None
+    diff: str
+    state: str
 
 
 def list_changed_files(
@@ -53,11 +57,14 @@ def read_changed_file_diff(
     task_id: str,
     path: str,
 ) -> WorktreeDiff:
-    """Return PATH's unified diff when it belongs to the worktree file set."""
+    """Return PATH's current text and unified diff when it is displayable."""
     worktree = resolve_project_worktree(manifest, workspace_root, project, task_id)
     paths = _list_worktree_paths(worktree.destination)
     if path not in paths:
         raise NotFoundError(f"worktree file not found: {path}")
+    content, state = _read_worktree_text(worktree.destination, path)
+    if state != "text":
+        return WorktreeDiff(path=path, content=None, diff="", state=state)
     if path in _list_untracked_paths(worktree.destination):
         result = run_git(
             worktree.destination,
@@ -71,7 +78,7 @@ def read_changed_file_diff(
         )
         if result.returncode not in (0, 1):
             raise ServiceError("git diff failed: " + process_detail(result))
-        return WorktreeDiff(path=path, content=result.stdout)
+        return WorktreeDiff(path=path, content=content, diff=result.stdout, state=state)
     result = run_git(
         worktree.destination,
         "diff",
@@ -83,7 +90,7 @@ def read_changed_file_diff(
     )
     if result.returncode != 0:
         raise ServiceError("git diff failed: " + process_detail(result))
-    return WorktreeDiff(path=path, content=result.stdout)
+    return WorktreeDiff(path=path, content=content, diff=result.stdout, state=state)
 
 
 def _list_changed_files(destination: Path, base_branch: str) -> list[ChangedFile]:
@@ -124,6 +131,29 @@ def _list_untracked_paths(destination: Path) -> set[str]:
     if result.returncode != 0:
         raise ServiceError("git ls-files failed: " + process_detail(result))
     return {path for path in result.stdout.split("\0") if path}
+
+
+def _read_worktree_text(destination: Path, path: str) -> tuple[str | None, str]:
+    target = destination / path
+    try:
+        if not stat.S_ISREG(target.lstat().st_mode):
+            return None, "unreadable"
+        descriptor = os.open(target, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    except OSError:
+        return None, "unreadable"
+    try:
+        with os.fdopen(descriptor, "rb") as file:
+            if not stat.S_ISREG(os.fstat(file.fileno()).st_mode):
+                return None, "unreadable"
+            content = file.read()
+    except OSError:
+        return None, "unreadable"
+    if b"\0" in content:
+        return None, "binary"
+    try:
+        return content.decode(), "text"
+    except UnicodeDecodeError:
+        return None, "binary"
 
 
 def _parse_changed_files(output: str) -> list[ChangedFile]:

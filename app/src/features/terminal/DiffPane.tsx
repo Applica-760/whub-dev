@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 import { errorMessage } from "../../api/errorMessage";
 import { WidgetFrame } from "../../components/WidgetFrame";
 import { fetchChangedFiles, fetchWorktreeDiff } from "./diffApi";
-import type { ChangedFile } from "./diffApi";
+import type { ChangedFile, WorktreeFile } from "./diffApi";
 
 type DiffPaneProps = {
   project: string | undefined;
@@ -44,6 +44,15 @@ function treeData(files: ChangedFile[]): ExplorerNode[] {
       nodes = node.children;
     }
   }
+  const sortNodes = (nodes: ExplorerNode[]) => {
+    nodes.sort(
+      (left, right) =>
+        Number(right.children.length > 0) - Number(left.children.length > 0) ||
+        left.label.localeCompare(right.label),
+    );
+    nodes.forEach((node) => sortNodes(node.children));
+  };
+  sortNodes(root);
   return root;
 }
 
@@ -51,70 +60,65 @@ function hasChanges(node: ExplorerNode): boolean {
   return Boolean(node.status) || node.children.some(hasChanges);
 }
 
-type RenderedDiffLine = {
+type RenderedFileLine = {
   content: string;
-  kind: "addition" | "context" | "deletion" | "file" | "hunk";
+  kind: "addition" | "context" | "deletion" | "hunk";
   newLine: number | null;
   oldLine: number | null;
   prefix: string;
 };
 
-function renderedDiffLines(content: string): RenderedDiffLine[] {
+function renderedFileLines(content: string, diff: string): RenderedFileLine[] {
+  const insertions = new Map<number, RenderedFileLine[]>();
+  const additions = new Set<number>();
   let oldLine = 0;
   let newLine = 0;
-  return content.split("\n").map((line) => {
+  const addInsertion = (line: number, insertion: RenderedFileLine) => {
+    insertions.set(line, [...(insertions.get(line) ?? []), insertion]);
+  };
+
+  for (const line of diff.split("\n")) {
     const hunk = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
     if (hunk) {
       oldLine = Number(hunk[1]);
       newLine = Number(hunk[2]);
-      return {
+      addInsertion(newLine, {
         content: line,
         kind: "hunk",
         oldLine: null,
         newLine: null,
         prefix: "",
-      };
-    }
-    if (line.startsWith("+++") || line.startsWith("---"))
-      return {
-        content: line,
-        kind: "file",
-        oldLine: null,
-        newLine: null,
-        prefix: "",
-      };
-    if (line.startsWith("+") && !line.startsWith("+++"))
-      return {
-        content: line.slice(1),
-        kind: "addition",
-        oldLine: null,
-        newLine: newLine++,
-        prefix: "+",
-      };
-    if (line.startsWith("-") && !line.startsWith("---"))
-      return {
+      });
+    } else if (line.startsWith("-") && !line.startsWith("---")) {
+      addInsertion(newLine, {
         content: line.slice(1),
         kind: "deletion",
         oldLine: oldLine++,
         newLine: null,
         prefix: "-",
-      };
-    if (line.startsWith(" "))
-      return {
-        content: line.slice(1),
-        kind: "context",
-        oldLine: oldLine++,
-        newLine: newLine++,
-        prefix: " ",
-      };
-    return {
-      content: line,
-      kind: "context",
-      oldLine: null,
-      newLine: null,
-      prefix: "",
-    };
-  });
+      });
+    } else if (line.startsWith("+") && !line.startsWith("+++")) {
+      additions.add(newLine++);
+    } else if (line.startsWith(" ")) {
+      oldLine++;
+      newLine++;
+    }
+  }
+
+  const lines = content.split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  return lines
+    .flatMap((line, index): RenderedFileLine[] => [
+      ...(insertions.get(index + 1) ?? []),
+      {
+        content: line,
+        kind: additions.has(index + 1) ? "addition" : "context",
+        oldLine: null,
+        newLine: index + 1,
+        prefix: additions.has(index + 1) ? "+" : " ",
+      },
+    ])
+    .concat(insertions.get(lines.length + 1) ?? []);
 }
 
 function changeCount(content: string) {
@@ -132,7 +136,7 @@ function changeCount(content: string) {
 export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
   const [files, setFiles] = useState<ChangedFile[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const [content, setContent] = useState("");
+  const [file, setFile] = useState<WorktreeFile | null>(null);
   const [loading, setLoading] = useState(false);
   const [diffLoading, setDiffLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +170,7 @@ export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
 
   useEffect(() => {
     if (!project || !taskId || !selectedPath) {
-      setContent("");
+      setFile(null);
       setDiffLoading(false);
       return;
     }
@@ -174,7 +178,7 @@ export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
     setDiffLoading(true);
     setError(null);
     fetchWorktreeDiff(project, taskId, selectedPath)
-      .then((response) => !cancelled && setContent(response.content))
+      .then((response) => !cancelled && setFile(response))
       .catch(
         (requestError) => !cancelled && setError(errorMessage(requestError)),
       )
@@ -185,7 +189,14 @@ export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
   }, [project, selectedPath, taskId]);
 
   const data = useMemo(() => treeData(files), [files]);
-  const changes = useMemo(() => changeCount(content), [content]);
+  const changes = useMemo(() => changeCount(file?.diff ?? ""), [file]);
+  const lines = useMemo(
+    () =>
+      file?.state === "text" && file.content !== null
+        ? renderedFileLines(file.content, file.diff)
+        : [],
+    [file],
+  );
   const copyPath = (path: string) => {
     const relativePath = workspacePath ? `${workspacePath}/${path}` : path;
     void navigator.clipboard?.writeText(relativePath);
@@ -251,7 +262,15 @@ export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
               {node.label}
             </Text>
           </Group>
-          {directory && open && renderTree(node.children ?? [], depth + 1)}
+          {directory && open && (
+            <Box className="diff-tree-children">
+              <Box
+                className="diff-tree-guide"
+                style={{ insetInlineStart: 22 + depth * 16 }}
+              />
+              {renderTree(node.children, depth + 1)}
+            </Box>
+          )}
         </Box>
       );
     });
@@ -295,10 +314,22 @@ export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
           <Text c="dimmed" p="md">
             変更ファイルを選択してください。
           </Text>
+        ) : file?.state === "binary" ? (
+          <Text c="dimmed" p="md">
+            バイナリファイルは表示できません。
+          </Text>
+        ) : file?.state === "unreadable" ? (
+          <Text c="dimmed" p="md">
+            ファイルを読み込めません。
+          </Text>
+        ) : file?.content === "" ? (
+          <Text c="dimmed" p="md">
+            空のファイルです。
+          </Text>
         ) : (
           <ScrollArea h="100%">
             <Box className="diff-content" component="pre">
-              {renderedDiffLines(content).map((line, index) => (
+              {lines.map((line, index) => (
                 <div
                   className={`diff-line diff-${line.kind}`}
                   key={`${index}-${line.content}`}

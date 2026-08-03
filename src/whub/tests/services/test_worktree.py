@@ -157,7 +157,7 @@ def test_resolve_project_worktree_requires_git_base_branch(tmp_path: Path) -> No
         )
 
 
-def test_list_changed_files_returns_full_tree_with_git_statuses(tmp_path: Path) -> None:
+def test_list_changed_files_returns_full_tree_without_deleted_files(tmp_path: Path) -> None:
     resolved = ResolvedProjectWorktree(
         definition=worktree_definition(),
         parent=tmp_path / "source",
@@ -176,7 +176,9 @@ def test_list_changed_files_returns_full_tree_with_git_statuses(tmp_path: Path) 
                     [], 0, stdout="README.md\0new.py\0unchanged.py\0draft.py\0"
                 ),
                 subprocess.CompletedProcess(
-                    [], 0, stdout="M\0README.md\0R100\0old.py\0new.py\0"
+                    [],
+                    0,
+                    stdout="M\0README.md\0R100\0old.py\0new.py\0D\0deleted.py\0",
                 ),
                 subprocess.CompletedProcess([], 0, stdout="draft.py\0"),
             ],
@@ -257,10 +259,13 @@ def test_read_changed_file_diff_rejects_path_outside_worktree(tmp_path: Path) ->
 
 
 def test_read_changed_file_diff_reads_untracked_file(tmp_path: Path) -> None:
+    destination = tmp_path / "worktree"
+    destination.mkdir()
+    (destination / "draft.py").write_text("draft\n")
     resolved = ResolvedProjectWorktree(
         definition=worktree_definition(),
         parent=tmp_path / "source",
-        destination=tmp_path / "worktree",
+        destination=destination,
         base_branch="main",
     )
     with (
@@ -287,7 +292,12 @@ def test_read_changed_file_diff_reads_untracked_file(tmp_path: Path) -> None:
             "draft.py",
         )
 
-    assert diff == WorktreeDiff(path="draft.py", content="@@ -0,0 +1 @@\n+draft\n")
+    assert diff == WorktreeDiff(
+        path="draft.py",
+        content="draft\n",
+        diff="@@ -0,0 +1 @@\n+draft\n",
+        state="text",
+    )
     assert git.call_args_list[-1] == call(
         resolved.destination,
         "diff",
@@ -297,6 +307,146 @@ def test_read_changed_file_diff_reads_untracked_file(tmp_path: Path) -> None:
         "--",
         "/dev/null",
         "draft.py",
+    )
+
+
+def test_read_changed_file_diff_excludes_binary_content(tmp_path: Path) -> None:
+    destination = tmp_path / "worktree"
+    destination.mkdir()
+    (destination / "image.bin").write_bytes(b"\0binary")
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=destination,
+        base_branch="main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            return_value=subprocess.CompletedProcess([], 0, stdout="image.bin\0"),
+        ) as git,
+    ):
+        diff = read_changed_file_diff(
+            Manifest.model_validate(manifest_data()),
+            tmp_path,
+            "local",
+            "TASK-072",
+            "image.bin",
+        )
+
+    assert diff == WorktreeDiff(
+        path="image.bin", content=None, diff="", state="binary"
+    )
+    git.assert_called_once_with(
+        destination,
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "-z",
+    )
+
+
+def test_read_changed_file_diff_rejects_symlink(tmp_path: Path) -> None:
+    destination = tmp_path / "worktree"
+    destination.mkdir()
+    outside = tmp_path / "secret.txt"
+    outside.write_text("secret\n")
+    (destination / "secret-link").symlink_to(outside)
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=destination,
+        base_branch="main",
+    )
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            return_value=subprocess.CompletedProcess([], 0, stdout="secret-link\0"),
+        ) as git,
+    ):
+        diff = read_changed_file_diff(
+            Manifest.model_validate(manifest_data()),
+            tmp_path,
+            "local",
+            "TASK-072",
+            "secret-link",
+        )
+
+    assert diff == WorktreeDiff(
+        path="secret-link", content=None, diff="", state="unreadable"
+    )
+    git.assert_called_once_with(
+        destination,
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "-z",
+    )
+
+
+def test_read_changed_file_diff_rejects_symlink_replaced_after_lstat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "worktree"
+    destination.mkdir()
+    inside = destination / "inside.txt"
+    inside.write_text("inside\n")
+    outside = tmp_path / "secret.txt"
+    outside.write_text("secret\n")
+    resolved = ResolvedProjectWorktree(
+        definition=worktree_definition(),
+        parent=tmp_path / "source",
+        destination=destination,
+        base_branch="main",
+    )
+    original_lstat = Path.lstat
+
+    def replace_after_lstat(candidate: Path):
+        result = original_lstat(candidate)
+        if candidate == inside:
+            inside.unlink()
+            inside.symlink_to(outside)
+        return result
+
+    with (
+        patch(
+            "whub.services.worktree.diff.resolve_project_worktree",
+            return_value=resolved,
+        ),
+        patch(
+            "whub.services.worktree.diff.run_git",
+            return_value=subprocess.CompletedProcess([], 0, stdout="inside.txt\0"),
+        ) as git,
+    ):
+        monkeypatch.setattr(Path, "lstat", replace_after_lstat)
+        diff = read_changed_file_diff(
+            Manifest.model_validate(manifest_data()),
+            tmp_path,
+            "local",
+            "TASK-072",
+            "inside.txt",
+        )
+
+    assert diff == WorktreeDiff(
+        path="inside.txt", content=None, diff="", state="unreadable"
+    )
+    git.assert_called_once_with(
+        destination,
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "-z",
     )
 
 
