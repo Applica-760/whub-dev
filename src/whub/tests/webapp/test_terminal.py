@@ -20,7 +20,7 @@ class FakeWebSocket:
     def __init__(self) -> None:
         self.headers = {"host": "localhost"}
         self.messages: asyncio.Queue[dict[str, object]] = asyncio.Queue()
-        self.output: asyncio.Queue[str] = asyncio.Queue()
+        self.output: asyncio.Queue[object] = asyncio.Queue()
         self.accepted = False
 
     async def accept(self) -> None:
@@ -29,7 +29,7 @@ class FakeWebSocket:
     async def receive(self) -> dict[str, object]:
         return await self.messages.get()
 
-    async def send_text(self, data: str) -> None:
+    async def send_bytes(self, data: bytes) -> None:
         await self.output.put(data)
 
     async def send_json(self, data: object) -> None:
@@ -64,7 +64,7 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
 
             peer.sendall(b"l")
             async with asyncio.timeout(1):
-                assert await websocket.output.get() == "l"
+                assert await websocket.output.get() == b"l"
 
             await websocket.messages.put(
                 {"type": "websocket.receive", "text": '{"type":"input","data":"1"}'}

@@ -20,6 +20,7 @@ let approvalAttention = [
   },
 ];
 let agentError: string | null = null;
+let operationStarts = 0;
 
 vi.mock("./TerminalWidget", () => ({
   TerminalWidget: ({
@@ -28,13 +29,14 @@ vi.mock("./TerminalWidget", () => ({
     taskId,
   }: {
     label?: string;
-    project: string;
-    taskId: string;
+    project?: string;
+    taskId?: string;
   }) => <div>{label ?? `${project} / ${taskId}`}</div>,
 }));
 
 beforeEach(() => {
   agentError = null;
+  operationStarts = 0;
   approvalAttention = [
     {
       project: "vault",
@@ -60,17 +62,18 @@ beforeEach(() => {
       disconnect() {}
     },
   );
+  vi.stubGlobal("confirm", vi.fn(() => true));
   vi.stubGlobal(
     "fetch",
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === "/api/operator-terminal")
+      if (url === "/api/operator-terminals")
         return Promise.resolve({
           ok: true,
           json: async () =>
             init?.method === "POST"
-              ? { state: "on", operator_id: "operator-1" }
-              : { state: "off", operator_id: null },
+              ? { operator_id: `operator-${++operationStarts}` }
+              : { terminals: [] },
         });
       if (url === "/api/agent-attention")
         return Promise.resolve({
@@ -185,19 +188,22 @@ describe("TerminalPage", () => {
     );
   });
 
-  it("Operatorトグルで専用terminalを選択する", async () => {
+  it("複数Operationを起動・選択・個別終了できる", async () => {
     renderPage();
-    fireEvent.click(
-      await screen.findByRole("switch", { name: "Operatorを開始" }),
+    const start = await screen.findByRole("button", { name: "Operationを起動" });
+    fireEvent.click(start);
+    expect(await screen.findByText("Operation / workspace-hub")).toBeTruthy();
+
+    fireEvent.click(start);
+    expect(await screen.findByRole("switch", { name: "Operation operator-2を停止" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("switch", { name: "Operation operator-1を停止" }));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith("/api/operator-terminals/operator-1", {
+        method: "DELETE",
+      }),
     );
-    expect(await screen.findByText("Operator / workspace-hub")).toBeTruthy();
-    expect(
-      (
-        screen.getByRole("switch", {
-          name: "Operatorを停止",
-        }) as HTMLInputElement
-      ).checked,
-    ).toBe(true);
+    expect(screen.queryByRole("switch", { name: "Operation operator-1を停止" })).toBeNull();
   });
 
   it("承認待ちのTerminalをバッジと導線で示す", async () => {

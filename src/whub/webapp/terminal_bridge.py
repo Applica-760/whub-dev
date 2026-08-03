@@ -78,7 +78,7 @@ async def terminal_bridge(
             data = os.read(attachment.master_fd, 4096)
             if not data:
                 return
-            await websocket.send_text(data.decode(errors="replace"))
+            await websocket.send_bytes(data)
 
     pumps = {asyncio.create_task(receive()), asyncio.create_task(forward())}
     try:

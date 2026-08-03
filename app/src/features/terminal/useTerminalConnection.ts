@@ -5,7 +5,7 @@ import type { XtermDimensions } from "../../components/XtermView";
 type UseTerminalConnectionOptions = {
   endpoint: string;
   onConnected: () => void;
-  onOutput: (data: string) => void;
+  onOutput: (data: Uint8Array) => void;
 };
 
 export function terminalUrl(path: string) {
@@ -40,6 +40,7 @@ export function useTerminalConnection({
 
   useEffect(() => {
     const socket = new WebSocket(terminalUrl(endpoint));
+    socket.binaryType = "arraybuffer";
     let disposed = false;
     socketRef.current = socket;
     setError(null);
@@ -51,9 +52,9 @@ export function useTerminalConnection({
       socket.send(JSON.stringify({ type: "claim" }));
       onConnected();
     });
-    socket.addEventListener("message", (event) => {
-      if (!disposed) {
-        onOutput(event.data);
+    socket.addEventListener("message", (event: MessageEvent<ArrayBuffer>) => {
+      if (!disposed && typeof event.data !== "string") {
+        onOutput(new Uint8Array(event.data));
       }
     });
     socket.addEventListener("error", () => {

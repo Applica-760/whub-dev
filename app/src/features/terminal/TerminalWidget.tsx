@@ -36,12 +36,13 @@ export function TerminalWidget({
   taskId,
 }: TerminalWidgetProps) {
   const xtermRef = useRef<XtermViewHandle>(null);
+  const decoderRef = useRef(new TextDecoder());
   const handleConnected = useCallback(() => {
-    xtermRef.current?.fit();
+    xtermRef.current?.fit(true);
     xtermRef.current?.focus();
   }, []);
-  const handleOutput = useCallback((data: string) => {
-    xtermRef.current?.write(data);
+  const handleOutput = useCallback((data: Uint8Array) => {
+    xtermRef.current?.write(decoderRef.current.decode(data, { stream: true }));
   }, []);
   const { error, sendInput, sendResize } = useTerminalConnection({
     endpoint:

@@ -23,7 +23,7 @@ def test_openapi_schema_contains_all_resource_endpoints() -> None:
         "/api/tasks/all",
         "/api/tasks/{task_id}",
         "/api/tasks/{task_id}/graph",
-        "/api/operator-terminal",
+        "/api/operator-terminals",
     }
     # 集約エンドポイントはProject指定を取らない
     assert "parameters" not in schema["paths"]["/api/tasks/all"]["get"]

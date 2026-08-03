@@ -11,6 +11,7 @@ from whub.services.agent.terminal_bridge import (
     TerminalAccessRegistry,
     TerminalAttachment,
     attach,
+    resize,
 )
 
 
@@ -93,3 +94,14 @@ def test_attach_overrides_dumb_terminal_for_xterm_client() -> None:
     assert environment["TERM"] == "xterm-256color"
     assert environment["COLORTERM"] == "truecolor"
     attachment.close()
+
+
+def test_resize_skips_an_unchanged_terminal_size() -> None:
+    attachment = TerminalAttachment(10, Mock())
+
+    with patch("whub.services.agent.terminal_bridge.fcntl.ioctl") as ioctl:
+        resize(attachment, 120, 40)
+        resize(attachment, 120, 40)
+        resize(attachment, 121, 40)
+
+    assert ioctl.call_count == 2
