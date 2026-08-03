@@ -157,7 +157,7 @@ def test_resolve_project_worktree_requires_git_base_branch(tmp_path: Path) -> No
         )
 
 
-def test_list_changed_files_returns_full_tree_with_git_statuses(tmp_path: Path) -> None:
+def test_list_changed_files_returns_full_tree_without_deleted_files(tmp_path: Path) -> None:
     resolved = ResolvedProjectWorktree(
         definition=worktree_definition(),
         parent=tmp_path / "source",
@@ -176,7 +176,9 @@ def test_list_changed_files_returns_full_tree_with_git_statuses(tmp_path: Path) 
                     [], 0, stdout="README.md\0new.py\0unchanged.py\0draft.py\0"
                 ),
                 subprocess.CompletedProcess(
-                    [], 0, stdout="M\0README.md\0R100\0old.py\0new.py\0"
+                    [],
+                    0,
+                    stdout="M\0README.md\0R100\0old.py\0new.py\0D\0deleted.py\0",
                 ),
                 subprocess.CompletedProcess([], 0, stdout="draft.py\0"),
             ],
