@@ -1,0 +1,120 @@
+schema_version: 1
+task:
+  id: TASK-111
+  state: completed
+  title: Codex CLI承認待ちをWeb通知へ連携する
+  objective: tmux上のnative Codex CLIで生じるPermissionRequestを、利用者が一度だけ信頼するuser-level Hookからwhub
+    Web appへ届ける。該当する登録済みAgent worktreeを既存のattention UIで強調し、非表示タブではBrowser Notificationを出して実ターミナルへ導く。
+  approach:
+  - 既存のapproval_attention store、/api/agent-attentionの取得・既読化、Terminal選択行のバッジ・固定banner・Browser
+    Notificationを再利用する。UIの新設やApp Server会話UIの拡張は行わない。
+  - Task 104でworktree-local PermissionRequest/PostToolUse Hookを試したが、project trustとHook
+    trustが別であり、生成されるworktreeごとに再承認が必要だった。加えてCode Mode executorの承認はCodex lifecycle
+    Hookを通らない。この失敗を再導入しない。
+  - Hookは~/.codex/hooks.jsonの固定user-level sourceに置き、利用者が内容を確認して一度だけ/hookで信頼する。Agent
+    openはglobal設定を自動編集せず、通知対象の登録・解除だけを担う。Hookは任意のcwdで発火するため、backendが登録済みAgent worktreeと厳密一致するcwdだけを受理する。
+  - 固定HookスクリプトはPermissionRequestのstdin JSONからsession_id、cwd、turn_id、tool_name、tool_inputを読み、localhost限定APIへ送る。送信失敗・Web
+    app停止時も正常終了して通常のCodex承認フローを妨げない。native Codex CLIだけを対象とする。
+  - App ServerはTask 104で承認イベントの唯一の入力として導入されたが、本Taskでは変更しない。理由はtmuxのCLI対話を置換せず、通知だけを横断的control
+    planeへ追加するためである。
+  - MulmoTerminalの調査では、実CLIをPTY/xtermへそのまま中継し、Claudeはspawn時Hookで状態をserverへ送る。Codexのworktree-local
+    Hook信頼を解決する実装は確認できず、session同定・再開にはrollout JSONLを利用している。本Taskは画面出力の正規表現解析を正本にせず、公式PermissionRequest
+    Hookを採用する。
+  - 解除の完全なイベント契約は未決定である。PostToolUseで解除できるケース、拒否・放置時のTTL失効、同一Taskで複数要求が重なる場合を実装前に検証して決定する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Hook契約と手動セットアップを確定する
+    acceptance: []
+    steps:
+    - description: PermissionRequest・PostToolUse・TTL・同一worktreeでの複数要求について、イベント項目、更新・解除・失効条件を定義する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ~/.codex/hooks.jsonが固定の~/.local/bin/whub subcommandを呼び、利用者が一度だけ/hookで信頼する手順を文書化する。Hook設定をAgent
+        openが自動編集しないことを確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Hook契約と手動設定を文書化し、Hook受信の対象テスト30件とruffが成功
+      deleted: false
+    deleted: false
+  - title: whub Hook受信経路を実装する
+    acceptance: []
+    steps:
+    - description: Hook stdinのPermissionRequest JSONを受けるwhub subcommandをwhub-devへ追加し、localhostのWeb
+        backendへイベントを送る。Hook実行の失敗は通常のCodex承認フローを妨げず成功終了する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: localhost APIで入力を検証し、cwdが登録済みAgent worktreeと厳密に一致するイベントだけを既存approval_attention
+        storeへ記録する。登録外・不正入力は拒否する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: PostToolUseまたは定義済みTTLでattentionを解除し、Agent close時のcleanupと矛盾しないことを実装・検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Hook CLI、localhost API、cwd厳密照合、PostToolUse解除、TTLとclose cleanupを対象pytestで検証
+      deleted: false
+    deleted: false
+  - title: 既存Web attention UIへ統合する
+    acceptance: []
+    steps:
+    - description: 承認待ちはExplorerの該当Terminal行バッジだけで示し、固定bannerとOSのBrowser Notificationは使わない。Safari優先でbrowser
+        tab titleをベル未読マークと件数へ更新し、faviconは補助表示とする。App Serverの状態・会話UIを変更しない。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: API、CLI subcommand、attention状態、既存UIの自動テストを追加または更新し、global Hookからの入力で表示状態が変わることを検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Explorerバッジ、Safari優先のベル付きtab title、補助faviconを実装し、型検査とTerminal UIテスト10件で検証
+      deleted: false
+    deleted: false
+  - title: 実機検証と運用手順を完了する
+    acceptance: []
+    steps:
+    - description: 実際のAgent tmuxでnative Codex CLIを起動し、/hooksでuser-level Hookを信頼後、Explorerの選択行バッジ、Safariのbrowser
+        tab title未読表示、favicon補助表示、承認後の解除またはTTL失効を確認する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: ~/.codex/hooks.jsonの手動設定、初回/hook信頼、診断方法、release後に~/.local/bin/whubを参照する理由を開発文書へ記録する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: ユーザーによりnative Codex CLIの実機確認が完了済みと確認。
+      deleted: false
+    - value:
+        verification: 'docs/operations/agent.md、docs/architecture/agent-adapters.md、docs/reference/cli.md
+          に user-level hooks の手動設定、/hooks 信頼、attention-hook、診断を記載済み。uv run pytest
+          src/whub/tests/commands/test_agent.py src/whub/tests/webapp/test_agent_attention_control.py
+          src/whub/tests/webapp/test_api.py: 26 passed。'
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: OSのBrowser Notificationを廃止し、既存worktreeバッジとbrowser tab title・faviconの未読表示へ置き換えるため
+- reason: 上部固定bannerを廃止し、ExplorerバッジとSafari優先の青いbrowser tab title・補助favicon表示へ通知方式を変更するため
+cancellation: null
+result:
+  summary: 'PR #11をmerge方式で統合し、Viteキャッシュ残骸とworktree登録をcleanup済み。native Codex CLI実機確認と対象テスト26件成功を確認。'
