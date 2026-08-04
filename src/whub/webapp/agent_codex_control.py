@@ -7,7 +7,7 @@ from urllib.request import Request, urlopen
 
 from whub.core.context import WhubContext
 from whub.services.errors import ServiceError
-from whub.webapp.runner import read_pid_record
+from whub.webapp.runner import HOST, read_pid_record
 
 
 def start(context: WhubContext, project: str, task_id: str) -> None:
@@ -25,7 +25,7 @@ def _request(context: WhubContext, method: str, project: str, task_id: str) -> N
     if process is None:
         raise ServiceError("whub web app is not running")
     request = Request(
-        f"http://127.0.0.1:{process.port}/api/agent-codex/{project}/{task_id}/session",
+        f"http://{HOST}:{process.port}/api/agent-codex/{project}/{task_id}/session",
         method=method,
     )
     try:

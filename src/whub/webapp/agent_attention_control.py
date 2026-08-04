@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 
 from whub.core.context import WhubContext
 from whub.services.errors import ServiceError
-from whub.webapp.runner import read_pid_record
+from whub.webapp.runner import HOST, read_pid_record
 
 
 _COMMON_FIELDS = ("hook_event_name", "session_id", "cwd", "turn_id")
@@ -25,7 +25,7 @@ def submit(context: WhubContext, event: Mapping[str, object]) -> None:
     if process is None:
         raise ServiceError("whub web app is not running")
     request = Request(
-        f"http://127.0.0.1:{process.port}/api/agent-attention/events",
+        f"http://{HOST}:{process.port}/api/agent-attention/events",
         data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json"},
         method="POST",

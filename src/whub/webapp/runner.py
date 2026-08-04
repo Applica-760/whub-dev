@@ -14,7 +14,8 @@ from pathlib import Path
 
 import uvicorn
 
-from whub.webapp.server import create_app
+
+HOST = "127.0.0.1"
 
 
 @dataclass(frozen=True)
@@ -86,12 +87,14 @@ def remove_pid_record(pid_path: Path, expected_pid: int | None = None) -> None:
 
 def serve(dist_dir: Path, port: int, pid_path: Path) -> None:
     """Run uvicorn and maintain the managed process record."""
+    from whub.webapp.server import create_app
+
     process_id = os.getpid()
     write_pid_record(pid_path, port)
     try:
         uvicorn.run(
             create_app(dist_dir),
-            host="127.0.0.1",
+            host=HOST,
             port=port,
             log_level="warning",
             access_log=False,
@@ -130,7 +133,7 @@ def serve_dev(app_dir: Path, port: int, api_port: int, pid_path: Path) -> None:
             "--factory",
             "--reload",
             "--host",
-            "127.0.0.1",
+            HOST,
             "--port",
             str(api_port),
         ],
@@ -145,7 +148,7 @@ def serve_dev(app_dir: Path, port: int, api_port: int, pid_path: Path) -> None:
                 "dev",
                 "--",
                 "--host",
-                "127.0.0.1",
+                HOST,
                 "--port",
                 str(port),
                 "--strictPort",

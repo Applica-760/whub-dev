@@ -13,6 +13,7 @@ from whub.services.errors import ServiceError
 from whub.services.manifest import load_manifest
 from whub.services.operator_terminal import operator_terminal
 from whub.services.worktree import inspect_worktrees
+from whub.webapp.runner import HOST
 
 
 router = APIRouter(prefix="/api/agent-attention")
@@ -66,7 +67,7 @@ def _response(item: ApprovalAttention) -> ApprovalAttentionResponse:
 
 
 def _require_localhost(request: Request) -> None:
-    if request.client is None or request.client.host != "127.0.0.1":
+    if request.client is None or request.client.host != HOST:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
 

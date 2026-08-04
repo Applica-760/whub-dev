@@ -17,7 +17,7 @@ from whub.webapp.resources import (
     development_app_source,
     packaged_app_dist,
 )
-from whub.webapp.runner import AppProcessRecord, read_pid_record, remove_pid_record
+from whub.webapp.runner import HOST, AppProcessRecord, read_pid_record, remove_pid_record
 
 DEV_PORT = 8712
 DEV_API_PORT = 8713
@@ -85,7 +85,7 @@ def app(ctx: click.Context, port: int) -> None:
     pid_path = context.app_pid_path
     process = _read_running_process(pid_path)
     if process is not None:
-        click.echo(f"app already running: http://127.0.0.1:{process.port}")
+        click.echo(f"app already running: http://{HOST}:{process.port}")
         return
 
     subprocess.Popen(
@@ -105,7 +105,7 @@ def app(ctx: click.Context, port: int) -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    click.echo(f"app starting: http://127.0.0.1:{port}")
+    click.echo(f"app starting: http://{HOST}:{port}")
 
 
 @app.command()
@@ -153,7 +153,7 @@ def dev() -> None:
     pid_path = context.app_dev_pid_path
     process = _read_running_process(pid_path)
     if process is not None:
-        click.echo(f"app dev already running: http://127.0.0.1:{process.port}")
+        click.echo(f"app dev already running: http://{HOST}:{process.port}")
         return
 
     try:
@@ -181,4 +181,4 @@ def dev() -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    click.echo(f"app dev starting: http://127.0.0.1:{DEV_PORT}")
+    click.echo(f"app dev starting: http://{HOST}:{DEV_PORT}")
