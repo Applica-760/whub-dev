@@ -60,9 +60,7 @@ def close(ctx: click.Context, project: str, task: str) -> None:
             stop_app_server(context, project, task)
         except ServiceError as error:
             control_error = error
-        close_agent(
-            get_manifest(ctx), context.workspace_root, project, task
-        )
+        close_agent(get_manifest(ctx), context.workspace_root, project, task)
     except (OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
     if control_error is not None:
@@ -77,6 +75,9 @@ def attention_hook() -> None:
         event = json.load(click.get_text_stream("stdin"))
         if not isinstance(event, Mapping):
             return
+        operator_id = os.environ.get("WHUB_OPERATOR_ID")
+        if operator_id:
+            event = {**event, "operator_id": operator_id}
         submit_attention_hook(current_context(), event)
     except (OSError, ServiceError, TypeError, json.JSONDecodeError):
         return

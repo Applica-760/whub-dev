@@ -9,11 +9,15 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalPage } from "./TerminalPage";
+import type { ApprovalAttention } from "./attentionApi";
 
-let approvalAttention = [
+let approvalAttention: ApprovalAttention[] = [
   {
+    target: "worktree",
+    event: "permission_request",
     project: "vault",
     task_id: "TASK-101",
+    operator_id: null,
     tool_name: "Bash",
     requested_at: "2026-08-03T00:00:00+00:00",
     acknowledged: false,
@@ -21,6 +25,7 @@ let approvalAttention = [
 ];
 let agentError: string | null = null;
 let operationStarts = 0;
+let operatorTerminals: { operator_id: string }[] = [];
 let changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
 let worktreeFile: {
   path: string;
@@ -50,6 +55,7 @@ vi.mock("./TerminalWidget", () => ({
 beforeEach(() => {
   agentError = null;
   operationStarts = 0;
+  operatorTerminals = [];
   changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
   worktreeFile = {
     path: "src/main.py",
@@ -64,8 +70,11 @@ beforeEach(() => {
   });
   approvalAttention = [
     {
+      target: "worktree",
+      event: "permission_request",
       project: "vault",
       task_id: "TASK-101",
+      operator_id: null,
       tool_name: "Bash",
       requested_at: "2026-08-03T00:00:00+00:00",
       acknowledged: false,
@@ -101,7 +110,7 @@ beforeEach(() => {
           json: async () =>
             init?.method === "POST"
               ? { operator_id: `operator-${++operationStarts}` }
-              : { terminals: [] },
+              : { terminals: operatorTerminals },
         });
       if (url === "/api/agent-attention")
         return Promise.resolve({
@@ -113,10 +122,8 @@ beforeEach(() => {
       if (url.includes("/acknowledge"))
         return Promise.resolve({
           ok: true,
-          json: async () => ({
-            ...approvalAttention[0],
-            acknowledged: true,
-          }),
+          json: async () =>
+            approvalAttention.map((item) => ({ ...item, acknowledged: true })),
         });
       if (url.includes("/api/agent-codex/"))
         return Promise.resolve({
@@ -385,11 +392,41 @@ describe("TerminalPage", () => {
     expect(icon?.href.endsWith("/attention-favicon.svg")).toBe(true);
   });
 
+  it("Operationの不変IDへ応答終了通知を表示して既読化する", async () => {
+    operatorTerminals = [{ operator_id: "operator-3" }];
+    approvalAttention = [
+      {
+        target: "operator",
+        event: "response_completed",
+        project: null,
+        task_id: null,
+        operator_id: "operator-3",
+        tool_name: null,
+        requested_at: "2026-08-03T00:00:00+00:00",
+        acknowledged: false,
+      },
+    ];
+    renderPage();
+
+    expect(await screen.findByText("応答終了")).toBeTruthy();
+    fireEvent.click(await screen.findByText("Operation 1"));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/agent-attention/operator/operator-3/acknowledge",
+        { method: "POST" },
+      ),
+    );
+  });
+
   it("既に選択済みのTerminalへ新着の承認待ちが来ても既読化しない", async () => {
     approvalAttention = [
       {
+        target: "worktree",
+        event: "permission_request",
         project: "whub-dev",
         task_id: "TASK-099",
+        operator_id: null,
         tool_name: "Bash",
         requested_at: "2026-08-03T00:00:00+00:00",
         acknowledged: false,
@@ -408,8 +445,11 @@ describe("TerminalPage", () => {
   it("明示的に選択したTerminalの承認待ちだけを既読化する", async () => {
     approvalAttention = [
       {
+        target: "worktree",
+        event: "permission_request",
         project: "whub-dev",
         task_id: "TASK-099",
+        operator_id: null,
         tool_name: "Bash",
         requested_at: "2026-08-03T00:00:00+00:00",
         acknowledged: false,

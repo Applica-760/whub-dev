@@ -70,18 +70,19 @@ pathとbranchを検査する。両者が同じ操作を二重実行しないよ�
 
 ## Codex approval attention hook
 
-Codexのuser-level `~/.codex/hooks.json`は、`PermissionRequest`と`PostToolUse`の両方から固定の
+Codexのuser-level `~/.codex/hooks.json`は、`PermissionRequest`、`PostToolUse`、`Stop`から固定の
 `~/.local/bin/whub agent attention-hook`を呼ぶ。これはAgent openが生成・更新する設定ではなく、利用者が
 `/hooks`で一度だけ定義を確認して信頼する任意の通知連携である。
 
-hookはstdinのJSONから`hook_event_name`、`session_id`、`cwd`、`turn_id`、`tool_name`だけをcontrol planeへ
-送る。`tool_input`や出力は送らない。`cwd`が登録済みAgent worktreeの絶対pathと文字列として完全一致する場合だけ、
-backendはそのworktreeに対応する`(project, task_id)`を解決する。登録外・不正な入力は状態を変更せず拒否する。
+hookはstdinのJSONから`hook_event_name`、`session_id`、`cwd`、`turn_id`、必要な場合だけ`tool_name`をcontrol planeへ
+送る。`tool_input`や出力は送らない。Operation Terminalのtmux環境では起動時に生成した不変`WHUB_OPERATOR_ID`を加え、
+backendは現在登録済みの`operator_id`を検証する。それ以外は、`cwd`が登録済みAgent worktreeの絶対pathと文字列として
+完全一致する場合だけ、対応する`(project, task_id)`を解決する。登録外・不正な入力は状態を変更せず拒否する。
 
-`PermissionRequest`はその`(project, task_id)`のattentionを最新の要求で置換する。`PostToolUse`は同じ
-`tool_name`と`turn_id`を持つ最新要求だけを解除する。Codex Hookの入力にはPermissionRequestを一意に対応付ける
-識別子がないため、同一worktreeで複数の要求が来た場合は最新の未解決要求だけを表示対象とする。対応する完了eventが
-得られない拒否・中断は既存の10分TTLで失効し、Agent close時はtask全体を解除する。
+`PermissionRequest`は対象（worktreeまたはOperation）ごとの権限通知を最新の要求で置換する。`PostToolUse`は同じ
+`session_id`、`tool_name`、`turn_id`を持つ権限通知だけを解除する。`Stop`は独立した応答終了通知を作るため、
+PostToolUseで消えない。Codex Hookの入力にはPermissionRequestを一意に対応付ける識別子がないため、同一targetで複数の
+要求が来た場合は最新の未解決要求だけを表示対象とする。各イベントは10分TTLで失効し、対象行の選択でまとめて既読化する。
 
 hook subcommandは、stdin不正・backend未起動・通信失敗・HTTPエラーのいずれでも成功終了し、stdoutへ判断結果を
 返さない。したがってHookは通常のCodex承認フローを許可・拒否・中断しない。

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
-  acknowledgeApprovalAttention,
+  acknowledgeOperatorAttention,
+  acknowledgeWorktreeAttention,
   listApprovalAttention,
 } from "./attentionApi";
 import type { ApprovalAttention } from "./attentionApi";
@@ -49,13 +50,41 @@ export function useApprovalAttention() {
     };
   }, [refresh]);
 
-  const acknowledge = useCallback(async (project: string, taskId: string) => {
+  const acknowledgeWorktree = useCallback(
+    async (project: string, taskId: string) => {
+      try {
+        const updated = await acknowledgeWorktreeAttention(project, taskId);
+        setAttention((current) =>
+          current.map(
+            (item) =>
+              updated.find(
+                (updatedItem) =>
+                  updatedItem.target === item.target &&
+                  updatedItem.event === item.event &&
+                  updatedItem.project === item.project &&
+                  updatedItem.task_id === item.task_id,
+              ) ?? item,
+          ),
+        );
+      } catch {
+        // The next poll retries synchronization with the control plane.
+      }
+    },
+    [],
+  );
+
+  const acknowledgeOperator = useCallback(async (operatorId: string) => {
     try {
-      const updated = await acknowledgeApprovalAttention(project, taskId);
-      if (updated === null) return;
+      const updated = await acknowledgeOperatorAttention(operatorId);
       setAttention((current) =>
-        current.map((item) =>
-          item.project === project && item.task_id === taskId ? updated : item,
+        current.map(
+          (item) =>
+            updated.find(
+              (updatedItem) =>
+                updatedItem.target === item.target &&
+                updatedItem.event === item.event &&
+                updatedItem.operator_id === item.operator_id,
+            ) ?? item,
         ),
       );
     } catch {
@@ -63,5 +92,5 @@ export function useApprovalAttention() {
     }
   }, []);
 
-  return { acknowledge, attention };
+  return { acknowledgeOperator, acknowledgeWorktree, attention };
 }

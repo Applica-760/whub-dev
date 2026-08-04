@@ -32,14 +32,23 @@ Agent openはこのuser-level設定を作成・変更しない。
         "command": "~/.local/bin/whub agent attention-hook",
         "timeout": 3
       }]
+    }],
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "~/.local/bin/whub agent attention-hook",
+        "timeout": 3
+      }]
     }]
   }
 }
 ```
 
 初回はnative Codex CLIで`/hooks`を開き、この定義を確認して信頼する。Hookは登録済みAgent worktreeからの
-`PermissionRequest`だけを表示し、`PostToolUse`または10分のTTLで解除する。Hook実行・Web app未起動・入力の
-いずれが失敗してもCodexの通常の承認promptは継続する。
+`PermissionRequest`と応答終了を表示する。`PostToolUse`は対応する承認待ちだけを解除し、応答終了は10分のTTLまたは
+対象行の選択まで保持する。Operation TerminalからのHookは起動時に割り当てた不変`operator_id`で対象を照合するため、
+表示上のOperation番号が振り直されても通知先を取り違えない。Hook実行・Web app未起動・入力のいずれが失敗してもCodexの
+通常の承認promptは継続する。
 
 診断は、Web app起動中に`whub agent attention-hook`へHook JSONをstdinで与え、`/api/agent-attention`で状態を
 確認する。登録外のcwdや不正なJSONでは状態を作らない。
