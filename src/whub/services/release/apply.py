@@ -123,7 +123,11 @@ def apply_release(
         _install_release_venv(target)
         _replace_current(context, target)
         switched = True
-        _run([str(target / "venv" / "bin" / "whub"), "app"], cwd=target)
+        _run(
+            [str(target / "venv" / "bin" / "whub"), "app"],
+            cwd=target,
+            isolated=True,
+        )
         return ReleaseApplication(release_id, target)
     except (OSError, ReleaseApplyError, ReleaseCommandError) as caught:
         error = (

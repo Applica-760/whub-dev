@@ -282,10 +282,14 @@ def test_apply_moves_verified_release_and_switches_current(monkeypatch, tmp_path
     release_id = "0.1.0+gaaaaaaaa"
     staging = _verified_staging(context, release_id)
     calls: list[list[str]] = []
+    envs: list[dict[str, str] | None] = []
+    monkeypatch.setenv("PYTHONPATH", "/checkout/src")
+    monkeypatch.setenv("VIRTUAL_ENV", "/other/venv")
 
     def run(command, *, cwd, capture_output, text, env=None):
-        del cwd, capture_output, text, env
+        del cwd, capture_output, text
         calls.append(command)
+        envs.append(env)
         return _result(command)
 
     monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
@@ -308,6 +312,10 @@ def test_apply_moves_verified_release_and_switches_current(monkeypatch, tmp_path
         [str(result.release_path / "venv" / "bin" / "whub"), "--version"],
         [str(result.release_path / "venv" / "bin" / "whub"), "app"],
     ]
+    assert envs and all(env is not None for env in envs)
+    for env in envs:
+        assert "PYTHONPATH" not in env
+        assert "VIRTUAL_ENV" not in env
 
 
 def test_apply_failure_restores_current_and_staging(monkeypatch, tmp_path: Path) -> None:

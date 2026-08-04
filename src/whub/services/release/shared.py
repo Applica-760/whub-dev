@@ -71,4 +71,4 @@ def _wheel_sha256(wheel_path: Path) -> str:
 
 
 def _restart_operation_app(executable: Path, *, cwd: Path) -> None:
-    _run([str(executable), "app"], cwd=cwd)
+    _run([str(executable), "app"], cwd=cwd, isolated=True)
