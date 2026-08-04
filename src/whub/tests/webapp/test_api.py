@@ -87,7 +87,7 @@ def test_agent_attention_has_no_external_event_producer(client: TestClient) -> N
 
     assert client.post("/api/agent-attention", json={}).status_code == 405
     assert listed.json()["attention"][0]["acknowledged"] is False
-    assert acknowledged.json()["acknowledged"] is True
+    assert acknowledged.json()[0]["acknowledged"] is True
 
 
 def test_hook_events_require_localhost_and_an_exact_registered_worktree(
@@ -125,16 +125,75 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
         ),
         patch("whub.webapp.routers.agent_attention.attention", store),
     ):
-        assert local_client.post("/api/agent-attention/events", json=body).status_code == 204
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 204
+        )
         assert len(store.list()) == 1
-        body["hook_event_name"] = "PostToolUse"
-        assert local_client.post("/api/agent-attention/events", json=body).status_code == 204
-        body["cwd"] = "/workspace/projects/worktrees/not-registered"
-        assert local_client.post("/api/agent-attention/events", json=body).status_code == 404
+        body["hook_event_name"] = "Stop"
         body.pop("tool_name")
-        assert local_client.post("/api/agent-attention/events", json=body).status_code == 422
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 204
+        )
+        assert len(store.list()) == 2
+        body["hook_event_name"] = "PostToolUse"
+        body["tool_name"] = "Bash"
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 204
+        )
+        assert [item.event for item in store.list()] == ["response_completed"]
+        body["cwd"] = "/workspace/projects/worktrees/not-registered"
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 404
+        )
+        body.pop("tool_name")
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 422
+        )
 
-    assert store.list() == ()
+    assert [item.event for item in store.list()] == ["response_completed"]
+
+
+def test_hook_events_identify_an_active_operator_by_immutable_id(
+    client: TestClient,
+) -> None:
+    body = {
+        "hook_event_name": "PermissionRequest",
+        "session_id": "session-1",
+        "cwd": "/workspace",
+        "turn_id": "turn-1",
+        "tool_name": "Bash",
+        "operator_id": "operator-3",
+    }
+    store = ApprovalAttentionStore()
+    local_client = TestClient(client.app, client=("127.0.0.1", 50000))
+    with (
+        patch("whub.webapp.routers.agent_attention.attention", store),
+        patch("whub.webapp.routers.agent_attention.operator_terminal.resolve"),
+    ):
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 204
+        )
+        body["hook_event_name"] = "Stop"
+        body.pop("tool_name")
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 204
+        )
+        acknowledged = local_client.post(
+            "/api/agent-attention/operator/operator-3/acknowledge"
+        )
+
+    assert {item["event"] for item in acknowledged.json()} == {
+        "permission_request",
+        "response_completed",
+    }
+    assert all(item["operator_id"] == "operator-3" for item in acknowledged.json())
 
 
 def test_agent_codex_session_is_owned_by_the_local_web_backend(

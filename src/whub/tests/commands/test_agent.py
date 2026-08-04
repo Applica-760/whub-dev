@@ -26,3 +26,19 @@ def test_attention_hook_swallows_invalid_input_and_control_failures() -> None:
 
     assert failed_control.exit_code == 0
     assert failed_control.output == ""
+
+
+def test_attention_hook_forwards_its_operation_identity(monkeypatch) -> None:
+    monkeypatch.setenv("WHUB_OPERATOR_ID", "operator-1")
+    with patch("whub.commands.agent.submit_attention_hook") as submit:
+        result = CliRunner().invoke(
+            agent,
+            ["attention-hook"],
+            input=(
+                '{"hook_event_name":"Stop","session_id":"session-1",'
+                '"cwd":"/workspace","turn_id":"turn-1"}'
+            ),
+        )
+
+    assert result.exit_code == 0
+    assert submit.call_args.args[1]["operator_id"] == "operator-1"

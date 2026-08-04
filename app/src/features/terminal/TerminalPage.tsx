@@ -46,7 +46,8 @@ export function TerminalPage({
   collapsed = { left: false, right: false },
 }: TerminalPageProps) {
   const { error, loading, worktrees } = useWorktrees();
-  const { acknowledge, attention } = useApprovalAttention();
+  const { acknowledgeOperator, acknowledgeWorktree, attention } =
+    useApprovalAttention();
   const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
   const [operators, setOperators] = useState<OperatorTerminal[]>([]);
@@ -67,12 +68,28 @@ export function TerminalPage({
       if (!worktree) return;
       const item = pendingAttention.find(
         (attentionItem) =>
+          attentionItem.target === "worktree" &&
           attentionItem.project === worktree.parent_project &&
           attentionItem.task_id === worktree.task_id,
       );
-      if (item) void acknowledge(item.project, item.task_id);
+      if (item)
+        void acknowledgeWorktree(worktree.parent_project, worktree.task_id);
     },
-    [acknowledge, pendingAttention, terminals],
+    [acknowledgeWorktree, pendingAttention, terminals],
+  );
+
+  const openOperator = useCallback(
+    (operatorId: string) => {
+      setSelectedTerminal(operatorValue(operatorId));
+      if (
+        pendingAttention.some(
+          (item) =>
+            item.target === "operator" && item.operator_id === operatorId,
+        )
+      )
+        void acknowledgeOperator(operatorId);
+    },
+    [acknowledgeOperator, pendingAttention],
   );
 
   const openTerminal = useCallback(
@@ -143,7 +160,7 @@ export function TerminalPage({
         { method: "POST" },
       );
       setOperators((current) => [...current, created]);
-      setSelectedTerminal(operatorValue(created.operator_id));
+      openOperator(created.operator_id);
     } catch (requestError) {
       setOperatorError(
         requestError instanceof Error
@@ -153,7 +170,7 @@ export function TerminalPage({
     } finally {
       setOperatorPending(false);
     }
-  }, []);
+  }, [openOperator]);
 
   const stopOperator = useCallback(async (operatorId: string) => {
     if (!window.confirm("Operationを終了しますか？")) return;
@@ -269,23 +286,44 @@ export function TerminalPage({
             {operators.map((operator, index) => (
               <GroupedListRow
                 key={operator.operator_id}
-                onClick={() =>
-                  setSelectedTerminal(operatorValue(operator.operator_id))
-                }
+                onClick={() => openOperator(operator.operator_id)}
                 rightSection={
-                  <Switch
-                    aria-label={`Operation ${operator.operator_id}を停止`}
-                    checked
-                    color="green"
-                    disabled={operatorPending}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                    }}
-                    onChange={() => void stopOperator(operator.operator_id)}
-                    offLabel="OFF"
-                    onLabel="ON"
-                    size="md"
-                  />
+                  <Group gap={4} wrap="nowrap">
+                    {pendingAttention
+                      .filter(
+                        (item) =>
+                          item.target === "operator" &&
+                          item.operator_id === operator.operator_id,
+                      )
+                      .map((item) => (
+                        <Badge
+                          color={
+                            item.event === "permission_request"
+                              ? "yellow"
+                              : "blue"
+                          }
+                          key={item.event}
+                          size="sm"
+                        >
+                          {item.event === "permission_request"
+                            ? "承認待ち"
+                            : "応答終了"}
+                        </Badge>
+                      ))}
+                    <Switch
+                      aria-label={`Operation ${operator.operator_id}を停止`}
+                      checked
+                      color="green"
+                      disabled={operatorPending}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                      }}
+                      onChange={() => void stopOperator(operator.operator_id)}
+                      offLabel="OFF"
+                      onLabel="ON"
+                      size="md"
+                    />
+                  </Group>
                 }
                 selected={
                   selectedTerminal === operatorValue(operator.operator_id)
@@ -311,12 +349,34 @@ export function TerminalPage({
                   rightSection={
                     pendingAttention.some(
                       (item) =>
+                        item.target === "worktree" &&
                         item.project === worktree.parent_project &&
                         item.task_id === worktree.task_id,
                     ) ? (
-                      <Badge color="yellow" size="sm">
-                        承認待ち
-                      </Badge>
+                      <Group gap={4} wrap="nowrap">
+                        {pendingAttention
+                          .filter(
+                            (item) =>
+                              item.target === "worktree" &&
+                              item.project === worktree.parent_project &&
+                              item.task_id === worktree.task_id,
+                          )
+                          .map((item) => (
+                            <Badge
+                              color={
+                                item.event === "permission_request"
+                                  ? "yellow"
+                                  : "blue"
+                              }
+                              key={item.event}
+                              size="sm"
+                            >
+                              {item.event === "permission_request"
+                                ? "承認待ち"
+                                : "応答終了"}
+                            </Badge>
+                          ))}
+                      </Group>
                     ) : undefined
                   }
                   selected={worktreeValue(worktree) === selectedTerminal}

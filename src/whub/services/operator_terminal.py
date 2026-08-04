@@ -48,6 +48,8 @@ class OperatorTerminalService:
                     tmux_command(
                         "new-session",
                         "-d",
+                        "-e",
+                        f"WHUB_OPERATOR_ID={operator_id}",
                         "-s",
                         name,
                         "-c",
@@ -58,7 +60,9 @@ class OperatorTerminalService:
                     text=True,
                 )
             except OSError as error:
-                raise ServiceError(f"failed to start Operator terminal: {error}") from error
+                raise ServiceError(
+                    f"failed to start Operator terminal: {error}"
+                ) from error
             if created.returncode != 0:
                 detail = created.stderr.strip() or f"exit status {created.returncode}"
                 raise ServiceError(f"failed to start Operator terminal: {detail}")
@@ -96,14 +100,18 @@ class OperatorTerminalService:
                     text=True,
                 )
             except OSError as error:
-                raise ServiceError(f"failed to stop Operator terminal: {error}") from error
+                raise ServiceError(
+                    f"failed to stop Operator terminal: {error}"
+                ) from error
             if stopped.returncode != 0:
                 detail = stopped.stderr.strip() or f"exit status {stopped.returncode}"
                 raise ServiceError(f"failed to stop Operator terminal: {detail}")
             remaining = [item for item in running if item != terminal]
             self._save(context, remaining)
             return OperatorTerminals(
-                terminals=[OperatorTerminal(operator_id=item.operator_id) for item in remaining]
+                terminals=[
+                    OperatorTerminal(operator_id=item.operator_id) for item in remaining
+                ]
             )
 
     def _load(self, context: WhubContext) -> list[_RunningOperatorTerminal]:
@@ -135,7 +143,13 @@ class OperatorTerminalService:
             if not isinstance(records, list):
                 raise ValueError
             running = [self._record(record) for record in records]
-        except (FileNotFoundError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+        except (
+            FileNotFoundError,
+            ValueError,
+            KeyError,
+            TypeError,
+            json.JSONDecodeError,
+        ):
             path.unlink(missing_ok=True)
             return []
         return running
@@ -151,7 +165,9 @@ class OperatorTerminalService:
         target = session_target(name)
         return _RunningOperatorTerminal(
             operator_id=operator_id,
-            session=TmuxSession(name, tuple(tmux_command("attach-session", "-t", target))),
+            session=TmuxSession(
+                name, tuple(tmux_command("attach-session", "-t", target))
+            ),
         )
 
     @staticmethod
@@ -159,7 +175,9 @@ class OperatorTerminalService:
         target = session_target(session.name)
         try:
             exists = subprocess.run(
-                tmux_command("has-session", "-t", target), capture_output=True, text=True
+                tmux_command("has-session", "-t", target),
+                capture_output=True,
+                text=True,
             )
         except OSError as error:
             raise ServiceError(f"tmux is unavailable: {error}") from error

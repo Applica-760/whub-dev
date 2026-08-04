@@ -10,12 +10,21 @@ export async function listApprovalAttention(): Promise<ApprovalAttentionListResp
   return requestJson<ApprovalAttentionListResponse>("/api/agent-attention");
 }
 
-export async function acknowledgeApprovalAttention(
+export async function acknowledgeWorktreeAttention(
   project: string,
   taskId: string,
-): Promise<ApprovalAttention | null> {
-  return requestJson<ApprovalAttention | null>(
+): Promise<ApprovalAttention[]> {
+  return requestJson<ApprovalAttention[]>(
     `/api/agent-attention/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}/acknowledge`,
+    { method: "POST" },
+  );
+}
+
+export async function acknowledgeOperatorAttention(
+  operatorId: string,
+): Promise<ApprovalAttention[]> {
+  return requestJson<ApprovalAttention[]>(
+    `/api/agent-attention/operator/${encodeURIComponent(operatorId)}/acknowledge`,
     { method: "POST" },
   );
 }
