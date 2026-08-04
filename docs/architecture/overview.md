@@ -6,6 +6,8 @@
 
 workspace root自体はProjectでもResourceでもない。`WhubContext` が `~/.whub` のconfig、manifest、todo、runtime、releaseと、workspace rootの`remote_files`を一元的に扱い、consumerは保存場所を直接組み立てない。
 
+`models/manifest.py` はI/OやContextに依存しないschemaだけを持つ。manifestの読込とworkspace rootへの束縛は`services/manifest.py`が担い、consumerは`ResolvedManifest`からworkspace path、remote host、remote pathを解決する。
+
 ## Execution boundaries
 
 - CLI adapterは表示と引数解釈だけを担う。

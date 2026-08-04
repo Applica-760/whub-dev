@@ -14,7 +14,7 @@ def isolate_whub_context(
     context_dir.mkdir()
     context_dir.joinpath("config.toml").write_text(f'workspace_root = "{tmp_path}"\n')
     context = WhubContext(context_dir)
-    monkeypatch.setattr("whub.models.manifest.current_context", lambda: context)
+    monkeypatch.setattr("whub.services.manifest.current_context", lambda: context)
     reset_context()
     yield
     reset_context()

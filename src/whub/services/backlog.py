@@ -6,10 +6,11 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from whub.models import Manifest, RemoteResource, SymlinkResource
+from whub.models import RemoteResource, SymlinkResource
 from whub.core.remote import run_ssh_command
 from whub.services.errors import ServiceError
 from whub.services.project_content import resolve_project_content_resource
+from whub.services.manifest import ResolvedManifest
 from whub.core.target import TargetItem, on_targets
 from whub.utils.managed_block import format_block, insert_before_end_marker
 from whub.utils.process import format_process_error
@@ -27,8 +28,9 @@ def _insert_memo(content: str, memo: str) -> str:
 
 def _append_local_backlog(
     resource: SymlinkResource,
-    memo: str,
+    data: tuple[ResolvedManifest, str],
 ) -> None:
+    _, memo = data
     root = Path(resource.source)
     if not root.exists():
         raise ServiceError(f"resource source does not exist: {root}")
@@ -40,10 +42,11 @@ def _append_local_backlog(
 
 def _append_remote_backlog(
     resource: RemoteResource,
-    memo: str,
+    data: tuple[ResolvedManifest, str],
 ) -> None:
-    host = resource._resolved_host
-    root = resource.remote_path
+    manifest, memo = data
+    host = manifest.remote_host(resource)
+    root = manifest.remote_path(resource)
     docs = f"{root}/docs"
     path = f"{docs}/backlog.md"
 
@@ -107,9 +110,11 @@ def _append_remote_backlog(
         ) from error
 
 
-def append_backlog(manifest: Manifest, project: str, memo: str) -> None:
+def append_backlog(manifest: ResolvedManifest, project: str, memo: str) -> None:
     """Append MEMO to PROJECT's local or remote backlog."""
-    target = TargetItem(resolve_project_content_resource(manifest, project), memo)
+    target = TargetItem(
+        resolve_project_content_resource(manifest, project), (manifest, memo)
+    )
     on_targets(
         [target],
         local=_append_local_backlog,
@@ -117,7 +122,7 @@ def append_backlog(manifest: Manifest, project: str, memo: str) -> None:
     )
 
 
-def _read_local_backlog(resource: SymlinkResource, data: None) -> str:
+def _read_local_backlog(resource: SymlinkResource, data: ResolvedManifest) -> str:
     del data
     root = Path(resource.source)
     if not root.is_dir():
@@ -130,9 +135,8 @@ def _read_local_backlog(resource: SymlinkResource, data: None) -> str:
     return path.read_text()
 
 
-def _read_remote_backlog(resource: RemoteResource, data: None) -> str:
-    del data
-    root = resource._resolved_workspace_path
+def _read_remote_backlog(resource: RemoteResource, manifest: ResolvedManifest) -> str:
+    root = manifest.workspace_path(resource)
     if not root.is_dir():
         raise ServiceError(f"remote workspace path is not available: {root}")
     path = root / "docs" / "backlog.md"
@@ -143,9 +147,9 @@ def _read_remote_backlog(resource: RemoteResource, data: None) -> str:
     return path.read_text()
 
 
-def read_backlog(manifest: Manifest, project: str) -> str:
+def read_backlog(manifest: ResolvedManifest, project: str) -> str:
     """Return PROJECT's local or mounted backlog content."""
-    target = TargetItem(resolve_project_content_resource(manifest, project), None)
+    target = TargetItem(resolve_project_content_resource(manifest, project), manifest)
     return on_targets(
         [target],
         local=_read_local_backlog,

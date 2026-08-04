@@ -8,7 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, status
 from pydantic import BaseModel
 
-from whub.models import load_manifest
+from whub.services.manifest import load_manifest
 from whub.models.todo import Priority, Todo
 from whub.services.todo import (
     add_todo,

@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from whub.models import load_manifest
+from whub.services.manifest import load_manifest
 from whub.services.task import (
     list_all_project_tasks,
     list_project_tasks,

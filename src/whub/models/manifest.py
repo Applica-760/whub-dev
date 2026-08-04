@@ -2,23 +2,17 @@
 
 from __future__ import annotations
 from collections import Counter
-from pathlib import Path
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from posixpath import normpath
 from typing import Annotated, Literal
-import yaml
 from pydantic import (
     AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
-    PrivateAttr,
     field_validator,
     model_validator,
 )
-from pydantic import ValidationError
-
-from whub.core.context import WhubContext, current_context
 
 
 class ManifestError(Exception):
@@ -74,8 +68,6 @@ class SymlinkResource(BaseResource):
     type: Literal["symlink"]
     workspace_path: RelativePath
     source: str
-    _resolved_workspace_path: Path = PrivateAttr()
-
     @field_validator("source")
     @classmethod
     def _validate_source(cls, value: str) -> str:
@@ -91,14 +83,6 @@ class RemoteResource(BaseResource):
     # mount_rootの前置を各resourceへ重複させないため相対で持つ
     path: RelativePath
     workspace_path: RelativePath
-    _resolved_host: Host = PrivateAttr()
-    _resolved_workspace_path: Path = PrivateAttr()
-
-    @property
-    def remote_path(self) -> str:
-        """Absolute path on the remote host, composed from the host mount_root."""
-        return str(PurePosixPath(self._resolved_host.mount_root) / self.path)
-
 
 # ── Project ─────────────────────────────────────────────────────────────────────────────────
 Resource = Annotated[SymlinkResource | RemoteResource, Field(discriminator="type")]
@@ -134,12 +118,8 @@ class Manifest(SchemaModel):
         if duplicate_paths:
             raise ValueError(f"duplicate workspace_path: {', '.join(duplicate_paths)}")
 
-        root = current_context().workspace_root
         for project in self.projects:
             resource = project.resource
-            if isinstance(resource, SymlinkResource):
-                resource._resolved_workspace_path = root / resource.workspace_path
-                continue
             if not isinstance(resource, RemoteResource):
                 continue
             if resource.host not in self.hosts:
@@ -147,37 +127,9 @@ class Manifest(SchemaModel):
                     f"project '{project.name}' references unknown host "
                     f"'{resource.host}'"
                 )
-            resource._resolved_host = self.hosts[resource.host]
-            resource._resolved_workspace_path = root / resource.workspace_path
         return self
 
     def resolve_project(self, name: str) -> Project | None:
         return next(
             (project for project in self.projects if project.name == name), None
         )
-
-
-def load_manifest(context: WhubContext | None = None) -> Manifest:
-    context = context or current_context()
-    path = context.manifest_path
-    try:
-        text = context.read_manifest_text()
-    except FileNotFoundError as error:
-        raise ManifestError(f"manifest.yaml not found: {path}") from error
-    try:
-        data = yaml.safe_load(text)
-    except yaml.YAMLError as error:
-        raise ManifestError(f"invalid manifest YAML: {path}: {error}") from error
-    try:
-        return Manifest.model_validate(data)
-    except ValidationError as error:
-        raise ManifestError(f"invalid manifest: {path}: {error}") from error
-
-
-def project_names(ctx, param, incomplete: str) -> list[str]:
-    del ctx, param
-    try:
-        projects = load_manifest().projects
-    except Exception:
-        return []
-    return [project.name for project in projects if project.name.startswith(incomplete)]

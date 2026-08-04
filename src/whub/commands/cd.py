@@ -6,7 +6,9 @@ import subprocess
 import sys
 import click
 from whub.commands import get_manifest
-from whub.models import RemoteResource, SymlinkResource, project_names
+from whub.commands import project_names
+from whub.models import RemoteResource, SymlinkResource
+from whub.services.manifest import ResolvedManifest
 from whub.core.remote import build_ssh_command
 from whub.core.tmux import build_shell_command, session_name
 from whub.core.target import (
@@ -45,21 +47,22 @@ source <(_WHUB_COMPLETE=zsh_source command whub)
 """
 
 
-def _cd_local(resource: SymlinkResource, _data: tuple[str, bool]) -> None:
-    path = resource._resolved_workspace_path
+def _cd_local(resource: SymlinkResource, data: tuple[ResolvedManifest, str, bool]) -> None:
+    path = data[0].workspace_path(resource)
     if not path.exists():
         raise click.ClickException(f"symlink target does not exist: {path}")
     click.echo(str(path))
 
 
-def _cd_remote(resource: RemoteResource, data: tuple[str, bool]) -> None:
-    project, plain = data
-    host = resource._resolved_host
+def _cd_remote(resource: RemoteResource, data: tuple[ResolvedManifest, str, bool]) -> None:
+    manifest, project, plain = data
+    host = manifest.remote_host(resource)
+    remote_path = manifest.remote_path(resource)
     if plain:
-        remote_command = f"cd {shlex.quote(resource.remote_path)} && exec $SHELL -l"
+        remote_command = f"cd {shlex.quote(remote_path)} && exec $SHELL -l"
     else:
         remote_command = build_shell_command(
-            session_name(project), resource.remote_path
+            session_name(project), remote_path
         )
     cmd = build_ssh_command(host, remote_command, tty=True)
     if not sys.stdout.isatty():
@@ -84,7 +87,7 @@ def cd(ctx: click.Context, project: str, plain: bool) -> None:
     except TargetError as error:
         raise click.ClickException(str(error)) from error
     on_targets(
-        [TargetItem(resource, (project, plain))],
+        [TargetItem(resource, (m, project, plain))],
         local=_cd_local,
         remote=_cd_remote,
     )

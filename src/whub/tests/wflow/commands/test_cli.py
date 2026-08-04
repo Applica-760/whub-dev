@@ -10,6 +10,7 @@ import yaml
 
 from whub.core.context import WhubContext
 from whub.models import Manifest
+from whub.services.manifest import resolve_manifest
 from whub.tests.helpers import manifest_data
 from whub.wflow.cli import main
 
@@ -30,7 +31,13 @@ def _task_environment(tmp_path: Path) -> tuple[Path, Path, WhubContext, Manifest
     )
     data = manifest_data()
     data["projects"][0]["resource"]["source"] = str(project_root)
-    return hub_root, project_root, WhubContext(context_dir), Manifest.model_validate(data)
+    context = WhubContext(context_dir)
+    return (
+        hub_root,
+        project_root,
+        context,
+        resolve_manifest(Manifest.model_validate(data), context.workspace_root),
+    )
 
 
 def test_task_init_and_check_use_hub_storage(tmp_path: Path, monkeypatch) -> None:

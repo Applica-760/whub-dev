@@ -10,8 +10,6 @@ from whub.models.manifest import (
     Resource,
     RemoteResource,
     SymlinkResource,
-    load_manifest,
-    project_names,
 )
 from whub.models.agent.auth import (
     AgentAuth,
@@ -63,10 +61,8 @@ __all__ = [
     "WorktreeInspection",
     "WorktreeStatus",
     "WorktreeStatus",
-    "load_manifest",
     "load_agent_auth",
     "load_extension_tool",
     "load_todos",
-    "project_names",
     "save_todos",
 ]

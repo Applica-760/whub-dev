@@ -11,11 +11,12 @@ from whub.services.status import _parse_probe, collect_resource_status, collect_
 from whub.tests.helpers import manifest
 
 
-def _symlink_ok(_resource) -> ResourceHealth:
+def _symlink_ok(_resource, _target) -> ResourceHealth:
     return ResourceHealth("ok")
 
 
-def _mount_ok(_resource, _mountpoint, _volname) -> ResourceHealth:
+def _mount_ok(_resource, _mountpoint, _volname, *, target) -> ResourceHealth:
+    del target
     return ResourceHealth("ok")
 
 

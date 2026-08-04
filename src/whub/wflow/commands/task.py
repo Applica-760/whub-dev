@@ -7,7 +7,9 @@ from pathlib import Path
 
 import click
 
-from whub.models import ManifestError, load_manifest, project_names
+from whub.commands import project_names
+from whub.models import ManifestError
+from whub.services.manifest import load_manifest
 from whub.services.errors import ServiceError
 from whub.services.task import (
     archive_project_task,

@@ -54,7 +54,7 @@ def get(ctx: click.Context, path: str) -> None:
     dest = remote_files / local_name
     result = subprocess.run(
         build_scp_command(
-            resource._resolved_host, f"{resource.remote_path}/{rel}", dest
+            m.remote_host(resource), f"{m.remote_path(resource)}/{rel}", dest
         ),
     )
     if result.returncode != 0:
@@ -93,8 +93,8 @@ def put(ctx: click.Context, local_name: str) -> None:
     except TargetError as error:
         raise click.ClickException(str(error)) from error
 
-    remote_path = f"{resource.remote_path}/{rel}"
-    current_hash = remote_file_hash(resource._resolved_host, remote_path)
+    remote_path = f"{m.remote_path(resource)}/{rel}"
+    current_hash = remote_file_hash(m.remote_host(resource), remote_path)
     if current_hash != record.sha256:
         raise click.ClickException(
             "remote file has changed or is unreadable since last fetch; "
@@ -102,7 +102,7 @@ def put(ctx: click.Context, local_name: str) -> None:
         )
 
     content = local_path.read_text()
-    result = remote_write_file(resource._resolved_host, remote_path, content)
+    result = remote_write_file(m.remote_host(resource), remote_path, content)
     if result.returncode != 0:
         raise click.ClickException(
             f"remote write failed (exit {result.returncode}): {result.stderr.strip()}"

@@ -8,10 +8,8 @@ from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, model_validator
 
 from whub.core.context import current_context
-from whub.models import load_manifest
-from whub.services.agent.codex.attention import ApprovalAttention, approval_attention
-from whub.services.errors import ServiceError
-from whub.services.operator_terminal import operator_terminal
+from whub.services.manifest import load_manifest
+from whub.services.agent.codex.attention import approval_attention
 from whub.services.worktree import inspect_worktrees
 
 

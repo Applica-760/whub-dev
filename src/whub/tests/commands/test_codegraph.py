@@ -7,6 +7,7 @@ from click.testing import CliRunner
 
 from whub.commands.codegraph import _collect_codegraph_targets, codegraph
 from whub.models import Manifest
+from whub.services.manifest import resolve_manifest
 from whub.tests.helpers import manifest
 
 
@@ -65,7 +66,7 @@ def test_local_failure_does_not_stop_later_targets(tmp_path) -> None:
     second = tmp_path / "second"
     first.mkdir()
     second.mkdir()
-    configured = Manifest.model_validate(
+    configured = resolve_manifest(Manifest.model_validate(
         {
             "version": "2",
             "projects": [
@@ -89,7 +90,7 @@ def test_local_failure_does_not_stop_later_targets(tmp_path) -> None:
                 },
             ],
         }
-    )
+    ), tmp_path)
     configured.projects[0].resource._resolved_workspace_path = first
     configured.projects[1].resource._resolved_workspace_path = second
 
@@ -128,7 +129,9 @@ def test_remote_init_uses_ssh() -> None:
 
     assert result.exit_code == 0
     # PATHはrun_ssh_command側のpreludeで解決するため、shell初期化の前置きを持たない
-    assert run.call_args.args[1] == f"codegraph init {project.resource.remote_path}"
+    assert run.call_args.args[1] == (
+        f"codegraph init {configured.remote_path(project.resource)}"
+    )
     assert "init    remote (CodeGraph)" in result.output
 
 

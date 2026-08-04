@@ -4,7 +4,8 @@ from __future__ import annotations
 import subprocess
 import click
 from whub.commands import get_manifest
-from whub.models import RemoteResource, project_names
+from whub.commands import project_names
+from whub.models import RemoteResource
 from whub.core.remote import build_remote_exec_command, build_ssh_command
 from whub.core.target import (
     TargetError,
@@ -41,8 +42,8 @@ def run(
         )
     except TargetError as error:
         raise click.ClickException(str(error)) from error
-    host = resource._resolved_host
-    remote_command = build_remote_exec_command(resource.remote_path, command)
+    host = m.remote_host(resource)
+    remote_command = build_remote_exec_command(m.remote_path(resource), command)
     ssh_command = build_ssh_command(host, remote_command, tty=tty)
     result = subprocess.run(ssh_command)
     ctx.exit(result.returncode)

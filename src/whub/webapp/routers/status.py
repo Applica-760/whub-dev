@@ -8,7 +8,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from whub.core.health import HealthState
-from whub.models import load_manifest
+from whub.services.manifest import load_manifest
 from whub.services.status import collect_resource_status
 
 

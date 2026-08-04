@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from posixpath import normpath
 from typing import Literal
-from whub.models import RemoteResource, SymlinkResource
+from whub.models.manifest import RemoteResource, SymlinkResource
 
 HealthState = Literal[
     "ok",
@@ -63,8 +63,12 @@ def probe_directory_readable(path: Path, timeout: int = 3) -> DirectoryProbe:
     return DirectoryProbe("ok")
 
 
-def inspect_symlink(resource: SymlinkResource) -> ResourceHealth:
-    target = resource._resolved_workspace_path
+def inspect_symlink(
+    resource: SymlinkResource, target: Path | None = None
+) -> ResourceHealth:
+    if target is None:
+        target = getattr(resource, "_resolved_workspace_path", None)
+        target = Path(resource.workspace_path) if target is None else target
     source = Path(resource.source).expanduser()
 
     if not source.exists():
@@ -161,10 +165,13 @@ def inspect_aggregated_mount(
     resource: RemoteResource,
     host_mountpoint: Path,
     host_volname: str,
+    target: Path | None = None,
 ) -> ResourceHealth:
     """Combine a workspace symlink check with its shared host mount health."""
     source = host_mountpoint / resource.path
-    target = resource._resolved_workspace_path
+    if target is None:
+        target = getattr(resource, "_resolved_workspace_path", None)
+        target = Path(resource.workspace_path) if target is None else target
 
     if not target.is_symlink():
         if target.exists():

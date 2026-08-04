@@ -4,7 +4,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from whub.core.health import HealthState
+from typing import Literal
+
+HealthState = Literal[
+    "ok",
+    "missing",
+    "source-missing",
+    "broken",
+    "wrong-target",
+    "unexpected",
+    "unreachable",
+    "unmounted",
+    "stale",
+    "unreadable",
+    "slow",
+]
 
 
 @dataclass(frozen=True)

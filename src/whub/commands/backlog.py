@@ -5,7 +5,7 @@ from __future__ import annotations
 import click
 
 from whub.commands import get_manifest
-from whub.models import project_names
+from whub.commands import project_names
 from whub.services.backlog import append_backlog
 from whub.services.errors import ServiceError
 

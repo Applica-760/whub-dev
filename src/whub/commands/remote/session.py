@@ -9,7 +9,7 @@ import click
 import yaml
 
 from whub.commands import get_manifest
-from whub.models import project_names
+from whub.commands import project_names
 from whub.services.errors import ServiceError
 from whub.services.remote.session import (
     build_follow_logs_command,
