@@ -1,0 +1,60 @@
+schema_version: 1
+task:
+  id: TASK-115
+  state: completed
+  title: 完了済みTaskをWebappに表示する
+  objective: Hub管理へ移行後も、project側へアーカイブされた完了済みTaskをWebappで一覧・詳細表示できるようにする
+  approach:
+  - Hub側の進行中Taskとproject側の完了アーカイブを読み取り時に統合する
+  - 既存の完了アーカイブを用いるID解決・採番の責務を参照し、保存先の二重化は行わない
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 調査
+    acceptance: []
+    steps:
+    - description: Hub側の進行中Task、project側の完了アーカイブ、ID採番・詳細解決の既存経路を照合し、統合読み取りの要件を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: 進行中TaskはHubのwflow/tasks/<project>、terminal Taskの保存先はprojectのdocs/tasks/done。Task
+          initのID採番はprojectのdocs/tasksを履歴rootとして走査する。Web APIはHub側のみ列挙しており、完了済み91件が表示されない。
+      deleted: false
+    deleted: false
+  - title: 実装
+    acceptance: []
+    steps:
+    - description: 一覧・詳細・依存関係の読み取りを、進行中Taskと完了アーカイブを統合して扱うよう実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Task読み取りサービスにproject側docs/tasks/doneのarchive rootを追加し、一覧はHub側activeとarchiveを統合、詳細はactive優先でarchiveへフォールバックするようにした。
+      deleted: false
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: 完了済みTaskの一覧・詳細表示と既存Task API/UIの回帰を自動テストで確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 追加したサービス・Web APIテストを含めuv run pytest 580件、Ruff、git diff --checkが成功した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: Hub側の進行中Taskとproject側の完了アーカイブをWebappで統合表示し、一覧・詳細の回帰テストを追加して全Pythonテストで検証した。
