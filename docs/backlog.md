@@ -103,4 +103,5 @@
 - C: reload_delayを延長
 - D: dev serverのライフサイクル管理見直し
 - AとBは排他ではなく併用可
+- 優先度: low。並列worktree運用向けに、Web appでTask worktreeのbranch分岐（base commit・ahead/behind・未push・PR状態）を読み取り専用で可視化する。GitHub Network/PRへのリンクも提供し、GitHubでは見えないローカルbranch作成直後の状態を補う。
 <!-- hub:backlog:appended:end -->

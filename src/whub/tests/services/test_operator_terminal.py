@@ -29,18 +29,25 @@ def test_start_creates_multiple_login_shells_in_workspace_root(tmp_path: Path) -
             "whub.services.operator_terminal.uuid4",
             side_effect=[Mock(hex="operator-1"), Mock(hex="operator-2")],
         ),
-        patch("whub.services.operator_terminal.subprocess.run", return_value=result) as run,
+        patch(
+            "whub.services.operator_terminal.subprocess.run", return_value=result
+        ) as run,
     ):
         first = service.start(context)
         second = service.start(context)
         listed = service.list(context)
 
-    assert [item.operator_id for item in listed.terminals] == ["operator-1", "operator-2"]
+    assert [item.operator_id for item in listed.terminals] == [
+        "operator-1",
+        "operator-2",
+    ]
     assert [first.operator_id, second.operator_id] == ["operator-1", "operator-2"]
     assert run.call_args_list[0].args[0] == [
         "tmux",
         "new-session",
         "-d",
+        "-e",
+        "WHUB_OPERATOR_ID=operator-1",
         "-s",
         "whub-operator-operator-1",
         "-c",
@@ -51,6 +58,8 @@ def test_start_creates_multiple_login_shells_in_workspace_root(tmp_path: Path) -
         "tmux",
         "new-session",
         "-d",
+        "-e",
+        "WHUB_OPERATOR_ID=operator-2",
         "-s",
         "whub-operator-operator-2",
         "-c",
@@ -59,22 +68,32 @@ def test_start_creates_multiple_login_shells_in_workspace_root(tmp_path: Path) -
     ]
 
 
-def test_stop_removes_only_the_selected_record_and_rejects_its_id(tmp_path: Path) -> None:
+def test_stop_removes_only_the_selected_record_and_rejects_its_id(
+    tmp_path: Path,
+) -> None:
     service = OperatorTerminalService()
     context = _context(tmp_path)
     context.operator_terminals_path.write_text(
         json.dumps(
             {
                 "terminals": [
-                    {"operator_id": "operator-1", "tmux_session": "whub-operator-operator-1"},
-                    {"operator_id": "operator-2", "tmux_session": "whub-operator-operator-2"},
+                    {
+                        "operator_id": "operator-1",
+                        "tmux_session": "whub-operator-operator-1",
+                    },
+                    {
+                        "operator_id": "operator-2",
+                        "tmux_session": "whub-operator-operator-2",
+                    },
                 ]
             }
         )
     )
     result = Mock(returncode=0, stderr="")
 
-    with patch("whub.services.operator_terminal.subprocess.run", return_value=result) as run:
+    with patch(
+        "whub.services.operator_terminal.subprocess.run", return_value=result
+    ) as run:
         remaining = service.stop(context, "operator-1")
         assert service.resolve(context, "operator-2").name == "whub-operator-operator-2"
 

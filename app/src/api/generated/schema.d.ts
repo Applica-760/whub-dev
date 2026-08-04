@@ -92,6 +92,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent-attention/operator/{operator_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge Operator Attention */
+        post: operations["acknowledge_operator_attention_api_agent_attention_operator__operator_id__acknowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent-attention/{project}/{task_id}/acknowledge": {
         parameters: {
             query?: never;
@@ -101,8 +118,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Acknowledge Attention */
-        post: operations["acknowledge_attention_api_agent_attention__project___task_id__acknowledge_post"];
+        /** Acknowledge Worktree Attention */
+        post: operations["acknowledge_worktree_attention_api_agent_attention__project___task_id__acknowledge_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -503,16 +520,28 @@ export interface components {
         };
         /** ApprovalAttentionResponse */
         ApprovalAttentionResponse: {
-            /** Project */
-            project: string;
-            /** Task Id */
-            task_id: string;
-            /** Tool Name */
-            tool_name: string;
+            /**
+             * Target
+             * @enum {string}
+             */
+            target: "worktree" | "operator";
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "permission_request" | "response_completed";
             /** Requested At */
             requested_at: string;
             /** Acknowledged */
             acknowledged: boolean;
+            /** Project */
+            project?: string | null;
+            /** Task Id */
+            task_id?: string | null;
+            /** Operator Id */
+            operator_id?: string | null;
+            /** Tool Name */
+            tool_name?: string | null;
         };
         /** ApprovalDecision */
         ApprovalDecision: {
@@ -623,7 +652,7 @@ export interface components {
              * Hook Event Name
              * @enum {string}
              */
-            hook_event_name: "PermissionRequest" | "PostToolUse";
+            hook_event_name: "PermissionRequest" | "PostToolUse" | "Stop";
             /** Session Id */
             session_id: string;
             /** Cwd */
@@ -631,7 +660,9 @@ export interface components {
             /** Turn Id */
             turn_id: string;
             /** Tool Name */
-            tool_name: string;
+            tool_name?: string | null;
+            /** Operator Id */
+            operator_id?: string | null;
         };
         /** InboxResponse */
         InboxResponse: {
@@ -1188,7 +1219,38 @@ export interface operations {
             };
         };
     };
-    acknowledge_attention_api_agent_attention__project___task_id__acknowledge_post: {
+    acknowledge_operator_attention_api_agent_attention_operator__operator_id__acknowledge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalAttentionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acknowledge_worktree_attention_api_agent_attention__project___task_id__acknowledge_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1206,7 +1268,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApprovalAttentionResponse"] | null;
+                    "application/json": components["schemas"]["ApprovalAttentionResponse"][];
                 };
             };
             /** @description Validation Error */
