@@ -12,14 +12,16 @@ from pathlib import Path
 import pytest
 
 from whub.core.context import WhubContext
-from whub.models.todo import Todo, Todos, load_todos, save_todos
+from whub.models.todo import Todo, Todos
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.todo import (
     add_todo,
     complete_todo,
     list_completed,
     list_pending,
+    load_todos,
     remove_todo,
+    save_todos,
 )
 from whub.tests.helpers import manifest
 
@@ -29,7 +31,7 @@ def todo_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     context_dir = tmp_path / "todo-context"
     context_dir.mkdir()
     monkeypatch.setattr(
-        "whub.models.todo.current_context",
+        "whub.services.todo.current_context",
         lambda: WhubContext(context_dir),
     )
     return context_dir / "todos.yaml"

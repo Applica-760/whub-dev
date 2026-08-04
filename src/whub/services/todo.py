@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from datetime import date
 
+import yaml
+from whub.core.context import WhubContext, current_context
 from whub.models import Manifest
-from whub.models.todo import PRIORITIES, Todo, load_todos, save_todos
+from whub.models.todo import PRIORITIES, Todo, Todos
 from whub.services.errors import NotFoundError, ServiceError
 
 
@@ -24,6 +26,30 @@ def _pending_sort_key(item: Todo) -> tuple[bool, date, int, int]:
 
 def _completed_sort_key(item: Todo) -> tuple[date, int]:
     return (item.done_at or date.max, item.id)
+
+
+def load_todos(context: WhubContext | None = None) -> Todos:
+    """Load todos from the current Hub context."""
+    context = context or current_context()
+    text = context.read_todo_text()
+    if text is None:
+        return Todos()
+    data = yaml.safe_load(text)
+    if not data:
+        return Todos()
+    return Todos.model_validate(data)
+
+
+def save_todos(todos: Todos, context: WhubContext | None = None) -> None:
+    """Persist todos in the current Hub context."""
+    context = context or current_context()
+    context.write_todo_text(
+        yaml.safe_dump(
+            todos.model_dump(mode="json", exclude_none=True),
+            allow_unicode=True,
+            sort_keys=False,
+        ),
+    )
 
 
 def list_pending() -> list[Todo]:

@@ -1,11 +1,9 @@
-"""Personal todos stored in .whub/todos.yaml."""
+"""Personal todo schemas."""
 
 from __future__ import annotations
 from datetime import date
 from typing import Literal, get_args
-import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from whub.core.context import WhubContext, current_context
 
 Priority = Literal["red", "yellow", "blue", "none"]
 PRIORITIES: list[str] = list(get_args(Priority))
@@ -76,25 +74,3 @@ class Todos(BaseModel):
         if duplicates:
             raise ValueError(f"duplicate todo ids: {', '.join(map(str, duplicates))}")
         return self
-
-
-def load_todos(context: WhubContext | None = None) -> Todos:
-    context = context or current_context()
-    text = context.read_todo_text()
-    if text is None:
-        return Todos()
-    data = yaml.safe_load(text)
-    if not data:
-        return Todos()
-    return Todos.model_validate(data)
-
-
-def save_todos(todos: Todos, context: WhubContext | None = None) -> None:
-    context = context or current_context()
-    context.write_todo_text(
-        yaml.safe_dump(
-            todos.model_dump(mode="json", exclude_none=True),
-            allow_unicode=True,
-            sort_keys=False,
-        ),
-    )

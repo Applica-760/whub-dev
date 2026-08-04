@@ -8,6 +8,7 @@ from importlib.resources import as_file, files
 from pathlib import Path
 from typing import TypeVar
 
+import yaml
 from whub.models.agent.auth import (
     AgentAuth,
     CommandRule,
@@ -19,14 +20,20 @@ from whub.models.agent.auth import (
     RegisteredProjectVariable,
     RegisteredTaskWorktreeVariable,
     VariableReference,
-    load_agent_auth,
-    load_extension_tool,
 )
 from whub.services.errors import ServiceError
 
 
 class AuthError(ValueError):
     """Raised when Agent auths cannot be composed."""
+
+
+class AgentAuthError(ValueError):
+    """Raised when an Agent authorization asset cannot be loaded."""
+
+
+class ExtensionToolError(ValueError):
+    """Raised when a registered extension tool cannot be loaded."""
 
 
 Item = TypeVar("Item")
@@ -38,6 +45,32 @@ class ResolvedAgentAuth:
 
     auth: EffectiveAuth
     tools: tuple[ExtensionTool, ...]
+
+
+def load_agent_auth(path: Path) -> AgentAuth:
+    """Load and validate one Agent authorization asset."""
+    try:
+        data = yaml.safe_load(path.read_text())
+    except (OSError, UnicodeError, yaml.YAMLError) as error:
+        raise AgentAuthError(f"invalid agent auth asset: {path}") from error
+    try:
+        return AgentAuth.model_validate(data)
+    except ValueError as error:
+        raise AgentAuthError(f"invalid agent auth asset: {path}: {error}") from error
+
+
+def load_extension_tool(directory: Path) -> ExtensionToolCatalog:
+    """Load all registered extension tool assets in one directory."""
+    try:
+        data = [
+            yaml.safe_load(path.read_text())
+            for path in sorted(directory.glob("*.yaml"))
+        ]
+        return ExtensionToolCatalog.model_validate({"tools": data})
+    except (OSError, UnicodeError, yaml.YAMLError, ValueError) as error:
+        raise ExtensionToolError(
+            f"invalid extension tool catalog: {directory}"
+        ) from error
 
 
 def resolve_agent_auth(auth_names: Sequence[str]) -> ResolvedAgentAuth:

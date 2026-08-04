@@ -1,17 +1,11 @@
-"""Models for reusable Agent authorization assets."""
+"""Schemas for reusable Agent authorization assets."""
 
 from __future__ import annotations
 
 from enum import StrEnum
-from pathlib import Path
 from typing import Annotated, Literal
 
-import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
-
-class AgentAuthError(ValueError):
-    """Raised when an Agent authorization asset cannot be loaded."""
 
 
 class AgentAuthModel(BaseModel):
@@ -126,10 +120,6 @@ class ApprovalGrants(AgentAuthModel):
 
 
 # ── Extension tools ─────────────────────────────────────────────────────────
-class ExtensionToolError(ValueError):
-    """Raised when a registered extension tool cannot be loaded."""
-
-
 ExtensionToolId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
 
 
@@ -222,29 +212,3 @@ class EffectiveAuth(AgentAuthModel):
 
     variables: dict[str, VariableDefinition]
     grants: Grants
-
-
-def load_agent_auth(path: Path) -> AgentAuth:
-    """Load and validate one `agent-auth.yaml` or `base.yaml` asset."""
-    try:
-        data = yaml.safe_load(path.read_text())
-    except (OSError, UnicodeError, yaml.YAMLError) as error:
-        raise AgentAuthError(f"invalid agent auth asset: {path}") from error
-    try:
-        return AgentAuth.model_validate(data)
-    except ValueError as error:
-        raise AgentAuthError(f"invalid agent auth asset: {path}: {error}") from error
-
-
-def load_extension_tool(directory: Path) -> ExtensionToolCatalog:
-    """Load all registered extension tool assets in one directory."""
-    try:
-        data = [
-            yaml.safe_load(path.read_text())
-            for path in sorted(directory.glob("*.yaml"))
-        ]
-        return ExtensionToolCatalog.model_validate({"tools": data})
-    except (OSError, UnicodeError, yaml.YAMLError, ValueError) as error:
-        raise ExtensionToolError(
-            f"invalid extension tool catalog: {directory}"
-        ) from error
