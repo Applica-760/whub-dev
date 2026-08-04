@@ -1,0 +1,75 @@
+schema_version: 1
+task:
+  id: TASK-086
+  state: completed
+  title: Manifest Modelをpure schema化する
+  objective: Manifestモデルから暗黙Context依存とI/O・補完を分離し、入力Contextに対して一貫した解決を保証する。
+  approach:
+  - '前提: modelsはschemaと検証を担い、操作はserviceまたはadapterに置く。'
+  - '課題: manifest validatorの暗黙Context依存とYAML I/O・補完がModel層に混在している。'
+  - '方針案: schemaを維持したままContext注入とload/save・補完を適切な層へ移し、互換facadeを段階的に保つ。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: pure schemaと解決契約を定義する
+    acceptance: []
+    steps:
+    - description: Manifest schemaの非I/O・非Context依存と、明示workspace rootによる解決契約をテストで固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 現在のprivate解決状態とYAML I/Oの参照箇所を、移設対象と互換性要件として確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: ManifestのContext依存・PrivateAttr、YAML I/O、補完、全consumerを確認。resolved
+          viewをservices/manifest.pyに置く契約テストを追加した。
+      deleted: false
+    deleted: false
+  - title: 境界を実装する
+    acceptance: []
+    steps:
+    - description: models/manifest.pyからContext・I/O・解決済み可変状態を除去し、services/manifest.pyへload・解決処理を移設する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: project_namesをcommands/__init__.pyへ移し、通常CLIとwflow CLIのshell_complete参照を更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: models/manifest.pyからContext・YAML I/O・解決済み可変状態を除去し、services/manifest.pyの薄いresolved
+          viewへ移設。project_namesをcommands/__init__.pyへ移し、通常CLIとwflow CLIの参照を更新した。
+      deleted: false
+    deleted: false
+  - title: 利用側を移行して検証する
+    acceptance: []
+    steps:
+    - description: 全consumerをresolved viewへ切り替え、回帰を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: focused testとuv run pytestを成功させ、architecture文書を実装に合わせて更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: 全consumerをResolvedManifestへ移行し、architecture文書を更新。ruffとpytest 577件が成功した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: 'PR #14 merged with merge strategy; post-merge uv run pytest passed (581
+    tests).'
