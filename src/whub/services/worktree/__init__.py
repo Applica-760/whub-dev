@@ -7,11 +7,15 @@ from whub.services.worktree.definition import (
     worktree_definition_path,
     worktree_definitions_dir,
 )
-from whub.services.worktree.operation import (
-    create_project_pull_request,
+from whub.services.worktree.lifecycle import (
     create_project_worktree,
-    merge_project_pull_request,
     remove_project_worktree,
+)
+from whub.services.worktree.pull_request import (
+    create_project_pull_request,
+    merge_project_pull_request,
+)
+from whub.services.worktree.resolve import (
     resolve_project_worktree,
     resolve_worktree_parent,
 )

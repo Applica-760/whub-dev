@@ -10,7 +10,7 @@ import stat
 from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.worktree.git import process_detail, run_git
-from whub.services.worktree.operation import resolve_project_worktree
+from whub.services.worktree.resolve import resolve_project_worktree
 
 
 @dataclass(frozen=True)

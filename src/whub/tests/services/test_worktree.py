@@ -9,18 +9,25 @@ import yaml
 from whub.models import Manifest, SymlinkResource, WorktreeDefinition
 from whub.services.errors import ServiceError
 from whub.services.worktree import (
-    create_project_pull_request,
-    create_project_worktree,
     list_worktree_definitions,
-    merge_project_pull_request,
-    remove_project_worktree,
-    resolve_project_worktree,
-    resolve_worktree_parent,
     save_worktree_definition,
     worktree_definition_path,
 )
-from whub.services.worktree.operation import _create_worktree, _require_worktree_parent
-from whub.services.worktree.operation import ResolvedProjectWorktree
+from whub.services.worktree.lifecycle import (
+    _create_worktree,
+    create_project_worktree,
+    remove_project_worktree,
+)
+from whub.services.worktree.pull_request import (
+    create_project_pull_request,
+    merge_project_pull_request,
+)
+from whub.services.worktree.resolve import (
+    ResolvedProjectWorktree,
+    _require_worktree_parent,
+    resolve_project_worktree,
+    resolve_worktree_parent,
+)
 from whub.services.worktree.diff import (
     WorktreeDiff,
     list_changed_files,
@@ -117,7 +124,7 @@ def test_resolve_project_worktree_returns_pr_lifecycle_inputs(tmp_path: Path) ->
             "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.operation.load_project_task") as load_task,
+        patch("whub.services.worktree.resolve.load_project_task") as load_task,
     ):
         resolved = resolve_project_worktree(
             Manifest.model_validate(data), tmp_path, "local", "TASK-072"
@@ -465,16 +472,16 @@ def test_create_pull_request_returns_existing_open_pr(tmp_path: Path) -> None:
             "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.operation.load_project_task"),
+        patch("whub.services.worktree.resolve.load_project_task"),
         patch(
-            "whub.services.worktree.operation.run_git",
+            "whub.services.worktree.pull_request.run_git",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0),
             ],
         ) as git,
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             return_value=subprocess.CompletedProcess(
                 [], 0, stdout="https://example/pr/72\n"
             ),
@@ -553,7 +560,7 @@ def test_create_worktree_saves_definition_then_adds_existing_branch(
     )
     definition = worktree_definition()
     with patch(
-        "whub.services.worktree.operation.run_git",
+        "whub.services.worktree.lifecycle.run_git",
         side_effect=[
             subprocess.CompletedProcess([], 0),
             subprocess.CompletedProcess([], 0),
@@ -591,7 +598,7 @@ def test_create_worktree_creates_missing_branch(tmp_path: Path) -> None:
     )
     definition = worktree_definition()
     with patch(
-        "whub.services.worktree.operation.run_git",
+        "whub.services.worktree.lifecycle.run_git",
         side_effect=[
             subprocess.CompletedProcess([], 1),
             subprocess.CompletedProcess([], 0),
@@ -619,7 +626,7 @@ def test_create_worktree_keeps_definition_when_git_add_fails(tmp_path: Path) -> 
     )
     definition = worktree_definition()
     with patch(
-        "whub.services.worktree.operation.run_git",
+        "whub.services.worktree.lifecycle.run_git",
         side_effect=[
             subprocess.CompletedProcess([], 0),
             subprocess.CompletedProcess([], 1, stderr="git add failed"),
@@ -636,7 +643,7 @@ def test_create_worktree_keeps_definition_when_git_add_fails(tmp_path: Path) -> 
 def test_create_project_worktree_rejects_missing_project_task(tmp_path: Path) -> None:
     with (
         patch(
-            "whub.services.worktree.operation.load_project_task",
+            "whub.services.worktree.lifecycle.load_project_task",
             side_effect=ServiceError("task not found: local/TASK-072"),
         ),
         pytest.raises(ServiceError, match="task not found: local/TASK-072"),
@@ -667,7 +674,7 @@ def test_remove_worktree_removes_clean_git_worktree_then_definition(
             return_value=[inspection],
         ),
         patch(
-            "whub.services.worktree.operation.run_git",
+            "whub.services.worktree.lifecycle.run_git",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0),
@@ -708,7 +715,7 @@ def test_remove_worktree_rejects_uncommitted_changes(
             return_value=[inspection],
         ),
         patch(
-            "whub.services.worktree.operation.run_git",
+            "whub.services.worktree.lifecycle.run_git",
             return_value=subprocess.CompletedProcess([], 0, stdout=status_output),
         ) as run,
         pytest.raises(
@@ -739,7 +746,7 @@ def test_remove_worktree_rejects_inconsistent_definition(tmp_path: Path) -> None
             "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.operation.run_git") as run,
+        patch("whub.services.worktree.lifecycle.run_git") as run,
         pytest.raises(
             ServiceError,
             match="cannot remove inconsistent worktree: git worktree is missing",
@@ -772,7 +779,7 @@ def test_remove_worktree_keeps_definition_when_yaml_removal_fails(
             return_value=[inspection],
         ),
         patch(
-            "whub.services.worktree.operation.run_git",
+            "whub.services.worktree.lifecycle.run_git",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0),
@@ -879,16 +886,16 @@ def test_create_pull_request_creates_when_no_open_pr_exists(tmp_path: Path) -> N
             "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.operation.load_project_task"),
+        patch("whub.services.worktree.resolve.load_project_task"),
         patch(
-            "whub.services.worktree.operation.run_git",
+            "whub.services.worktree.pull_request.run_git",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0),
             ],
         ),
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0, stdout="https://example/pr/72\n"),
@@ -930,12 +937,12 @@ def test_create_pull_request_rejects_uncommitted_changes(tmp_path: Path) -> None
             "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.operation.load_project_task"),
+        patch("whub.services.worktree.resolve.load_project_task"),
         patch(
-            "whub.services.worktree.operation.run_git",
+            "whub.services.worktree.pull_request.run_git",
             return_value=subprocess.CompletedProcess([], 0, stdout=" M changed.py\n"),
         ),
-        patch("whub.services.worktree.operation.run_gh") as gh,
+        patch("whub.services.worktree.pull_request.run_gh") as gh,
         pytest.raises(ServiceError, match="worktree has uncommitted changes"),
     ):
         create_project_pull_request(
@@ -960,16 +967,16 @@ def test_create_pull_request_reports_gh_lookup_failure(tmp_path: Path) -> None:
             "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.operation.load_project_task"),
+        patch("whub.services.worktree.resolve.load_project_task"),
         patch(
-            "whub.services.worktree.operation.run_git",
+            "whub.services.worktree.pull_request.run_git",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0),
             ],
         ),
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             return_value=subprocess.CompletedProcess([], 1, stderr="not logged in"),
         ) as gh,
         pytest.raises(ServiceError, match="gh PR lookup failed: not logged in"),
@@ -996,16 +1003,16 @@ def test_create_pull_request_reports_gh_create_failure(tmp_path: Path) -> None:
             "whub.services.worktree.check.inspect_worktrees",
             return_value=[inspection],
         ),
-        patch("whub.services.worktree.operation.load_project_task"),
+        patch("whub.services.worktree.resolve.load_project_task"),
         patch(
-            "whub.services.worktree.operation.run_git",
+            "whub.services.worktree.pull_request.run_git",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 0),
             ],
         ),
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             side_effect=[
                 subprocess.CompletedProcess([], 0, stdout=""),
                 subprocess.CompletedProcess([], 1, stderr="PR creation rejected"),
@@ -1036,12 +1043,12 @@ def test_merge_pull_request_removes_worktree_only_after_confirmation(
     )
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.pull_request.resolve_project_worktree",
             return_value=resolved,
         ),
-        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch("whub.services.worktree.pull_request._require_clean_worktree"),
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             side_effect=[
                 subprocess.CompletedProcess(
                     [],
@@ -1052,7 +1059,7 @@ def test_merge_pull_request_removes_worktree_only_after_confirmation(
                 subprocess.CompletedProcess([], 0, stdout="MERGED\n"),
             ],
         ),
-        patch("whub.services.worktree.operation.remove_project_worktree") as remove,
+        patch("whub.services.worktree.pull_request.remove_project_worktree") as remove,
     ):
         merge_project_pull_request(
             service_manifest, tmp_path, "local", "TASK-072", "squash"
@@ -1068,12 +1075,12 @@ def test_merge_pull_request_reports_merge_failure(tmp_path: Path) -> None:
     )
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.pull_request.resolve_project_worktree",
             return_value=resolved,
         ),
-        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch("whub.services.worktree.pull_request._require_clean_worktree"),
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             side_effect=[
                 subprocess.CompletedProcess(
                     [], 0, stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]'
@@ -1081,7 +1088,7 @@ def test_merge_pull_request_reports_merge_failure(tmp_path: Path) -> None:
                 subprocess.CompletedProcess([], 1, stderr="review required"),
             ],
         ),
-        patch("whub.services.worktree.operation.remove_project_worktree") as remove,
+        patch("whub.services.worktree.pull_request.remove_project_worktree") as remove,
         pytest.raises(ServiceError, match="gh PR merge failed: review required"),
     ):
         merge_project_pull_request(
@@ -1098,12 +1105,12 @@ def test_merge_pull_request_reports_cleanup_failure_after_merge(tmp_path: Path) 
     )
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.pull_request.resolve_project_worktree",
             return_value=resolved,
         ),
-        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch("whub.services.worktree.pull_request._require_clean_worktree"),
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             side_effect=[
                 subprocess.CompletedProcess(
                     [], 0, stdout='[{"url":"https://example/pr/72","headRefOid":"abc"}]'
@@ -1113,7 +1120,7 @@ def test_merge_pull_request_reports_cleanup_failure_after_merge(tmp_path: Path) 
             ],
         ),
         patch(
-            "whub.services.worktree.operation.remove_project_worktree",
+            "whub.services.worktree.pull_request.remove_project_worktree",
             side_effect=ServiceError("git worktree remove failed: locked"),
         ),
         pytest.raises(
@@ -1137,12 +1144,12 @@ def test_merge_pull_request_keeps_worktree_when_not_merged(tmp_path: Path) -> No
     )
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.pull_request.resolve_project_worktree",
             return_value=resolved,
         ),
-        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch("whub.services.worktree.pull_request._require_clean_worktree"),
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             side_effect=[
                 subprocess.CompletedProcess(
                     [],
@@ -1153,7 +1160,7 @@ def test_merge_pull_request_keeps_worktree_when_not_merged(tmp_path: Path) -> No
                 subprocess.CompletedProcess([], 0, stdout="OPEN\n"),
             ],
         ),
-        patch("whub.services.worktree.operation.remove_project_worktree") as remove,
+        patch("whub.services.worktree.pull_request.remove_project_worktree") as remove,
         pytest.raises(ServiceError, match="pull request was not merged"),
     ):
         merge_project_pull_request(
@@ -1179,15 +1186,15 @@ def test_merge_pull_request_requires_one_matching_open_pr(
     )
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.pull_request.resolve_project_worktree",
             return_value=resolved,
         ),
-        patch("whub.services.worktree.operation._require_clean_worktree"),
+        patch("whub.services.worktree.pull_request._require_clean_worktree"),
         patch(
-            "whub.services.worktree.operation.run_gh",
+            "whub.services.worktree.pull_request.run_gh",
             return_value=subprocess.CompletedProcess([], 0, stdout=output),
         ),
-        patch("whub.services.worktree.operation.remove_project_worktree") as remove,
+        patch("whub.services.worktree.pull_request.remove_project_worktree") as remove,
         pytest.raises(ServiceError, match=message),
     ):
         merge_project_pull_request(

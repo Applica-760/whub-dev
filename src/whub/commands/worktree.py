@@ -10,12 +10,14 @@ from whub.commands import get_manifest
 from whub.core.context import current_context
 from whub.commands import project_names
 from whub.services.errors import ServiceError
-from whub.services.worktree import (
-    create_project_pull_request,
+from whub.services.worktree.check import inspect_worktrees
+from whub.services.worktree.lifecycle import (
     create_project_worktree,
-    inspect_worktrees,
-    merge_project_pull_request,
     remove_project_worktree,
+)
+from whub.services.worktree.pull_request import (
+    create_project_pull_request,
+    merge_project_pull_request,
 )
 from whub.utils.render import render_table
 from whub.wflow.models.task import TASK_ID_PATTERN

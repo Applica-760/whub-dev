@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from whub.core.context import current_context
 from whub.services.manifest import load_manifest
 from whub.services.agent.codex.app_server import app_servers
-from whub.services.worktree.operation import resolve_project_worktree
+from whub.services.worktree.resolve import resolve_project_worktree
 
 
 router = APIRouter(prefix="/api/agent-codex")

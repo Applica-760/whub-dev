@@ -20,7 +20,7 @@ from whub.services.agent.tmux_session import (
     open_tmux_session,
 )
 from whub.services.agent.state import cleanup, prepare
-from whub.services.worktree.operation import resolve_project_worktree
+from whub.services.worktree.resolve import resolve_project_worktree
 
 
 def open_agent(

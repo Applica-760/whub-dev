@@ -13,7 +13,7 @@ from whub.models import (
 from whub.services.errors import ServiceError
 from whub.services.worktree.definition import list_worktree_definitions
 from whub.services.worktree.git import process_detail, run_git
-from whub.services.worktree.operation import resolve_worktree_parent
+from whub.services.worktree.resolve import resolve_worktree_parent
 
 
 def inspect_worktrees(
