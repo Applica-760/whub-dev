@@ -16,12 +16,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
 import pytest
+from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from whub.models import ManifestError
@@ -34,6 +36,7 @@ from whub.services.task import ProjectTasks
 from whub.services.vault import VaultNode
 from whub.services.worktree.diff import ChangedFile, WorktreeDiff
 from whub.tests.helpers import manifest
+from whub.webapp.routers import agent_attention
 from whub.webapp.server import create_app
 from whub.wflow.models.task import TaskDocument, TaskSummary
 
@@ -44,6 +47,43 @@ def client(tmp_path: Path) -> TestClient:
     dist_dir.mkdir()
     (dist_dir / "index.html").write_text("<main>whub</main>")
     return TestClient(create_app(dist_dir))
+
+
+def test_attention_stream_pushes_updates_and_releases_disconnected_clients() -> None:
+    class WebSocket:
+        headers = {"host": "localhost"}
+
+        def __init__(self) -> None:
+            self.messages: asyncio.Queue[object] = asyncio.Queue()
+            self.sent: list[dict[str, str]] = []
+            self.accepted = False
+
+        async def accept(self) -> None:
+            self.accepted = True
+
+        async def receive(self) -> object:
+            message = await self.messages.get()
+            if isinstance(message, Exception):
+                raise message
+            return message
+
+        async def send_json(self, message: dict[str, str]) -> None:
+            self.sent.append(message)
+
+    async def exercise() -> None:
+        websocket = WebSocket()
+        with patch("whub.webapp.routers.agent_attention._subscribers", set()):
+            stream = asyncio.create_task(agent_attention.attention_stream(websocket))
+            await asyncio.sleep(0)
+            await agent_attention._publish("response_completed")
+            assert websocket.accepted
+            assert websocket.sent == [
+                {"type": "attention_updated", "event": "response_completed"}
+            ]
+            await websocket.messages.put(WebSocketDisconnect())
+            await stream
+
+    asyncio.run(exercise())
 
 
 def _todo(
