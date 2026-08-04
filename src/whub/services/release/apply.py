@@ -8,8 +8,12 @@ from pathlib import Path
 import re
 
 from whub.core.context import WhubContext, current_context
-from whub.services.release.shared import ReleaseApplyError, ReleaseBuildError, _operation_whub, _restart_operation_app, _run
-from whub.services.release.verify import _wheel_sha256
+from whub.services.errors import ServiceError
+from whub.services.release.shared import ReleaseCommandError, _operation_whub, _restart_operation_app, _run, _wheel_sha256
+
+
+class ReleaseApplyError(ServiceError):
+    """Raised when a verified operation release cannot be applied."""
 
 
 @dataclass(frozen=True)
@@ -108,7 +112,7 @@ def apply_release(
     old_release = _current_release(context)
     try:
         old_whub = _operation_whub(context)
-    except ReleaseBuildError as error:
+    except ReleaseCommandError as error:
         raise ReleaseApplyError(str(error)) from error
     moved = False
     switched = False
@@ -121,7 +125,7 @@ def apply_release(
         switched = True
         _run([str(target / "venv" / "bin" / "whub"), "app"], cwd=target)
         return ReleaseApplication(release_id, target)
-    except (OSError, ReleaseApplyError, ReleaseBuildError) as caught:
+    except (OSError, ReleaseApplyError, ReleaseCommandError) as caught:
         error = (
             caught
             if isinstance(caught, ReleaseApplyError)
@@ -134,7 +138,7 @@ def apply_release(
                 os.replace(target, staging)
                 _install_release_venv(staging)
             _restart_operation_app(old_whub, cwd=old_release)
-        except (OSError, ReleaseApplyError, ReleaseBuildError) as rollback_error:
+        except (OSError, ReleaseApplyError, ReleaseCommandError) as rollback_error:
             raise ReleaseApplyError(f"{error}; failed to restore old release: {rollback_error}") from error
         if error is caught:
             raise

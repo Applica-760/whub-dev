@@ -4,11 +4,32 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import re
+import sys
 import tomllib
 
 from whub.core.context import WhubContext, current_context
 from whub.core.release import ReleaseInfo
-from whub.services.release.shared import ReleaseBuildError, _ROLLUP_NATIVE_DEPENDENCY, _operation_whub, _restart_operation_app, _run, _stop_operation_app
+from whub.services.errors import ServiceError
+from whub.services.release.shared import ReleaseCommandError, _operation_whub, _restart_operation_app, _run as _run_command
+
+
+class ReleaseBuildError(ServiceError):
+    """Raised when an operation release artifact cannot be built."""
+
+
+def _run(*args, **kwargs):
+    try:
+        return _run_command(*args, **kwargs)
+    except ReleaseCommandError as error:
+        raise ReleaseBuildError(str(error)) from error
+
+
+_ROLLUP_NATIVE_DEPENDENCY = re.compile(r"@rollup/rollup-[a-z0-9-]+")
+
+
+def _stop_operation_app(*, cwd: Path) -> None:
+    _run([sys.executable, "-m", "whub", "app", "down"], cwd=cwd)
 
 
 @dataclass(frozen=True)
@@ -70,7 +91,10 @@ def build_release(
     source = source.expanduser().resolve()
     context = context or current_context()
     release = _source_release(source)
-    operation_whub = _operation_whub(context)
+    try:
+        operation_whub = _operation_whub(context)
+    except ReleaseCommandError as error:
+        raise ReleaseBuildError(str(error)) from error
     staging = context.releases_dir / ".staging" / release.release_id
     artifact_dir = staging / "artifact"
     metadata_path = source / "src" / "whub" / "_build.json"
@@ -106,10 +130,8 @@ def build_release(
         if app_stopped:
             try:
                 _restart_operation_app(operation_whub, cwd=source)
-            except ReleaseBuildError as restart_error:
+            except ReleaseCommandError as restart_error:
                 raise ReleaseBuildError(f"{error}; failed to restart app: {restart_error}") from error
         raise
     finally:
         metadata_path.unlink(missing_ok=True)
-
-

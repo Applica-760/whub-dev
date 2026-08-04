@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -10,7 +9,12 @@ import zipfile
 
 from whub.core.context import WhubContext, current_context
 from whub.core.release import ReleaseInfo
-from whub.services.release.shared import ReleaseBuildError, ReleaseVerifyError, _operation_whub, _restart_operation_app, _run
+from whub.services.errors import ServiceError
+from whub.services.release.shared import ReleaseCommandError, _operation_whub, _restart_operation_app, _run, _wheel_sha256
+
+
+class ReleaseVerifyError(ServiceError):
+    """Raised when an operation release artifact cannot be verified."""
 
 
 @dataclass(frozen=True)
@@ -56,17 +60,6 @@ def _verified_release_info(wheel_path: Path, release_id: str) -> ReleaseInfo:
     return release
 
 
-def _wheel_sha256(wheel_path: Path) -> str:
-    digest = hashlib.sha256()
-    try:
-        with wheel_path.open("rb") as wheel:
-            for chunk in iter(lambda: wheel.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as error:
-        raise ReleaseVerifyError(f"cannot read wheel: {wheel_path}") from error
-    return digest.hexdigest()
-
-
 def verify_release(
     release_id: str,
     *,
@@ -83,7 +76,10 @@ def verify_release(
     if release_json.exists():
         raise ReleaseVerifyError(f"release is already verified: {release_id}")
 
-    operation_whub = _operation_whub(context)
+    try:
+        operation_whub = _operation_whub(context)
+    except ReleaseCommandError as error:
+        raise ReleaseVerifyError(str(error)) from error
     wheel_path = wheels[0]
     try:
         release = _verified_release_info(wheel_path, release_id)
@@ -120,7 +116,7 @@ def verify_release(
             + "\n"
         )
         return ReleaseVerification(release.release_id, wheel_path, wheel_sha256)
-    except (OSError, ReleaseBuildError, ReleaseVerifyError) as caught:
+    except (OSError, ReleaseCommandError, ReleaseVerifyError) as caught:
         error = (
             caught
             if isinstance(caught, ReleaseVerifyError)
@@ -128,10 +124,8 @@ def verify_release(
         )
         try:
             _restart_operation_app(operation_whub, cwd=staging)
-        except ReleaseBuildError as restart_error:
+        except ReleaseCommandError as restart_error:
             raise ReleaseVerifyError(f"{error}; failed to restart app: {restart_error}") from error
         if error is caught:
             raise
         raise error from caught
-
-

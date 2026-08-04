@@ -115,7 +115,7 @@ def test_build_stages_wheel_and_removes_generated_metadata(
             (output / "whub-0.1.0-py3-none-any.whl").touch()
         return _result(command)
 
-    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+    monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
 
     result = build_release(source, context=context)
 
@@ -142,7 +142,7 @@ def test_build_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> No
             return _result(command, returncode=1)
         return _result(command)
 
-    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+    monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
 
     with pytest.raises(ReleaseBuildError, match="npm run build"):
         build_release(source, context=context)
@@ -179,7 +179,7 @@ def test_build_recovers_rollup_native_dependency_once(monkeypatch, tmp_path: Pat
             (output / "whub-0.1.0-py3-none-any.whl").touch()
         return _result(command)
 
-    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+    monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
 
     result = build_release(source, context=context)
 
@@ -206,7 +206,7 @@ def test_verify_records_wheel_hash_after_staging_smoke_test(monkeypatch, tmp_pat
             return _result(command, stdout="whub, version 0.1.0 (commit " + "a" * 40 + ")\n")
         return _result(command)
 
-    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+    monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
 
     result = verify_release(release_id, context=context)
 
@@ -246,7 +246,7 @@ def test_verify_isolates_staging_venv_from_caller_interpreter_vars(
             return _result(command, stdout="whub, version 0.1.0 (commit " + "a" * 40 + ")\n")
         return _result(command)
 
-    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+    monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
 
     verify_release(release_id, context=context)
 
@@ -269,7 +269,7 @@ def test_verify_failure_restarts_operation_app(monkeypatch, tmp_path: Path) -> N
         calls.append(command)
         return _result(command)
 
-    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+    monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
 
     with pytest.raises(ReleaseVerifyError, match="webapp index.html"):
         verify_release(release_id, context=context)
@@ -288,7 +288,7 @@ def test_apply_moves_verified_release_and_switches_current(monkeypatch, tmp_path
         calls.append(command)
         return _result(command)
 
-    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+    monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
 
     result = apply_release(release_id, context=context)
 
@@ -327,7 +327,7 @@ def test_apply_failure_restores_current_and_staging(monkeypatch, tmp_path: Path)
             return _result(command, returncode=1)
         return _result(command)
 
-    monkeypatch.setattr("whub.services.release.subprocess.run", run)
+    monkeypatch.setattr("whub.services.release.shared.subprocess.run", run)
 
     with pytest.raises(ReleaseApplyError, match="app"):
         apply_release(release_id, context=context)
