@@ -1,0 +1,60 @@
+schema_version: 1
+task:
+  id: TASK-087
+  state: completed
+  title: Todo・AgentAuthのI/OをModel層から分離する
+  objective: TodoおよびAgentAuthの永続化・asset読み込みをModel層から分離し、Modelの責務をschemaと検証へ限定する。
+  approach:
+  - '前提: TodoとAgentAuthは既存の形式・公開APIとの互換性を維持する。'
+  - '課題: load/saveやasset読み込みがModel層に混在している。'
+  - '方針案: I/Oをserviceまたはrepositoryへ移し、必要に応じて互換exportを維持する。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: I/O境界の分離
+    acceptance: []
+    steps:
+    - description: todo と agent auth の model からファイルI/Oを service 層へ移す
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: todo と agent auth の YAML・ファイルI/Oを service 層へ移設した
+      deleted: false
+    deleted: false
+  - title: テストの更新
+    acceptance: []
+    steps:
+    - description: モデル検証とYAML・ファイルI/Oのテスト責務を分離する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: モデル検証と asset・todo のファイルI/Oテストを分離した
+      deleted: false
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: focused test と全テストで回帰を確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: focused 19件および全578件の pytest が成功した
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: model層からtodoとagent authのファイルI/Oを分離し、全578テストで検証済み
