@@ -1,0 +1,60 @@
+schema_version: 1
+task:
+  id: TASK-088
+  state: completed
+  title: Release serviceを責務別にパッケージ化する
+  objective: Releaseのbuild・verify・apply・process責務を分離し、変更容易性を高める。
+  approach:
+  - '前提: releaseの外部CLIとtransaction・rollbackの振る舞いを維持する。'
+  - '課題: services/release.pyに複数のライフサイクル責務が混在している。'
+  - '方針案: services/release配下へ責務別moduleを配置し、既存の公開APIはfacadeで維持する。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: release serviceの分割
+    acceptance: []
+    steps:
+    - description: release serviceを既存のshared・build・verify・apply区切りでモジュールへ分割する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: release serviceをshared・build・verify・applyに分割した
+      deleted: false
+    deleted: false
+  - title: 呼び出し側の更新
+    acceptance: []
+    steps:
+    - description: CLIとテストのrelease service呼び出しを分割後のモジュールへ更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: release CLIを分割後のserviceモジュール呼び出しへ更新した
+      deleted: false
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: focused testと全テストを実行して分割前後の振る舞いを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: focused 13件および全578件の pytest が成功した
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: release serviceを区切り単位で分割し、CLI更新後に全578テストで検証済み
