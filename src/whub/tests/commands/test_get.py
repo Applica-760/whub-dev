@@ -40,7 +40,7 @@ def _run_get(tmp_path, path: str, returncode: int = 0):
     with (
         patch("whub.commands.remote.transfer.get_manifest", return_value=m),
         patch("whub.commands.remote.transfer.current_context", return_value=context),
-        patch("whub.commands.remote.transfer.subprocess.run", mock_run),
+        patch("whub.services.remote.transfer.subprocess.run", mock_run),
     ):
         result = CliRunner().invoke(get, [path], catch_exceptions=False)
     return result, mock_run, remote_files

@@ -63,9 +63,9 @@ def _run_put(
     with (
         patch("whub.commands.remote.transfer.get_manifest", return_value=m),
         patch("whub.commands.remote.transfer.current_context", return_value=context),
-        patch("whub.commands.remote.transfer.remote_file_hash", return_value=remote_hash),
+        patch("whub.services.remote.transfer.remote_file_hash", return_value=remote_hash),
         patch(
-            "whub.commands.remote.transfer.remote_write_file",
+            "whub.services.remote.transfer.remote_write_file",
             return_value=CompletedProcess([], write_returncode, "", write_stderr),
         ) as mock_write,
     ):
@@ -94,7 +94,10 @@ class TestPutSpec:
         remote_files = tmp_path / "remote_files"
         remote_files.mkdir()
         context = MagicMock(remote_files_dir=remote_files)
-        with patch("whub.commands.remote.transfer.current_context", return_value=context):
+        with (
+            patch("whub.commands.remote.transfer.current_context", return_value=context),
+            patch("whub.commands.remote.transfer.get_manifest", return_value=manifest()),
+        ):
             result = CliRunner().invoke(put, ["nonexistent.csv"])
 
         assert result.exit_code != 0
@@ -106,7 +109,10 @@ class TestPutSpec:
         remote_files.mkdir()
         (remote_files / "orphan.csv").write_text("data")
         context = MagicMock(remote_files_dir=remote_files)
-        with patch("whub.commands.remote.transfer.current_context", return_value=context):
+        with (
+            patch("whub.commands.remote.transfer.current_context", return_value=context),
+            patch("whub.commands.remote.transfer.get_manifest", return_value=manifest()),
+        ):
             result = CliRunner().invoke(put, ["orphan.csv"])
 
         assert result.exit_code != 0
@@ -129,7 +135,7 @@ class TestPutSpec:
         with (
             patch("whub.commands.remote.transfer.get_manifest", return_value=m),
             patch("whub.commands.remote.transfer.current_context", return_value=context),
-            patch("whub.commands.remote.transfer.remote_file_hash", return_value=None),
+            patch("whub.services.remote.transfer.remote_file_hash", return_value=None),
         ):
             result = CliRunner().invoke(put, ["file.csv"], catch_exceptions=False)
 
