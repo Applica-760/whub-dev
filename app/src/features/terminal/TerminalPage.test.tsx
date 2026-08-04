@@ -27,6 +27,7 @@ let approvalAttention: ApprovalAttention[] = [
 let agentError: string | null = null;
 let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
+let deferWorktrees = false;
 let changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
 let worktreeFile: {
   path: string;
@@ -68,6 +69,7 @@ beforeEach(() => {
   agentError = null;
   operationStarts = 0;
   operatorTerminals = [];
+  deferWorktrees = false;
   changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
   worktreeFile = {
     path: "src/main.py",
@@ -184,6 +186,7 @@ beforeEach(() => {
           ok: true,
           json: async () => worktreeFile,
         });
+      if (deferWorktrees) return new Promise(() => {});
       return Promise.resolve({
         ok: true,
         json: async () => ({
@@ -377,6 +380,21 @@ describe("TerminalPage", () => {
     expect(
       screen.queryByRole("switch", { name: "Operation operator-1を停止" }),
     ).toBeNull();
+  });
+
+  it("worktreeの探索中でも既存Operationを先に表示する", async () => {
+    operatorTerminals = [{ operator_id: "operator-1" }];
+    deferWorktrees = true;
+
+    renderPage();
+
+    expect(await screen.findByText("Operation / workspace-hub")).toBeTruthy();
+    expect(screen.getByText("worktreeを読み込んでいます…")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: /Operation 1/ })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("承認待ちのTerminalをExplorerバッジと選択行で示す", async () => {

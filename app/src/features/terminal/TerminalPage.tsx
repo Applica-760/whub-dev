@@ -52,6 +52,7 @@ export function TerminalPage({
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
   const [operators, setOperators] = useState<OperatorTerminal[]>([]);
   const [operatorError, setOperatorError] = useState<string | null>(null);
+  const [operatorsLoaded, setOperatorsLoaded] = useState(false);
   const [operatorPending, setOperatorPending] = useState(false);
   const [panelMode, setPanelMode] = useState<PanelMode>("terminal");
   const selectedWorktree = terminals.find(
@@ -103,22 +104,22 @@ export function TerminalPage({
 
   useEffect(() => {
     setSelectedTerminal((current) => {
-      if (loading) return current;
+      if (!operatorsLoaded) return current;
       if (
         operators.some(
           (operator) => operatorValue(operator.operator_id) === current,
         )
       )
         return current;
+      if (operators[0]) return operatorValue(operators[0].operator_id);
+      if (loading) return current;
       return terminals.some((item) => worktreeValue(item) === current)
         ? current
-        : operators[0]
-          ? operatorValue(operators[0].operator_id)
-          : terminals[0]
-            ? worktreeValue(terminals[0])
-            : null;
+        : terminals[0]
+          ? worktreeValue(terminals[0])
+          : null;
     });
-  }, [loading, operators, terminals]);
+  }, [loading, operators, operatorsLoaded, terminals]);
 
   useEffect(() => {
     if (!selectedWorktree) setPanelMode("terminal");
@@ -144,6 +145,8 @@ export function TerminalPage({
           ? requestError.message
           : "Operator Terminalを読み込めませんでした。",
       );
+    } finally {
+      setOperatorsLoaded(true);
     }
   }, []);
 
