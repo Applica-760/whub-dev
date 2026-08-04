@@ -5,9 +5,10 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from whub.commands.codegraph import _collect_codegraph_targets, codegraph
+from whub.commands.codegraph import codegraph
 from whub.models import Manifest
 from whub.services.manifest import resolve_manifest
+from whub.services.codegraph import initialize_codegraph
 from whub.tests.helpers import manifest
 
 
@@ -21,8 +22,8 @@ def test_local_init_uses_resolved_workspace_path(tmp_path) -> None:
 
     with (
         patch("whub.commands.codegraph.get_manifest", return_value=configured),
-        patch("whub.commands.codegraph.shutil.which", return_value="/bin/codegraph"),
-        patch("whub.commands.codegraph.subprocess.run") as run,
+        patch("whub.services.codegraph.shutil.which", return_value="/bin/codegraph"),
+        patch("whub.services.codegraph.subprocess.run") as run,
     ):
         result = CliRunner().invoke(codegraph, catch_exceptions=False)
 
@@ -46,7 +47,7 @@ def test_missing_local_target_is_skipped(tmp_path) -> None:
 
     with (
         patch("whub.commands.codegraph.get_manifest", return_value=configured),
-        patch("whub.commands.codegraph.subprocess.run") as run,
+        patch("whub.services.codegraph.subprocess.run") as run,
     ):
         result = CliRunner().invoke(codegraph, catch_exceptions=False)
 
@@ -55,10 +56,8 @@ def test_missing_local_target_is_skipped(tmp_path) -> None:
     run.assert_not_called()
 
 
-def test_collect_excludes_codegraph_false() -> None:
-    assert all(
-        target.resource.codegraph for target in _collect_codegraph_targets(manifest())
-    )
+def test_excludes_codegraph_false() -> None:
+    assert initialize_codegraph(manifest()) == []
 
 
 def test_local_failure_does_not_stop_later_targets(tmp_path) -> None:
@@ -96,9 +95,9 @@ def test_local_failure_does_not_stop_later_targets(tmp_path) -> None:
 
     with (
         patch("whub.commands.codegraph.get_manifest", return_value=configured),
-        patch("whub.commands.codegraph.shutil.which", return_value="/bin/codegraph"),
+        patch("whub.services.codegraph.shutil.which", return_value="/bin/codegraph"),
         patch(
-            "whub.commands.codegraph.subprocess.run",
+            "whub.services.codegraph.subprocess.run",
             side_effect=[
                 subprocess.CalledProcessError(1, [], stderr="failed"),
                 subprocess.CompletedProcess([], 0),
@@ -122,7 +121,7 @@ def test_remote_init_uses_ssh() -> None:
     with (
         patch("whub.commands.codegraph.get_manifest", return_value=configured),
         patch(
-            "whub.commands.codegraph.run_ssh_command", return_value=completed
+            "whub.services.codegraph.run_ssh_command", return_value=completed
         ) as run,
     ):
         result = CliRunner().invoke(codegraph, catch_exceptions=False)
@@ -140,8 +139,8 @@ def test_workspace_root_is_not_initialized() -> None:
 
     with (
         patch("whub.commands.codegraph.get_manifest", return_value=configured),
-        patch("whub.commands.codegraph.subprocess.run") as local_run,
-        patch("whub.commands.codegraph.run_ssh_command") as remote_run,
+        patch("whub.services.codegraph.subprocess.run") as local_run,
+        patch("whub.services.codegraph.run_ssh_command") as remote_run,
     ):
         result = CliRunner().invoke(codegraph, catch_exceptions=False)
 

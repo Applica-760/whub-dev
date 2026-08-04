@@ -1,0 +1,60 @@
+schema_version: 1
+task:
+  id: TASK-092
+  state: completed
+  title: Remote transfer commandを薄くする
+  objective: remote transfer commandの転送・整合性確認・metadata・削除処理をserviceへ移す。
+  approach:
+  - '前提: get・put・rmのCLI仕様、remote resource操作、既存テストの意図を維持する。'
+  - '課題: commands/remote/transfer.pyに転送処理とadapter処理が混在している。'
+  - '方針案: services/remote/transfer.pyへユースケースを移し、commandは引数解釈・表示・例外変換に限定する。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: service分離
+    acceptance: []
+    steps:
+    - description: 転送・メタデータ・競合確認をremote transfer serviceへ移す
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: remote transfer処理をserviceへ移動。commit 0d0cbff
+      deleted: false
+    deleted: false
+  - title: CLI更新
+    acceptance: []
+    steps:
+    - description: CLIをservice呼出・表示・Click例外/終了コード変換へ限定し、テストを更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: CLIをservice呼出と表示・Click変換へ縮小し、focused testを更新
+      deleted: false
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: focused testと全体pytestで回帰を確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: focused 15件と全体578件のpytestが成功
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: remote transferをserviceへ分離し、CLIをadapterへ縮小

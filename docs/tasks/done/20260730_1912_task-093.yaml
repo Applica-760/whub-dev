@@ -1,0 +1,60 @@
+schema_version: 1
+task:
+  id: TASK-093
+  state: completed
+  title: Link commandを薄くする
+  objective: link commandのsymlink作成とgitignore更新をserviceへ移し、adapter責務を明確にする。
+  approach:
+  - '前提: whub linkのCLI仕様と既存workspace・gitignoreの更新規則を維持する。'
+  - '課題: commands/link.pyにファイル操作とCLI adapter処理が混在している。'
+  - '方針案: services/link.pyへユースケースを移し、commandは引数解釈・表示・例外変換に限定する。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: service分離
+    acceptance: []
+    steps:
+    - description: linkとcodegraphの実行ロジックをserviceへ移す
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: linkとcodegraphの実行ロジックをserviceへ移動
+      deleted: false
+    deleted: false
+  - title: CLI更新
+    acceptance: []
+    steps:
+    - description: commandをClick adapterへ縮小しテストの依存先を更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: commandをClick adapterへ縮小し、テスト依存をserviceへ更新
+      deleted: false
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: focused testと全体pytestで回帰を確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: focused 14件、全体578件のpytest、ruff checkが成功
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: linkとcodegraphをserviceへ分離し、CLIをadapterへ縮小
