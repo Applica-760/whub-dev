@@ -1,0 +1,75 @@
+schema_version: 1
+task:
+  id: TASK-112
+  state: completed
+  title: Operation・worktreeのCodex通知を統合する
+  objective: Operation Terminalと登録済みworktreeのCodexセッションで、PermissionRequestに加えCodexの応答終了を示すStop
+    Hookも、既存のExplorerバッジ・タブ通知・既読化を通じてWeb UIへ通知できるようにする。
+  approach:
+  - Operation tmux起動時に、稼働中のOperationを一意に示すoperator_idを環境変数として束縛する。
+  - Codex共通HookはTask worktreeでは既存のcwd照合を維持し、Operationでは明示的なoperator_idをcontrol planeへ送る。全Operationがworkspace
+    rootを共有するため、cwdからOperationを推測しない。
+  - PermissionRequestとStopを種別付きの独立した通知イベントとして保持する。StopはCodexの応答終了と同時に通知を生成し、PostToolUseは対応する権限リクエストだけを解除して応答終了通知を消さない。
+  - Terminal ExplorerのOperation行とworktree行に、既存のバッジ・ブラウザタブ通知・行選択時の既読化を適用する。通知表示はイベント種別を区別し、OSネイティブ通知は対象外とする。
+  - 通知ルーティングは認可境界ではない。環境変数だけを信頼せず、backend側でOperationまたはworktreeの登録・稼働状態を検証する。
+  - workspace-hub共通のagent auth・rule配布は本Taskの非対象とし、Operation・worktreeのHookからUIまでの通知経路に限定する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Hook通知モデルを拡張する
+    acceptance: []
+    steps:
+    - description: Operationと登録済みworktreeを安全に識別した上で、PermissionRequest・PostToolUse・Stop
+        Hookを種別付きイベントとして受け付ける。Stopで応答終了通知を作成し、PostToolUseによる権限通知の解除と独立して保持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 通知targetはworktree（project・task_id）とOperation（operator_id）を区別する。PermissionRequestとStopは独立イベントとして10分TTLで保持し、行選択時は対象行の未読イベントをまとめて既読化する。PostToolUseは対応するPermissionRequestだけを解除し、Stopを消さない。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: ユーザー承認。Operationごとに不変なoperator_idをtmux環境とHookイベントで伝播し、backendで登録済みOperationを検証する。UIのOperation番号は表示専用で、並び替え・欠番による通知targetの取り違えを許容しない。
+      deleted: false
+    - value:
+        verification: Operationとworktreeの不変target ID、PermissionRequest・PostToolUse・Stopの独立イベント、TTL・既読化をPythonテストで検証した。
+      deleted: false
+    deleted: false
+  - title: 共通Web UI通知を表示する
+    acceptance: []
+    steps:
+    - description: Explorerとブラウザタブの既存通知UIを、Operation・worktree双方の権限リクエストとCodex応答終了へ共通適用する。イベント種別が判別できる表示と、対象行選択による既読化を実装する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: OperationとworktreeのExplorer badge、応答終了表示、対象別既読化、ブラウザtab通知をVitestで検証した。
+      deleted: false
+    deleted: false
+  - title: 通知の時系列を検証する
+    acceptance: []
+    steps:
+    - description: Hook入力・登録対象の検証・イベント独立性・TTL/既読化・Explorer/タブ表示を、Operationとworktreeの両経路でテストする。PermissionRequest、PostToolUse、Stopの時系列において通知が意図せず相互に消えないことを検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: pytest 581 passed、Terminal UI Vitest 47 passed、TypeScript typecheck、production
+          build、変更対象のRuff check/formatを確認した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: 'PR #13 merged with merge method; worktree cleaned; review and targeted
+    verification passed.'
