@@ -6,6 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalPage } from "./TerminalPage";
@@ -39,6 +40,8 @@ let worktreeFile: {
   state: "text",
 };
 let clipboardWrite = vi.fn();
+let terminalMounts: string[] = [];
+let terminalUnmounts: string[] = [];
 
 vi.mock("./TerminalWidget", () => ({
   TerminalWidget: ({
@@ -49,7 +52,16 @@ vi.mock("./TerminalWidget", () => ({
     label?: string;
     project?: string;
     taskId?: string;
-  }) => <div>{label ?? `${project} / ${taskId}`}</div>,
+  }) => {
+    const terminal = label ?? `${project} / ${taskId}`;
+    useEffect(() => {
+      terminalMounts.push(terminal);
+      return () => {
+        terminalUnmounts.push(terminal);
+      };
+    }, []);
+    return <div>{terminal}</div>;
+  },
 }));
 
 beforeEach(() => {
@@ -64,6 +76,8 @@ beforeEach(() => {
     state: "text",
   };
   clipboardWrite = vi.fn();
+  terminalMounts = [];
+  terminalUnmounts = [];
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: { writeText: clipboardWrite },
@@ -236,6 +250,8 @@ describe("TerminalPage", () => {
     expect(firstTerminal.getAttribute("aria-pressed")).toBe("false");
     expect(secondTerminal.getAttribute("aria-pressed")).toBe("true");
     expect(screen.getAllByText("vault / TASK-101")).not.toHaveLength(0);
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
+    expect(terminalUnmounts).toEqual(["whub-dev / TASK-099"]);
     expect(fetch).toHaveBeenCalledWith(
       "/api/worktrees/vault/TASK-101/changes",
       undefined,

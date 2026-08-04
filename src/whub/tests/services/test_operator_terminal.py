@@ -29,6 +29,7 @@ def test_start_creates_multiple_login_shells_in_workspace_root(tmp_path: Path) -
             "whub.services.operator_terminal.uuid4",
             side_effect=[Mock(hex="operator-1"), Mock(hex="operator-2")],
         ),
+        patch.dict("whub.services.operator_terminal.os.environ", {"NO_COLOR": "1"}),
         patch(
             "whub.services.operator_terminal.subprocess.run", return_value=result
         ) as run,
@@ -48,11 +49,13 @@ def test_start_creates_multiple_login_shells_in_workspace_root(tmp_path: Path) -
         "-d",
         "-e",
         "WHUB_OPERATOR_ID=operator-1",
+        "-e",
+        "COLORTERM=truecolor",
         "-s",
         "whub-operator-operator-1",
         "-c",
         "/workspace-hub",
-        "exec $SHELL -l",
+        "unset NO_COLOR; exec $SHELL -l",
     ]
     assert run.call_args_list[2].args[0] == [
         "tmux",
@@ -60,12 +63,15 @@ def test_start_creates_multiple_login_shells_in_workspace_root(tmp_path: Path) -
         "-d",
         "-e",
         "WHUB_OPERATOR_ID=operator-2",
+        "-e",
+        "COLORTERM=truecolor",
         "-s",
         "whub-operator-operator-2",
         "-c",
         "/workspace-hub",
-        "exec $SHELL -l",
+        "unset NO_COLOR; exec $SHELL -l",
     ]
+    assert "NO_COLOR" not in run.call_args_list[0].kwargs["env"]
 
 
 def test_stop_removes_only_the_selected_record_and_rejects_its_id(

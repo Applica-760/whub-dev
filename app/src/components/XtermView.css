@@ -28,6 +28,14 @@
   --xterm-bright-cyan: #56d4dd;
   --xterm-bright-white: #f0f6fc;
 
+  box-sizing: border-box;
   height: 64rem;
+  min-width: 0;
   padding: 0.5rem;
+  width: 100%;
+}
+
+.xterm-view > .xterm {
+  height: 100%;
+  width: 100%;
 }
