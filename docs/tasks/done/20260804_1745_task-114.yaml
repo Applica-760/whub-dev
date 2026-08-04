@@ -1,0 +1,87 @@
+schema_version: 1
+task:
+  id: TASK-114
+  state: completed
+  title: Operation Terminalの表示信頼性を安定化する
+  objective: Terminal選択切替時の描画・サイズ不整合を解消し、新規Operationが通知識別子とtruecolor能力を両立して維持できるようにする。
+  approach:
+  - Phase 1で症状、再現条件、ブラウザ・xterm・PTY・tmux間の寸法遷移を観測し、原因と対策は検証結果に基づいて後続Phaseで決定する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 調査
+    acceptance: []
+    steps:
+    - description: Terminal選択切替時の描画・サイズ不整合と、新規OperationのCOLORTERM伝播を再現・観測し、原因・対策・検証条件を事実で確定する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        症状: Explorerで選択するworktreeまたはTerminalを変更すると、tmux Terminalが確保領域全体に描画される場合と、左上の小さい領域に縮小して描画される場合がある。
+      deleted: false
+    - value:
+        推測原因: 未確定。未検証の推測は記録しない。
+      deleted: false
+    - value:
+        解決策の案: 未確定。調査で原因と再現条件を確認後に、対策案と検証条件を計画へ追加する。
+      deleted: false
+    - value:
+        finding: TerminalWidgetは選択先変更時も同一xterm instanceを再利用し、WebSocketだけを再接続している。Operation
+          tmux作成はWHUB_OPERATOR_IDのみを渡し、COLORTERM=truecolorを渡していない。切替時の表示再生成とtmux環境の両設定を対策候補として検証する。
+      deleted: false
+    - value:
+        manual_observation: COLORTERM=truecolorとWHUB_OPERATOR_IDの伝播はfresh Operationで確認済み。Operationからworktreeへの切替ではxtermが既定80x24のまま残ることがあるため、接続確立直後ではなく次の描画フレーム後に強制fitする対策を追加して再確認する。
+      deleted: false
+    - value:
+        correction: 描画不安定は接続後fitの遅延だけでは解消しなかった。xtermの外側コンテナには高さがある一方、内側.xtermには高さがなく、fit失敗時に既定canvasだけが残る。内側.xtermを親全面に固定し、接続後fitは即時強制resizeへ戻した。tmuxはxterm-256color:RGBを有効化済みである。
+      deleted: false
+    - value:
+        root_cause: 実行中Codexの環境にNO_COLOR=1、TERM=tmux-256color、COLORTERM=truecolorを確認した。NO_COLOR=1がCodex
+          TUIを白黒に強制していた。Operation起動時に親環境からNO_COLORを除外し、login shell実行前にもunsetする。既存Operationは停止・再作成して確認する。
+      deleted: false
+    - value:
+        result: Terminal切替でxterm instanceを再生成し、内側.xtermを親全面に固定することで描画領域を安定化した。OperationのNO_COLOR継承を除去し、COLORTERM=truecolor、tmux
+          RGB、Codexのカラー表示を手動確認した。
+      deleted: false
+    deleted: false
+  - title: 修正
+    acceptance: []
+    steps:
+    - description: 選択切替後もTerminalを確保領域全体へ安定して描画し、Operation tmux作成時にWHUB_OPERATOR_IDとCOLORTERM=truecolorを共存させる。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Terminal選択時にxtermとWebSocketを再生成し、.xtermを親全面へ固定した。Operation tmuxにはWHUB_OPERATOR_IDとCOLORTERM=truecolorを渡し、NO_COLORを親環境とlogin
+          shellの双方で除去した。承認通知ルーターの欠落importも修正した。
+      deleted: false
+    deleted: false
+  - title: 検証
+    acceptance: []
+    steps:
+    - description: Terminal選択切替のUI回帰、Operation起動の環境契約、fresh OperationでのリッチカラーとPermissionRequest/Stop通知を検証する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 手動で新規OperationのCOLORTERM=truecolor、空のNO_COLOR、Codex承認UIのカラー表示、Explorerの承認待ちバッジを確認した。Terminal描画の安定化とOperation通知APIは、フロントエンド47件・Python582件・lint・production
+          buildで回帰確認済み。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: Operation Terminalの選択切替描画不整合と、fresh sessionでのCOLORTERM未伝播を同じ表示信頼性の改善として扱うため
+cancellation: null
+result:
+  summary: 'PR #15 merged with merge method; worktree cleanup and parent repository
+    fast-forward sync confirmed.'
