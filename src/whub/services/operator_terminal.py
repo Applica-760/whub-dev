@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import subprocess
 from threading import Lock
@@ -42,7 +43,9 @@ class OperatorTerminalService:
             operator_id = uuid4().hex
             name = session_name("operator", operator_id)
             target = session_target(name)
-            command = "exec $SHELL -l"
+            command = "unset NO_COLOR; exec $SHELL -l"
+            environment = os.environ.copy()
+            environment.pop("NO_COLOR", None)
             try:
                 created = subprocess.run(
                     tmux_command(
@@ -50,6 +53,8 @@ class OperatorTerminalService:
                         "-d",
                         "-e",
                         f"WHUB_OPERATOR_ID={operator_id}",
+                        "-e",
+                        "COLORTERM=truecolor",
                         "-s",
                         name,
                         "-c",
@@ -57,6 +62,7 @@ class OperatorTerminalService:
                         command,
                     ),
                     capture_output=True,
+                    env=environment,
                     text=True,
                 )
             except OSError as error:

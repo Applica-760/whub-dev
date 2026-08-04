@@ -252,11 +252,13 @@ export function TerminalPage({
           ) : selectedOperator ? (
             <TerminalWidget
               endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
+              key={selectedTerminal}
               label="Operation / workspace-hub"
               resizeSignal={selectedTerminal ?? ""}
             />
           ) : selectedWorktree ? (
             <TerminalWidget
+              key={selectedTerminal}
               project={selectedWorktree.parent_project}
               resizeSignal={selectedTerminal ?? ""}
               taskId={selectedWorktree.task_id}
