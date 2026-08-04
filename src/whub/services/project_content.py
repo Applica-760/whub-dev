@@ -5,12 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from whub.core.health import probe_directory_readable
-from whub.models import Manifest, RemoteResource, SymlinkResource
+from whub.models import RemoteResource, SymlinkResource
 from whub.services.errors import ServiceError
+from whub.services.manifest import ResolvedManifest
 
 
 def resolve_project_content_resource(
-    manifest: Manifest,
+    manifest: ResolvedManifest,
     project: str,
 ) -> SymlinkResource | RemoteResource:
     """Resolve a Project's declared resource."""
@@ -22,13 +23,13 @@ def resolve_project_content_resource(
     raise ServiceError(f"project has no resource: {project}")
 
 
-def resolve_project_content_root(manifest: Manifest, project: str) -> Path:
+def resolve_project_content_root(manifest: ResolvedManifest, project: str) -> Path:
     """Resolve an available local or mounted Project content root."""
     resource = resolve_project_content_resource(manifest, project)
     root = (
         Path(resource.source).expanduser()
         if isinstance(resource, SymlinkResource)
-        else resource._resolved_workspace_path
+        else manifest.workspace_path(resource)
     )
     if not root.is_dir():
         raise ServiceError(f"project resource is not available: {project}")

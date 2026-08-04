@@ -71,7 +71,7 @@ class TestCdSpec:
             patch("whub.commands.cd.sys.stdout", output),
             pytest.raises(SystemExit) as error,
         ):
-            _cd_remote(resource, ("remote", False))
+            _cd_remote(resource, (m, "remote", False))
 
         assert error.value.code == 23
         run.assert_called_once()
@@ -93,7 +93,7 @@ class TestCdSpec:
             patch("whub.commands.cd.sys.stdout", output),
             pytest.raises(OSError, match="ssh unavailable"),
         ):
-            _cd_remote(resource, ("remote", False))
+            _cd_remote(resource, (m, "remote", False))
 
         assert output.value == _TERMINAL_RECOVERY
         assert output.flushed
@@ -107,7 +107,7 @@ class TestCdSpec:
             patch("whub.commands.cd.sys.stdout", NonTtyOutput()),
             pytest.raises(SystemExit) as error,
         ):
-            _cd_remote(resource, ("remote", False))
+            _cd_remote(resource, (m, "remote", False))
 
         assert error.value.code == EXIT_SSH
         run.assert_not_called()

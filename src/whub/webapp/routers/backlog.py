@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, field_validator
 
-from whub.models import load_manifest
+from whub.services.manifest import load_manifest
 from whub.services.backlog import append_backlog, read_backlog
 
 

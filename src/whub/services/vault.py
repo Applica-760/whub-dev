@@ -7,8 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
+from whub.services.manifest import ResolvedManifest
 
 
 class VaultNode(BaseModel):
@@ -20,7 +20,7 @@ class VaultNode(BaseModel):
     children: list[VaultNode] = []
 
 
-def resolve_vault_path(manifest: Manifest) -> Path:
+def resolve_vault_path(manifest: ResolvedManifest) -> Path:
     """Return the vault workspace path or raise if unavailable."""
     project = manifest.resolve_project("vault")
     if project is None:
@@ -28,19 +28,19 @@ def resolve_vault_path(manifest: Manifest) -> Path:
     if project.resource is None:
         raise ServiceError("vault project has no resource")
 
-    path = project.resource._resolved_workspace_path
+    path = manifest.workspace_path(project.resource)
     if not path.is_dir():
         raise ServiceError(f"vault workspace path is not available: {path}")
     return path
 
 
-def list_vault_tree(manifest: Manifest) -> list[VaultNode]:
+def list_vault_tree(manifest: ResolvedManifest) -> list[VaultNode]:
     """Return the vault's .md files as a nested tree of nodes."""
     root = resolve_vault_path(manifest)
     return _scan_directory(root, root)
 
 
-def read_vault_note(manifest: Manifest, relative_path: str) -> str:
+def read_vault_note(manifest: ResolvedManifest, relative_path: str) -> str:
     """Return the raw content of a vault note."""
     root = resolve_vault_path(manifest)
     target = (root / relative_path).resolve()

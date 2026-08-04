@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from whub.models import Manifest
+from whub.services.manifest import resolve_manifest
 
 
 def manifest_data() -> dict:
@@ -48,4 +51,4 @@ def manifest_data() -> dict:
 
 
 def manifest() -> Manifest:
-    return Manifest.model_validate(manifest_data())
+    return resolve_manifest(Manifest.model_validate(manifest_data()), Path("/tmp"))

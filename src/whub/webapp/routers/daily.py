@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, status
 from pydantic import BaseModel, Field
 
-from whub.models import load_manifest
+from whub.services.manifest import load_manifest
 from whub.services.daily import append_daily_entry
 
 

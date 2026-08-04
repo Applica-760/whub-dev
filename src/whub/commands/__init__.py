@@ -4,7 +4,18 @@ from __future__ import annotations
 
 import click
 
-from whub.models import ManifestError, load_manifest
+from whub.models import ManifestError
+from whub.services.manifest import load_manifest
+
+
+def project_names(ctx, param, incomplete: str) -> list[str]:
+    """Complete project names without exposing manifest loading to adapters."""
+    del ctx, param
+    try:
+        projects = load_manifest().projects
+    except Exception:
+        return []
+    return [project.name for project in projects if project.name.startswith(incomplete)]
 
 
 def get_manifest(ctx: click.Context):

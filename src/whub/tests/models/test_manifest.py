@@ -32,12 +32,32 @@ from whub.models import (
     ManifestError,
     RemoteResource,
     SymlinkResource,
-    load_manifest,
 )
+from whub.services.manifest import load_manifest, resolve_manifest
 from whub.tests.helpers import manifest_data
 
 
 class TestManifestSpec:
+    def test_schema_is_pure_and_resolution_uses_explicit_workspace_root(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        with patch(
+            "whub.core.context.current_context",
+            side_effect=AssertionError("schema must not access Context"),
+        ):
+            schema = Manifest.model_validate(manifest_data())
+
+        resource = schema.resolve_project("remote").resource
+        assert isinstance(resource, RemoteResource)
+        assert not hasattr(resource, "_resolved_host")
+        assert not hasattr(resource, "_resolved_workspace_path")
+
+        resolved = resolve_manifest(schema, tmp_path)
+        remote = resolved.resolve_project("remote").resource
+        assert resolved.workspace_path(remote) == tmp_path / "projects/remote"
+        assert resolved.remote_path(remote) == "/srv/remote"
+
     def test_project_without_resource_is_valid(self) -> None:
         # ケース1
         manifest = Manifest.model_validate(manifest_data())
@@ -94,11 +114,12 @@ class TestManifestSpec:
 
         manifest = Manifest.model_validate(data)
         assert manifest.hosts["home"].mount_root == "/srv/remote"
+        resolved = resolve_manifest(manifest, Path("/workspace"))
         # mount_rootの変更だけで全remote resourceの絶対pathが追随する
-        assert manifest.resolve_project("remote").resource.remote_path == (
+        assert resolved.remote_path(resolved.resolve_project("remote").resource) == (
             "/srv/remote/remote"
         )
-        assert manifest.resolve_project("nested").resource.remote_path == (
+        assert resolved.remote_path(resolved.resolve_project("nested").resource) == (
             "/srv/remote/remote/nested"
         )
 
@@ -165,7 +186,7 @@ class TestManifestSpec:
         with pytest.raises(ValidationError):
             Manifest.model_validate(data)
 
-    def test_validation_sets_resolved_resource_attributes(self) -> None:
+    def test_resolution_sets_resolved_resource_attributes(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             # ケース7
             context_dir = Path(root) / "context"
@@ -173,15 +194,13 @@ class TestManifestSpec:
             context_dir.joinpath("config.toml").write_text(
                 f'workspace_root = "{root}"\n'
             )
-            context = WhubContext(context_dir)
-            with patch("whub.models.manifest.current_context", return_value=context):
-                manifest = Manifest.model_validate(manifest_data())
+            manifest = resolve_manifest(Manifest.model_validate(manifest_data()), Path(root))
 
         local = manifest.resolve_project("local").resource
         remote = manifest.resolve_project("remote").resource
-        assert local._resolved_workspace_path == Path(root) / "projects/local"
-        assert remote._resolved_workspace_path == Path(root) / "projects/remote"
-        assert remote._resolved_host.hostname == "home.example.com"
+        assert manifest.workspace_path(local) == Path(root) / "projects/local"
+        assert manifest.workspace_path(remote) == Path(root) / "projects/remote"
+        assert manifest.remote_host(remote).hostname == "home.example.com"
 
     def test_load_manifest_reports_user_facing_errors(self) -> None:
         with tempfile.TemporaryDirectory() as root:
@@ -192,15 +211,13 @@ class TestManifestSpec:
             )
             context = WhubContext(context_dir)
             # ケース8
-            with patch("whub.models.manifest.current_context", return_value=context):
-                with pytest.raises(ManifestError, match="manifest.yaml not found"):
-                    load_manifest(context)
+            with pytest.raises(ManifestError, match="manifest.yaml not found"):
+                load_manifest(context)
 
             # ケース8
             context.manifest_path.write_text("version: [")
-            with patch("whub.models.manifest.current_context", return_value=context):
-                with pytest.raises(ManifestError, match="invalid manifest YAML"):
-                    load_manifest(context)
+            with pytest.raises(ManifestError, match="invalid manifest YAML"):
+                load_manifest(context)
 
             # ケース8
             context.manifest_path.write_text(
@@ -212,6 +229,5 @@ class TestManifestSpec:
                 "    workspace_path: /absolute\n"
                 "    source: relative\n"
             )
-            with patch("whub.models.manifest.current_context", return_value=context):
-                with pytest.raises(ManifestError, match="invalid manifest"):
-                    load_manifest(context)
+            with pytest.raises(ManifestError, match="invalid manifest"):
+                load_manifest(context)

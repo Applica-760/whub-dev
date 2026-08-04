@@ -49,13 +49,14 @@ from whub.services.remote.mount import (
     unmount_targets,
 )
 from whub.models import Manifest
+from whub.services.manifest import resolve_manifest
 from whub.tests.helpers import manifest, manifest_data
 
 
-def _manifest_without_auto_mount() -> Manifest:
+def _manifest_without_auto_mount():
     data = manifest_data()
     data["hosts"]["home"]["auto_mount"] = False
-    return Manifest.model_validate(data)
+    return resolve_manifest(Manifest.model_validate(data), Path("/tmp"))
 
 
 @pytest.fixture(autouse=True)
@@ -76,7 +77,9 @@ def _statuses(results) -> list[str]:
 
 def _relocate(m, name: str, root: Path) -> None:
     """Point one project's workspace path at an isolated temporary location."""
-    m.resolve_project(name).resource._resolved_workspace_path = root / name
+    resource = m.resolve_project(name).resource
+    resource.workspace_path = str(root / name)
+    resource._resolved_workspace_path = root / name
 
 
 class TestHostIdentifiers:
@@ -175,7 +178,7 @@ class TestMountSpec:
             ),
             patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
         ):
-            status = _mount_host("home", [(project, resource)])
+            status = _mount_host(m, "home", [(project, resource)])
 
         assert status == "skip"
         assert resource._resolved_workspace_path.readlink() == mountpoint / "remote"
@@ -195,7 +198,7 @@ class TestMountSpec:
             ),
             patch("whub.services.remote.mount.host_mountpoint", return_value=mountpoint),
         ):
-            status = _mount_host("home", [(project, resource)])
+            status = _mount_host(m, "home", [(project, resource)])
 
         assert status.startswith("FAIL: workspace path is not a symlink")
         assert resource._resolved_workspace_path.is_dir()
@@ -395,7 +398,7 @@ class TestMountSpec:
                 return_value=CompletedProcess([], 1, "", "failed"),
             ),
         ):
-            status = _mount_host("home", [(project, project.resource)])
+            status = _mount_host(m, "home", [(project, project.resource)])
 
         assert status == "FAIL: failed"
         assert not mountpoint.exists()
@@ -418,7 +421,7 @@ class TestMountSpec:
                 return_value=CompletedProcess([], 1, "", "failed"),
             ),
         ):
-            status = _mount_host("home", [(project, project.resource)])
+            status = _mount_host(m, "home", [(project, project.resource)])
 
         assert status == "FAIL: failed"
         assert mountpoint.exists()
@@ -449,13 +452,13 @@ class TestMountSpec:
             ) as cleanup,
         ):
             targets = [(project, project.resource)]
-            status = _mount_host("home", targets)
+            status = _mount_host(m, "home", targets)
 
         assert status == (
             "FAIL: mount unreadable: Operation not permitted; cleanup=unmount; "
             "recovery: allow Network Volumes access, then remount"
         )
-        cleanup.assert_called_once_with("home", targets, force=True)
+        cleanup.assert_called_once_with(m, "home", targets, force=True)
 
     def test_skips_when_mounted_but_slow(self, tmp_path, _sshfs_installed):
         # ケース18
@@ -500,7 +503,7 @@ class TestMountSpec:
             ),
             patch("whub.services.remote.mount._unmount_host") as cleanup,
         ):
-            status = _mount_host("home", [(project, project.resource)])
+            status = _mount_host(m, "home", [(project, project.resource)])
 
         assert status == "mount"
         cleanup.assert_not_called()
@@ -523,7 +526,7 @@ class TestMountSpec:
             ),
             patch("whub.services.remote.mount.write_mount_log") as write_log,
         ):
-            _mount_host("home", [(project, project.resource)])
+            _mount_host(m, "home", [(project, project.resource)])
 
         sshfs_record = next(
             call.kwargs

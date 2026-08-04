@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from whub.core.context import current_context
-from whub.models import load_manifest
+from whub.services.manifest import load_manifest
 from whub.services.worktree.diff import (
     ChangedFile,
     WorktreeDiff,

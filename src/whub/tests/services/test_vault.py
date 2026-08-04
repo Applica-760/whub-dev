@@ -16,6 +16,7 @@ import pytest
 
 from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
+from whub.services.manifest import resolve_manifest
 from whub.services.vault import list_vault_tree, read_vault_note
 from whub.tests.helpers import manifest, manifest_data
 
@@ -34,13 +35,13 @@ def _vault_manifest(tmp_path: Path) -> tuple[Manifest, Path]:
             },
         }
     )
-    result = Manifest.model_validate(data)
+    result = resolve_manifest(Manifest.model_validate(data), tmp_path)
     project = result.resolve_project("vault")
     assert project is not None
     assert project.resource is not None
     workspace_path = tmp_path / "vault"
     workspace_path.symlink_to(source, target_is_directory=True)
-    project.resource._resolved_workspace_path = workspace_path
+    project.resource.workspace_path = str(workspace_path)
     return result, workspace_path
 
 

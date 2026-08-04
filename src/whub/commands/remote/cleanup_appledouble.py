@@ -14,7 +14,8 @@ from whub.core.target import (
     require_resource_type,
     resolve_project_resource,
 )
-from whub.models import RemoteResource, project_names
+from whub.commands import project_names
+from whub.models import RemoteResource
 from whub.utils.apple_double import APPLE_DOUBLE_MAGIC, APPLE_DOUBLE_PREFIX
 
 
@@ -33,7 +34,7 @@ def cleanup_appledouble(ctx: click.Context, apply: bool, project: str) -> None:
         raise click.ClickException(str(error)) from error
 
     remote_command = build_remote_exec_command(
-        resource.remote_path,
+        manifest.remote_path(resource),
         (
             "python3",
             "-c",
@@ -43,5 +44,7 @@ def cleanup_appledouble(ctx: click.Context, apply: bool, project: str) -> None:
             APPLE_DOUBLE_MAGIC.hex(),
         ),
     )
-    result = subprocess.run(build_ssh_command(resource._resolved_host, remote_command))
+    result = subprocess.run(
+        build_ssh_command(manifest.remote_host(resource), remote_command)
+    )
     ctx.exit(result.returncode)

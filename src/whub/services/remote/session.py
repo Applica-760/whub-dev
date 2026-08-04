@@ -18,15 +18,16 @@ from whub.core.target import (
     require_resource_type,
     resolve_project_resource,
 )
-from whub.models import Manifest, RemoteResource, SessionDescriptor
+from whub.models import RemoteResource, SessionDescriptor
 from whub.services.errors import ServiceError
+from whub.services.manifest import ResolvedManifest
 from whub.utils.process import format_process_error
 
 
 _JST = ZoneInfo("Asia/Tokyo")
 
 
-def _resource(manifest: Manifest, project: str) -> RemoteResource:
+def _resource(manifest: ResolvedManifest, project: str) -> RemoteResource:
     try:
         return require_resource_type(
             resolve_project_resource(manifest, project), RemoteResource, project
@@ -46,12 +47,18 @@ def _operation_script(name: str) -> str:
 
 
 def _python(
-    resource: RemoteResource, script: str, *args: str, input: str | None = None
+    manifest: ResolvedManifest,
+    resource: RemoteResource,
+    script: str,
+    *args: str,
+    input: str | None = None,
 ) -> str:
-    command = shlex.join(("python3", "-c", script, resource.remote_path, *args))
+    command = shlex.join(
+        ("python3", "-c", script, manifest.remote_path(resource), *args)
+    )
     try:
         result = run_ssh_command(
-            resource._resolved_host, command, input=input, check=True
+            manifest.remote_host(resource), command, input=input, check=True
         )
     except (OSError, subprocess.SubprocessError) as error:
         raise ServiceError(
@@ -60,7 +67,9 @@ def _python(
     return result.stdout
 
 
-def reserve_session(manifest: Manifest, project: str, task: str | None = None) -> str:
+def reserve_session(
+    manifest: ResolvedManifest, project: str, task: str | None = None
+) -> str:
     resource = _resource(manifest, project)
     if task and task.isdigit():
         task = f"TASK-{int(task):03}"
@@ -75,25 +84,31 @@ def reserve_session(manifest: Manifest, project: str, task: str | None = None) -
         .read_text(),
     }
     payload = json.dumps({"project": project, "task": task, "assets": assets})
-    return _python(resource, _operation_script("reserve.py"), input=payload).strip()
+    return _python(manifest, resource, _operation_script("reserve.py"), input=payload).strip()
 
 
-def list_sessions(manifest: Manifest, project: str) -> list[SessionDescriptor]:
+def list_sessions(
+    manifest: ResolvedManifest, project: str
+) -> list[SessionDescriptor]:
     resource = _resource(manifest, project)
     try:
         return [
             SessionDescriptor.model_validate(item)
-            for item in json.loads(_python(resource, _operation_script("list.py")))
+            for item in json.loads(_python(manifest, resource, _operation_script("list.py")))
         ]
     except (json.JSONDecodeError, ValidationError) as error:
         raise ServiceError(f"invalid remote session descriptor: {error}") from error
 
 
-def get_session(manifest: Manifest, project: str, run_id: str) -> SessionDescriptor:
+def get_session(
+    manifest: ResolvedManifest, project: str, run_id: str
+) -> SessionDescriptor:
     resource = _resource(manifest, project)
     run_id = _validate_run_id(run_id)
     try:
-        items = json.loads(_python(resource, _operation_script("list.py"), run_id))
+        items = json.loads(
+            _python(manifest, resource, _operation_script("list.py"), run_id)
+        )
         if not items:
             raise ServiceError(f"unknown run: {run_id}")
         return SessionDescriptor.model_validate(items[0])
@@ -101,8 +116,9 @@ def get_session(manifest: Manifest, project: str, run_id: str) -> SessionDescrip
         raise ServiceError(f"invalid remote session descriptor: {error}") from error
 
 
-def clean_session(manifest: Manifest, project: str, run_id: str) -> None:
+def clean_session(manifest: ResolvedManifest, project: str, run_id: str) -> None:
     _python(
+        manifest,
         _resource(manifest, project),
         _operation_script("clean.py"),
         _validate_run_id(run_id),
@@ -110,7 +126,7 @@ def clean_session(manifest: Manifest, project: str, run_id: str) -> None:
 
 
 def write_session_handoff(
-    manifest: Manifest,
+    manifest: ResolvedManifest,
     project: str,
     run_id: str,
     purpose: str,
@@ -132,11 +148,11 @@ def write_session_handoff(
             "timestamp": datetime.now(_JST).strftime("%Y-%m-%d %H:%M:%S JST"),
         }
     )
-    _python(resource, _operation_script("handoff.py"), run_id, input=payload)
+    _python(manifest, resource, _operation_script("handoff.py"), run_id, input=payload)
 
 
 def read_session_logs(
-    manifest: Manifest, project: str, run_id: str, pane: str | None = None
+    manifest: ResolvedManifest, project: str, run_id: str, pane: str | None = None
 ) -> str:
     resource = _resource(manifest, project)
     descriptor = get_session(manifest, project, run_id)
@@ -152,16 +168,16 @@ def read_session_logs(
     output = []
     for item in selected:
         remote = (
-            f"cd {shlex.quote(resource.remote_path)} && "
+            f"cd {shlex.quote(manifest.remote_path(resource))} && "
             f"cat {shlex.quote(item.transcript)}"
         )
-        result = run_ssh_command(resource._resolved_host, remote)
+        result = run_ssh_command(manifest.remote_host(resource), remote)
         output.append(f"== {item.window_name} {item.pane_id} ==\n{result.stdout}")
     return "".join(output)
 
 
 def build_follow_logs_command(
-    manifest: Manifest, project: str, run_id: str, pane: str | None = None
+    manifest: ResolvedManifest, project: str, run_id: str, pane: str | None = None
 ) -> list[str]:
     resource = _resource(manifest, project)
     descriptor = get_session(manifest, project, run_id)
@@ -173,7 +189,7 @@ def build_follow_logs_command(
     if len(candidates) != 1:
         raise ServiceError("logs --follow requires one unambiguous pane")
     remote = (
-        f"cd {shlex.quote(resource.remote_path)} && exec tail -n 20 -F "
+        f"cd {shlex.quote(manifest.remote_path(resource))} && exec tail -n 20 -F "
         f"{shlex.quote(candidates[0].transcript)}"
     )
-    return build_ssh_command(resource._resolved_host, remote)
+    return build_ssh_command(manifest.remote_host(resource), remote)

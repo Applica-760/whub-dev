@@ -16,8 +16,9 @@ from whub.core.context import current_context
 from whub.core.health import ResourceHealth, inspect_mountpoint
 from whub.core.mount_log import safe_option_names, write_mount_log
 from whub.core.remote import build_sshfs_command
-from whub.models import Manifest, Project, RemoteResource
+from whub.models import Project, RemoteResource
 from whub.services.errors import ServiceError
+from whub.services.manifest import ResolvedManifest
 
 _OK_STATUSES = ("mount", "unmount", "skip")
 
@@ -55,7 +56,7 @@ def inspect_host_mount(host_name: str) -> ResourceHealth:
 
 
 def select_targets(
-    manifest: Manifest,
+    manifest: ResolvedManifest,
     name: str | None,
     *,
     auto_only: bool = False,
@@ -72,7 +73,7 @@ def select_targets(
         (project, project.resource)
         for project in manifest.projects
         if isinstance(project.resource, RemoteResource)
-        and (not auto_only or project.resource._resolved_host.auto_mount)
+        and (not auto_only or manifest.remote_host(project.resource).auto_mount)
     ]
 
 
@@ -105,11 +106,12 @@ def _links_to(target: Path, source: Path) -> bool:
 
 
 def _ensure_shared_links(
+    manifest: ResolvedManifest,
     targets: list[tuple[Project, RemoteResource]],
     mountpoint: Path,
 ) -> str | None:
     for _, resource in targets:
-        target = resource._resolved_workspace_path
+        target = manifest.workspace_path(resource)
         source = mountpoint / resource.path
         if target.is_symlink():
             if _links_to(target, source):
@@ -123,12 +125,13 @@ def _ensure_shared_links(
 
 
 def _remove_shared_links(
+    manifest: ResolvedManifest,
     targets: list[tuple[Project, RemoteResource]],
     mountpoint: Path,
 ) -> None:
     """Drop the workspace symlinks this mount owns, leaving no dangling links."""
     for _, resource in targets:
-        target = resource._resolved_workspace_path
+        target = manifest.workspace_path(resource)
         # mountが作ったlinkだけを消す。実体や無関係なsymlinkには触れない
         if not _links_to(target, mountpoint / resource.path):
             continue
@@ -143,10 +146,11 @@ def _remove_shared_links(
 
 
 def _mount_host(
+    manifest: ResolvedManifest,
     host_name: str,
     targets: list[tuple[Project, RemoteResource]],
 ) -> str:
-    host = targets[0][1]._resolved_host
+    host = manifest.remote_host(targets[0][1])
     mountpoint = host_mountpoint(host_name)
     health = inspect_host_mount(host_name)
     write_mount_log(
@@ -158,7 +162,7 @@ def _mount_host(
         recovery=health.recovery,
     )
     if health.state in ("ok", "slow"):
-        link_error = _ensure_shared_links(targets, mountpoint)
+        link_error = _ensure_shared_links(manifest, targets, mountpoint)
         return link_error or "skip"
     if health.state == "stale":
         return f"STALE: {health.detail}; recovery: {health.recovery}"
@@ -196,7 +200,7 @@ def _mount_host(
         health = inspect_host_mount(host_name)
         # slow=健全だが高遅延。unmountすると再mountフラッピングになるため成功扱い
         if health.state in ("ok", "slow"):
-            link_error = _ensure_shared_links(targets, mountpoint)
+            link_error = _ensure_shared_links(manifest, targets, mountpoint)
             if link_error:
                 return link_error
             write_mount_log(
@@ -209,7 +213,7 @@ def _mount_host(
             )
             return "mount"
         if health.state == "unreadable":
-            cleanup = _unmount_host(host_name, targets, force=True)
+            cleanup = _unmount_host(manifest, host_name, targets, force=True)
             write_mount_log(
                 project=host_name,
                 mountpoint=mountpoint,
@@ -239,6 +243,7 @@ def _mount_host(
 
 
 def _unmount_host(
+    manifest: ResolvedManifest,
     host_name: str,
     targets: list[tuple[Project, RemoteResource]],
     force: bool,
@@ -246,7 +251,7 @@ def _unmount_host(
     mountpoint = host_mountpoint(host_name)
     health = inspect_host_mount(host_name)
     if health.state == "unmounted":
-        _remove_shared_links(targets, mountpoint)
+        _remove_shared_links(manifest, targets, mountpoint)
         return "skip"
     if health.state == "stale" and not force:
         return "STALE: retry with --force"
@@ -265,13 +270,13 @@ def _unmount_host(
         return f"FAIL: {result.stderr.strip()}"
     if inspect_host_mount(host_name).state != "unmounted":
         return "FAIL: still mounted"
-    _remove_shared_links(targets, mountpoint)
+    _remove_shared_links(manifest, targets, mountpoint)
     _remove_if_empty(mountpoint)
     return "unmount"
 
 
 def mount_targets(
-    manifest: Manifest,
+    manifest: ResolvedManifest,
     name: str | None,
     *,
     include_all: bool = False,
@@ -281,15 +286,19 @@ def mount_targets(
         raise ServiceError("sshfs not found (brew install fuse-t sshfs-fuse-t)")
     targets = select_targets(manifest, name, auto_only=not include_all)
     return [
-        MountResult(host_name, _mount_host(host_name, host_targets))
+        MountResult(host_name, _mount_host(manifest, host_name, host_targets))
         for host_name, host_targets in _group_by_host(targets).items()
     ]
 
 
-def unmount_targets(manifest: Manifest, *, force: bool = False) -> list[MountResult]:
+def unmount_targets(
+    manifest: ResolvedManifest, *, force: bool = False
+) -> list[MountResult]:
     """Unmount every host serving a remote resource."""
     by_host = _group_by_host(select_targets(manifest, None))
     return [
-        MountResult(host_name, _unmount_host(host_name, by_host[host_name], force))
+        MountResult(
+            host_name, _unmount_host(manifest, host_name, by_host[host_name], force)
+        )
         for host_name in sorted(by_host)
     ]

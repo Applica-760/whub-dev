@@ -8,7 +8,7 @@ import click
 
 from whub.commands import get_manifest
 from whub.core.context import current_context
-from whub.models import project_names
+from whub.commands import project_names
 from whub.services.errors import ServiceError
 from whub.services.worktree import (
     create_project_pull_request,

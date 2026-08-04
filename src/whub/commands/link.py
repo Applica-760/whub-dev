@@ -65,9 +65,9 @@ def link(ctx: click.Context) -> None:
         if not isinstance(r, SymlinkResource):
             continue
         legacy_link_paths.add(r.workspace_path.split("/")[0])
-        target = r._resolved_workspace_path
+        target = m.workspace_path(r)
         source = Path(r.source).expanduser()
-        health = inspect_symlink(r)
+        health = inspect_symlink(r, target)
 
         if health.state == "ok":
             click.echo(f"  skip  {project.name}")
@@ -84,7 +84,7 @@ def link(ctx: click.Context) -> None:
                 click.echo(f"  WARN  {project.name}: link failed: {error}")
                 warnings += 1
                 continue
-            result = inspect_symlink(r)
+            result = inspect_symlink(r, target)
             if result.state == "ok":
                 click.echo(f"  link  {project.name}: {target} -> {source}")
                 created += 1
