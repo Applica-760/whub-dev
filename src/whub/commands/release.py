@@ -7,7 +7,9 @@ from pathlib import Path
 import click
 
 from whub.services.errors import ServiceError
-from whub.services.release import apply_release, build_release, verify_release
+from whub.services.release.apply import apply_release
+from whub.services.release.build import build_release
+from whub.services.release.verify import verify_release
 
 
 @click.group()
