@@ -40,6 +40,12 @@ def resolve_project_task_history_root(manifest: Manifest, project: str) -> Path 
     return root if root.exists() else None
 
 
+def resolve_project_task_archive_root(manifest: Manifest, project: str) -> Path | None:
+    """Resolve PROJECT's terminal Task archive directory."""
+    root = resolve_project_content_root(manifest, project) / "docs/tasks/done"
+    return root if root.exists() else None
+
+
 def project_task_root(manifest: Manifest, project: str) -> Path | None:
     """Return PROJECT's active Hub Task directory, when it exists."""
     task_root = resolve_project_task_root(manifest, project)
@@ -66,12 +72,13 @@ def list_project_tasks(
     manifest: Manifest,
     project: str,
 ) -> tuple[TaskSummary, ...]:
-    """Return Task summaries from one Project, or an empty result when absent."""
+    """Return active and archived Task summaries from one Project."""
     task_root = project_task_root(manifest, project)
-    if task_root is None:
-        return ()
+    archive_root = resolve_project_task_archive_root(manifest, project)
     try:
-        return list_tasks(task_root)
+        active_tasks = list_tasks(task_root) if task_root is not None else ()
+        archived_tasks = list_tasks(archive_root) if archive_root is not None else ()
+        return (*active_tasks, *archived_tasks)
     except WflowError as error:
         raise ServiceError(str(error)) from error
 
@@ -103,23 +110,33 @@ def load_project_task(
     project: str,
     task_id: str,
 ) -> TaskDocument:
-    """Load and validate one Task within one Project."""
-    task_root = project_task_root(manifest, project)
-    if task_root is None:
-        raise NotFoundError(f"task not found: {project}/{task_id}")
-    try:
-        path = resolve_task_reference(task_id, task_root)
-        document = load_task(path)
-        diagnostics = validate_task(document, load_task_workflow())
-    except WflowError as error:
-        if str(error).startswith("task ID not found:"):
-            raise NotFoundError(f"task not found: {project}/{task_id}") from error
-        raise ServiceError(str(error)) from error
-    if diagnostics:
-        raise ServiceError(
-            "task is invalid: " + "; ".join(item.message for item in diagnostics)
+    """Load and validate an active or archived Task within one Project."""
+    roots = (
+        root
+        for root in (
+            project_task_root(manifest, project),
+            resolve_project_task_archive_root(manifest, project),
         )
-    return document
+        if root is not None
+    )
+    for root in roots:
+        try:
+            path = resolve_task_reference(task_id, root)
+        except WflowError as error:
+            if str(error).startswith("task ID not found:"):
+                continue
+            raise ServiceError(str(error)) from error
+        try:
+            document = load_task(path)
+            diagnostics = validate_task(document, load_task_workflow())
+        except WflowError as error:
+            raise ServiceError(str(error)) from error
+        if diagnostics:
+            raise ServiceError(
+                "task is invalid: " + "; ".join(item.message for item in diagnostics)
+            )
+        return document
+    raise NotFoundError(f"task not found: {project}/{task_id}")
 
 
 def render_project_task_flow(
