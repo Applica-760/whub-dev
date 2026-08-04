@@ -1,4 +1,4 @@
-import { Box } from "@mantine/core";
+import { Box, useComputedColorScheme } from "@mantine/core";
 import { useEffect, useRef } from "react";
 import type { ElementDefinition, LayoutOptions } from "cytoscape";
 
@@ -17,6 +17,33 @@ type TaskDependencyGraphProps = {
 };
 
 const GRAPH_PADDING = 24;
+
+const GRAPH_COLOR_VARIABLES = {
+  nodeBackground: "--whub-color-task-graph-node-background",
+  nodeBorder: "--whub-color-task-graph-node-border",
+  nodeText: "--whub-color-task-graph-node-text",
+  inProgressBackground: "--whub-color-task-graph-in-progress-background",
+  inProgressBorder: "--whub-color-task-graph-in-progress-border",
+  pausedBackground: "--whub-color-task-graph-paused-background",
+  pausedBorder: "--whub-color-task-graph-paused-border",
+  completedBackground: "--whub-color-task-graph-completed-background",
+  completedBorder: "--whub-color-task-graph-completed-border",
+  cancelledBackground: "--whub-color-task-graph-cancelled-background",
+  cancelledBorder: "--whub-color-task-graph-cancelled-border",
+  cancelledText: "--whub-color-task-graph-cancelled-text",
+  edge: "--whub-color-task-graph-edge",
+  interrupt: "--whub-color-task-graph-interrupt",
+} as const;
+
+function graphColors(element: HTMLElement) {
+  const styles = getComputedStyle(element);
+  return Object.fromEntries(
+    Object.entries(GRAPH_COLOR_VARIABLES).map(([name, variable]) => [
+      name,
+      styles.getPropertyValue(variable).trim(),
+    ]),
+  ) as Record<keyof typeof GRAPH_COLOR_VARIABLES, string>;
+}
 
 export function buildTaskGraphElements(
   tasks: TaskGraphItem[],
@@ -110,6 +137,7 @@ export function TaskDependencyGraph({
   onSelectTask,
 }: TaskDependencyGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const colorScheme = useComputedColorScheme("light");
 
   useEffect(() => {
     let cancelled = false;
@@ -129,6 +157,7 @@ export function TaskDependencyGraph({
       cytoscape.use(fcose);
 
       const elements = buildTaskGraphElements(tasks);
+      const colors = graphColors(containerRef.current);
       const graph = cytoscape({
         container: containerRef.current,
         elements,
@@ -136,10 +165,10 @@ export function TaskDependencyGraph({
           {
             selector: "node",
             style: {
-              "background-color": "#f8f9fa",
-              "border-color": "#868e96",
+              "background-color": colors.nodeBackground,
+              "border-color": colors.nodeBorder,
               "border-width": 2,
-              color: "#212529",
+              color: colors.nodeText,
               "font-size": 14,
               height: "96px",
               label: "data(label)",
@@ -155,34 +184,46 @@ export function TaskDependencyGraph({
           },
           {
             selector: "node.in_progress",
-            style: { "background-color": "#e7f5ff", "border-color": "#228be6" },
+            style: {
+              "background-color": colors.inProgressBackground,
+              "border-color": colors.inProgressBorder,
+            },
           },
           {
             selector: "node.paused",
-            style: { "background-color": "#fff3bf", "border-color": "#f08c00" },
+            style: {
+              "background-color": colors.pausedBackground,
+              "border-color": colors.pausedBorder,
+            },
           },
           {
             selector: "node.draft",
-            style: { "background-color": "#f8f9fa", "border-color": "#868e96" },
+            style: {
+              "background-color": colors.nodeBackground,
+              "border-color": colors.nodeBorder,
+            },
           },
           {
             selector: "node.completed",
-            style: { "background-color": "#ebfbee", "border-color": "#40c057" },
+            style: {
+              "background-color": colors.completedBackground,
+              "border-color": colors.completedBorder,
+            },
           },
           {
             selector: "node.cancelled",
             style: {
-              "background-color": "#f1f3f5",
-              "border-color": "#adb5bd",
-              color: "#868e96",
+              "background-color": colors.cancelledBackground,
+              "border-color": colors.cancelledBorder,
+              color: colors.cancelledText,
             },
           },
           {
             selector: "edge",
             style: {
               "curve-style": "bezier",
-              "line-color": "#adb5bd",
-              "target-arrow-color": "#adb5bd",
+              "line-color": colors.edge,
+              "target-arrow-color": colors.edge,
               "target-arrow-shape": "triangle",
               width: 2,
             },
@@ -190,12 +231,12 @@ export function TaskDependencyGraph({
           {
             selector: "edge.interrupt",
             style: {
-              "line-color": "#eca035",
+              "line-color": colors.interrupt,
               "line-style": "dashed",
-              "target-arrow-color": "#eca035",
+              "target-arrow-color": colors.interrupt,
               label: "data(label)",
               "font-size": 20,
-              color: "#ff8c00",
+              color: colors.interrupt,
             },
           },
         ],
@@ -238,7 +279,7 @@ export function TaskDependencyGraph({
       cancelled = true;
       destroy?.();
     };
-  }, [onSelectTask, tasks]);
+  }, [colorScheme, onSelectTask, tasks]);
 
   return <Box h={height} ref={containerRef} w="100%" />;
 }

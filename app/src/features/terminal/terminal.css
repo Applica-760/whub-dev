@@ -132,16 +132,16 @@
 }
 
 .diff-addition {
-  background: color-mix(in srgb, var(--mantine-color-green-6) 20%, transparent);
-  color: var(--mantine-color-green-9);
+  background: var(--whub-color-diff-addition-background);
+  color: var(--whub-color-diff-addition-text);
 }
 .diff-deletion {
-  background: color-mix(in srgb, var(--mantine-color-red-6) 18%, transparent);
-  color: var(--mantine-color-red-9);
+  background: var(--whub-color-diff-deletion-background);
+  color: var(--whub-color-diff-deletion-text);
 }
 .diff-hunk {
-  background: color-mix(in srgb, var(--mantine-color-blue-5) 18%, transparent);
-  color: var(--mantine-color-blue-8);
+  background: var(--whub-color-diff-hunk-background);
+  color: var(--whub-color-diff-hunk-text);
 }
 .diff-file {
   color: var(--mantine-color-dimmed);

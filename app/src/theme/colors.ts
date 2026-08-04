@@ -61,6 +61,86 @@ const colorPairs = {
     light: palette.hover,
     dark: "var(--mantine-color-dark-5)",
   },
+  "--whub-color-task-graph-node-background": {
+    light: "#f8f9fa",
+    dark: "#25262b",
+  },
+  "--whub-color-task-graph-node-border": {
+    light: "#868e96",
+    dark: "#5c5f66",
+  },
+  "--whub-color-task-graph-node-text": {
+    light: "#212529",
+    dark: "#c1c2c5",
+  },
+  "--whub-color-task-graph-in-progress-background": {
+    light: "#e7f5ff",
+    dark: "#1864ab",
+  },
+  "--whub-color-task-graph-in-progress-border": {
+    light: "#228be6",
+    dark: "#74c0fc",
+  },
+  "--whub-color-task-graph-paused-background": {
+    light: "#fff3bf",
+    dark: "#5f3b00",
+  },
+  "--whub-color-task-graph-paused-border": {
+    light: "#f08c00",
+    dark: "#ffd43b",
+  },
+  "--whub-color-task-graph-completed-background": {
+    light: "#ebfbee",
+    dark: "#1b5e20",
+  },
+  "--whub-color-task-graph-completed-border": {
+    light: "#40c057",
+    dark: "#69db7c",
+  },
+  "--whub-color-task-graph-cancelled-background": {
+    light: "#f1f3f5",
+    dark: "#373a40",
+  },
+  "--whub-color-task-graph-cancelled-border": {
+    light: "#adb5bd",
+    dark: "#5c5f66",
+  },
+  "--whub-color-task-graph-cancelled-text": {
+    light: "#868e96",
+    dark: "#909296",
+  },
+  "--whub-color-task-graph-edge": {
+    light: "#adb5bd",
+    dark: "#5c5f66",
+  },
+  "--whub-color-task-graph-interrupt": {
+    light: "#eca035",
+    dark: "#ffd43b",
+  },
+  "--whub-color-diff-addition-background": {
+    light: "rgba(64, 192, 87, 0.2)",
+    dark: "rgba(81, 207, 102, 0.18)",
+  },
+  "--whub-color-diff-addition-text": {
+    light: "#2b8a3e",
+    dark: "#8ce99a",
+  },
+  "--whub-color-diff-deletion-background": {
+    light: "rgba(250, 82, 82, 0.18)",
+    dark: "rgba(255, 107, 107, 0.18)",
+  },
+  "--whub-color-diff-deletion-text": {
+    light: "#c92a2a",
+    dark: "#ffa8a8",
+  },
+  "--whub-color-diff-hunk-background": {
+    light: "rgba(34, 139, 230, 0.18)",
+    dark: "rgba(116, 143, 252, 0.18)",
+  },
+  "--whub-color-diff-hunk-text": {
+    light: "#1971c2",
+    dark: "#bac8ff",
+  },
 } satisfies Record<`--whub-color-${string}`, ColorPair>;
 
 function variablesFor(scheme: ColorScheme): Record<string, string> {
