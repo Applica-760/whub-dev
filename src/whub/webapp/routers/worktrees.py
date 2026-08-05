@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from whub.core.context import current_context
 from whub.services.manifest import load_manifest
-from whub.services.status import collect_status
+from whub.services.worktree import collect_worktree_status
 
 
 router = APIRouter(prefix="/api/worktrees")
@@ -27,7 +27,9 @@ class WorktreeListResponse(BaseModel):
 
 @router.get("", response_model=WorktreeListResponse)
 def get_worktrees() -> WorktreeListResponse:
-    report = collect_status(load_manifest(), current_context().workspace_root)
+    worktrees = collect_worktree_status(
+        load_manifest(), current_context().workspace_root
+    )
     return WorktreeListResponse(
         worktrees=[
             WorktreeResponse(
@@ -37,6 +39,6 @@ def get_worktrees() -> WorktreeListResponse:
                 workspace_path=item.workspace_path,
                 diagnostics=list(item.diagnostics),
             )
-            for item in report.worktrees
+            for item in worktrees
         ]
     )

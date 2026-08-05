@@ -30,7 +30,7 @@ from whub.models import ManifestError
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.agent.codex.attention import ApprovalAttentionStore
-from whub.models import ResourceStatus, StatusReport, WorktreeStatus
+from whub.models import ResourceStatus, WorktreeStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminals
 from whub.services.task import ProjectTasks
 from whub.services.vault import VaultNode
@@ -662,15 +662,12 @@ def test_get_resource_status_returns_service_results(client: TestClient) -> None
     mock_collect.assert_called_once_with(m)
 
 
-def test_get_worktrees_returns_status_report_entries(
+def test_get_worktrees_returns_worktree_status_entries(
     client: TestClient, tmp_path: Path
 ) -> None:
     m = manifest()
     worktree = WorktreeStatus(
         "local", "TASK-075", "tasks/075", "projects/worktrees/local-075"
-    )
-    report = StatusReport(
-        (ResourceStatus("local", "ok", "symlink", worktrees=(worktree,)),)
     )
     with (
         patch("whub.webapp.routers.worktrees.load_manifest", return_value=m),
@@ -679,7 +676,8 @@ def test_get_worktrees_returns_status_report_entries(
             return_value=type("Context", (), {"workspace_root": tmp_path})(),
         ),
         patch(
-            "whub.webapp.routers.worktrees.collect_status", return_value=report
+            "whub.webapp.routers.worktrees.collect_worktree_status",
+            return_value=[worktree],
         ) as mock_collect,
     ):
         response = client.get("/api/worktrees")
