@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useApprovalAttention } from "./useApprovalAttention";
@@ -10,6 +10,7 @@ class FakeWebSocket {
   static connections: FakeWebSocket[] = [];
 
   onclose: (() => void) | null = null;
+  onopen: (() => void) | null = null;
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
 
   constructor() {
@@ -17,6 +18,10 @@ class FakeWebSocket {
   }
 
   close() {}
+
+  open() {
+    this.onopen?.();
+  }
 
   emit(message: object) {
     this.onmessage?.(
@@ -75,9 +80,34 @@ beforeEach(() => {
   );
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("useApprovalAttention", () => {
+  it("WebSocket接続時にRESTで通知状態を再同期する", async () => {
+    const { result } = renderHook(() => useApprovalAttention());
+
+    await waitFor(() => expect(result.current.attention).toEqual([]));
+    attention = [
+      {
+        target: "worktree",
+        event: "response_completed",
+        project: "whub-dev",
+        task_id: "TASK-116",
+        operator_id: null,
+        tool_name: null,
+        requested_at: "2026-08-05T00:00:00+00:00",
+        acknowledged: false,
+      },
+    ];
+
+    act(() => FakeWebSocket.connections[0]?.open());
+
+    await waitFor(() => expect(result.current.attention).toEqual(attention));
+  });
+
   it("通常の最初の操作で音声を起動し、WebSocketイベントで直ちに通知音を鳴らす", async () => {
     const { result } = renderHook(() => useApprovalAttention());
 
@@ -106,9 +136,9 @@ describe("useApprovalAttention", () => {
     );
 
     await waitFor(() => expect(result.current.attention).toEqual(attention));
-    expect(
-      FakeAudioContext.contexts[0]?.oscillatorStart,
-    ).toHaveBeenCalledOnce();
+    await waitFor(() =>
+      expect(FakeAudioContext.contexts[0]?.oscillatorStart).toHaveBeenCalledOnce(),
+    );
   });
 
   it("通知音が拒否されても次の通常操作で再試行する", async () => {

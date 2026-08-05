@@ -89,6 +89,9 @@ export function useApprovalAttention() {
       socket = new WebSocket(
         `${protocol}//${window.location.host}/api/agent-attention/stream`,
       );
+      socket.onopen = () => {
+        void refresh();
+      };
       socket.onmessage = (message) => {
         try {
           const payload = JSON.parse(message.data) as {

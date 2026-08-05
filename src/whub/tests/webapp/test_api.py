@@ -86,6 +86,40 @@ def test_attention_stream_pushes_updates_and_releases_disconnected_clients() -> 
     asyncio.run(exercise())
 
 
+def test_attention_publish_tolerates_subscriber_disconnect_during_send() -> None:
+    class WebSocket:
+        def __init__(self) -> None:
+            self.sent: list[dict[str, str]] = []
+
+        async def send_json(self, message: dict[str, str]) -> None:
+            sending.append(self)
+            started.set()
+            await release.wait()
+            self.sent.append(message)
+
+    async def exercise() -> None:
+        first = WebSocket()
+        second = WebSocket()
+        subscribers = {first, second}
+        with patch("whub.webapp.routers.agent_attention._subscribers", subscribers):
+            publishing = asyncio.create_task(agent_attention._publish())
+            await started.wait()
+            disconnected = next(
+                subscriber for subscriber in subscribers if subscriber is not sending[0]
+            )
+            subscribers.discard(disconnected)
+            release.set()
+            await publishing
+
+        assert first.sent == [{"type": "attention_updated"}]
+        assert second.sent == [{"type": "attention_updated"}]
+
+    started = asyncio.Event()
+    release = asyncio.Event()
+    sending: list[WebSocket] = []
+    asyncio.run(exercise())
+
+
 def _todo(
     todo_id: int,
     *,

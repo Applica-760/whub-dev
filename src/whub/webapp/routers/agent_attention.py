@@ -85,7 +85,7 @@ async def _publish(event: str | None = None) -> None:
     if event is not None:
         message["event"] = event
     disconnected: list[WebSocket] = []
-    for subscriber in _subscribers:
+    for subscriber in tuple(_subscribers):
         try:
             await subscriber.send_json(message)
         except (RuntimeError, WebSocketDisconnect):
