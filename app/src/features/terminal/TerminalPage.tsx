@@ -46,13 +46,8 @@ export function TerminalPage({
   collapsed = { left: false, right: false },
 }: TerminalPageProps) {
   const { error, loading, worktrees } = useWorktrees();
-  const {
-    acknowledgeOperator,
-    acknowledgeWorktree,
-    attention,
-    enableSound,
-    soundEnabled,
-  } = useApprovalAttention();
+  const { acknowledgeOperator, acknowledgeWorktree, attention } =
+    useApprovalAttention();
   const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
   const [operators, setOperators] = useState<OperatorTerminal[]>([]);
@@ -281,20 +276,7 @@ export function TerminalPage({
           className="terminal-explorer"
           data-collapsed={collapsed.left || undefined}
         >
-          <WidgetFrame
-            action={
-              !soundEnabled ? (
-                <Button
-                  onClick={() => void enableSound()}
-                  size="compact-xs"
-                  variant="subtle"
-                >
-                  通知音を有効化
-                </Button>
-              ) : undefined
-            }
-            title={<Text fw={600}>Explorer</Text>}
-          >
+          <WidgetFrame title={<Text fw={600}>Explorer</Text>}>
             <Group justify="space-between" m="md">
               <Text fw={500}>Operations</Text>
               <Button

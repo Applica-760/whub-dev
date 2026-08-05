@@ -78,11 +78,13 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("useApprovalAttention", () => {
-  it("WebSocketイベントで直ちに同期し、有効化済みなら通知音を鳴らす", async () => {
+  it("通常の最初の操作で音声を起動し、WebSocketイベントで直ちに通知音を鳴らす", async () => {
     const { result } = renderHook(() => useApprovalAttention());
 
-    await act(async () => result.current.enableSound());
-    expect(result.current.soundEnabled).toBe(true);
+    act(() => window.dispatchEvent(new Event("pointerdown")));
+    await waitFor(() =>
+      expect(FakeAudioContext.contexts[0]?.state).toBe("running"),
+    );
 
     attention = [
       {
@@ -109,12 +111,17 @@ describe("useApprovalAttention", () => {
     ).toHaveBeenCalledOnce();
   });
 
-  it("通知音が拒否された場合は有効状態にしない", async () => {
+  it("通知音が拒否されても次の通常操作で再試行する", async () => {
     FakeAudioContext.rejectResume = true;
-    const { result } = renderHook(() => useApprovalAttention());
+    renderHook(() => useApprovalAttention());
 
-    await act(async () => result.current.enableSound());
+    act(() => window.dispatchEvent(new Event("pointerdown")));
+    await waitFor(() => expect(FakeAudioContext.contexts).toHaveLength(1));
+    FakeAudioContext.rejectResume = false;
+    act(() => window.dispatchEvent(new Event("keydown")));
 
-    expect(result.current.soundEnabled).toBe(false);
+    await waitFor(() =>
+      expect(FakeAudioContext.contexts[0]?.state).toBe("running"),
+    );
   });
 });

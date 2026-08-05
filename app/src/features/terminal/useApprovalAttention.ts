@@ -31,7 +31,6 @@ function setTabAttention(attention: ApprovalAttention[]) {
 
 export function useApprovalAttention() {
   const [attention, setAttention] = useState<ApprovalAttention[]>([]);
-  const [soundEnabled, setSoundEnabled] = useState(false);
   const audioContext = useRef<AudioContext | null>(null);
 
   const playSound = useCallback(() => {
@@ -48,20 +47,20 @@ export function useApprovalAttention() {
       oscillator.start();
       oscillator.stop(context.currentTime + 0.16);
     } catch {
-      setSoundEnabled(false);
+      // Browsers block audio until a user interaction; the badge remains visible.
     }
   }, []);
 
-  const enableSound = useCallback(async () => {
+  const activateSound = useCallback(async () => {
     try {
       const AudioContextConstructor = window.AudioContext;
-      if (!AudioContextConstructor) throw new Error("audio unavailable");
+      if (!AudioContextConstructor) return false;
       const context = audioContext.current ?? new AudioContextConstructor();
       audioContext.current = context;
       await context.resume();
-      setSoundEnabled(true);
+      return context.state === "running";
     } catch {
-      setSoundEnabled(false);
+      return false;
     }
   }, []);
 
@@ -115,6 +114,24 @@ export function useApprovalAttention() {
     };
   }, [refresh]);
 
+  useEffect(() => {
+    let activated = false;
+    const activate = () => {
+      void activateSound().then((running) => {
+        if (!running || activated) return;
+        activated = true;
+        window.removeEventListener("pointerdown", activate, true);
+        window.removeEventListener("keydown", activate, true);
+      });
+    };
+    window.addEventListener("pointerdown", activate, true);
+    window.addEventListener("keydown", activate, true);
+    return () => {
+      window.removeEventListener("pointerdown", activate, true);
+      window.removeEventListener("keydown", activate, true);
+    };
+  }, [activateSound]);
+
   const acknowledgeWorktree = useCallback(
     async (project: string, taskId: string) => {
       try {
@@ -161,7 +178,5 @@ export function useApprovalAttention() {
     acknowledgeOperator,
     acknowledgeWorktree,
     attention,
-    enableSound,
-    soundEnabled,
   };
 }
