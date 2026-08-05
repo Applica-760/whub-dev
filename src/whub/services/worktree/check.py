@@ -12,8 +12,8 @@ from whub.models import (
 )
 from whub.services.errors import ServiceError
 from whub.services.worktree.definition import list_worktree_definitions
-from whub.services.worktree.git import process_detail, run_git
-from whub.services.worktree.resolve import resolve_worktree_parent
+from whub.services.worktree.git import process_detail, run_worktree_git
+from whub.services.worktree.resolve import _resolve_location
 
 
 def inspect_worktrees(
@@ -34,7 +34,8 @@ def _inspect_worktree(
     if definition is None or diagnostics:
         return WorktreeInspection(record, tuple(diagnostics))
     try:
-        worktrees = _list_git_worktrees(resolve_worktree_parent(manifest, definition))
+        parent, destination, host = _resolve_location(manifest, workspace_root, definition)
+        worktrees = _list_git_worktrees(parent, host)
     except ServiceError as error:
         diagnostics.append(str(error))
         return WorktreeInspection(record, tuple(diagnostics))
@@ -42,12 +43,12 @@ def _inspect_worktree(
         (
             item
             for item in worktrees
-            if item.path == workspace_root / definition.workspace_path
+            if item.path == Path(destination)
         ),
         None,
     )
     if git_worktree is None:
-        diagnostics.append(f"git worktree is missing: {definition.workspace_path}")
+        diagnostics.append(f"git worktree is missing: {destination}")
     elif git_worktree.branch != f"refs/heads/{definition.branch}":
         found = (
             git_worktree.branch.removeprefix("refs/heads/")
@@ -61,8 +62,8 @@ def _inspect_worktree(
     return WorktreeInspection(record, tuple(diagnostics))
 
 
-def _list_git_worktrees(parent: Path) -> list[GitWorktree]:
-    result = run_git(parent, "worktree", "list", "--porcelain")
+def _list_git_worktrees(parent: Path | str, host=None) -> list[GitWorktree]:
+    result = run_worktree_git(host, parent, "worktree", "list", "--porcelain")
     if result.returncode != 0:
         raise ServiceError("git worktree list failed: " + process_detail(result))
     return _parse_git_worktrees(result.stdout)

@@ -7,25 +7,28 @@ from pathlib import Path
 
 from whub.models import Manifest
 from whub.services.errors import ServiceError
-from whub.services.worktree.github import run_gh
-from whub.services.worktree.git import process_detail, run_git
+from whub.services.worktree.github import run_worktree_gh
+from whub.services.worktree.git import process_detail, run_worktree_git
 from whub.services.worktree.lifecycle import remove_project_worktree
 from whub.services.worktree.resolve import ResolvedProjectWorktree, resolve_project_worktree
 
 
 _MERGE_METHODS = frozenset(("merge", "squash", "rebase"))
 
-
 def _require_clean_worktree(worktree: ResolvedProjectWorktree) -> None:
     """Reject a worktree whose branch does not fully represent its contents."""
-    status = run_git(
-        worktree.destination, "status", "--porcelain", "--untracked-files=all"
+    status = run_worktree_git(
+        worktree.host,
+        worktree.destination,
+        "status",
+        "--porcelain",
+        "--untracked-files=all",
     )
     if status.returncode != 0:
         raise ServiceError("git status failed: " + process_detail(status))
     if status.stdout.strip():
         raise ServiceError(
-            f"worktree has uncommitted changes: {worktree.definition.workspace_path}"
+            f"worktree has uncommitted changes: {worktree.workspace_path}"
         )
 
 
@@ -35,7 +38,8 @@ def create_project_pull_request(
     """Push a clean task branch and create or return its open GitHub PR."""
     worktree = resolve_project_worktree(manifest, workspace_root, project, task_id)
     _require_clean_worktree(worktree)
-    pushed = run_git(
+    pushed = run_worktree_git(
+        worktree.host,
         worktree.destination,
         "push",
         "--set-upstream",
@@ -44,7 +48,8 @@ def create_project_pull_request(
     )
     if pushed.returncode != 0:
         raise ServiceError("git push failed: " + process_detail(pushed))
-    existing = run_gh(
+    existing = run_worktree_gh(
+        worktree.host,
         worktree.destination,
         "pr",
         "list",
@@ -63,7 +68,8 @@ def create_project_pull_request(
         raise ServiceError("gh PR lookup failed: " + process_detail(existing))
     if existing.stdout.strip():
         return existing.stdout.strip()
-    created = run_gh(
+    created = run_worktree_gh(
+        worktree.host,
         worktree.destination,
         "pr",
         "create",
@@ -93,7 +99,8 @@ def merge_project_pull_request(
         raise ServiceError(f"invalid merge method: {method}")
     worktree = resolve_project_worktree(manifest, workspace_root, project, task_id)
     _require_clean_worktree(worktree)
-    viewed = run_gh(
+    viewed = run_worktree_gh(
+        worktree.host,
         worktree.destination,
         "pr",
         "list",
@@ -123,7 +130,8 @@ def merge_project_pull_request(
         head_oid = pull_request["headRefOid"]
     except (json.JSONDecodeError, KeyError, TypeError) as error:
         raise ServiceError("gh PR lookup returned invalid data") from error
-    merged = run_gh(
+    merged = run_worktree_gh(
+        worktree.host,
         worktree.destination,
         "pr",
         "merge",
@@ -134,7 +142,8 @@ def merge_project_pull_request(
     )
     if merged.returncode != 0:
         raise ServiceError("gh PR merge failed: " + process_detail(merged))
-    confirmed = run_gh(
+    confirmed = run_worktree_gh(
+        worktree.host,
         worktree.destination,
         "pr",
         "view",

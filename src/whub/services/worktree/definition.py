@@ -122,14 +122,10 @@ def _definition_record(workspace_root: Path, path: Path) -> WorktreeDefinitionRe
             path, None, (f"invalid worktree definition YAML: {path.name}: {error}",)
         )
 
-    number = definition.task_id.removeprefix("TASK-")
     diagnostics: list[str] = []
+    number = definition.task_id.removeprefix("TASK-")
     if path.name != f"{definition.parent_project}-{number}.yaml":
         diagnostics.append(
             f"worktree definition name does not match identity: {path.name}"
-        )
-    if not (workspace_root / definition.workspace_path).is_dir():
-        diagnostics.append(
-            f"worktree directory is missing: {definition.workspace_path}"
         )
     return WorktreeDefinitionRecord(path, definition, tuple(diagnostics))

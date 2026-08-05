@@ -16,6 +16,7 @@ def manifest_data() -> dict:
                 "port": 2222,
                 "identity_file": "~/.ssh/id_home",
                 "mount_root": "/srv",
+                "worktree_root": "worktrees",
             },
         },
         "projects": [

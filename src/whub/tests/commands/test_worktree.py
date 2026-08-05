@@ -15,7 +15,6 @@ def _definition() -> WorktreeDefinition:
         task_id="TASK-072",
         parent_project="local",
         branch="tasks/072",
-        workspace_path="projects/worktrees/local-072",
     )
 
 

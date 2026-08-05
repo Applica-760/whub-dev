@@ -19,22 +19,23 @@ class WorktreeModel(BaseModel):
 
 
 class WorktreeDefinition(WorktreeModel):
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
     task_id: TaskId
     parent_project: ProjectName
     branch: str
-    workspace_path: str
+
+    @property
+    def workspace_path(self) -> str:
+        """Return the conventional local path for display-only callers."""
+        number = self.task_id.removeprefix("TASK-")
+        return f"projects/worktrees/{self.parent_project}-{number}"
 
     @model_validator(mode="after")
     def _validate_identity(self) -> WorktreeDefinition:
         number = self.task_id.removeprefix("TASK-")
-        expected_name = f"{self.parent_project}-{number}"
         expected_branch = f"tasks/{number}"
-        expected_workspace_path = f"projects/worktrees/{expected_name}"
         if self.branch != expected_branch:
             raise ValueError(f"branch must be {expected_branch}")
-        if self.workspace_path != expected_workspace_path:
-            raise ValueError(f"workspace_path must be {expected_workspace_path}")
         return self
 
 

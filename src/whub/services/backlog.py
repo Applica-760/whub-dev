@@ -11,7 +11,6 @@ from whub.core.remote import run_ssh_command
 from whub.services.errors import ServiceError
 from whub.services.project_content import resolve_project_content_resource
 from whub.services.manifest import ResolvedManifest
-from whub.core.target import TargetItem, on_targets
 from whub.utils.managed_block import format_block, insert_before_end_marker
 from whub.utils.process import format_process_error
 
@@ -112,14 +111,11 @@ def _append_remote_backlog(
 
 def append_backlog(manifest: ResolvedManifest, project: str, memo: str) -> None:
     """Append MEMO to PROJECT's local or remote backlog."""
-    target = TargetItem(
-        resolve_project_content_resource(manifest, project), (manifest, memo)
-    )
-    on_targets(
-        [target],
-        local=_append_local_backlog,
-        remote=_append_remote_backlog,
-    )
+    resource = resolve_project_content_resource(manifest, project)
+    if isinstance(resource, SymlinkResource):
+        _append_local_backlog(resource, (manifest, memo))
+    else:
+        _append_remote_backlog(resource, (manifest, memo))
 
 
 def _read_local_backlog(resource: SymlinkResource, data: ResolvedManifest) -> str:
@@ -149,9 +145,7 @@ def _read_remote_backlog(resource: RemoteResource, manifest: ResolvedManifest) -
 
 def read_backlog(manifest: ResolvedManifest, project: str) -> str:
     """Return PROJECT's local or mounted backlog content."""
-    target = TargetItem(resolve_project_content_resource(manifest, project), manifest)
-    return on_targets(
-        [target],
-        local=_read_local_backlog,
-        remote=_read_remote_backlog,
-    )[0]
+    resource = resolve_project_content_resource(manifest, project)
+    if isinstance(resource, SymlinkResource):
+        return _read_local_backlog(resource, manifest)
+    return _read_remote_backlog(resource, manifest)

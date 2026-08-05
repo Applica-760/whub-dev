@@ -19,6 +19,7 @@ from whub.services.worktree.pull_request import (
     create_project_pull_request,
     merge_project_pull_request,
 )
+from whub.services.worktree.resolve import _resolve_location
 from whub.utils.render import render_table
 from whub.wflow.models.task import TASK_ID_PATTERN
 
@@ -120,12 +121,21 @@ def check(ctx: click.Context) -> None:
         definition = inspection.definition
         diagnostics = "; ".join(inspection.diagnostics) or "ok"
         unhealthy = unhealthy or bool(inspection.diagnostics)
+        workspace_path = "-"
+        if definition is not None:
+            try:
+                _, destination, _ = _resolve_location(
+                    get_manifest(ctx), workspace_root, definition
+                )
+                workspace_path = str(destination)
+            except ServiceError:
+                pass
         rows.append(
             (
                 definition.parent_project if definition else "-",
                 definition.task_id if definition else "-",
                 definition.branch if definition else "-",
-                definition.workspace_path if definition else "-",
+                workspace_path,
                 diagnostics,
             )
         )

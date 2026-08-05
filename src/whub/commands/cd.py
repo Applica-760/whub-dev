@@ -13,8 +13,6 @@ from whub.core.remote import build_ssh_command
 from whub.core.tmux import build_shell_command, session_name
 from whub.core.target import (
     TargetError,
-    TargetItem,
-    on_targets,
     resolve_project_resource,
 )
 
@@ -86,11 +84,10 @@ def cd(ctx: click.Context, project: str, plain: bool) -> None:
         resource = resolve_project_resource(m, project)
     except TargetError as error:
         raise click.ClickException(str(error)) from error
-    on_targets(
-        [TargetItem(resource, (m, project, plain))],
-        local=_cd_local,
-        remote=_cd_remote,
-    )
+    if isinstance(resource, SymlinkResource):
+        _cd_local(resource, (m, project, plain))
+    else:
+        _cd_remote(resource, (m, project, plain))
 
 
 @click.command("shell-init")
