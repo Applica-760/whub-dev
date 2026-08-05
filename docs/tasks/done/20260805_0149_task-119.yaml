@@ -1,0 +1,67 @@
+schema_version: 1
+task:
+  id: TASK-119
+  state: completed
+  title: Terminalのworktree一覧を段階描画できるか調査する
+  objective: Terminal Pageでworktree一覧の初期表示が遅延する原因を特定し、取得済み項目から段階的に描画する方法で待ち時間を削減できるか判断する
+  approach:
+  - 現行の一覧APIと状態収集の同期境界を計測して遅延要因を分離し、軽量一覧先行取得・診断後続取得・ストリーミングの実現性と影響を比較する。このTaskは調査と採用案の決定までとし、実装は含めない。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 遅延要因を特定する
+    acceptance: []
+    steps:
+    - description: 現行の/API worktrees取得を実測し、全Resourceの同期状態収集、remote hostごとのSSH probe、local
+        git status、登録worktreeごとのgit worktree listが完了までレスポンスを返さないという現時点の原因候補を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: '2026-08-05実測: collect_worktree_status は0.000秒、collect_status は0.664秒、collect_resource_status
+          は0.980秒。/api/worktrees は一覧だけを返すが collect_status 経由で全Resourceのlocal git status・host単位SSH
+          probe・登録worktreeのgit worktree listを同期実行する。登録worktreeなしでも前二者を待つため、全Resource状態収集が直接の遅延要因。'
+      deleted: false
+    deleted: false
+  - title: 段階描画の選択肢を評価する
+    acceptance: []
+    steps:
+    - description: 一覧先行取得、診断の後続取得、SSE等の逐次配信を、既存の状態整合性・失敗表示・実装複雑性の観点で比較する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decision: 採用候補は /api/worktrees から collect_status を外し、collect_worktree_status
+          を直接利用する最小分離。既存のworktree diagnosticsとレスポンス型を維持し、Resource状態は既存 /api/resources/status
+          の責務とする。診断の後続取得はworktree診断が新たな実測上のボトルネックになった場合のみ再検討し、SSEは単発読取APIに対し過剰なため見送る。
+      deleted: false
+    deleted: false
+  - title: 採用案を結論化する
+    acceptance: []
+    steps:
+    - description: 採用または見送りの判断、必要なAPI/UI境界、期待する表示改善、後続実装Taskの受け入れ条件を記録する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        conclusion: '/api/worktrees は collect_worktree_status を直接呼ぶ実装を後続Taskで採用する。API/UI境界は、worktree一覧・整合診断を
+          /api/worktrees、全Resourceのmount・SSH・git・tmux状態を /api/resources/status に固定する。期待表示改善は、Resource状態収集の0.664〜0.980秒の待機を一覧ロードから除外すること。後続Taskの受け入れ条件:
+          (1) /api/worktrees のJSON/OpenAPI型とdiagnostics内容を維持、(2) handlerがcollect_status/collect_resource_statusを呼ばないことを単体テストで保証、(3)
+          登録なし・正常/不正診断の既存回帰を通す、(4) /api/resources/status の挙動を変更しない、(5) API・関連frontendテストおよび型検査を成功させる。'
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: 現行 /api/worktrees の待機原因を実測・評価し、Resource状態収集を分離して collect_worktree_status
+    を直接利用する後続実装方針、API/UI境界、受け入れ条件を確定した。
