@@ -26,9 +26,7 @@ def _task_environment(tmp_path: Path) -> tuple[Path, Path, WhubContext, Manifest
     project_root.mkdir()
     context_dir = tmp_path / "task-context"
     context_dir.mkdir()
-    context_dir.joinpath("config.toml").write_text(
-        f'workspace_root = "{hub_root}"\n'
-    )
+    context_dir.joinpath("config.toml").write_text(f'workspace_root = "{hub_root}"\n')
     data = manifest_data()
     data["projects"][0]["resource"]["source"] = str(project_root)
     context = WhubContext(context_dir)
@@ -45,7 +43,9 @@ def test_task_init_and_check_use_hub_storage(tmp_path: Path, monkeypatch) -> Non
     monkeypatch.chdir(hub_root)
 
     with (
-        patch("whub.wflow.commands.task.load_manifest", return_value=manifest),
+        patch(
+            "whub.wflow.services.task.application.load_manifest", return_value=manifest
+        ),
         patch("whub.services.task.current_context", return_value=context),
     ):
         runner = CliRunner()
@@ -80,7 +80,9 @@ def test_task_init_uses_project_task_history_for_id_allocation(
     monkeypatch.chdir(hub_root)
 
     with (
-        patch("whub.wflow.commands.task.load_manifest", return_value=manifest),
+        patch(
+            "whub.wflow.services.task.application.load_manifest", return_value=manifest
+        ),
         patch("whub.services.task.current_context", return_value=context),
     ):
         result = CliRunner().invoke(
@@ -100,7 +102,9 @@ def test_task_init_stops_when_remote_project_is_unavailable(
     monkeypatch.chdir(hub_root)
 
     with (
-        patch("whub.wflow.commands.task.load_manifest", return_value=manifest),
+        patch(
+            "whub.wflow.services.task.application.load_manifest", return_value=manifest
+        ),
         patch("whub.services.task.current_context", return_value=context),
     ):
         result = CliRunner().invoke(
@@ -136,7 +140,9 @@ def test_task_terminal_transitions_archive_to_project(
     monkeypatch.chdir(hub_root)
 
     with (
-        patch("whub.wflow.commands.task.load_manifest", return_value=manifest),
+        patch(
+            "whub.wflow.services.task.application.load_manifest", return_value=manifest
+        ),
         patch("whub.services.task.current_context", return_value=context),
     ):
         runner = CliRunner()
