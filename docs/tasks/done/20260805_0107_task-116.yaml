@@ -1,0 +1,127 @@
+schema_version: 1
+task:
+  id: TASK-116
+  state: completed
+  title: Web通知をリアルタイム化し通知音を追加する
+  objective: Terminalページの承認待ち・応答終了通知をポーリング遅延なく反映し、未読通知の発生を音でも知らせる。
+  approach:
+  - 通知専用のイベント配信経路を追加し、接続時同期・再接続・TTL失効を整合させる。通知音は利用者の明示的な操作で有効化し、ブラウザの自動再生制約を守る。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 通知契約と前提を整理する
+    acceptance: []
+    steps:
+    - description: リアルタイム通知・通知音の実装前に、現在の通知契約、既知の遅延要因、状態遷移、ブラウザ制約を整理する。
+      state: pending
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        known_issues: 通知一覧は5秒ポーリングのため表示・解除に最大約5秒の遅延がある。応答終了は対象行の選択または10分TTLまで保持される。Hook転送失敗は通常のCodex操作を継続するため、解除イベント不達を画面上で診断できない。通知状態はWeb
+          appプロセス内メモリである。
+      deleted: false
+    - value:
+        scope: 承認待ちに加え、応答完了時も対象TerminalまたはOperationのExplorer行に未読バッジを表示し、リアルタイム配信と通知音の対象に含める。
+      deleted: false
+    - value:
+        reference: '状態遷移と未読通知の正本: docs/development/agent-workspace/session-state.md（detail_state
+          の approval_requested・completed・failed と attention_state の定義）。通知Hookと既存保持契約:
+          docs/operations/agent.md#codex-approval-attention-hook。'
+      deleted: false
+    deleted: true
+  - title: 通知契約を固定する
+    acceptance: []
+    steps:
+    - description: 既存の未読・既読化・10分TTL・Hook失敗時継続の契約を維持し、通知対象を permission_request と response_completed
+        に限定する。failed は対象外とする。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: permission_requestとresponse_completedのみを対象とし、failedを追加しない既存契約を維持した。
+      deleted: false
+    deleted: false
+  - title: リアルタイム配信を実装する
+    acceptance: []
+    steps:
+    - description: 既存Terminal WebSocketとは分離した通知専用WebSocket接続を追加し、attention更新を即時配信する。接続・再接続時はREST一覧で同期する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 通知専用WebSocketを追加し、Hook・既読化・解除の更新を即時配信し、接続時・再接続時はRESTで同期する。
+      deleted: false
+    deleted: false
+  - title: UIと通知音を実装する
+    acceptance: []
+    steps:
+    - description: Terminal・Operationの未読バッジとtab表示を受信イベントで即時更新する。初回は通知音を有効化するボタンを表示し、以後は各対象イベントで発音する。再生拒否時はボタンを再表示する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: Terminal・Operationの未読表示とtab状態をWebSocket更新で同期し、通知音の有効化ボタンと再生不能時の再表示を実装した。
+      deleted: false
+    deleted: false
+  - title: 検証する
+    acceptance: []
+    steps:
+    - description: backendの配信・再接続同期・対象外failed、frontendの即時更新・通知音有効化と拒否時フォールバックを自動テストし、TerminalとOperationを手動確認する。
+      state: skipped
+      skip_reason: response_completedの実機確認はStop Hookを含むrelease適用後に行う。ユーザーは開発版で通知音UXを確認済みで、Task完了を指示した。
+      deleted: false
+    log:
+    - value:
+        automated: npm run build、npm run typecheck、Vitest 49件、uv run pytest 581件が成功。通知WebSocket配信、即時同期、通知音有効化・拒否時フォールバックを自動テストした。全体ruff
+          formatは既存42ファイルの未整形により不通過だが、変更Pythonファイルは個別検査済み。
+      deleted: false
+    - value:
+        result: 自動検証と開発版での権限リクエスト通知音は確認済み。response_completedの実機確認はrelease適用後の運用確認へ移管する。
+      deleted: false
+    deleted: false
+  - title: 通知音の起動体験を改善する
+    acceptance: []
+    steps:
+    - description: 通知音を既定で有効にし、専用ボタンを表示せず、ページ内の最初の通常操作でAudioContextを起動する。リロード後も同じ操作で再有効化し、操作前の通知はバッジ表示のみとする。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 専用ボタンを撤去し、Terminal画面での最初のpointerdownまたはkeydownでAudioContextを起動する。再生が拒否されても後続の通常操作で再試行する。Vitest
+          50件とnpm run buildが成功。
+      deleted: false
+    deleted: false
+  - title: コードレビュー指摘を修正する
+    acceptance: []
+    steps:
+    - description: コードレビュー指摘を修正する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: WebSocket接続時のREST再同期と購読者スナップショット化を実装し、型検査、Vitest 51件、pytest 582件が成功した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: WebSocket通知専用接続、初回音声有効化、通知対象を明確化するため
+- reason: 専用の通知音有効化ボタンを廃止し、通常の最初の操作で音声を起動する体験へ変更するため。
+- reason: コードレビューで判明した再接続同期漏れと購読者集合の反復競合を修正する
+cancellation: null
+result:
+  summary: 'PR #16 を merge 方式で統合し、worktree cleanup と親リポジトリの rebase 同期を確認した。通知のリアルタイム配信・再同期・音声起動を実装し、コードレビュー指摘も修正済み。'
