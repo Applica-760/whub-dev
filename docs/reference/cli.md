@@ -44,11 +44,11 @@
 
 | コマンド | 直接の挙動 |
 |---|---|
-| `whub worktree create <PROJECT> <TASK-ID>` | 未完了TaskからTask branchとpathを導出し、worktreeを登録・作成 |
+| `whub worktree create <PROJECT> <TTT>` | 未完了TaskからTask branchとpathを導出し、worktreeを登録・作成 |
 | `whub worktree check` | 全登録のidentityとdiagnosticを読み取り専用で表示 |
-| `whub worktree remove <PROJECT> <TASK-ID>` | cleanかつ整合したTask worktreeと定義YAMLを削除 |
-| `whub worktree pull-request <PROJECT> <TASK-ID>` | Task branchをpushし、既存PRを返すかPRを作成 |
-| `whub worktree merge <PROJECT> <TASK-ID> --method {merge,squash,rebase}` | 一致するPRをmergeし、確認後にTask worktreeをcleanup |
+| `whub worktree remove <PROJECT> <TTT>` | cleanかつ整合したTask worktreeと定義YAMLを削除 |
+| `whub worktree pull-request <PROJECT> <TTT>` | Task branchをpushし、既存PRを返すかPRを作成 |
+| `whub worktree merge <PROJECT> <TTT> --method {merge,squash,rebase}` | 一致するPRをmergeし、確認後にTask worktreeをcleanup |
 
 - 詳細は[Worktree reference](worktree.md)、運用は[Worktree operation](../operations/worktree.md)を参照する。
 

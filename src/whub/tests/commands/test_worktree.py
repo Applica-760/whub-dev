@@ -33,7 +33,7 @@ def test_create_passes_project_and_task_to_service(tmp_path: Path) -> None:
             return_value=destination,
         ) as create,
     ):
-        result = CliRunner().invoke(worktree, ["create", "local", "TASK-072"])
+        result = CliRunner().invoke(worktree, ["create", "local", "072"])
 
     assert result.exit_code == 0
     assert "local" in result.output
@@ -62,13 +62,20 @@ def test_check_renders_inspections_and_fails_for_diagnostics(tmp_path: Path) -> 
     assert "git worktree is missing" in result.output
 
 
+def test_rejects_prefixed_task_number() -> None:
+    result = CliRunner().invoke(worktree, ["create", "local", "TASK-072"])
+
+    assert result.exit_code != 0
+    assert "expected TTT" in result.output
+
+
 def test_remove_selects_definition_by_project_and_task(tmp_path: Path) -> None:
     with (
         patch("whub.commands.worktree.get_manifest", return_value=manifest()),
         patch("whub.commands.worktree.current_context", return_value=_context(tmp_path)),
         patch("whub.commands.worktree.remove_project_worktree") as remove,
     ):
-        result = CliRunner().invoke(worktree, ["remove", "local", "TASK-072"])
+        result = CliRunner().invoke(worktree, ["remove", "local", "072"])
 
     assert result.exit_code == 0
     assert "removed local/TASK-072" in result.output
@@ -84,7 +91,7 @@ def test_create_renders_service_errors(tmp_path: Path) -> None:
             side_effect=ServiceError("task not found: local/TASK-072"),
         ),
     ):
-        result = CliRunner().invoke(worktree, ["create", "local", "TASK-072"])
+        result = CliRunner().invoke(worktree, ["create", "local", "072"])
 
     assert result.exit_code != 0
     assert "task not found: local/TASK-072" in result.output
@@ -99,7 +106,7 @@ def test_pull_request_renders_url(tmp_path: Path) -> None:
             return_value="https://example/pr/72",
         ) as create,
     ):
-        result = CliRunner().invoke(worktree, ["pull-request", "local", "TASK-072"])
+        result = CliRunner().invoke(worktree, ["pull-request", "local", "072"])
 
     assert result.exit_code == 0
     assert "https://example/pr/72" in result.output
@@ -115,7 +122,7 @@ def test_pull_request_renders_service_errors(tmp_path: Path) -> None:
             side_effect=ServiceError("gh PR lookup failed: not logged in"),
         ),
     ):
-        result = CliRunner().invoke(worktree, ["pull-request", "local", "TASK-072"])
+        result = CliRunner().invoke(worktree, ["pull-request", "local", "072"])
 
     assert result.exit_code != 0
     assert "gh PR lookup failed: not logged in" in result.output
@@ -127,9 +134,9 @@ def test_merge_requires_method_and_passes_it_to_service(tmp_path: Path) -> None:
         patch("whub.commands.worktree.current_context", return_value=_context(tmp_path)),
         patch("whub.commands.worktree.merge_project_pull_request") as merge,
     ):
-        missing = CliRunner().invoke(worktree, ["merge", "local", "TASK-072"])
+        missing = CliRunner().invoke(worktree, ["merge", "local", "072"])
         result = CliRunner().invoke(
-            worktree, ["merge", "local", "TASK-072", "--method", "squash"]
+            worktree, ["merge", "local", "072", "--method", "squash"]
         )
 
     assert missing.exit_code != 0
@@ -149,7 +156,7 @@ def test_merge_renders_service_errors(tmp_path: Path) -> None:
         ),
     ):
         result = CliRunner().invoke(
-            worktree, ["merge", "local", "TASK-072", "--method", "merge"]
+            worktree, ["merge", "local", "072", "--method", "merge"]
         )
 
     assert result.exit_code != 0

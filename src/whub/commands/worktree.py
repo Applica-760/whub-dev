@@ -27,9 +27,10 @@ _TASK_ID_PATTERN = re.compile(TASK_ID_PATTERN)
 
 
 def _task_id(value: str) -> str:
-    if not _TASK_ID_PATTERN.fullmatch(value):
-        raise click.BadParameter("expected TASK-NNN", param_hint="task_id")
-    return value
+    task_id = f"TASK-{value}"
+    if not _TASK_ID_PATTERN.fullmatch(task_id):
+        raise click.BadParameter("expected TTT", param_hint="task_id")
+    return task_id
 
 
 @click.group()
@@ -39,10 +40,12 @@ def worktree() -> None:
 
 @worktree.command()
 @click.argument("project", shell_complete=project_names)
-@click.argument("task_id", callback=lambda _ctx, _param, value: _task_id(value))
+@click.argument(
+    "task_id", metavar="TTT", callback=lambda _ctx, _param, value: _task_id(value)
+)
 @click.pass_context
 def create(ctx: click.Context, project: str, task_id: str) -> None:
-    """Create PROJECT's worktree for TASK_ID."""
+    """Create PROJECT's worktree for TTT."""
     workspace_root = current_context().workspace_root
     try:
         destination = create_project_worktree(
@@ -59,10 +62,12 @@ def create(ctx: click.Context, project: str, task_id: str) -> None:
 
 @worktree.command(name="pull-request")
 @click.argument("project", shell_complete=project_names)
-@click.argument("task_id", callback=lambda _ctx, _param, value: _task_id(value))
+@click.argument(
+    "task_id", metavar="TTT", callback=lambda _ctx, _param, value: _task_id(value)
+)
 @click.pass_context
 def pull_request(ctx: click.Context, project: str, task_id: str) -> None:
-    """Create or show PROJECT's pull request for TASK_ID."""
+    """Create or show PROJECT's pull request for TTT."""
     workspace_root = current_context().workspace_root
     try:
         url = create_project_pull_request(
@@ -75,7 +80,9 @@ def pull_request(ctx: click.Context, project: str, task_id: str) -> None:
 
 @worktree.command()
 @click.argument("project", shell_complete=project_names)
-@click.argument("task_id", callback=lambda _ctx, _param, value: _task_id(value))
+@click.argument(
+    "task_id", metavar="TTT", callback=lambda _ctx, _param, value: _task_id(value)
+)
 @click.option(
     "--method",
     type=click.Choice(("merge", "squash", "rebase")),
@@ -84,7 +91,7 @@ def pull_request(ctx: click.Context, project: str, task_id: str) -> None:
 )
 @click.pass_context
 def merge(ctx: click.Context, project: str, task_id: str, method: str) -> None:
-    """Merge PROJECT's pull request for TASK_ID and remove its worktree."""
+    """Merge PROJECT's pull request for TTT and remove its worktree."""
     workspace_root = current_context().workspace_root
     try:
         merge_project_pull_request(
@@ -132,10 +139,12 @@ def check(ctx: click.Context) -> None:
 
 @worktree.command()
 @click.argument("project", shell_complete=project_names)
-@click.argument("task_id", callback=lambda _ctx, _param, value: _task_id(value))
+@click.argument(
+    "task_id", metavar="TTT", callback=lambda _ctx, _param, value: _task_id(value)
+)
 @click.pass_context
 def remove(ctx: click.Context, project: str, task_id: str) -> None:
-    """Remove PROJECT's clean worktree for TASK_ID."""
+    """Remove PROJECT's clean worktree for TTT."""
     workspace_root = current_context().workspace_root
     try:
         remove_project_worktree(get_manifest(ctx), workspace_root, project, task_id)
