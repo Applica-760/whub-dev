@@ -1,0 +1,44 @@
+schema_version: 1
+task:
+  id: TASK-118
+  state: completed
+  title: Git Explorerで変更ファイルへの経路を初期展開する
+  objective: Terminal Page下部のGit Explorerで、変更ファイルの位置を初期表示から把握できるようにする
+  approach:
+  - 全ディレクトリを閉じる初期状態を基本とし、Git差分に含まれるファイルの祖先ディレクトリだけを展開する。既存の手動開閉とファイル選択は維持する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: Git Explorerの初期展開
+    acceptance: []
+    steps:
+    - description: 差分ファイルの祖先ディレクトリだけを初期展開し、既存の手動開閉とファイル選択を維持する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 初期展開・未変更ディレクトリ・手動開閉を対象にコンポーネントテストを追加する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 対象テスト・型検査・整形検査を実行する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: TerminalPage.test.tsx 16件、npm run typecheck、変更2ファイルのPrettier検査、git
+          diff --checkが成功。アプリ全体のPrettier検査は既存7ファイルの未整形により不成功。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: 差分ファイルの祖先ディレクトリを初期展開し、手動開閉・ファイル選択を維持した。対象テスト16件、型検査、変更ファイルの整形検査、git diff
+    --checkを確認済み。
