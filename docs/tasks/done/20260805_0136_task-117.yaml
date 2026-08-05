@@ -1,0 +1,34 @@
+schema_version: 1
+task:
+  id: TASK-117
+  state: completed
+  title: worktreeのTask ID入力を短縮形式へ統一する
+  objective: whub worktreeがTASK-TTTを要求する不整合を解消し、他のTask操作と同じTTT形式で操作できるようにする
+  approach:
+  - worktree各サブコマンドの公開入力をTTTのみに統一し、CLI境界でTASK-TTTへ正規化して既存の内部識別子と定義形式を維持する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 短縮Task番号入力を実装・検証する
+    acceptance: []
+    steps:
+    - description: worktreeの4コマンドでTTT入力を受け付けて内部TASK-TTTへ正規化し、CLIリファレンス・Task運用Skill・回帰テストを更新する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: whub worktree create・pull-request・merge・removeの公開入力をTTTへ統一し、CLI境界でTASK-TTTへ正規化した。TASK-TTT入力の拒否、9件のコマンドテスト、全Pythonテスト583件、Ruff、CLIヘルプを検証。CLIリファレンスとTask運用SkillもTTT表記へ更新し、コミット0e87756と97586d6で記録済み。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: worktreeの4コマンドのTask番号入力をTTTへ統一し、内部TASK-TTTの識別子・公開文書・Task運用Skill・回帰テストの整合性を確認して完了した。
