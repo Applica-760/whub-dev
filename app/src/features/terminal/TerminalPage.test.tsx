@@ -261,30 +261,44 @@ describe("TerminalPage", () => {
     );
   });
 
-  it("Git Explorerを初期折りたたみで表示し、状態と右クリックコピーを反映する", async () => {
+  it("Git Explorerで変更ファイルへの経路を初期展開し、状態と右クリックコピーを反映する", async () => {
     changedFiles = [
-      { path: "src/main.py", status: "M", previous_path: null },
+      { path: "src/nested/main.py", status: "M", previous_path: null },
       { path: "draft.txt", status: "A", previous_path: null },
-      { path: "a.txt", status: "", previous_path: null },
+      { path: "unchanged/note.txt", status: "", previous_path: null },
     ];
     const { container } = renderPage();
 
     const source = await screen.findByText("src");
-    expect(
-      container
-        .querySelector(".diff-tree-chevron")
-        ?.getAttribute("data-expanded"),
-    ).toBeNull();
-    expect(container.querySelector('[data-changed="true"]')).toBeTruthy();
-    expect(container.querySelector('[data-new="true"]')).toBeTruthy();
-
-    fireEvent.click(source);
     expect(await screen.findByText("main.py")).toBeTruthy();
     expect(
       container
         .querySelector(".diff-tree-chevron")
         ?.getAttribute("data-expanded"),
     ).toBe("true");
+    expect(
+      container
+        .querySelectorAll(".diff-tree-chevron")[1]
+        ?.getAttribute("data-expanded"),
+    ).toBe("true");
+    expect(
+      container
+        .querySelectorAll(".diff-tree-chevron")[2]
+        ?.getAttribute("data-expanded"),
+    ).toBeNull();
+    expect(container.querySelector('[data-changed="true"]')).toBeTruthy();
+    expect(container.querySelector('[data-new="true"]')).toBeTruthy();
+
+    fireEvent.click(source);
+    expect(screen.queryByText("main.py")).toBeNull();
+    expect(
+      container
+        .querySelector(".diff-tree-chevron")
+        ?.getAttribute("data-expanded"),
+    ).toBeNull();
+
+    fireEvent.click(source);
+    expect(await screen.findByText("main.py")).toBeTruthy();
     expect(
       container.querySelector(".diff-tree-children")?.getAttribute("style"),
     ).toBeNull();
@@ -293,7 +307,7 @@ describe("TerminalPage", () => {
     ).toContain("inset-inline-start: 22px");
     fireEvent.contextMenu(screen.getByText("main.py"));
     expect(clipboardWrite).toHaveBeenCalledWith(
-      "projects/worktrees/whub-dev-099/src/main.py",
+      "projects/worktrees/whub-dev-099/src/nested/main.py",
     );
   });
 

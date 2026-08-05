@@ -60,6 +60,17 @@ function hasChanges(node: ExplorerNode): boolean {
   return Boolean(node.status) || node.children.some(hasChanges);
 }
 
+function expandedDirectories(files: ChangedFile[]): Set<string> {
+  const expanded = new Set<string>();
+  for (const file of files) {
+    if (!file.status) continue;
+    const parts = file.path.split("/");
+    for (let index = 1; index < parts.length; index++)
+      expanded.add(parts.slice(0, index).join("/"));
+  }
+  return expanded;
+}
+
 type RenderedFileLine = {
   content: string;
   kind: "addition" | "context" | "deletion" | "hunk";
@@ -156,7 +167,7 @@ export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
         if (!cancelled) {
           setFiles(response.files);
           setSelectedPath(response.files[0]?.path ?? null);
-          setExpanded(new Set());
+          setExpanded(expandedDirectories(response.files));
         }
       })
       .catch(
