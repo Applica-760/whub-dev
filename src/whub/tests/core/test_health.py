@@ -64,11 +64,12 @@ def _remote_resource(mountpoint: Path) -> RemoteResource:
 def _aggregated_resource(workspace_path: Path) -> RemoteResource:
     resource = _remote_resource(workspace_path)
     resource._resolved_host = Host(
-        hostname="home.example.com",
-        user="takumi",
-        identity_file="~/.ssh/id_home",
+        hostname="ssh.test.invalid",
+        user="test-user",
+        identity_file="/test/identity",
         mount_root="/srv",
-    )
+        worktree_root="worktrees",
+        )
     return resource
 
 

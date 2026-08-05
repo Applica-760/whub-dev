@@ -200,7 +200,7 @@ class TestManifestSpec:
         remote = manifest.resolve_project("remote").resource
         assert manifest.workspace_path(local) == Path(root) / "projects/local"
         assert manifest.workspace_path(remote) == Path(root) / "projects/remote"
-        assert manifest.remote_host(remote).hostname == "home.example.com"
+        assert manifest.remote_host(remote).hostname == "ssh.test.invalid"
 
     def test_load_manifest_reports_user_facing_errors(self) -> None:
         with tempfile.TemporaryDirectory() as root:

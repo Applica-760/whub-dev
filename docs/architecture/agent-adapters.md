@@ -8,9 +8,11 @@
   render planを返す。
 - `context.py`: Hub rootの`AGENTS.md`、`.agents/skills`、baseと選択されたRoleの指示をsnapshot renderする。
 - `state.py`: authのrender planとcontextを対象worktreeへ安全に具体化し、所有物を記録・cleanupする。
+- `remote/state.py`: remote worktreeに対して、SSH経由で同じ生成物の所有・cleanup契約を実行する。
 - `tmux_session.py`: tmux sessionの開始・停止だけを扱う。
 - `codex/config.py`: `EffectiveAuth`をCodex project configとrulesのrender planへ変換する。
 - `codex/trust.py`: worktreeごとのCodex trust entryを所有・cleanupする。
+- `remote/codex_trust.py`: remote host上のCodex trust entryを所有・cleanupする。
 - `codex/app_server.py`: worktreeごとのCodex App Server processとJSON-RPC状態を所有する。
 - `codex/attention.py`: Codex approval requestの短期in-memory状態を保持する。
 - `webapp/agent_codex_control.py`: `whub agent`からlocal web backendを起動・停止するcontrol clientであり、Codex App Server protocolは扱わない。
@@ -21,6 +23,9 @@ Agent所有の管理blockとして追加する。`.claude/CLAUDE.md`はworktree�
 所有する。Stateは生成fileと管理blockのhashを一つのrecordに保存し、`close`時は全所有物を検証してから管理block、
 生成fileの順に未変更の所有物だけを除去する。
 Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。
+
+remote Resourceでは`agent.py`が`on_targets()`でSSH adapterを選択する。remoteの所有recordはHub側に残すため、
+remote AgentはTask YAMLやHub control planeを更新しない。
 
 ## Execution context
 

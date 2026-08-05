@@ -56,8 +56,8 @@
 
 | コマンド | 直接の挙動 |
 |---|---|
-| `whub agent open <PROJECT> <TASK-ID> --auth <AUTH> [--auth <AUTH>]` | Agent設定を生成し、Taskのtmux sessionへ接続または新規作成 |
-| `whub agent close <PROJECT> <TASK-ID>` | tmux sessionを停止し、未変更のHarness所有設定を削除 |
+| `whub agent open <PROJECT> <TASK-ID> --auth <AUTH> [--auth <AUTH>]` | Agent設定を生成し、Taskのtmux sessionへ接続または新規作成。remote Resourceはhost内で起動しSSHでattachする |
+| `whub agent close <PROJECT> <TASK-ID>` | tmux sessionを停止し、未変更のHarness所有設定を削除。remote Resourceの生成物もhost上でcleanupする |
 | `whub agent attention-hook` | stdinのCodex Hook eventをlocalhost Web appへ転送する。入力・通信・backendの失敗時も成功終了する |
 
 詳細は[Agent harness operation](../operations/agent.md)を参照する。

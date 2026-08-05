@@ -17,7 +17,7 @@ def test_safe_option_names_excludes_secret_values() -> None:
         "/mnt/project",
         "-s",
         "-o",
-        "IdentityFile=/Users/secret/.ssh/id_rsa",
+        "IdentityFile=/test/private/identity",
         "-o",
         "reconnect",
         "-o",

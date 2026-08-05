@@ -37,7 +37,7 @@ class TestRunSpec:
         assert result.exit_code == 0
         cmd = mock_run.call_args[0][0]
         assert cmd[0] == "ssh"
-        assert any("home.example.com" in arg for arg in cmd)
+        assert any("ssh.test.invalid" in arg for arg in cmd)
         assert "ls -la" in " ".join(cmd)
         # mount_rootと合成した絶対pathでcdする
         assert "cd /srv/remote" in " ".join(cmd)

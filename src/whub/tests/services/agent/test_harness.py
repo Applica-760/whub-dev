@@ -535,7 +535,7 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
 
 def test_remote_open_uses_remote_state_and_ssh_tmux(tmp_path: Path) -> None:
     host = Host(
-        hostname="remote.example", user="agent", identity_file="~/.ssh/id_test",
+        hostname="ssh.test.invalid", user="test-user", identity_file="/test/identity",
         mount_root="/srv", worktree_root="worktrees"
     )
     resource = RemoteResource(
