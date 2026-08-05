@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from whub.core.target import TargetItem, TargetError, on_targets, resolve_project_resource
 from whub.core.tmux import TmuxSession
-from whub.models import Manifest
+from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.services.agent.adapters.claude_code import render as render_claude_code
 from whub.services.agent.codex.config import render as render_codex
 from whub.services.agent.auth import (
@@ -20,7 +21,13 @@ from whub.services.agent.tmux_session import (
     open_tmux_session,
 )
 from whub.services.agent.state import cleanup, prepare
-from whub.services.worktree.resolve import resolve_project_worktree
+from whub.services.agent.remote import codex_trust as remote_codex_trust
+from whub.services.agent.remote import state as remote_state
+from whub.services.errors import ServiceError
+from whub.services.worktree.resolve import (
+    ResolvedProjectWorktree,
+    resolve_project_worktree,
+)
 
 
 def open_agent(
@@ -46,26 +53,58 @@ def open_agent(
     files = {
         relative: content for plan in plans for relative, content in plan.files.items()
     }
-    prepare(
-        workspace_root,
-        project,
-        registered.definition.task_id,
-        registered.destination,
-        files,
-        render_context(workspace_root, auth_names, registered.definition.branch),
-    )
-    prepare_codex_trust(
-        workspace_root,
-        project,
-        registered.definition.task_id,
-        registered.destination,
-    )
-    return open_tmux_session(
-        project,
-        registered.definition.task_id,
-        registered.destination,
-        workspace_root,
-    )
+    context = render_context(workspace_root, auth_names, registered.definition.branch)
+    try:
+        resource = resolve_project_resource(manifest, project)
+    except TargetError as error:
+        raise ServiceError(str(error)) from error
+
+    def local(_: SymlinkResource, item: ResolvedProjectWorktree) -> TmuxSession:
+        assert isinstance(item.destination, Path)
+        prepare(
+            workspace_root,
+            project,
+            item.definition.task_id,
+            item.destination,
+            files,
+            context,
+        )
+        prepare_codex_trust(
+            workspace_root, project, item.definition.task_id, item.destination
+        )
+        return open_tmux_session(
+            project, item.definition.task_id, item.destination, workspace_root
+        )
+
+    def remote(_: RemoteResource, item: ResolvedProjectWorktree) -> TmuxSession:
+        assert item.host is not None and isinstance(item.destination, str)
+        remote_codex_trust.prepare(
+            workspace_root,
+            project,
+            item.definition.task_id,
+            item.host,
+            item.destination,
+        )
+        remote_state.prepare(
+            workspace_root,
+            project,
+            item.definition.task_id,
+            item.host,
+            item.destination,
+            files,
+            context,
+        )
+        return open_tmux_session(
+            project,
+            item.definition.task_id,
+            item.destination,
+            workspace_root,
+            item.host,
+        )
+
+    return on_targets(
+        [TargetItem(resource, registered)], local=local, remote=remote
+    )[0]
 
 
 def close_agent(
@@ -73,13 +112,35 @@ def close_agent(
 ) -> None:
     """Stop PROJECT/TASK's session and clean its owned configuration."""
     registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
-    close_tmux_session(project, registered.definition.task_id)
-    cleanup_codex_trust(
-        workspace_root,
-        project,
-        registered.definition.task_id,
-        registered.destination,
-    )
-    cleanup(
-        workspace_root, project, registered.definition.task_id, registered.destination
-    )
+    try:
+        resource = resolve_project_resource(manifest, project)
+    except TargetError as error:
+        raise ServiceError(str(error)) from error
+
+    def local(_: SymlinkResource, item: ResolvedProjectWorktree) -> None:
+        assert isinstance(item.destination, Path)
+        close_tmux_session(project, item.definition.task_id)
+        cleanup_codex_trust(
+            workspace_root, project, item.definition.task_id, item.destination
+        )
+        cleanup(workspace_root, project, item.definition.task_id, item.destination)
+
+    def remote(_: RemoteResource, item: ResolvedProjectWorktree) -> None:
+        assert item.host is not None and isinstance(item.destination, str)
+        close_tmux_session(project, item.definition.task_id, item.host)
+        remote_codex_trust.cleanup(
+            workspace_root,
+            project,
+            item.definition.task_id,
+            item.host,
+            item.destination,
+        )
+        remote_state.cleanup(
+            workspace_root,
+            project,
+            item.definition.task_id,
+            item.host,
+            item.destination,
+        )
+
+    on_targets([TargetItem(resource, registered)], local=local, remote=remote)
