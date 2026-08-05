@@ -1,0 +1,62 @@
+schema_version: 1
+task:
+  id: TASK-091
+  state: completed
+  title: Wflow Task commandを薄くする
+  objective: wflow task CLIからユースケース処理をserviceへ移し、commandを引数解釈・表示・例外変換へ限定する。
+  approach:
+  - '前提: wflow taskのCLI互換性と既存のTask workflow規則を維持する。'
+  - '課題: wflow/commands/task.pyに検証・遷移・複数文書更新などのユースケース処理が混在している。'
+  - '方針案: command群を責務で分け、ユースケース処理はwflow/services/taskのapplication層へ移す。'
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 責務の移管
+    acceptance: []
+    steps:
+    - description: Task操作の既存オーケストレーションをサービスへ移管する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: Taskオーケストレーションをservices/task/application.pyへ移管
+      deleted: false
+    deleted: false
+  - title: CLI adapterの縮小
+    acceptance: []
+    steps:
+    - description: Click callbackを引数・表示・例外変換だけに縮小する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: commands/task.pyをClick adapterへ縮小
+      deleted: false
+    deleted: false
+  - title: 回帰検証
+    acceptance: []
+    steps:
+    - description: 既存CLI契約を回帰テストで検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 'uv run pytest src/whub/tests/wflow: 52 passed; Ruff check/format:
+          passed'
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: Task CLIのオーケストレーションをapplication serviceへ移管し、既存CLI契約を保持した。uv run pytest
+    src/whub/tests/wflowは52件成功。
