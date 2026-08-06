@@ -1,0 +1,156 @@
+schema_version: 1
+task:
+  id: TASK-124
+  state: completed
+  title: active・archive Taskの統合取得を共通化する
+  objective: Hub側のactive TaskとProject側のTask archiveをProject単位で統合取得し、ID採番・依存解決・Task一覧で一貫したTask集合を利用できるようにする
+  approach:
+  - ProjectのTask root群を解決し、Task recordとsummaryを統合する共通helperへ集約する
+  - archiveは読み取り専用とし、Task更新はHub側active storageに限定する
+  - archive済みcompletedは依存完了、cancelledは未完了として扱う
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance:
+  - id: ACC-001
+    statement: initがHub activeとProject docs/tasksの全Task IDを採番対象とし、最大IDの次を重複なく割り当てる
+  - id: ACC-002
+    statement: Project archiveのcompleted TaskがHub active Taskのdepends_onを満たし、approve_plan・CLI・Webで一貫して開始可能と判定される
+  - id: ACC-003
+    statement: archiveのcancelled Task、存在しないTask、activeとarchiveで重複するTask IDが依存を満たさず、それぞれ一貫したdiagnosticを返す
+  - id: ACC-004
+    statement: Taskの更新・計画編集・依存編集・完了操作はHub activeだけを対象とし、Project archiveのYAMLを変更しない
+  - id: ACC-005
+    statement: Project固有path解決はtask_resolution.pyのResolvedProjectTaskStorageとresolve_project_task_storageへ集約され、同等のroot解決関数が他moduleに残らない
+  phases:
+  - title: 統合取得契約の固定
+    acceptance: []
+    steps:
+    - description: ResolvedProjectTaskStorageのactive_root・history_root・archive_root・read_roots・id_rootsと、project/resource/path異常時の契約を確定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: resolve_task_reference・load_task_records・list_tasksの複数root契約を、missing・duplicate・不正YAML・相対pathの扱いまで関数単位で固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        contract: storageはactive_rootを常設の書込先、history_root=Project docs/tasks、archive_root=docs/tasks/done、read_rootsは存在するactive/archiveを順序保持、id_rootsは存在するhistoryとする。Project/resource/path異常はServiceErrorへ統一する
+      deleted: false
+    - value:
+        query: 複数rootは入力順で探索し、ID参照は全root横断でmissing/ambiguousを判定する。records/listは全rootを一集合としてduplicate・dependency・interruptionを導出し、不正YAMLはrecordsではerror、listではroot相対path付きdiagnosticとする。明示pathは従来どおりそのpathを返す
+      deleted: false
+    deleted: false
+  - title: Resolution serviceとwflow複数root処理の実装
+    acceptance: []
+    steps:
+    - description: src/whub/services/task_resolution.pyへResolvedProjectTaskStorageとresolve_project_task_storageだけを実装し、既存の重複したroot解決関数を置換する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: resolve_task_reference・load_task_records・list_tasksを可変長root対応にし、全rootを一つのTask集合として参照解決・重複検出・依存状態導出する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: resolution serviceと複数root queryの単体テストを追加し、active・archiveの順序、completed・cancelled・missing・duplicateの契約を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: task_resolution serviceへstorage path解決を集約し、ID参照・record load・summary
+          listをroot入力順の統合Task集合へ変更した
+      deleted: false
+    - value:
+        verification: storage/query/CLI focused tests 37 passed、変更範囲Ruff成功。active→archive順、completed/cancelled/missing/duplicateを単体テストで固定した
+      deleted: false
+    deleted: false
+  - title: Consumerの統合Task集合への移行
+    acceptance: []
+    steps:
+    - description: initのID採番をactive_rootとid_rootsへ、完了・中止時のarchive先をarchive_rootへ接続し、保存先pathの組み立てをresolution
+        serviceへ集約する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: approve_planと割り込み開始・再開のTask集合をread_rootsから取得し、操作対象の解決と書き込みはactive側だけに限定する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: CLIのls・show・checkとWeb APIのProject別一覧・詳細をread_rootsへ接続し、activeからarchiveへの依存・割り込み参照を同じ結果で表示する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Task更新・plan編集・依存編集・完了操作の参照先がactive_root限定であり、archive YAMLを更新しないことを回帰テストで固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        consumer: init/approve/interrupt/resume/CLI ls-show-check/Web Project serviceを統合read_rootsへ接続し、mutationのID解決はactive_rootに限定した
+      deleted: false
+    - value:
+        verification: service・CLI・Web API focused tests 43 passed、Ruff成功。archive Taskへのupdate/plan/depends/complete拒否とbyte不変、archive
+          childからのresumeを回帰テストで固定した
+      deleted: false
+    deleted: false
+  - title: 回帰検証と文書化
+    acceptance: []
+    steps:
+    - description: TASK-120がProject archive、TASK-122がHub activeにある実例相当の統合テストで、completed依存が解決され開始可能になることを検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: focused test、uv run pytest、Ruff、git diff --checkを実行し、既存のTask・worktree・Web
+        API契約に回帰がないことを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Task storageのresolution・read roots・write boundaryをdocs/architectureへ反映し、rgで旧root解決関数と重複実装が残っていないことを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        integration: TASK-120 archive completedとTASK-122 active draftの実例相当テストで、CLI
+          list/check/showとapprove_plan、Project serviceのready判定を検証した
+      deleted: false
+    - value:
+        verification: frontend build後のuv run pytest 580 passed、uv run ruff check .成功、変更9
+          Python filesのruff format --check成功、git diff --check成功
+      deleted: false
+    - value:
+        documentation: docs/architecture/overview.mdへresolution・read_roots・archive
+          read-only境界を反映し、旧root解決関数がsrc/whubとdocs/architectureに残っていないことをrgで確認した
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - activeとdocs/tasks直下・done配下のTASK-014/015を配置し、initがTASK-016を採番するCLI testが成功
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - archive TASK-120 completedがactive TASK-122の依存を満たし、approve・CLI・Project serviceでreadyとなる統合テストが成功
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - cancelled・missing・active/archive duplicateをqueryとapprove_planのテストで検証し、各diagnosticを確認
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - update・plan・depends・completeがarchive IDを解決せず、archive YAMLのbyte不変を回帰テストで確認
+- acceptance: ACC-005
+  status: passed
+  evidence:
+  - task_resolution.pyへResolvedProjectTaskStorageとresolve_project_task_storageを集約し、旧root解決関数が残らないことをrgで確認
+change_requests: []
+cancellation: null
+result:
+  summary: 'PR #18をmerge方式で統合し、Task worktreeのcleanupと親repo mainのfast-forward同期を完了'
