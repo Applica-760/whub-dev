@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from whub.core.context import current_context
-from whub.models import Manifest
 from whub.services.errors import NotFoundError, ServiceError
-from whub.services.project_content import resolve_project_content_root
+from whub.services.manifest import ResolvedManifest
+from whub.services.task_resolution import resolve_project_task_storage
 from whub.wflow.models.task import TaskDocument, TaskSummary
 from whub.wflow.services import (
     WflowError,
@@ -21,45 +20,14 @@ from whub.wflow.services import (
 )
 
 
-TASKS_RELATIVE_PATH = Path("wflow/tasks")
-
-
-def resolve_project_task_root(manifest: Manifest, project: str) -> Path:
-    """Resolve PROJECT's Hub-owned active Task directory."""
-    if manifest.resolve_project(project) is None:
-        raise ServiceError(f"unknown project: {project}")
-    task_root = current_context().workspace_root / TASKS_RELATIVE_PATH / project
-    if task_root.exists() and not task_root.is_dir():
-        raise ServiceError(f"Hub task path is not a directory: {project}")
-    return task_root
-
-
-def resolve_project_task_history_root(manifest: Manifest, project: str) -> Path | None:
-    """Resolve PROJECT's Task history directory for ID allocation."""
-    root = resolve_project_content_root(manifest, project) / "docs/tasks"
-    return root if root.exists() else None
-
-
-def resolve_project_task_archive_root(manifest: Manifest, project: str) -> Path | None:
-    """Resolve PROJECT's terminal Task archive directory."""
-    root = resolve_project_content_root(manifest, project) / "docs/tasks/done"
-    return root if root.exists() else None
-
-
-def project_task_root(manifest: Manifest, project: str) -> Path | None:
-    """Return PROJECT's active Hub Task directory, when it exists."""
-    task_root = resolve_project_task_root(manifest, project)
-    return task_root if task_root.exists() else None
-
-
 def archive_project_task(
-    manifest: Manifest,
+    manifest: ResolvedManifest,
     project: str,
     source: Path,
     task: TaskDocument,
 ) -> Path:
     """Move a terminal Hub Task into the owning Project's frozen archive."""
-    destination = resolve_project_content_root(manifest, project) / "docs/tasks/done"
+    destination = resolve_project_task_storage(manifest, project).archive_root
     if task.task.state == "cancelled":
         destination /= "cancelled"
     try:
@@ -69,16 +37,15 @@ def archive_project_task(
 
 
 def list_project_tasks(
-    manifest: Manifest,
+    manifest: ResolvedManifest,
     project: str,
 ) -> tuple[TaskSummary, ...]:
     """Return active and archived Task summaries from one Project."""
-    task_root = project_task_root(manifest, project)
-    archive_root = resolve_project_task_archive_root(manifest, project)
+    storage = resolve_project_task_storage(manifest, project)
+    if not storage.read_roots:
+        return ()
     try:
-        active_tasks = list_tasks(task_root) if task_root is not None else ()
-        archived_tasks = list_tasks(archive_root) if archive_root is not None else ()
-        return (*active_tasks, *archived_tasks)
+        return list_tasks(*storage.read_roots)
     except WflowError as error:
         raise ServiceError(str(error)) from error
 
@@ -92,7 +59,7 @@ class ProjectTasks:
     error: str | None = None
 
 
-def list_all_project_tasks(manifest: Manifest) -> tuple[ProjectTasks, ...]:
+def list_all_project_tasks(manifest: ResolvedManifest) -> tuple[ProjectTasks, ...]:
     """Return every Project's Task summaries, isolating per-Project failures."""
     results: list[ProjectTasks] = []
     for project in manifest.projects:
@@ -106,41 +73,34 @@ def list_all_project_tasks(manifest: Manifest) -> tuple[ProjectTasks, ...]:
 
 
 def load_project_task(
-    manifest: Manifest,
+    manifest: ResolvedManifest,
     project: str,
     task_id: str,
 ) -> TaskDocument:
     """Load and validate an active or archived Task within one Project."""
-    roots = (
-        root
-        for root in (
-            project_task_root(manifest, project),
-            resolve_project_task_archive_root(manifest, project),
+    storage = resolve_project_task_storage(manifest, project)
+    if not storage.read_roots:
+        raise NotFoundError(f"task not found: {project}/{task_id}")
+    try:
+        path = resolve_task_reference(task_id, *storage.read_roots)
+    except WflowError as error:
+        if str(error).startswith("task ID not found:"):
+            raise NotFoundError(f"task not found: {project}/{task_id}") from error
+        raise ServiceError(str(error)) from error
+    try:
+        document = load_task(path)
+        diagnostics = validate_task(document, load_task_workflow())
+    except WflowError as error:
+        raise ServiceError(str(error)) from error
+    if diagnostics:
+        raise ServiceError(
+            "task is invalid: " + "; ".join(item.message for item in diagnostics)
         )
-        if root is not None
-    )
-    for root in roots:
-        try:
-            path = resolve_task_reference(task_id, root)
-        except WflowError as error:
-            if str(error).startswith("task ID not found:"):
-                continue
-            raise ServiceError(str(error)) from error
-        try:
-            document = load_task(path)
-            diagnostics = validate_task(document, load_task_workflow())
-        except WflowError as error:
-            raise ServiceError(str(error)) from error
-        if diagnostics:
-            raise ServiceError(
-                "task is invalid: " + "; ".join(item.message for item in diagnostics)
-            )
-        return document
-    raise NotFoundError(f"task not found: {project}/{task_id}")
+    return document
 
 
 def render_project_task_flow(
-    manifest: Manifest,
+    manifest: ResolvedManifest,
     project: str,
     task_id: str,
 ) -> str:

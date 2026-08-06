@@ -528,6 +528,68 @@ def test_resolves_task_ids_and_rejects_missing_or_ambiguous_ids(tmp_path: Path) 
         resolve_task_reference("TASK-001", tmp_path)
 
 
+def test_queries_ordered_roots_as_one_task_collection(tmp_path: Path) -> None:
+    active_root = tmp_path / "active"
+    archive_root = tmp_path / "archive"
+    active_root.mkdir()
+    archive_root.mkdir()
+
+    completed = _task_data()
+    completed["task"]["id"] = "TASK-120"
+    cancelled = apply_transition(
+        _draft_task(),
+        load_task_workflow(),
+        "cancel_task",
+        "user",
+        {"reason": "superseded"},
+    ).model_dump(mode="json")
+    cancelled["task"]["id"] = "TASK-121"
+    dependent = _draft_task().model_dump(mode="json")
+    dependent["task"].update(
+        id="TASK-122",
+        depends_on=["TASK-120", "TASK-121", "TASK-999"],
+    )
+    _write_task(active_root, "dependent.yaml", dependent)
+    _write_task(archive_root, "completed.yaml", completed)
+    _write_task(archive_root, "cancelled.yaml", cancelled)
+
+    summaries = list_tasks(active_root, archive_root)
+    tasks = {item.id: item for item in summaries}
+
+    assert [item.id for item in summaries] == ["TASK-122", "TASK-121", "TASK-120"]
+    assert tasks["TASK-122"].blocked_by == [
+        "incomplete dependency: TASK-121 (cancelled)",
+        "missing dependency: TASK-999",
+    ]
+    assert resolve_task_reference("TASK-120", active_root, archive_root) == (
+        archive_root / "completed.yaml"
+    )
+    assert set(load_task_records(active_root, archive_root)) == {
+        "TASK-120",
+        "TASK-121",
+        "TASK-122",
+    }
+
+
+def test_reports_duplicate_task_ids_across_roots(tmp_path: Path) -> None:
+    active_root = tmp_path / "active"
+    archive_root = tmp_path / "archive"
+    active_root.mkdir()
+    archive_root.mkdir()
+    _write_task(active_root, "active.yaml", _task_data())
+    _write_task(archive_root, "archived.yaml", _task_data())
+
+    with pytest.raises(WflowError, match="task ID is ambiguous: TASK-001"):
+        resolve_task_reference("TASK-001", active_root, archive_root)
+    with pytest.raises(WflowError, match="duplicate task id: TASK-001"):
+        load_task_records(active_root, archive_root)
+
+    summaries = list_tasks(active_root, archive_root)
+
+    assert [item.path for item in summaries] == ["active.yaml", "archived.yaml"]
+    assert all("duplicate task id: TASK-001" in item.diagnostics for item in summaries)
+
+
 def test_resolves_task_ids_written_with_unexpected_formatting(tmp_path: Path) -> None:
     # ID照合の高速pathが外れる整形でも、全文解析へ落ちて解決できる
     text = yaml.safe_dump(_task_data(), allow_unicode=True, sort_keys=False)

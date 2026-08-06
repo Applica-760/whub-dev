@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import chdir, contextmanager
+from dataclasses import replace
 from pathlib import Path
 
 from whub.services.manifest import load_manifest
-from whub.services.task import (
-    archive_project_task,
-    resolve_project_task_history_root,
-    resolve_project_task_root,
+from whub.services.task import archive_project_task
+from whub.services.task_resolution import (
+    ResolvedProjectTaskStorage,
+    resolve_project_task_storage,
 )
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.services.errors import WflowError
@@ -49,24 +50,30 @@ from whub.wflow.services.task.transition import apply_transition
 
 
 @contextmanager
-def _task_directory(project: str) -> Iterator[None]:
-    root = resolve_project_task_root(load_manifest(), project)
-    root.mkdir(parents=True, exist_ok=True)
-    with chdir(root):
-        yield
+def _task_directory(project: str) -> Iterator[ResolvedProjectTaskStorage]:
+    storage = resolve_project_task_storage(load_manifest(), project)
+    storage.active_root.mkdir(parents=True, exist_ok=True)
+    storage = replace(
+        storage,
+        read_roots=(
+            storage.active_root,
+            *(root for root in storage.read_roots if root != storage.active_root),
+        ),
+    )
+    with chdir(storage.active_root):
+        yield storage
 
 
 def init_task(
     project: str, title: str, objective: str, approaches: tuple[str, ...]
 ) -> tuple[Path, TaskDocument]:
-    with _task_directory(project):
-        history_root = resolve_project_task_history_root(load_manifest(), project)
+    with _task_directory(project) as storage:
         return create_task(
             Path("."),
             title,
             objective,
             approaches,
-            id_roots=(history_root,) if history_root is not None else (),
+            id_roots=storage.id_roots,
         )
 
 
@@ -177,46 +184,40 @@ def delete_acceptance(project: str, task_ref: str, acceptance_ref: str) -> None:
 def check_task(project: str, task_ref: str) -> tuple[Path, tuple[str, ...]]:
     from whub.wflow.services.task.integrity import validate_task
 
-    with _task_directory(project):
-        task_path = resolve_task_reference(task_ref)
-        task_root = Path(".")
-        try:
-            relative_path = (
-                task_path.resolve().relative_to(task_root.resolve()).as_posix()
-            )
-        except ValueError:
-            diagnostics = tuple(
+    with _task_directory(project) as storage:
+        task_path = resolve_task_reference(task_ref, *storage.read_roots)
+        record = load_task(task_path)
+        summary = next(
+            (
+                item
+                for item in list_tasks(*storage.read_roots)
+                if item.id == record.task.id
+            ),
+            None,
+        )
+        diagnostics = (
+            summary.diagnostics
+            if summary is not None
+            else tuple(
                 f"{item.code}: {item.message}"
-                for item in validate_task(load_task(task_path), load_task_workflow())
+                for item in validate_task(record, load_task_workflow())
             )
-        else:
-            summary = next(
-                (item for item in list_tasks(task_root) if item.path == relative_path),
-                None,
-            )
-            diagnostics = (
-                summary.diagnostics
-                if summary is not None
-                else tuple(
-                    f"{item.code}: {item.message}"
-                    for item in validate_task(
-                        load_task(task_path), load_task_workflow()
-                    )
-                )
-            )
+        )
         return task_path, tuple(diagnostics)
 
 
 def list_task_records(project: str, task_dir: Path):
-    with _task_directory(project):
+    with _task_directory(project) as storage:
+        if task_dir == Path("."):
+            return list_tasks(*storage.read_roots)
         return list_tasks(task_dir)
 
 
 def show_task(project: str, task_ref: str):
     from whub.wflow.services.task.integrity import validate_task
 
-    with _task_directory(project):
-        task_path = resolve_task_reference(task_ref)
+    with _task_directory(project) as storage:
+        task_path = resolve_task_reference(task_ref, *storage.read_roots)
         record = load_task(task_path)
         diagnostics = validate_task(record, load_task_workflow())
         if diagnostics:
@@ -224,7 +225,12 @@ def show_task(project: str, task_ref: str):
                 "task is invalid: " + "; ".join(item.message for item in diagnostics)
             )
         summary = next(
-            (item for item in list_tasks(Path(".")) if item.id == record.task.id), None
+            (
+                item
+                for item in list_tasks(*storage.read_roots)
+                if item.id == record.task.id
+            ),
+            None,
         )
         return record, summary
 
@@ -236,11 +242,11 @@ def transition_task(
     actor: str,
     input_data: dict[str, str],
 ) -> tuple[TaskDocument, Path | None]:
-    with _task_directory(project):
+    with _task_directory(project) as storage:
         task_path = resolve_task_reference(task_ref)
         record = load_task(task_path)
         if trigger == "approve_plan":
-            records = load_task_records(Path("."))
+            records = load_task_records(*storage.read_roots)
             tasks = {task_id: item for task_id, (_, item) in records.items()}
             tasks[record.task.id] = record
             if diagnostics := dependency_start_diagnostics(record, tasks):
@@ -294,8 +300,12 @@ def _record_for_path(
 def interrupt(
     project: str, parent_ref: str, child_ref: str, reason: str, task_dir: Path
 ) -> tuple[str, str]:
-    with _task_directory(project):
-        records = load_task_records(task_dir)
+    with _task_directory(project) as storage:
+        records = (
+            load_task_records(*storage.read_roots)
+            if task_dir == Path(".")
+            else load_task_records(task_dir)
+        )
         parent_path = resolve_task_reference(parent_ref, task_dir)
         child_path = resolve_task_reference(child_ref, task_dir)
         parent_id, parent = _record_for_path(parent_path, records)
@@ -310,8 +320,12 @@ def interrupt(
 
 
 def resume(project: str, parent_ref: str, task_dir: Path) -> str:
-    with _task_directory(project):
-        records = load_task_records(task_dir)
+    with _task_directory(project) as storage:
+        records = (
+            load_task_records(*storage.read_roots)
+            if task_dir == Path(".")
+            else load_task_records(task_dir)
+        )
         parent_path = resolve_task_reference(parent_ref, task_dir)
         parent_id, parent = _record_for_path(parent_path, records)
         tasks = {task_id: record for task_id, (_, record) in records.items()}

@@ -46,7 +46,12 @@ def iter_task_paths(root: Path) -> Iterator[Path]:
     return (path for path in root.rglob("*.yaml") if not is_apple_double(path))
 
 
-def resolve_task_reference(reference: str, root: Path = Path(".")) -> Path:
+def resolve_task_reference(
+    reference: str,
+    root: Path = Path("."),
+    *additional_roots: Path,
+) -> Path:
+    """Resolve a Task ID across ordered roots, or return an explicit path."""
     task_id = (
         reference
         if re.fullmatch(TASK_ID_PATTERN, reference)
@@ -56,10 +61,15 @@ def resolve_task_reference(reference: str, root: Path = Path(".")) -> Path:
     )
     if task_id is None:
         return Path(reference)
-    if not root.is_dir():
-        raise WflowError(f"task directory does not exist: {root}")
+    roots = (root, *additional_roots)
+    for task_root in roots:
+        if not task_root.is_dir():
+            raise WflowError(f"task directory does not exist: {task_root}")
     matches = [
-        path for path in sorted(iter_task_paths(root)) if _task_id(path) == task_id
+        path
+        for task_root in roots
+        for path in sorted(iter_task_paths(task_root))
+        if _task_id(path) == task_id
     ]
     if not matches:
         raise WflowError(f"task ID not found: {task_id}")
