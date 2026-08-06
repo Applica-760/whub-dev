@@ -142,6 +142,14 @@ class TestManifestSpec:
         data["hosts"]["home"]["auto_mount"] = False
         assert Manifest.model_validate(data).hosts["home"].auto_mount is False
 
+    def test_worktree_root_defaults_for_existing_manifests(self) -> None:
+        data = manifest_data()
+        del data["hosts"]["home"]["worktree_root"]
+
+        manifest = Manifest.model_validate(data)
+
+        assert manifest.hosts["home"].worktree_root == "worktrees"
+
     def test_duplicate_project_names_are_rejected(self) -> None:
         # ケース4
         data = manifest_data()
@@ -200,7 +208,7 @@ class TestManifestSpec:
         remote = manifest.resolve_project("remote").resource
         assert manifest.workspace_path(local) == Path(root) / "projects/local"
         assert manifest.workspace_path(remote) == Path(root) / "projects/remote"
-        assert manifest.remote_host(remote).hostname == "home.example.com"
+        assert manifest.remote_host(remote).hostname == "ssh.test.invalid"
 
     def test_load_manifest_reports_user_facing_errors(self) -> None:
         with tempfile.TemporaryDirectory() as root:

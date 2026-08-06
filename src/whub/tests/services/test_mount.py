@@ -512,7 +512,7 @@ class TestMountSpec:
         # ケース20
         m = manifest()
         project = m.resolve_project("remote")
-        secret = "user@host:/private/path IdentityFile=/Users/private/key"
+        secret = "user@host:/private/path IdentityFile=/test/private/identity"
         with (
             patch(
                 "whub.services.remote.mount.inspect_host_mount",

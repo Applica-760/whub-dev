@@ -50,13 +50,14 @@ from whub.core.remote import (
 )
 
 
-def _host(identity_file: str = "~/.ssh/id_home") -> Host:
+def _host(identity_file: str = "/test/identity") -> Host:
     return Host(
-        hostname="home.example.com",
-        user="takumi",
+        hostname="ssh.test.invalid",
+        user="test-user",
         port=2222,
         identity_file=identity_file,
         mount_root="/srv",
+        worktree_root="worktrees",
     )
 
 
@@ -65,8 +66,8 @@ class TestRemoteSpec:
         # ケース1
         target, identity, port = ssh_target(_host())
 
-        assert target == "takumi@home.example.com"
-        assert identity == str(Path("~/.ssh/id_home").expanduser())
+        assert target == "test-user@ssh.test.invalid"
+        assert identity == "/test/identity"
         assert port == 2222
 
     def test_build_remote_exec_command_changes_directory_and_execs_quoted_arguments(
@@ -90,10 +91,10 @@ class TestRemoteSpec:
         assert command == [
             "ssh",
             "-i",
-            str(Path("~/.ssh/id_home").expanduser()),
+            "/test/identity",
             "-p",
             "2222",
-            "takumi@home.example.com",
+            "test-user@ssh.test.invalid",
             "echo ok",
         ]
 
@@ -158,11 +159,11 @@ class TestRemoteSpec:
 
         assert command[:4] == [
             "sshfs",
-            "takumi@home.example.com:/srv/remote",
+            "test-user@ssh.test.invalid:/srv/remote",
             "/tmp/mount",
             "-s",
         ]
-        assert f"IdentityFile={Path('~/.ssh/id_home').expanduser()}" in command
+        assert "IdentityFile=/test/identity" in command
         assert "port=2222" in command
         assert "reconnect" in command
         assert "volname=whub-remote" in command
@@ -178,10 +179,10 @@ class TestRemoteSpec:
             "-o",
             "ConnectTimeout=5",
             "-i",
-            str(Path("~/.ssh/id_home").expanduser()),
+            "/test/identity",
             "-P",
             "2222",
-            "takumi@home.example.com:/srv/remote/out.nc",
+            "test-user@ssh.test.invalid:/srv/remote/out.nc",
             "/tmp/out.nc",
         ]
 
@@ -189,7 +190,7 @@ class TestRemoteSpec:
         # ケース8
         command = build_scp_command(_host(), "/srv/[run]?/*.nc", Path("/tmp/out.nc"))
 
-        assert r"takumi@home.example.com:/srv/\[run\]\?/\*.nc" in command
+        assert r"test-user@ssh.test.invalid:/srv/\[run\]\?/\*.nc" in command
 
     def test_build_rsync_command_builds_copy_argv(self) -> None:
         # ケース9
@@ -201,18 +202,18 @@ class TestRemoteSpec:
             "rsync",
             "-a",
             "-e",
-            f"ssh -i {Path('~/.ssh/id_home').expanduser()} -p 2222",
+            "ssh -i /test/identity -p 2222",
             "/tmp/skills/",
-            "takumi@home.example.com:/srv/project/.agents/skills/",
+            "test-user@ssh.test.invalid:/srv/project/.agents/skills/",
         ]
 
     def test_build_rsync_command_quotes_identity_path(self) -> None:
         # ケース9b
-        host = _host("~/Library/Application Support/whub/id home")
+        host = _host("/test/identity with space")
         command = build_rsync_command(host, "/tmp/skills", "/srv/project")
 
         assert (
-            f"ssh -i '{Path('~/Library/Application Support/whub/id home').expanduser()}' -p 2222"
+            "ssh -i '/test/identity with space' -p 2222"
             in command
         )
 

@@ -23,12 +23,25 @@ class SchemaModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+def _check_relative_path(value: str) -> str:
+    path = Path(value)
+    if path.is_absolute():
+        raise ValueError("path must be relative")
+    if ".." in path.parts:
+        raise ValueError("path must not escape its root")
+    return value
+
+
+RelativePath = Annotated[str, AfterValidator(_check_relative_path)]
+
+
 class Host(SchemaModel):
     hostname: str
     user: str
     port: int = 22
     identity_file: str
     mount_root: str
+    worktree_root: RelativePath = "worktrees"
     auto_mount: bool = True
 
     @field_validator("mount_root")
@@ -48,19 +61,6 @@ class BaseResource(SchemaModel):
     git: GitInfo | None = None
     codegraph: bool = False
     status: bool = True
-
-
-def _check_relative_path(value: str) -> str:
-    path = Path(value)
-    if path.is_absolute():
-        raise ValueError("path must be relative")
-    # Attachment paths must stay inside their root without resolving symlinks.
-    if ".." in path.parts:
-        raise ValueError("path must not escape its root")
-    return value
-
-
-RelativePath = Annotated[str, AfterValidator(_check_relative_path)]
 
 
 # ── Local ─────────────────────────────────────────────────────────────────────────────────

@@ -11,11 +11,12 @@ def manifest_data() -> dict:
         "version": "2",
         "hosts": {
             "home": {
-                "hostname": "home.example.com",
-                "user": "takumi",
+                "hostname": "ssh.test.invalid",
+                "user": "test-user",
                 "port": 2222,
-                "identity_file": "~/.ssh/id_home",
+                "identity_file": "/test/identity",
                 "mount_root": "/srv",
+                "worktree_root": "worktrees",
             },
         },
         "projects": [

@@ -1,4 +1,4 @@
-"""Create and remove registered Git worktrees."""
+"""Create and remove resource-specific Git worktrees."""
 
 from __future__ import annotations
 
@@ -8,13 +8,12 @@ from whub.models import Manifest, WorktreeDefinition
 from whub.services.errors import ServiceError
 from whub.services.task import load_project_task
 from whub.services.worktree.definition import save_worktree_definition
-from whub.services.worktree.git import process_detail, run_git
-from whub.services.worktree.resolve import resolve_worktree_parent
-
+from whub.services.worktree.git import process_detail, run_worktree_git
+from whub.services.worktree.resolve import _resolve_location
 
 def create_project_worktree(
     manifest: Manifest, workspace_root: Path, project: str, task_id: str
-) -> Path:
+) -> Path | str:
     """Create a worktree for an existing Task in PROJECT."""
     task = load_project_task(manifest, project, task_id)
     resolved_task_id = task.task.id
@@ -23,29 +22,27 @@ def create_project_worktree(
         task_id=resolved_task_id,
         parent_project=project,
         branch=f"tasks/{number}",
-        workspace_path=f"projects/worktrees/{project}-{number}",
     )
     return _create_worktree(manifest, workspace_root, definition)
 
 
 def _create_worktree(
-    manifest: Manifest,
-    workspace_root: Path,
-    definition: WorktreeDefinition,
-) -> Path:
+    manifest: Manifest, workspace_root: Path, definition: WorktreeDefinition
+) -> Path | str:
     """Save DEFINITION, then create its Git worktree and branch if needed."""
-    parent = resolve_worktree_parent(manifest, definition)
-    destination = workspace_root / definition.workspace_path
+    parent, destination, host = _resolve_location(manifest, workspace_root, definition)
     save_worktree_definition(workspace_root, definition)
     branch_ref = f"refs/heads/{definition.branch}"
-    branch_check = run_git(parent, "show-ref", "--verify", "--quiet", branch_ref)
+    branch_check = run_worktree_git(
+        host, parent, "show-ref", "--verify", "--quiet", branch_ref
+    )
     if branch_check.returncode == 0:
         command = ("worktree", "add", str(destination), definition.branch)
     elif branch_check.returncode == 1:
         command = ("worktree", "add", "-b", definition.branch, str(destination))
     else:
         raise ServiceError("git branch lookup failed: " + process_detail(branch_check))
-    result = run_git(parent, *command)
+    result = run_worktree_git(host, parent, *command)
     if result.returncode != 0:
         raise ServiceError("git worktree add failed: " + process_detail(result))
     return destination
@@ -75,16 +72,15 @@ def remove_project_worktree(
         )
     definition = inspection.definition
     assert definition is not None
-    parent = resolve_worktree_parent(manifest, definition)
-    destination = workspace_root / definition.workspace_path
-    status = run_git(destination, "status", "--porcelain", "--untracked-files=all")
+    parent, destination, host = _resolve_location(manifest, workspace_root, definition)
+    status = run_worktree_git(
+        host, destination, "status", "--porcelain", "--untracked-files=all"
+    )
     if status.returncode != 0:
         raise ServiceError("git status failed: " + process_detail(status))
     if status.stdout.strip():
-        raise ServiceError(
-            f"worktree has uncommitted changes: {definition.workspace_path}"
-        )
-    result = run_git(parent, "worktree", "remove", str(destination))
+        raise ServiceError(f"worktree has uncommitted changes: {destination}")
+    result = run_worktree_git(host, parent, "worktree", "remove", str(destination))
     if result.returncode != 0:
         raise ServiceError("git worktree remove failed: " + process_detail(result))
     try:

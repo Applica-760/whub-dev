@@ -13,7 +13,6 @@ def _definition() -> WorktreeDefinition:
         task_id="TASK-072",
         parent_project="local",
         branch="tasks/072",
-        workspace_path="projects/worktrees/local-072",
     )
 
 
@@ -51,7 +50,7 @@ def test_collect_worktree_status_projects_definition_and_diagnostics(
     assert statuses[0].parent_project == "local"
     assert statuses[0].task_id == "TASK-072"
     assert statuses[0].branch == "tasks/072"
-    assert statuses[0].workspace_path == "projects/worktrees/local-072"
+    assert statuses[0].workspace_path == str(tmp_path / "projects/worktrees/local-072")
     assert statuses[0].diagnostics == ()
     assert statuses[1].diagnostics == (
         "git worktree is missing: projects/worktrees/local-072",
