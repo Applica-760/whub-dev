@@ -6,6 +6,8 @@ releaseは`~/.whub/releases/<release-id>`配下の`artifact/`・`venv/`・`relea
 
 release操作だけは、古い`current` releaseの実装に依存しないよう、cleanな開発checkoutのPython moduleとして実行する。通常の`whub`・`wflow`操作は引き続きPATH上のCLIを使う。
 
+releaseは運用作業であり、Taskの起票・worktreeの作成・Task計画の承認を必要としない。変更済みでcleanな親repositoryをpushしてから、この手順を実行する。
+
 ## 前提
 
 - release commandでは`<path>/src`を`PYTHONPATH`に指定し、`uv run --project <path> python -m whub release ...`を使う。
