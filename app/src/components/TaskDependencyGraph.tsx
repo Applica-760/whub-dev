@@ -1,5 +1,6 @@
 import { Box, useComputedColorScheme } from "@mantine/core";
 import { useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
 import type { ElementDefinition, LayoutOptions } from "cytoscape";
 
 export type TaskGraphItem = {
@@ -12,7 +13,7 @@ export type TaskGraphItem = {
 
 type TaskDependencyGraphProps = {
   tasks: TaskGraphItem[];
-  height?: number;
+  height?: CSSProperties["height"];
   onSelectTask?: (taskId: string) => void;
 };
 

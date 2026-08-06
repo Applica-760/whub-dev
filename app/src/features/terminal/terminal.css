@@ -23,8 +23,31 @@
   order: -1;
 }
 
-.terminal-task-detail {
+.terminal-task-panel {
+  contain: size;
+  display: grid;
+  gap: 1rem;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
+  height: 100%;
+  min-height: 0;
   order: 1;
+  overflow: hidden;
+}
+
+.terminal-task-graph,
+.terminal-task-detail {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.terminal-task-graph .whub-box {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.terminal-task-detail .whub-box {
+  min-height: 0;
+  overflow: auto;
 }
 
 .terminal-layout[data-explorer-collapsed="true"] {
@@ -40,7 +63,7 @@
 }
 
 .terminal-explorer[data-collapsed="true"],
-.terminal-task-detail[data-collapsed="true"] {
+.terminal-task-panel[data-collapsed="true"] {
   display: none;
 }
 
@@ -151,5 +174,11 @@
   .terminal-layout,
   .terminal-diff-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .terminal-task-panel {
+    contain: none;
+    height: auto;
+    min-height: 64rem;
   }
 }

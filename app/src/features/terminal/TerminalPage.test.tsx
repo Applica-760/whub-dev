@@ -65,6 +65,23 @@ vi.mock("./TerminalWidget", () => ({
   },
 }));
 
+vi.mock("../tasks/TaskDependencyGraphWidget", () => ({
+  TaskDependencyGraphWidget: ({
+    onSelectTask,
+    project,
+  }: {
+    onSelectTask?: (project: string, taskId: string) => void;
+    project: string | null;
+  }) => (
+    <button
+      onClick={() => project && onSelectTask?.(project, "TASK-126")}
+      type="button"
+    >
+      Task graph: {project ?? "-"}
+    </button>
+  ),
+}));
+
 beforeEach(() => {
   agentError = null;
   operationStarts = 0;
@@ -160,7 +177,11 @@ beforeEach(() => {
           json: async () => ({
             schema_version: 1,
             task: {
-              id: url.includes("TASK-101") ? "TASK-101" : "TASK-099",
+              id: url.includes("TASK-101")
+                ? "TASK-101"
+                : url.includes("TASK-126")
+                  ? "TASK-126"
+                  : "TASK-099",
               state: "in_progress",
               title: "Terminal task",
               approach: [],
@@ -239,6 +260,7 @@ describe("TerminalPage", () => {
     );
     expect(screen.getByText("whub-dev / TASK-099")).toBeTruthy();
     expect(await screen.findByText("Task ID: TASK-099")).toBeTruthy();
+    expect(screen.getByText("Task graph: whub-dev")).toBeTruthy();
     expect(await screen.findByText("src")).toBeTruthy();
     expect(await screen.findByText("new")).toBeTruthy();
     expect(
@@ -246,6 +268,9 @@ describe("TerminalPage", () => {
     ).toBe("+");
     expect(screen.getByText("unchanged")).toBeTruthy();
     expect(container.querySelectorAll(".terminal-layout")).toHaveLength(1);
+    expect(container.querySelectorAll(".terminal-task-panel")).toHaveLength(1);
+    expect(container.querySelectorAll(".terminal-task-graph")).toHaveLength(1);
+    expect(container.querySelectorAll(".terminal-task-detail")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(1);
 
     fireEvent.click(secondTerminal);
@@ -253,6 +278,10 @@ describe("TerminalPage", () => {
     expect(firstTerminal.getAttribute("aria-pressed")).toBe("false");
     expect(secondTerminal.getAttribute("aria-pressed")).toBe("true");
     expect(screen.getAllByText("vault / TASK-101")).not.toHaveLength(0);
+    expect(screen.getByText("Task graph: vault")).toBeTruthy();
+    expect(await screen.findByText("Task ID: TASK-101")).toBeTruthy();
+    fireEvent.click(screen.getByText("Task graph: vault"));
+    expect(screen.getByText("Task ID: TASK-101")).toBeTruthy();
     expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
     expect(terminalUnmounts).toEqual(["whub-dev / TASK-099"]);
     expect(fetch).toHaveBeenCalledWith(
@@ -394,6 +423,23 @@ describe("TerminalPage", () => {
     expect(
       screen.queryByRole("switch", { name: "Operation operator-1を停止" }),
     ).toBeNull();
+  });
+
+  it("Operationではwhub-devのグラフ選択後にTask詳細を表示する", async () => {
+    operatorTerminals = [{ operator_id: "operator-1" }];
+    renderPage();
+
+    const graph = await screen.findByText("Task graph: whub-dev");
+    expect(screen.getByText("グラフからTaskを選択してください")).toBeTruthy();
+    expect(screen.queryByText("Task ID: TASK-126")).toBeNull();
+
+    fireEvent.click(graph);
+
+    expect(await screen.findByText("Task ID: TASK-126")).toBeTruthy();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/tasks/TASK-126?project=whub-dev",
+      undefined,
+    );
   });
 
   it("worktreeの探索中でも既存Operationを先に表示する", async () => {

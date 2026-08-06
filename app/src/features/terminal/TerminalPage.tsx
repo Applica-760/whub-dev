@@ -11,6 +11,8 @@ import { CodexPanel } from "./CodexPanel";
 import { TerminalWidget } from "./TerminalWidget";
 import { useApprovalAttention } from "./useApprovalAttention";
 import type { TerminalCollapseState } from "./useTerminalCollapse";
+import type { SelectedTask } from "../tasks/AllTasksWidget";
+import { TaskDependencyGraphWidget } from "../tasks/TaskDependencyGraphWidget";
 import { TaskDetailWidget } from "../tasks/TaskDetailWidget";
 
 import "./terminal.css";
@@ -55,6 +57,8 @@ export function TerminalPage({
   const [operatorsLoaded, setOperatorsLoaded] = useState(false);
   const [operatorPending, setOperatorPending] = useState(false);
   const [panelMode, setPanelMode] = useState<PanelMode>("terminal");
+  const [selectedOperationTask, setSelectedOperationTask] =
+    useState<SelectedTask | null>(null);
   const selectedWorktree = terminals.find(
     (item) => worktreeValue(item) === selectedTerminal,
   );
@@ -62,6 +66,15 @@ export function TerminalPage({
   const selectedOperator = operators.find(
     (operator) => operatorValue(operator.operator_id) === selectedTerminal,
   );
+  const graphProject = selectedOperator
+    ? "whub-dev"
+    : (selectedWorktree?.parent_project ?? null);
+  const detailProject = selectedOperator
+    ? selectedOperationTask?.project
+    : selectedWorktree?.parent_project;
+  const detailTaskId = selectedOperator
+    ? selectedOperationTask?.taskId
+    : selectedWorktree?.task_id;
 
   const acknowledgeTerminal = useCallback(
     (value: string) => {
@@ -101,6 +114,10 @@ export function TerminalPage({
     },
     [acknowledgeTerminal],
   );
+
+  const selectOperationTask = useCallback((project: string, taskId: string) => {
+    setSelectedOperationTask({ project, taskId });
+  }, []);
 
   useEffect(() => {
     setSelectedTerminal((current) => {
@@ -206,14 +223,27 @@ export function TerminalPage({
         data-task-collapsed={collapsed.right || undefined}
       >
         <aside
-          className="terminal-task-detail"
+          className="terminal-task-panel"
           data-collapsed={collapsed.right || undefined}
         >
-          <TaskDetailWidget
-            emptyMessage="Terminalを選択してください"
-            project={selectedWorktree?.parent_project}
-            taskId={selectedWorktree?.task_id}
-          />
+          <div className="terminal-task-graph">
+            <TaskDependencyGraphWidget
+              height="100%"
+              onSelectTask={selectedOperator ? selectOperationTask : undefined}
+              project={graphProject}
+            />
+          </div>
+          <div className="terminal-task-detail">
+            <TaskDetailWidget
+              emptyMessage={
+                selectedOperator
+                  ? "グラフからTaskを選択してください"
+                  : "Terminalを選択してください"
+              }
+              project={detailProject}
+              taskId={detailTaskId}
+            />
+          </div>
         </aside>
         <WidgetFrame
           action={

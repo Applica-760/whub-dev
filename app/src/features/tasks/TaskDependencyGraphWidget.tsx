@@ -1,5 +1,6 @@
 import { Alert, Box, Text } from "@mantine/core";
 import { useCallback } from "react";
+import type { CSSProperties } from "react";
 import { useNavigate } from "react-router";
 
 import { TaskDependencyGraph } from "../../components/TaskDependencyGraph";
@@ -9,7 +10,7 @@ import { useTasks } from "./useTasks";
 
 type TaskDependencyGraphWidgetProps = {
   project: string | null;
-  height?: number;
+  height?: CSSProperties["height"];
   onSelectTask?: (project: string, taskId: string) => void;
 };
 
@@ -42,7 +43,7 @@ export function TaskDependencyGraphWidget({
         </Text>
       }
     >
-      <Box p="md">
+      <Box h="100%" p="md">
         {error ? (
           <Alert color="red" title="Taskグラフを取得できませんでした">
             {error}
