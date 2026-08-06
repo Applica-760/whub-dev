@@ -1,0 +1,185 @@
+schema_version: 1
+task:
+  id: TASK-120
+  state: completed
+  title: Remote resource対応のworktree・Agent方針検討
+  objective: remote resourceでもmanifest管理のworktree配置とremote Agent sessionを扱える設計を確定する
+  approach:
+  - worktree rootをmanifest化し、lifecycleをresource種別で分岐する。remote Agentはhost内で起動しSSH attachする。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 方針検討
+    acceptance: []
+    steps:
+    - description: manifestでlocal/remote resourceごとのworktree rootと配置契約を設計する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: create・check・remove・PR・mergeのresource別実装境界をon_targets()で設計する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: remote host内で起動しSSH attachするAgent sessionと、Hub側Task SSOT更新の経路・前提を設計する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        decisions: worktree rootはlocal/remote resourceごとにmanifestで宣言する。lifecycleはon_targets()でresource別に分岐する。remote
+          Agentはhost内で起動してSSH attachし、使い捨てのHub context・認証生成物はcloseで削除する。
+      deleted: false
+    - value:
+        decisions: remote worktree rootはmount_rootと同じくhosts.<host>に1つ定義する。remote AgentはHub側repo
+          sessionへTask操作を依頼し、TASK-120ではremoteからのwflow task操作経路を実装しない。
+      deleted: false
+    - value:
+        decisions: local worktree rootは現行配置を維持し、コード内の単一定数で管理する。remote rootはhosts.<host>.worktree_rootへmount_root相対pathとして定義し、mount外を指定させない。判断はADR-0016に記録した。
+      deleted: false
+    - value:
+        result: ADR-0016で、localは固定root定数、remoteはhosts.<host>.worktree_rootのmount_root相対pathとする配置契約を確定した。
+      deleted: false
+    - value:
+        decisions: mount_rootの変更は予定しないため、WorktreeDefinitionへ実パスは保存せず、local定数または現行manifestのrootから都度導出する。
+      deleted: false
+    - value:
+        scope: Web appのCodex App Server・attention・差分表示のremote Agent連携はTASK-122へ分離した。TASK-120はCLI
+          Agent lifecycleとworktree lifecycleに限定する。
+      deleted: false
+    - value:
+        finding: worktree checkでTASK-120（tasks/120、projects/worktrees/whub-dev-120）の登録とdiagnostic
+          okを確認。ADR-0016、worktree/Agent操作文書、および現行のlocal専用実装を再読込し、resource別lifecycleの詳細設計を開始した。
+      deleted: false
+    - value:
+        decision: 利用者の指示により、各Phaseの完了時に設計・変更・検証を要約して確認を得てから次Phaseへ進む。
+      deleted: false
+    - value:
+        decision: 承認された層構成として、配置導出はresolverへ集約し、lifecycle・check・PR・mergeはon_targets()経由でlocal/remote実行を分岐する。remote
+          Agentの実行・SSH attach・Hub側Task SSOT非更新は次Phaseで実装する。
+      deleted: false
+    deleted: false
+  - title: Resource別worktree lifecycleを実装する
+    acceptance: []
+    steps:
+    - description: local/remote resourceをon_targets()で分岐し、create・check・remove・pull-request・mergeの共通契約とresource別実行を実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: local固定rootとremote hostのmount_root相対worktree_rootを検証し、定義・診断・エラー表示をresource別に整備する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: worktree定義をschema v2へ更新し、配置導出をresolverへ集約。local/remoteのcreate・check・remove・pull-request・mergeを共通Git/GitHub実行境界から実行し、remote
+          hostのmount_root相対worktree_rootを検証する。対象テスト18件とruff checkが成功した。
+      deleted: false
+    deleted: false
+  - title: Remote Agent lifecycleを実装する
+    acceptance: []
+    steps:
+    - description: remote host内でAgent sessionを起動し、SSH attachで接続する経路を実装する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: Hub側repo sessionがTask SSOTを更新する責務を維持し、close時にHub context・認証生成物だけをcleanupする
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: remote host内tmux起動・SSH attach、Hub所有のremote context/auth/Codex trust生成とclose
+          cleanupを実装。Agent harness 24件とruff checkが成功した。
+      deleted: false
+    deleted: false
+  - title: 検証と運用文書を整備する
+    acceptance: []
+    steps:
+    - description: local/remoteの正常系・不正設定・cleanupを自動テストで検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: CLI reference・worktree operation・Agent harness operationを実装契約に合わせ、uv
+        run pytestで全体を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: remote Agent dispatchとcleanupのharnessテスト、Host schema移行漏れを検証。CLI・Agent
+          operation・architecture文書を更新し、npm run build、uv run ruff check src、uv run
+          pytest -qが成功した（551 passed）。
+      deleted: false
+    deleted: false
+  - title: 敵対的レビュー指摘を修正する
+    acceptance: []
+    steps:
+    - description: 既存manifestとworktree schema v1を互換読込または安全な移行で維持し、実登録を使って検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: SSH障害をsession・file不在と区別し、cleanup state保持とremote trustの排他更新を実装して異常系・並行更新を検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: worktree referenceをschema v2とremote lifecycle契約へ更新し、対象テスト・静的解析・全体テストを実行する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: 既存manifestとschema v1登録の互換読込、SSH障害時のstate保持、remote trustの排他・atomic更新、正本文書と回帰テストを追加。uv
+          run ruff check src、uv run pytest -q（562 passed）、uv run whub worktree check（TASK-120
+          diagnostic ok）、uv run whub lsが成功。実装commit d3ff22b。
+      deleted: false
+    deleted: false
+  - title: Agent adapterとCodex serviceを再編する
+    acceptance: []
+    steps:
+    - description: CodexとClaude Codeのrender-only設定変換をadaptersへ統一し、Codex固有lifecycle/runtimeはcodexへ、remoteは汎用transportだけへ再編して、import・テスト・設計文書を更新し検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: adapters/codex.pyへrender-only設定変換を移動し、remote Codex trust lifecycleをcodex/trust.pyへ統合。remote/codex_trust.pyを削除し、agent
+          imports・テスト・設計文書を更新した。uv run ruff check src、uv run pytest -q（562 passed）、git
+          diff --check、旧import参照なしを確認。実装commit e37ed48。
+      deleted: false
+    deleted: false
+  - title: Remote stateをフラット化する
+    acceptance: []
+    steps:
+    - description: remote/state.pyをremote_state.pyへ再配置し、参照・テスト・設計文書を更新してremote directoryを除去し、静的解析と全テストで検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        result: remote/state.pyをremote_state.pyへ移動し、空のremote packageを削除。agent import、remote
+          lifecycle test、architecture文書を更新し、旧参照なしを確認した。uv run ruff check src、uv run
+          pytest -q（562 passed）、git diff --checkが成功。実装commit a1ce072。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: 実装・検証・受け入れ範囲を既存の方針検討に追加するため
+- reason: 敵対的レビューで既存manifest・worktree schema互換性、SSH障害時cleanup、remote trust並行更新、正本文書の不整合を検出したため、修正と異常系検証を追加する。
+- reason: 修正 Phase をTask計画へ記録するため。
+- reason: 利用者指定の責務分割に合わせ、Agent adapterとCodex固有serviceの配置を再編するため。
+- reason: remote serviceがremote stateだけになったため、過剰なdirectory層を除去してremote_state.pyへ再配置する。
+cancellation: null
+result:
+  summary: 'PR #17をmerge方式で統合し、worktree cleanupと親mainのfast-forward同期を確認。remote/local
+    worktree lifecycle、remote Agent lifecycle、敵対的レビュー修正、Agent adapter/Codex service再編、remote_stateフラット化を完了。'
