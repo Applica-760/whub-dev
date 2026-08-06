@@ -8,11 +8,12 @@
   render planを返す。
 - `context.py`: Hub rootの`AGENTS.md`、`.agents/skills`、baseと選択されたRoleの指示をsnapshot renderする。
 - `state.py`: authのrender planとcontextを対象worktreeへ安全に具体化し、所有物を記録・cleanupする。
-- `remote/state.py`: remote worktreeに対して、SSH経由で同じ生成物の所有・cleanup契約を実行する。
+- `adapters/`: Agent open時に配る設定・ruleをAgent別のrender planへ純粋変換する。生成物の書込み、状態、lifecycleは所有しない。
+- `adapters/codex.py`: `EffectiveAuth`をCodex project configとrulesのrender planへ変換する。
+- `adapters/claude_code.py`: `EffectiveAuth`をClaude Code project settings、hook、MCP configのrender planへ変換する。
+- `remote/state.py`: remote worktreeに対して、SSH経由で同じ生成物の所有・cleanup契約を実行する。remoteは汎用SSH transportと生成物の扱いだけを担い、Agent固有の意味論は持たない。
 - `tmux_session.py`: tmux sessionの開始・停止だけを扱う。
-- `codex/config.py`: `EffectiveAuth`をCodex project configとrulesのrender planへ変換する。
-- `codex/trust.py`: worktreeごとのCodex trust entryを所有・cleanupする。
-- `remote/codex_trust.py`: remote host上のCodex trust entryを所有・cleanupする。
+- `codex/trust.py`: local/remote worktreeごとのCodex trust entryを所有・cleanupする。remote実行時もCodex trustの意味論とlockはこのserviceが持ち、SSHはtransportとしてのみ利用する。
 - `codex/app_server.py`: worktreeごとのCodex App Server processとJSON-RPC状態を所有する。
 - `codex/attention.py`: Codex approval requestの短期in-memory状態を保持する。
 - `webapp/agent_codex_control.py`: `whub agent`からlocal web backendを起動・停止するcontrol clientであり、Codex App Server protocolは扱わない。

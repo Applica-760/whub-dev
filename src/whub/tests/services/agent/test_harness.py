@@ -10,7 +10,7 @@ from whub.models.agent.auth import (
     RegisteredTaskWorktreeVariable,
 )
 from whub.models import Host, RemoteResource, SymlinkResource
-from whub.services.agent.codex.config import CodexRenderPlan
+from whub.services.agent.adapters.codex import CodexRenderPlan
 from whub.services.agent.agent import close_agent, open_agent
 from whub.services.agent.auth import resolve_variables
 from whub.services.agent.context import AGENTS_CONTEXT_PATH, render_context
@@ -555,7 +555,7 @@ def test_remote_open_uses_remote_state_and_ssh_tmux(tmp_path: Path) -> None:
         patch("whub.services.agent.agent.resolve_agent_auth", return_value=resolved_auth),
         patch("whub.services.agent.agent.render_codex", return_value=plan),
         patch("whub.services.agent.agent.render_claude_code", return_value=plan),
-        patch("whub.services.agent.agent.remote_codex_trust.prepare") as trust,
+        patch("whub.services.agent.agent.prepare_remote_codex_trust") as trust,
         patch("whub.services.agent.agent.remote_state.prepare") as state,
         patch("whub.services.agent.agent.open_tmux_session", return_value=session) as start,
     ):

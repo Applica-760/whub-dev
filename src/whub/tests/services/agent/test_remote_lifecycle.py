@@ -9,7 +9,8 @@ import pytest
 
 from whub.models import Host, RemoteResource
 from whub.services.agent.agent import close_agent
-from whub.services.agent.remote import codex_trust, state
+from whub.services.agent.codex import trust as codex_trust
+from whub.services.agent.remote import state
 from whub.services.agent.tmux_session import close_tmux_session
 from whub.services.errors import ServiceError
 
@@ -70,7 +71,7 @@ def test_remote_close_preserves_state_when_tmux_probe_fails(tmp_path: Path) -> N
             "whub.services.agent.tmux_session.run_ssh_command",
             return_value=CompletedProcess([], 255, "", "ssh failed"),
         ),
-        patch("whub.services.agent.agent.remote_codex_trust.cleanup") as trust,
+        patch("whub.services.agent.agent.cleanup_remote_codex_trust") as trust,
         patch("whub.services.agent.agent.remote_state.cleanup") as remote_state,
         pytest.raises(ServiceError, match="failed to inspect remote tmux"),
     ):
@@ -188,15 +189,15 @@ def test_remote_codex_trust_serializes_concurrent_updates(tmp_path: Path) -> Non
 
     def prepare(task: str, worktree: str) -> None:
         barrier.wait()
-        codex_trust.prepare(tmp_path, "remote", task, _host(), worktree)
+        codex_trust.prepare_remote(tmp_path, "remote", task, _host(), worktree)
 
     with (
         patch(
-            "whub.services.agent.remote.codex_trust.run_ssh_command",
+            "whub.services.agent.codex.trust.run_ssh_command",
             side_effect=remote.run,
         ),
         patch(
-            "whub.services.agent.remote.codex_trust.remote_write_file",
+            "whub.services.agent.codex.trust.remote_write_file",
             side_effect=remote.write,
         ),
         ThreadPoolExecutor(max_workers=2) as executor,
@@ -214,8 +215,8 @@ def test_remote_codex_trust_serializes_concurrent_updates(tmp_path: Path) -> Non
 
 
 def test_remote_codex_cleanup_keeps_state_on_ssh_failure(tmp_path: Path) -> None:
-    state_path = codex_trust._state_path(tmp_path, "remote", "TASK-120")
-    codex_trust._save(
+    state_path = codex_trust._remote_state_path(tmp_path, "remote", "TASK-120")
+    codex_trust._save_remote_state(
         state_path,
         {
             "config_path": "/home/test-user/.codex/config.toml",
@@ -231,12 +232,12 @@ def test_remote_codex_cleanup_keeps_state_on_ssh_failure(tmp_path: Path) -> None
 
     with (
         patch(
-            "whub.services.agent.remote.codex_trust.run_ssh_command",
+            "whub.services.agent.codex.trust.run_ssh_command",
             side_effect=run,
         ),
         pytest.raises(ServiceError, match="remote Codex trust operation failed"),
     ):
-        codex_trust.cleanup(
+        codex_trust.cleanup_remote(
             tmp_path,
             "remote",
             "TASK-120",

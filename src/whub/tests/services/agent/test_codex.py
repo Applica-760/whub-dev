@@ -9,7 +9,7 @@ from whub.models.agent.auth import (
     ExtensionTool,
     FilesystemGrants,
 )
-from whub.services.agent.codex.config import (
+from whub.services.agent.adapters.codex import (
     CodexAdapterError,
     render,
 )

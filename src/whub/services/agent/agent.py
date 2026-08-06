@@ -8,20 +8,21 @@ from whub.core.target import TargetItem, TargetError, on_targets, resolve_projec
 from whub.core.tmux import TmuxSession
 from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.services.agent.adapters.claude_code import render as render_claude_code
-from whub.services.agent.codex.config import render as render_codex
+from whub.services.agent.adapters.codex import render as render_codex
 from whub.services.agent.auth import (
     resolve_agent_auth,
     resolve_variables,
 )
 from whub.services.agent.context import render_context
 from whub.services.agent.codex.trust import cleanup as cleanup_codex_trust
+from whub.services.agent.codex.trust import cleanup_remote as cleanup_remote_codex_trust
 from whub.services.agent.codex.trust import prepare as prepare_codex_trust
+from whub.services.agent.codex.trust import prepare_remote as prepare_remote_codex_trust
 from whub.services.agent.tmux_session import (
     close_tmux_session,
     open_tmux_session,
 )
 from whub.services.agent.state import cleanup, prepare
-from whub.services.agent.remote import codex_trust as remote_codex_trust
 from whub.services.agent.remote import state as remote_state
 from whub.services.errors import ServiceError
 from whub.services.worktree.resolve import (
@@ -78,7 +79,7 @@ def open_agent(
 
     def remote(_: RemoteResource, item: ResolvedProjectWorktree) -> TmuxSession:
         assert item.host is not None and isinstance(item.destination, str)
-        remote_codex_trust.prepare(
+        prepare_remote_codex_trust(
             workspace_root,
             project,
             item.definition.task_id,
@@ -128,7 +129,7 @@ def close_agent(
     def remote(_: RemoteResource, item: ResolvedProjectWorktree) -> None:
         assert item.host is not None and isinstance(item.destination, str)
         close_tmux_session(project, item.definition.task_id, item.host)
-        remote_codex_trust.cleanup(
+        cleanup_remote_codex_trust(
             workspace_root,
             project,
             item.definition.task_id,
