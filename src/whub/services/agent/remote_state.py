@@ -65,6 +65,18 @@ def cleanup(
     state_path.unlink()
 
 
+def owned_paths(
+    workspace_root: Path, project: str, task_id: str, worktree: str
+) -> set[PurePosixPath]:
+    """Return paths owned wholly or partly by the remote Agent lifecycle."""
+    state = _load(_state_path(workspace_root, project, task_id))
+    if state is None:
+        return set()
+    if state["worktree"] != worktree:
+        raise ServiceError("remote Agent state does not match the registered worktree")
+    return {PurePosixPath(name) for key in ("files", "blocks") for name in state[key]}
+
+
 def _remote_path(worktree: str, relative: PurePosixPath) -> str:
     if relative.is_absolute() or ".." in relative.parts:
         raise ServiceError(f"invalid generated config path: {relative}")
@@ -172,7 +184,9 @@ def _cleanup_files(host: Host, worktree: str, files: object) -> None:
         if content is None:
             continue
         if not isinstance(expected, str) or _digest(content) != expected:
-            raise ServiceError(f"generated config was modified and was not removed: {relative}")
+            raise ServiceError(
+                f"generated config was modified and was not removed: {relative}"
+            )
         _run(host, f"rm -- {shlex.quote(path)}")
 
 
@@ -187,7 +201,9 @@ def _cleanup_blocks(host: Host, worktree: str, blocks: object) -> None:
             continue
         start, end = _block_range(content, relative)
         if not isinstance(expected, str) or _digest(content[start:end]) != expected:
-            raise ServiceError(f"managed context was modified and was not removed: {relative}")
+            raise ServiceError(
+                f"managed context was modified and was not removed: {relative}"
+            )
         remaining = content[:start].rstrip("\n") + content[end:]
         if remaining.strip():
             _write(host, path, remaining)
@@ -206,7 +222,11 @@ def _block_range(content: str, relative: PurePosixPath) -> tuple[int, int]:
 
 
 def _state_path(workspace_root: Path, project: str, task_id: str) -> Path:
-    return workspace_root / "projects/worktrees/agents" / f"{project}-{task_id.removeprefix('TASK-')}.remote.json"
+    return (
+        workspace_root
+        / "projects/worktrees/agents"
+        / f"{project}-{task_id.removeprefix('TASK-')}.remote.json"
+    )
 
 
 def _load(path: Path) -> dict[str, object] | None:

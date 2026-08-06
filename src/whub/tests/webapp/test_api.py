@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
@@ -718,6 +718,10 @@ def test_worktree_diff_endpoints_use_registered_worktree_services(
             "whub.webapp.routers.worktree_diff.list_changed_files", return_value=files
         ) as mock_files,
         patch(
+            "whub.webapp.routers.worktree_diff.generated_paths",
+            return_value={PurePosixPath("src/main.py")},
+        ) as mock_generated,
+        patch(
             "whub.webapp.routers.worktree_diff.read_changed_file_diff",
             return_value=diff,
         ) as mock_diff,
@@ -728,7 +732,14 @@ def test_worktree_diff_endpoints_use_registered_worktree_services(
         )
 
     assert files_response.json() == {
-        "files": [{"path": "src/main.py", "status": "M", "previous_path": None}]
+        "files": [
+            {
+                "path": "src/main.py",
+                "status": "M",
+                "previous_path": None,
+                "agent_generated": True,
+            }
+        ]
     }
     assert diff_response.json() == {
         "path": "src/main.py",
@@ -737,6 +748,7 @@ def test_worktree_diff_endpoints_use_registered_worktree_services(
         "state": diff.state,
     }
     mock_files.assert_called_once_with(m, tmp_path, "local", "TASK-072")
+    mock_generated.assert_called_once_with(m, tmp_path, "local", "TASK-072")
     mock_diff.assert_called_once_with(m, tmp_path, "local", "TASK-072", "src/main.py")
 
 

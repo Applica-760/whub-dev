@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
-from whub.core.target import TargetItem, TargetError, on_targets, resolve_project_resource
+from whub.core.target import (
+    TargetItem,
+    TargetError,
+    on_targets,
+    resolve_project_resource,
+)
 from whub.core.tmux import TmuxSession
 from whub.models import Manifest, RemoteResource, SymlinkResource
 from whub.services.agent.adapters.claude_code import render as render_claude_code
@@ -22,7 +27,7 @@ from whub.services.agent.tmux_session import (
     close_tmux_session,
     open_tmux_session,
 )
-from whub.services.agent.state import cleanup, prepare
+from whub.services.agent.state import cleanup, owned_paths as local_owned_paths, prepare
 from whub.services.agent import remote_state
 from whub.services.errors import ServiceError
 from whub.services.worktree.resolve import (
@@ -103,9 +108,21 @@ def open_agent(
             item.host,
         )
 
-    return on_targets(
-        [TargetItem(resource, registered)], local=local, remote=remote
-    )[0]
+    return on_targets([TargetItem(resource, registered)], local=local, remote=remote)[0]
+
+
+def generated_paths(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> set[PurePosixPath]:
+    """Return Agent-owned paths for one registered local or remote worktree."""
+    registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    if registered.is_remote:
+        assert isinstance(registered.destination, str)
+        return remote_state.owned_paths(
+            workspace_root, project, task_id, registered.destination
+        )
+    assert isinstance(registered.destination, Path)
+    return local_owned_paths(workspace_root, project, task_id, registered.destination)
 
 
 def close_agent(

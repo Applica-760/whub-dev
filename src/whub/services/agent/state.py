@@ -121,6 +121,17 @@ def cleanup(workspace_root: Path, project: str, task_id: str, worktree: Path) ->
     path.unlink()
 
 
+def owned_paths(
+    workspace_root: Path, project: str, task_id: str, worktree: Path
+) -> set[PurePosixPath]:
+    """Return paths owned wholly or partly by the local Agent lifecycle."""
+    state = _load(_state_path(workspace_root, project, task_id))
+    if state is None:
+        return set()
+    _validate(state, project, task_id, worktree)
+    return set(state.files) | set(state.blocks)
+
+
 def _state_path(workspace_root: Path, project: str, task_id: str) -> Path:
     number = task_id.removeprefix("TASK-")
     return (

@@ -37,7 +37,11 @@ class FakeAudioContext {
   state: AudioContextState = "suspended";
   currentTime = 0;
   destination = {} as AudioDestinationNode;
-  oscillatorStart = vi.fn();
+  decodeAudioData = vi.fn(async (data: ArrayBuffer) => {
+    const asset = new TextDecoder().decode(data);
+    return { asset } as unknown as AudioBuffer;
+  });
+  playedAssets: string[] = [];
 
   constructor() {
     FakeAudioContext.contexts.push(this);
@@ -46,17 +50,21 @@ class FakeAudioContext {
   createGain() {
     return {
       connect: vi.fn().mockReturnThis(),
-      gain: { exponentialRampToValueAtTime: vi.fn(), setValueAtTime: vi.fn() },
+      gain: { setValueAtTime: vi.fn() },
     } as unknown as GainNode;
   }
 
-  createOscillator() {
-    return {
+  createBufferSource() {
+    const source = {
+      buffer: null as AudioBuffer | null,
       connect: vi.fn().mockReturnThis(),
-      frequency: { value: 0 },
-      start: this.oscillatorStart,
-      stop: vi.fn(),
-    } as unknown as OscillatorNode;
+      start: () => {
+        this.playedAssets.push(
+          (source.buffer as unknown as { asset: string }).asset,
+        );
+      },
+    };
+    return source as unknown as AudioBufferSourceNode;
   }
 
   async resume() {
@@ -74,9 +82,15 @@ beforeEach(() => {
   vi.stubGlobal("AudioContext", FakeAudioContext);
   vi.stubGlobal(
     "fetch",
-    vi.fn(() =>
-      Promise.resolve({ ok: true, json: async () => ({ attention }) }),
-    ),
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/audio/"))
+        return Promise.resolve({
+          ok: true,
+          arrayBuffer: async () => new TextEncoder().encode(url).buffer,
+        });
+      return Promise.resolve({ ok: true, json: async () => ({ attention }) });
+    }),
   );
 });
 
@@ -115,6 +129,11 @@ describe("useApprovalAttention", () => {
     await waitFor(() =>
       expect(FakeAudioContext.contexts[0]?.state).toBe("running"),
     );
+    await waitFor(() =>
+      expect(
+        FakeAudioContext.contexts[0]?.decodeAudioData,
+      ).toHaveBeenCalledTimes(2),
+    );
 
     attention = [
       {
@@ -137,7 +156,22 @@ describe("useApprovalAttention", () => {
 
     await waitFor(() => expect(result.current.attention).toEqual(attention));
     await waitFor(() =>
-      expect(FakeAudioContext.contexts[0]?.oscillatorStart).toHaveBeenCalledOnce(),
+      expect(FakeAudioContext.contexts[0]?.playedAssets).toEqual([
+        "/audio/response-completed.ogg",
+      ]),
+    );
+
+    act(() =>
+      FakeWebSocket.connections[0]?.emit({
+        type: "attention_updated",
+        event: "permission_request",
+      }),
+    );
+    await waitFor(() =>
+      expect(FakeAudioContext.contexts[0]?.playedAssets).toEqual([
+        "/audio/response-completed.ogg",
+        "/audio/permission-request.ogg",
+      ]),
     );
   });
 

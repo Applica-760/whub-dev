@@ -28,7 +28,12 @@ let agentError: string | null = null;
 let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
 let deferWorktrees = false;
-let changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
+let changedFiles: {
+  path: string;
+  status: string;
+  previous_path: string | null;
+  agent_generated?: boolean;
+}[] = [{ path: "src/main.py", status: "M", previous_path: null }];
 let worktreeFile: {
   path: string;
   content: string | null;
@@ -48,10 +53,12 @@ vi.mock("./TerminalWidget", () => ({
   TerminalWidget: ({
     label,
     project,
+    resizeSignal,
     taskId,
   }: {
     label?: string;
     project?: string;
+    resizeSignal: string;
     taskId?: string;
   }) => {
     const terminal = label ?? `${project} / ${taskId}`;
@@ -61,7 +68,7 @@ vi.mock("./TerminalWidget", () => ({
         terminalUnmounts.push(terminal);
       };
     }, []);
-    return <div>{terminal}</div>;
+    return <div data-resize-signal={resizeSignal}>{terminal}</div>;
   },
 }));
 
@@ -362,6 +369,32 @@ describe("TerminalPage", () => {
     expect(labels).toEqual(["src", "a.py", "z.py", "a.txt", "z.txt"]);
   });
 
+  it("Agent生成物だけの祖先を初期展開せず、手動展開は維持する", async () => {
+    changedFiles = [
+      {
+        path: ".agents/AGENTS_context.md",
+        status: "M",
+        previous_path: null,
+        agent_generated: true,
+      },
+      {
+        path: "src/main.py",
+        status: "M",
+        previous_path: null,
+        agent_generated: false,
+      },
+    ];
+    renderPage();
+
+    const agents = await screen.findByText(".agents");
+    expect(await screen.findByText("main.py")).toBeTruthy();
+    expect(screen.queryByText("AGENTS_context.md")).toBeNull();
+
+    fireEvent.click(agents);
+
+    expect(await screen.findByText("AGENTS_context.md")).toBeTruthy();
+  });
+
   it("バイナリファイルの本文を表示しない", async () => {
     worktreeFile = {
       path: "src/main.py",
@@ -579,6 +612,24 @@ describe("TerminalPage", () => {
       expect(agent.getAttribute("aria-pressed")).toBe("true"),
     );
     expect(await screen.findByPlaceholderText("Codexへ依頼…")).toBeTruthy();
+  });
+
+  it("左右ペインの折りたたみ状態をTerminalのresize signalへ反映する", async () => {
+    const view = renderPage();
+    const terminal = await screen.findByText("whub-dev / TASK-099");
+    expect(terminal.getAttribute("data-resize-signal")).toContain(
+      ":false:false",
+    );
+
+    view.rerender(
+      <MantineProvider env="test">
+        <TerminalPage collapsed={{ left: true, right: false }} />
+      </MantineProvider>,
+    );
+
+    expect(terminal.getAttribute("data-resize-signal")).toContain(
+      ":true:false",
+    );
   });
 
   it("Codex promptをJSONとして送信する", async () => {

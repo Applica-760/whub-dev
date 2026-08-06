@@ -63,7 +63,7 @@ function hasChanges(node: ExplorerNode): boolean {
 function expandedDirectories(files: ChangedFile[]): Set<string> {
   const expanded = new Set<string>();
   for (const file of files) {
-    if (!file.status) continue;
+    if (!file.status || file.agent_generated) continue;
     const parts = file.path.split("/");
     for (let index = 1; index < parts.length; index++)
       expanded.add(parts.slice(0, index).join("/"));

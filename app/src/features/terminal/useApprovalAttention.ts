@@ -11,6 +11,10 @@ const DEFAULT_TITLE = "whub";
 const ATTENTION_ICON = "/attention-favicon.svg";
 const RECONNECT_DELAY_MS = 1_000;
 type NotificationEvent = "permission_request" | "response_completed";
+const SOUND_ASSETS: Record<NotificationEvent, string> = {
+  permission_request: "/audio/permission-request.ogg",
+  response_completed: "/audio/response-completed.ogg",
+};
 
 function setTabAttention(attention: ApprovalAttention[]) {
   const count = attention.filter((item) => !item.acknowledged).length;
@@ -32,20 +36,39 @@ function setTabAttention(attention: ApprovalAttention[]) {
 export function useApprovalAttention() {
   const [attention, setAttention] = useState<ApprovalAttention[]>([]);
   const audioContext = useRef<AudioContext | null>(null);
+  const soundBuffers = useRef<Partial<Record<NotificationEvent, AudioBuffer>>>(
+    {},
+  );
 
-  const playSound = useCallback(() => {
+  const loadSoundBuffers = useCallback(async (context: AudioContext) => {
+    const loaded = await Promise.all(
+      (Object.entries(SOUND_ASSETS) as [NotificationEvent, string][]).map(
+        async ([event, path]) => {
+          const response = await fetch(path);
+          if (!response.ok) throw new Error("sound unavailable");
+          const buffer = await context.decodeAudioData(
+            await response.arrayBuffer(),
+          );
+          return [event, buffer] as const;
+        },
+      ),
+    );
+    soundBuffers.current = Object.fromEntries(loaded);
+  }, []);
+
+  const playSound = useCallback((event: NotificationEvent) => {
     try {
       const context = audioContext.current;
+      const buffer = soundBuffers.current[event];
       if (!context || context.state !== "running")
         throw new Error("audio unavailable");
-      const oscillator = context.createOscillator();
+      if (!buffer) throw new Error("sound unavailable");
+      const source = context.createBufferSource();
       const gain = context.createGain();
-      oscillator.frequency.value = 880;
-      gain.gain.setValueAtTime(0.08, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.16);
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.16);
+      source.buffer = buffer;
+      gain.gain.setValueAtTime(0.35, context.currentTime);
+      source.connect(gain).connect(context.destination);
+      source.start();
     } catch {
       // Browsers block audio until a user interaction; the badge remains visible.
     }
@@ -58,11 +81,16 @@ export function useApprovalAttention() {
       const context = audioContext.current ?? new AudioContextConstructor();
       audioContext.current = context;
       await context.resume();
+      if (
+        context.state === "running" &&
+        !soundBuffers.current.permission_request
+      )
+        await loadSoundBuffers(context);
       return context.state === "running";
     } catch {
       return false;
     }
-  }, []);
+  }, [loadSoundBuffers]);
 
   const refresh = useCallback(
     async (event?: NotificationEvent) => {
@@ -70,7 +98,7 @@ export function useApprovalAttention() {
         const response = await listApprovalAttention();
         setAttention(response.attention);
         setTabAttention(response.attention);
-        if (event) playSound();
+        if (event) playSound(event);
       } catch {
         // Approval attention is supplementary; retain the latest visible state.
       }

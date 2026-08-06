@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from subprocess import CompletedProcess
 import threading
 from types import SimpleNamespace
@@ -110,6 +110,28 @@ def test_remote_state_cleanup_keeps_state_on_ssh_failure(tmp_path: Path) -> None
         )
 
     assert state_path.exists()
+
+
+def test_remote_state_reports_owned_files_and_blocks(tmp_path: Path) -> None:
+    state_path = remote_state._state_path(tmp_path, "whub-dev", "TASK-120")
+    remote_state._save(
+        state_path,
+        {
+            "worktree": "/srv/worktrees/whub-dev-120",
+            "files": {".codex/config.toml": "digest"},
+            "blocks": {"AGENTS.md": "digest"},
+        },
+    )
+
+    assert remote_state.owned_paths(
+        tmp_path,
+        "whub-dev",
+        "TASK-120",
+        "/srv/worktrees/whub-dev-120",
+    ) == {
+        PurePosixPath(".codex/config.toml"),
+        PurePosixPath("AGENTS.md"),
+    }
 
 
 def test_remote_state_cleanup_accepts_confirmed_missing_owned_files(

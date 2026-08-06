@@ -593,6 +593,8 @@ export interface components {
             status: string;
             /** Previous Path */
             previous_path?: string | null;
+            /** Agent Generated */
+            agent_generated: boolean;
         };
         /** CompleteTodoRequest */
         CompleteTodoRequest: {

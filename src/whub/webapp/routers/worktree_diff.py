@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import PurePosixPath
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from whub.core.context import current_context
+from whub.services.agent.agent import generated_paths
 from whub.services.manifest import load_manifest
 from whub.services.worktree.diff import (
     ChangedFile,
@@ -21,6 +24,7 @@ class ChangedFileResponse(BaseModel):
     path: str
     status: str
     previous_path: str | None = None
+    agent_generated: bool
 
 
 class ChangedFileListResponse(BaseModel):
@@ -34,22 +38,28 @@ class WorktreeDiffResponse(BaseModel):
     state: str
 
 
-def _changed_file_response(item: ChangedFile) -> ChangedFileResponse:
+def _changed_file_response(
+    item: ChangedFile, agent_paths: set[PurePosixPath]
+) -> ChangedFileResponse:
     return ChangedFileResponse(
         path=item.path,
         status=item.status,
         previous_path=item.previous_path,
+        agent_generated=PurePosixPath(item.path) in agent_paths,
     )
 
 
 @router.get("/changes", response_model=ChangedFileListResponse)
 def get_changed_files(project: str, task_id: str) -> ChangedFileListResponse:
+    manifest = load_manifest()
+    workspace_root = current_context().workspace_root
+    agent_paths = generated_paths(manifest, workspace_root, project, task_id)
     return ChangedFileListResponse(
         files=[
-            _changed_file_response(item)
+            _changed_file_response(item, agent_paths)
             for item in list_changed_files(
-                load_manifest(),
-                current_context().workspace_root,
+                manifest,
+                workspace_root,
                 project,
                 task_id,
             )

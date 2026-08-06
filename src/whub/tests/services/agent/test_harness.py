@@ -16,7 +16,7 @@ from whub.services.agent.auth import resolve_variables
 from whub.services.agent.context import AGENTS_CONTEXT_PATH, render_context
 from whub.services.agent.tmux_session import open_tmux_session
 from whub.services.errors import ServiceError
-from whub.services.agent.state import _state_path, cleanup, prepare
+from whub.services.agent.state import _state_path, cleanup, owned_paths, prepare
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +40,11 @@ def test_state_creates_and_cleans_owned_config(tmp_path: Path) -> None:
     path = tmp_path / ".codex/config.toml"
     assert path.read_text() == 'sandbox_mode = "workspace-write"\n'
     assert _state_path(tmp_path, "whub-dev", "TASK-095").exists()
+    assert owned_paths(tmp_path, "whub-dev", "TASK-095", tmp_path) == {
+        PurePosixPath(".codex/config.toml")
+    }
     cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
+    assert owned_paths(tmp_path, "whub-dev", "TASK-095", tmp_path) == set()
     assert not path.exists()
     assert not (tmp_path / ".codex").exists()
 
@@ -535,34 +539,51 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
 
 def test_remote_open_uses_remote_state_and_ssh_tmux(tmp_path: Path) -> None:
     host = Host(
-        hostname="ssh.test.invalid", user="test-user", identity_file="/test/identity",
-        mount_root="/srv", worktree_root="worktrees"
+        hostname="ssh.test.invalid",
+        user="test-user",
+        identity_file="/test/identity",
+        mount_root="/srv",
+        worktree_root="worktrees",
     )
     resource = RemoteResource(
         type="remote", host="remote", path="project", workspace_path="projects/remote"
     )
     registered = SimpleNamespace(
         definition=SimpleNamespace(task_id="TASK-095", branch="tasks/095"),
-        destination="/srv/worktrees/whub-dev-095", host=host,
+        destination="/srv/worktrees/whub-dev-095",
+        host=host,
     )
     resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
     plan = SimpleNamespace(files={})
     session = SimpleNamespace()
 
     with (
-        patch("whub.services.agent.agent.resolve_project_worktree", return_value=registered),
-        patch("whub.services.agent.agent.resolve_project_resource", return_value=resource),
-        patch("whub.services.agent.agent.resolve_agent_auth", return_value=resolved_auth),
+        patch(
+            "whub.services.agent.agent.resolve_project_worktree",
+            return_value=registered,
+        ),
+        patch(
+            "whub.services.agent.agent.resolve_project_resource", return_value=resource
+        ),
+        patch(
+            "whub.services.agent.agent.resolve_agent_auth", return_value=resolved_auth
+        ),
         patch("whub.services.agent.agent.render_codex", return_value=plan),
         patch("whub.services.agent.agent.render_claude_code", return_value=plan),
         patch("whub.services.agent.agent.prepare_remote_codex_trust") as trust,
         patch("whub.services.agent.agent.remote_state.prepare") as state,
-        patch("whub.services.agent.agent.open_tmux_session", return_value=session) as start,
+        patch(
+            "whub.services.agent.agent.open_tmux_session", return_value=session
+        ) as start,
     ):
         assert open_agent(None, tmp_path, "whub-dev", "TASK-095", ()) is session
 
     assert trust.call_args.args[3:] == (host, registered.destination)
     assert state.call_args.args[3:5] == (host, registered.destination)
     assert start.call_args.args == (
-        "whub-dev", "TASK-095", registered.destination, tmp_path, host
+        "whub-dev",
+        "TASK-095",
+        registered.destination,
+        tmp_path,
+        host,
     )
