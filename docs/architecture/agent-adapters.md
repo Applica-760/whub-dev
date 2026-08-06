@@ -11,7 +11,7 @@
 - `adapters/`: Agent open時に配る設定・ruleをAgent別のrender planへ純粋変換する。生成物の書込み、状態、lifecycleは所有しない。
 - `adapters/codex.py`: `EffectiveAuth`をCodex project configとrulesのrender planへ変換する。
 - `adapters/claude_code.py`: `EffectiveAuth`をClaude Code project settings、hook、MCP configのrender planへ変換する。
-- `remote/state.py`: remote worktreeに対して、SSH経由で同じ生成物の所有・cleanup契約を実行する。remoteは汎用SSH transportと生成物の扱いだけを担い、Agent固有の意味論は持たない。
+- `remote_state.py`: remote worktreeに対して、SSH経由で同じ生成物の所有・cleanup契約を実行する。汎用SSH transportと生成物の扱いだけを担い、Agent固有の意味論は持たない。
 - `tmux_session.py`: tmux sessionの開始・停止だけを扱う。
 - `codex/trust.py`: local/remote worktreeごとのCodex trust entryを所有・cleanupする。remote実行時もCodex trustの意味論とlockはこのserviceが持ち、SSHはtransportとしてのみ利用する。
 - `codex/app_server.py`: worktreeごとのCodex App Server processとJSON-RPC状態を所有する。

@@ -10,7 +10,7 @@ import pytest
 from whub.models import Host, RemoteResource
 from whub.services.agent.agent import close_agent
 from whub.services.agent.codex import trust as codex_trust
-from whub.services.agent.remote import state
+from whub.services.agent import remote_state
 from whub.services.agent.tmux_session import close_tmux_session
 from whub.services.errors import ServiceError
 
@@ -82,8 +82,8 @@ def test_remote_close_preserves_state_when_tmux_probe_fails(tmp_path: Path) -> N
 
 
 def test_remote_state_cleanup_keeps_state_on_ssh_failure(tmp_path: Path) -> None:
-    state_path = state._state_path(tmp_path, "whub-dev", "TASK-120")
-    state._save(
+    state_path = remote_state._state_path(tmp_path, "whub-dev", "TASK-120")
+    remote_state._save(
         state_path,
         {
             "worktree": "/srv/worktrees/whub-dev-120",
@@ -98,10 +98,10 @@ def test_remote_state_cleanup_keeps_state_on_ssh_failure(tmp_path: Path) -> None
         return CompletedProcess([], 255, "", "ssh failed")
 
     with (
-        patch("whub.services.agent.remote.state.run_ssh_command", side_effect=run),
+        patch("whub.services.agent.remote_state.run_ssh_command", side_effect=run),
         pytest.raises(ServiceError, match="remote Agent state operation failed"),
     ):
-        state.cleanup(
+        remote_state.cleanup(
             tmp_path,
             "whub-dev",
             "TASK-120",
@@ -115,8 +115,8 @@ def test_remote_state_cleanup_keeps_state_on_ssh_failure(tmp_path: Path) -> None
 def test_remote_state_cleanup_accepts_confirmed_missing_owned_files(
     tmp_path: Path,
 ) -> None:
-    state_path = state._state_path(tmp_path, "whub-dev", "TASK-120")
-    state._save(
+    state_path = remote_state._state_path(tmp_path, "whub-dev", "TASK-120")
+    remote_state._save(
         state_path,
         {
             "worktree": "/srv/worktrees/whub-dev-120",
@@ -128,8 +128,8 @@ def test_remote_state_cleanup_accepts_confirmed_missing_owned_files(
     def run(_host: Host, command: str) -> CompletedProcess[str]:
         return CompletedProcess([], 0 if command.startswith("test ! -L") else 1, "", "")
 
-    with patch("whub.services.agent.remote.state.run_ssh_command", side_effect=run):
-        state.cleanup(
+    with patch("whub.services.agent.remote_state.run_ssh_command", side_effect=run):
+        remote_state.cleanup(
             tmp_path,
             "whub-dev",
             "TASK-120",

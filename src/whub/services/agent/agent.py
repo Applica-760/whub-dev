@@ -23,7 +23,7 @@ from whub.services.agent.tmux_session import (
     open_tmux_session,
 )
 from whub.services.agent.state import cleanup, prepare
-from whub.services.agent.remote import state as remote_state
+from whub.services.agent import remote_state
 from whub.services.errors import ServiceError
 from whub.services.worktree.resolve import (
     ResolvedProjectWorktree,
