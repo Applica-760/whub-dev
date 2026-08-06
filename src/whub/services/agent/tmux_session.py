@@ -40,8 +40,7 @@ def open_tmux_session(
     if host is not None:
         assert isinstance(worktree, str)
         command = _shell_command(worktree)
-        existing = run_ssh_command(host, f"tmux has-session -t {target}")
-        if existing.returncode != 0:
+        if not _remote_session_exists(host, target):
             created = run_ssh_command(
                 host,
                 f"tmux new-session -d -s {name} -c {shlex.quote(worktree)} {shlex.quote(command)}",
@@ -101,8 +100,7 @@ def close_tmux_session(project: str, task_id: str, host: Host | None = None) -> 
     """Stop one Agent tmux session when it exists."""
     target = session_target(session_name(project, task_id))
     if host is not None:
-        existing = run_ssh_command(host, f"tmux has-session -t {target}")
-        if existing.returncode == 0:
+        if _remote_session_exists(host, target):
             stopped = run_ssh_command(host, f"tmux kill-session -t {target}")
             if stopped.returncode != 0:
                 detail = stopped.stderr.strip() or f"exit status {stopped.returncode}"
@@ -122,3 +120,13 @@ def close_tmux_session(project: str, task_id: str, host: Host | None = None) -> 
     if stopped.returncode != 0:
         detail = stopped.stderr.strip() or f"exit status {stopped.returncode}"
         raise ServiceError(f"failed to stop tmux session: {detail}")
+
+
+def _remote_session_exists(host: Host, target: str) -> bool:
+    result = run_ssh_command(host, f"tmux has-session -t {target}")
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    detail = result.stderr.strip() or f"exit status {result.returncode}"
+    raise ServiceError(f"failed to inspect remote tmux: {detail}")

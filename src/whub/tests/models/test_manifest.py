@@ -142,6 +142,14 @@ class TestManifestSpec:
         data["hosts"]["home"]["auto_mount"] = False
         assert Manifest.model_validate(data).hosts["home"].auto_mount is False
 
+    def test_worktree_root_defaults_for_existing_manifests(self) -> None:
+        data = manifest_data()
+        del data["hosts"]["home"]["worktree_root"]
+
+        manifest = Manifest.model_validate(data)
+
+        assert manifest.hosts["home"].worktree_root == "worktrees"
+
     def test_duplicate_project_names_are_rejected(self) -> None:
         # ケース4
         data = manifest_data()

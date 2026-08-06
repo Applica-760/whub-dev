@@ -41,7 +41,7 @@ class Host(SchemaModel):
     port: int = 22
     identity_file: str
     mount_root: str
-    worktree_root: RelativePath
+    worktree_root: RelativePath = "worktrees"
     auto_mount: bool = True
 
     @field_validator("mount_root")

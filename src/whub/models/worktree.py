@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Literal
@@ -23,6 +24,24 @@ class WorktreeDefinition(WorktreeModel):
     task_id: TaskId
     parent_project: ProjectName
     branch: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_schema_v1(cls, value: object) -> object:
+        if not isinstance(value, Mapping) or value.get("schema_version") != 1:
+            return value
+        task_id = value.get("task_id")
+        parent_project = value.get("parent_project")
+        if not isinstance(task_id, str) or not isinstance(parent_project, str):
+            return value
+        number = task_id.removeprefix("TASK-")
+        expected = f"projects/worktrees/{parent_project}-{number}"
+        if value.get("workspace_path") != expected:
+            raise ValueError(f"workspace_path must be {expected}")
+        normalized = dict(value)
+        normalized["schema_version"] = 2
+        del normalized["workspace_path"]
+        return normalized
 
     @property
     def workspace_path(self) -> str:

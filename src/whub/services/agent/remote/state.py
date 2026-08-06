@@ -91,8 +91,11 @@ def _validate_path(host: Host, worktree: str, relative: PurePosixPath) -> str:
 
 def _read(host: Host, path: str) -> str | None:
     exists = run_ssh_command(host, f"test -e {shlex.quote(path)}")
-    if exists.returncode != 0:
+    if exists.returncode == 1:
         return None
+    if exists.returncode != 0:
+        detail = exists.stderr.strip() or f"exit status {exists.returncode}"
+        raise ServiceError(f"remote Agent state operation failed: {detail}")
     result = run_ssh_command(host, f"cat -- {shlex.quote(path)}")
     if result.returncode == 0:
         return result.stdout
@@ -181,7 +184,7 @@ def _cleanup_blocks(host: Host, worktree: str, blocks: object) -> None:
         path = _validate_path(host, worktree, relative)
         content = _read(host, path)
         if content is None:
-            raise ServiceError(f"managed context is missing: {relative}")
+            continue
         start, end = _block_range(content, relative)
         if not isinstance(expected, str) or _digest(content[start:end]) != expected:
             raise ServiceError(f"managed context was modified and was not removed: {relative}")
