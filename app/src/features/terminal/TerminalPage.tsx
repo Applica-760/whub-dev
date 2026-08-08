@@ -115,6 +115,25 @@ export function TerminalPage({
     [acknowledgeTerminal],
   );
 
+  const terminalValues = useMemo(
+    () => [
+      ...operators.map((operator) => operatorValue(operator.operator_id)),
+      ...terminals.map(worktreeValue),
+    ],
+    [operators, terminals],
+  );
+
+  const selectTerminal = useCallback(
+    (value: string) => {
+      const operator = operators.find(
+        (item) => operatorValue(item.operator_id) === value,
+      );
+      if (operator) openOperator(operator.operator_id);
+      else openTerminal(value);
+    },
+    [openOperator, openTerminal, operators],
+  );
+
   const selectOperationTask = useCallback((project: string, taskId: string) => {
     setSelectedOperationTask({ project, taskId });
   }, []);
@@ -141,6 +160,29 @@ export function TerminalPage({
   useEffect(() => {
     if (!selectedWorktree) setPanelMode("terminal");
   }, [selectedWorktree]);
+
+  useEffect(() => {
+    const acknowledgeSelected = () => {
+      if (selectedOperator)
+        void acknowledgeOperator(selectedOperator.operator_id);
+      else if (selectedWorktree)
+        void acknowledgeWorktree(
+          selectedWorktree.parent_project,
+          selectedWorktree.task_id,
+        );
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") acknowledgeSelected();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [
+    acknowledgeOperator,
+    acknowledgeWorktree,
+    selectedOperator,
+    selectedWorktree,
+  ]);
 
   const refreshOperator = useCallback(async () => {
     try {
@@ -215,6 +257,51 @@ export function TerminalPage({
     }
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        !event.metaKey ||
+        !event.shiftKey ||
+        event.altKey ||
+        event.ctrlKey ||
+        !(event.target instanceof Element) ||
+        !event.target.closest(".xterm-view")
+      )
+        return;
+
+      if (event.code === "KeyO") {
+        if (!operatorPending) {
+          event.preventDefault();
+          void startOperator();
+        }
+        return;
+      }
+      if (
+        !terminalValues.length ||
+        (event.key !== "ArrowUp" && event.key !== "ArrowDown")
+      )
+        return;
+
+      event.preventDefault();
+      const index = terminalValues.indexOf(selectedTerminal ?? "");
+      const nextIndex =
+        event.key === "ArrowDown"
+          ? (index + 1 + terminalValues.length) % terminalValues.length
+          : index <= 0
+            ? terminalValues.length - 1
+            : index - 1;
+      selectTerminal(terminalValues[nextIndex]);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [
+    operatorPending,
+    selectedTerminal,
+    selectTerminal,
+    startOperator,
+    terminalValues,
+  ]);
+
   return (
     <main className="terminal-page">
       <section
@@ -287,13 +374,13 @@ export function TerminalPage({
               endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
               key={selectedTerminal}
               label="Operation / workspace-hub"
-              resizeSignal={selectedTerminal ?? ""}
+              resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}`}
             />
           ) : selectedWorktree ? (
             <TerminalWidget
               key={selectedTerminal}
               project={selectedWorktree.parent_project}
-              resizeSignal={selectedTerminal ?? ""}
+              resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}`}
               taskId={selectedWorktree.task_id}
             />
           ) : (

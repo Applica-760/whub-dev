@@ -89,6 +89,10 @@ beforeEach(() => {
           ok: true,
           arrayBuffer: async () => new TextEncoder().encode(url).buffer,
         });
+      if (url.includes("/acknowledge")) {
+        attention = attention.map((item) => ({ ...item, acknowledged: true }));
+        return Promise.resolve({ ok: true, json: async () => attention });
+      }
       return Promise.resolve({ ok: true, json: async () => ({ attention }) });
     }),
   );
@@ -120,6 +124,30 @@ describe("useApprovalAttention", () => {
     act(() => FakeWebSocket.connections[0]?.open());
 
     await waitFor(() => expect(result.current.attention).toEqual(attention));
+  });
+
+  it("既読化直後にブラウザタブの通知を消す", async () => {
+    attention = [
+      {
+        target: "worktree",
+        event: "response_completed",
+        project: "whub-dev",
+        task_id: "TASK-116",
+        operator_id: null,
+        tool_name: null,
+        requested_at: "2026-08-05T00:00:00+00:00",
+        acknowledged: false,
+      },
+    ];
+    const { result } = renderHook(() => useApprovalAttention());
+
+    await waitFor(() => expect(document.title).toBe("🔔 (1) whub"));
+    await act(() => result.current.acknowledgeWorktree("whub-dev", "TASK-116"));
+
+    await waitFor(() => expect(document.title).toBe("whub"));
+    expect(
+      document.head.querySelector('[data-whub-attention-icon="true"]'),
+    ).toBeNull();
   });
 
   it("通常の最初の操作で音声を起動し、WebSocketイベントで直ちに通知音を鳴らす", async () => {

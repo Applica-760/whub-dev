@@ -36,6 +36,7 @@ function setTabAttention(attention: ApprovalAttention[]) {
 export function useApprovalAttention() {
   const [attention, setAttention] = useState<ApprovalAttention[]>([]);
   const audioContext = useRef<AudioContext | null>(null);
+  const refreshVersion = useRef(0);
   const soundBuffers = useRef<Partial<Record<NotificationEvent, AudioBuffer>>>(
     {},
   );
@@ -94,10 +95,11 @@ export function useApprovalAttention() {
 
   const refresh = useCallback(
     async (event?: NotificationEvent) => {
+      const version = ++refreshVersion.current;
       try {
         const response = await listApprovalAttention();
+        if (version !== refreshVersion.current) return;
         setAttention(response.attention);
-        setTabAttention(response.attention);
         if (event) playSound(event);
       } catch {
         // Approval attention is supplementary; retain the latest visible state.
@@ -146,6 +148,10 @@ export function useApprovalAttention() {
   }, [refresh]);
 
   useEffect(() => {
+    setTabAttention(attention);
+  }, [attention]);
+
+  useEffect(() => {
     let activated = false;
     const activate = () => {
       void activateSound().then((running) => {
@@ -179,31 +185,36 @@ export function useApprovalAttention() {
               ) ?? item,
           ),
         );
+        void refresh();
       } catch {
         // The next poll retries synchronization with the control plane.
       }
     },
-    [],
+    [refresh],
   );
 
-  const acknowledgeOperator = useCallback(async (operatorId: string) => {
-    try {
-      const updated = await acknowledgeOperatorAttention(operatorId);
-      setAttention((current) =>
-        current.map(
-          (item) =>
-            updated.find(
-              (updatedItem) =>
-                updatedItem.target === item.target &&
-                updatedItem.event === item.event &&
-                updatedItem.operator_id === item.operator_id,
-            ) ?? item,
-        ),
-      );
-    } catch {
-      // The next poll retries synchronization with the control plane.
-    }
-  }, []);
+  const acknowledgeOperator = useCallback(
+    async (operatorId: string) => {
+      try {
+        const updated = await acknowledgeOperatorAttention(operatorId);
+        setAttention((current) =>
+          current.map(
+            (item) =>
+              updated.find(
+                (updatedItem) =>
+                  updatedItem.target === item.target &&
+                  updatedItem.event === item.event &&
+                  updatedItem.operator_id === item.operator_id,
+              ) ?? item,
+          ),
+        );
+        void refresh();
+      } catch {
+        // The next poll retries synchronization with the control plane.
+      }
+    },
+    [refresh],
+  );
 
   return {
     acknowledgeOperator,

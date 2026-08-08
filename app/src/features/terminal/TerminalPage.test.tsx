@@ -68,7 +68,11 @@ vi.mock("./TerminalWidget", () => ({
         terminalUnmounts.push(terminal);
       };
     }, []);
-    return <div data-resize-signal={resizeSignal}>{terminal}</div>;
+    return (
+      <div className="xterm-view" data-resize-signal={resizeSignal}>
+        {terminal}
+      </div>
+    );
   },
 }));
 
@@ -162,8 +166,13 @@ beforeEach(() => {
       if (url.includes("/acknowledge"))
         return Promise.resolve({
           ok: true,
-          json: async () =>
-            approvalAttention.map((item) => ({ ...item, acknowledged: true })),
+          json: async () => {
+            approvalAttention = approvalAttention.map((item) => ({
+              ...item,
+              acknowledged: true,
+            }));
+            return approvalAttention;
+          },
         });
       if (url.includes("/api/agent-codex/"))
         return Promise.resolve({
@@ -509,6 +518,45 @@ describe("TerminalPage", () => {
     );
   });
 
+  it("xterm上の⌘⇧↑↓でTerminalを切り替える", async () => {
+    renderPage();
+
+    const first = await screen.findByText("whub-dev / TASK-099");
+    fireEvent.keyDown(first, {
+      code: "ArrowDown",
+      key: "ArrowDown",
+      metaKey: true,
+      shiftKey: true,
+    });
+    expect(await screen.findByText("vault / TASK-101")).toBeTruthy();
+
+    fireEvent.keyDown(screen.getByText("vault / TASK-101"), {
+      code: "ArrowUp",
+      key: "ArrowUp",
+      metaKey: true,
+      shiftKey: true,
+    });
+    expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
+  });
+
+  it("xterm上の⌘⇧OでOperationを起動する", async () => {
+    renderPage();
+
+    fireEvent.keyDown(await screen.findByText("whub-dev / TASK-099"), {
+      code: "KeyO",
+      key: "O",
+      metaKey: true,
+      shiftKey: true,
+    });
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith("/api/operator-terminals", {
+        method: "POST",
+      }),
+    );
+    expect(await screen.findByText("Operation / workspace-hub")).toBeTruthy();
+  });
+
   it("承認待ちをブラウザタブのタイトルとfaviconで示す", async () => {
     renderPage();
 
@@ -566,6 +614,40 @@ describe("TerminalPage", () => {
     expect(fetch).not.toHaveBeenCalledWith(
       "/api/agent-attention/whub-dev/TASK-099/acknowledge",
       { method: "POST" },
+    );
+  });
+
+  it("ブラウザタブ復帰時に選択済みTerminalを既読化する", async () => {
+    approvalAttention = [
+      {
+        target: "worktree",
+        event: "response_completed",
+        project: "whub-dev",
+        task_id: "TASK-099",
+        operator_id: null,
+        tool_name: null,
+        requested_at: "2026-08-03T00:00:00+00:00",
+        acknowledged: false,
+      },
+    ];
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    renderPage();
+    await screen.findByText("応答終了");
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    fireEvent(document, new Event("visibilitychange"));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/agent-attention/whub-dev/TASK-099/acknowledge",
+        { method: "POST" },
+      ),
     );
   });
 
