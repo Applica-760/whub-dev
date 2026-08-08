@@ -266,4 +266,35 @@ describe("TerminalWidget", () => {
     );
     expect(window.open).toHaveBeenCalledOnce();
   });
+
+  it("worktree TerminalだけでOption+ドラッグ選択を有効にする", () => {
+    const worktree = render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="initial"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+
+    expect(terminalMocks.options).toMatchObject({
+      macOptionClickForcesSelection: true,
+    });
+
+    worktree.unmount();
+    render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          endpoint="/api/operator-terminals/operator-1"
+          label="Operation / workspace-hub"
+          resizeSignal="initial"
+        />
+      </MantineProvider>,
+    );
+
+    expect(terminalMocks.options).not.toHaveProperty(
+      "macOptionClickForcesSelection",
+    );
+  });
 });

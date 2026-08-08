@@ -1,5 +1,5 @@
 import { Alert, Text } from "@mantine/core";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 import { XtermView } from "../../components/XtermView";
 import type { XtermViewHandle } from "../../components/XtermView";
@@ -7,11 +7,10 @@ import { useTerminalConnection } from "./useTerminalConnection";
 
 type TerminalWidgetProps = {
   resizeSignal: string;
-} &
-  (
-    | { endpoint: string; label: string; project?: never; taskId?: never }
-    | { endpoint?: never; label?: never; project: string; taskId: string }
-  );
+} & (
+  | { endpoint: string; label: string; project?: never; taskId?: never }
+  | { endpoint?: never; label?: never; project: string; taskId: string }
+);
 
 function openWebLink(event: MouseEvent, uri: string) {
   if (!event.metaKey && !event.ctrlKey) {
@@ -37,6 +36,10 @@ export function TerminalWidget({
 }: TerminalWidgetProps) {
   const xtermRef = useRef<XtermViewHandle>(null);
   const decoderRef = useRef(new TextDecoder());
+  const terminalOptions = useMemo(
+    () => (taskId ? { macOptionClickForcesSelection: true } : undefined),
+    [taskId],
+  );
   const handleConnected = useCallback(() => {
     xtermRef.current?.fit(true);
     xtermRef.current?.focus();
@@ -46,7 +49,8 @@ export function TerminalWidget({
   }, []);
   const { error, sendInput, sendResize } = useTerminalConnection({
     endpoint:
-      endpoint ?? `/api/terminals/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}`,
+      endpoint ??
+      `/api/terminals/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}`,
     onConnected: handleConnected,
     onOutput: handleOutput,
   });
@@ -62,6 +66,7 @@ export function TerminalWidget({
         onData={sendInput}
         onLink={openWebLink}
         onResize={sendResize}
+        options={terminalOptions}
         ref={xtermRef}
         resizeSignal={resizeSignal}
       />
