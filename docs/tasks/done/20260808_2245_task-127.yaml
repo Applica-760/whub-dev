@@ -1,0 +1,81 @@
+schema_version: 1
+task:
+  id: TASK-127
+  state: completed
+  title: Browser Terminalの選択コピーを安定化する
+  objective: tmuxのマウス操作を維持しつつ、Browser Terminalでテキストを確実に選択し、Cmd+Cでコピーできるようにする。
+  approach:
+  - xterm.jsの既存選択・clipboard APIを用い、tmuxのmouse onを維持する。修飾キーなしの選択は、明示的な選択モードで通常ドラッグを切り替える案を評価・実装する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 選択モードの実装境界を確定する
+    acceptance: []
+    steps:
+    - description: xterm.jsの公開APIだけで、修飾キーなしの選択モードを実現できるか確認する。通常時はtmux mouse操作を維持し、選択モード時だけ通常ドラッグ選択へ切り替える。session外・Operation
+        Terminal・tmux全体の設定を変更しない。成立しない場合はprivate APIや入力注入を使わず、根拠と代案をTask logへ記録して停止する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        finding: xterm.jsの公開APIでは、tmux mouse mode中に無修飾ドラッグ選択へ切替できない。disableStdinはtextareaをreadonlyにするだけで選択サービスを再有効化せず、公開optionはmacOptionClickForcesSelection（Optionキー必須）のみ。private
+          API・入力注入はTask方針により採用しない。
+      deleted: false
+    deleted: false
+  - title: Browser Terminalの選択コピーを実装する
+    acceptance: []
+    steps:
+    - description: で選択文字列を公開し、選択時のCmd+Cをtmuxへ送る前にClipboard APIへ渡す。で選択モードの切替と利用説明を提供する。通常クリック・右クリック・tmuxのmouse
+        onは既存どおり維持し、依存追加や独自コンテキストメニューは行わない。
+      state: pending
+      skip_reason: null
+      deleted: true
+    log: []
+    deleted: false
+  - title: Browser Terminalの選択コピーを実装する
+    acceptance: []
+    steps:
+    - description: app/src/features/terminal/TerminalWidget.tsxで、worktree Terminalだけにxterm.jsのmacOptionClickForcesSelectionを設定する。Option+ドラッグ後はxterm.js標準のコピー処理を使い、Clipboard
+        API・選択モードUI・依存追加は行わない。Operation Terminal・通常クリック・右クリック・tmux mouse onは既存どおり維持する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        implementation: worktree TerminalだけにmacOptionClickForcesSelectionを設定し、Option+ドラッグ後のコピーはxterm.js標準処理へ委ねた。Operation
+          Terminalは変更していない。
+      deleted: false
+    deleted: false
+  - title: 回帰を検証する
+    acceptance: []
+    steps:
+    - description: TerminalWidgetの既存Vitestで、worktree TerminalだけにmacOptionClickForcesSelectionが設定され、Operation
+        Terminalには設定されないことを確認する。focused frontend test、typecheck、build、git diff --checkを実行し、Option+ドラッグとCmd+Cの手動確認手順をTask
+        logへ残す。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: 'TerminalWidget focused test 5件、typecheck、build、対象Prettier check、git
+          diff --checkが成功。手動確認: worktree TerminalでOption+ドラッグしてCmd+C、続けて任意の入力欄へCmd+V。Operation
+          Terminalと通常ドラッグは従来どおり確認する。'
+      deleted: false
+    - value:
+        manual_verification: ユーザーがwhub-dev / TASK-127でOption+範囲選択の成功を確認した。
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+- actor: user
+acceptance_results: []
+change_requests:
+- reason: ユーザーが無修飾ドラッグ選択の代わりにOption+ドラッグを許容したため、公開optionだけの最小実装へ変更する。
+cancellation: null
+result:
+  summary: 'PR #19をmerge方式で統合し、Task worktree cleanupと親repoのfast-forward同期を確認した。'
