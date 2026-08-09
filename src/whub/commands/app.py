@@ -131,7 +131,9 @@ def down(dev_mode: bool) -> None:
         remove_pid_record(pid_path, expected_pid=process.pid)
         click.echo(f"{name} stopped")
         return
-    time.sleep(0.1)
+    deadline = time.monotonic() + 1
+    while _is_running(process.pid) and time.monotonic() < deadline:
+        time.sleep(0.05)
     if _is_running(process.pid):
         try:
             if same_process_group:
@@ -140,6 +142,8 @@ def down(dev_mode: bool) -> None:
                 os.killpg(process_group, signal.SIGKILL)
         except ProcessLookupError:
             pass
+        except PermissionError as error:
+            raise click.ClickException(f"failed to stop {name}: {error}") from error
     if dev_mode:
         _stop_process_groups(process.processes)
     remove_pid_record(pid_path, expected_pid=process.pid)

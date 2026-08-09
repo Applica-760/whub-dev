@@ -199,6 +199,7 @@ class TestAppCommand:
             patch("whub.commands.app.os.getpgid", return_value=42),
             patch("whub.commands.app._is_running", return_value=True),
             patch("whub.commands.app.os.killpg") as mock_killpg,
+            patch("whub.commands.app.time.monotonic", side_effect=[0, 1]),
             patch("whub.commands.app.time.sleep"),
             patch("whub.commands.app.remove_pid_record"),
         ):
@@ -209,6 +210,54 @@ class TestAppCommand:
             call(42, signal.SIGTERM),
             call(42, signal.SIGKILL),
         ]
+
+    def test_down_waits_for_graceful_exit(self, tmp_path):
+        with (
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
+            ),
+            patch(
+                "whub.commands.app._read_running_process",
+                return_value=AppProcessRecord(pid=42, port=8710),
+            ),
+            patch("whub.commands.app.os.getpgid", return_value=42),
+            patch("whub.commands.app._is_running", side_effect=[True, False, False]),
+            patch("whub.commands.app.os.killpg") as mock_killpg,
+            patch("whub.commands.app.time.monotonic", return_value=0),
+            patch("whub.commands.app.time.sleep") as mock_sleep,
+            patch("whub.commands.app.remove_pid_record"),
+        ):
+            result = CliRunner().invoke(app, ["down"])
+
+        assert result.exit_code == 0
+        mock_killpg.assert_called_once_with(42, signal.SIGTERM)
+        mock_sleep.assert_called_once_with(0.05)
+
+    def test_down_reports_permission_error_without_removing_pid_record(self, tmp_path):
+        with (
+            patch(
+                "whub.commands.app.current_context",
+                return_value=_app_context(tmp_path),
+            ),
+            patch(
+                "whub.commands.app._read_running_process",
+                return_value=AppProcessRecord(pid=42, port=8710),
+            ),
+            patch("whub.commands.app.os.getpgid", return_value=42),
+            patch("whub.commands.app._is_running", return_value=True),
+            patch(
+                "whub.commands.app.os.killpg",
+                side_effect=[None, PermissionError("denied")],
+            ),
+            patch("whub.commands.app.time.monotonic", side_effect=[0, 1]),
+            patch("whub.commands.app.remove_pid_record") as mock_remove,
+        ):
+            result = CliRunner().invoke(app, ["down"])
+
+        assert result.exit_code == 1
+        assert "failed to stop app: denied" in result.output
+        mock_remove.assert_not_called()
 
     def test_down_stops_only_the_app_in_its_own_process_group(self, tmp_path):
         with (
