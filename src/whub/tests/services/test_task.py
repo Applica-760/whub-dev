@@ -39,6 +39,8 @@ def _write_task(
     *,
     state: str = "draft",
     depends_on: list[str] | None = None,
+    interruption_task_id: str | None = None,
+    interruption_source_task_id: str | None = None,
     title: str = "Task",
 ) -> None:
     path = root / filename
@@ -51,6 +53,8 @@ def _write_task(
             workflow="WF-001",
             state=state,
             depends_on=depends_on or [],
+            interruption_task_id=interruption_task_id,
+            interruption_source_task_id=interruption_source_task_id,
         ),
     )
     write_task_markdown(path, f"# {title}\n")
@@ -93,6 +97,31 @@ def test_project_task_list_derives_dependencies_across_active_and_archive(
 
     assert tasks["TASK-122"].ready is True
     assert tasks["TASK-122"].blocked_by == []
+
+
+def test_project_task_list_resolves_interruptions_across_active_and_archive(
+    task_storage: tuple[ResolvedManifest, Path, Path],
+) -> None:
+    manifest, active_root, archive_root = task_storage
+    _write_task(
+        active_root,
+        "parent.yaml",
+        "TASK-122",
+        state="paused",
+        interruption_task_id="TASK-123",
+    )
+    _write_task(
+        archive_root,
+        "child.yaml",
+        "TASK-123",
+        state="completed",
+        interruption_source_task_id="TASK-122",
+    )
+
+    tasks = {task.id: task for task in list_project_tasks(manifest, "local")}
+
+    assert tasks["TASK-122"].interruption_task_id == "TASK-123"
+    assert tasks["TASK-123"].interruption_source_task_id == "TASK-122"
 
 
 def test_task_reader_rejects_duplicate_ids_and_missing_markdown(
