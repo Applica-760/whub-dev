@@ -11,8 +11,9 @@ from whub.services.task.task import (
     list_project_tasks,
     load_project_task,
     render_project_task_flow,
+    TaskRecord,
+    TaskSummary,
 )
-from whub.wflow.models.task import TaskDocument, TaskSummary
 
 router = APIRouter(prefix="/api/tasks")
 
@@ -55,8 +56,8 @@ def get_all_tasks() -> AllTasksResponse:
     )
 
 
-@router.get("/{task_id}", response_model=TaskDocument)
-def get_task(task_id: str, project: str = "whub-dev") -> TaskDocument:
+@router.get("/{task_id}", response_model=TaskRecord)
+def get_task(task_id: str, project: str = "whub-dev") -> TaskRecord:
     return load_project_task(load_manifest(), project, task_id)
 
 

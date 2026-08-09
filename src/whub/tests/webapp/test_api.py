@@ -27,18 +27,18 @@ from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from whub.models import ManifestError
+from whub.models.flow import TaskRuntime
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.agent.codex.attention import ApprovalAttentionStore
 from whub.models import ResourceStatus, WorktreeStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminals
-from whub.services.task.task import ProjectTasks
+from whub.services.task.task import ProjectTasks, TaskRecord, TaskSummary
 from whub.services.vault import VaultNode
 from whub.services.worktree.diff import ChangedFile, WorktreeDiff
 from whub.tests.helpers import manifest
 from whub.webapp.routers import agent_attention
 from whub.webapp.server import create_app
-from whub.wflow.models.task import TaskDocument, TaskSummary
 
 
 @pytest.fixture
@@ -519,19 +519,19 @@ def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
         id="TASK-003",
         title="Task view",
         state="draft",
+        depends_on=[],
         blocked_by=[],
         ready=True,
     )
-    document = TaskDocument.model_validate(
-        {
-            "schema_version": 1,
-            "task": {
-                "id": "TASK-003",
-                "state": "draft",
-                "title": "Task view",
-                "objective": "Show tasks",
-            },
-        }
+    document = TaskRecord(
+        path="20260715_task.yaml",
+        title="Task view",
+        task=TaskRuntime(
+            schema_version=2,
+            id="TASK-003",
+            workflow="WF-001",
+            state="draft",
+        ),
     )
     m = manifest()
     with (
@@ -570,6 +570,7 @@ def test_all_tasks_endpoint_returns_per_project_results(client: TestClient) -> N
         id="TASK-001",
         title="Task view",
         state="draft",
+        depends_on=[],
         blocked_by=[],
         ready=True,
     )

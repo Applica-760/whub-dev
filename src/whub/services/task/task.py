@@ -1,54 +1,88 @@
-"""Task operations shared by whub web adapters."""
+"""Project-scoped read models for minimal Task runtime records."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
+from pydantic import BaseModel
+
+from whub.models.flow import TaskRuntime
 from whub.services.errors import NotFoundError, ServiceError
+from whub.services.flow.errors import FlowError
+from whub.services.flow.task.eligibility import dependency_start_diagnostics
+from whub.services.flow.task.query import load_task_records
 from whub.services.manifest import ResolvedManifest
 from whub.services.task_resolution import resolve_project_task_storage
-from whub.wflow.models.task import TaskDocument, TaskSummary
-from whub.wflow.services import (
-    WflowError,
-    archive_task,
-    list_tasks,
-    load_task,
-    load_task_workflow,
-    render_task_flow,
-    resolve_task_reference,
-    validate_task,
-)
 
 
-def archive_project_task(
-    manifest: ResolvedManifest,
-    project: str,
-    source: Path,
-    task: TaskDocument,
-) -> Path:
-    """Move a terminal Hub Task into the owning Project's frozen archive."""
-    destination = resolve_project_task_storage(manifest, project).archive_root
-    if task.task.state == "cancelled":
-        destination /= "cancelled"
+class TaskSummary(BaseModel):
+    """Task runtime fields shown in lists and relationship graphs."""
+
+    path: str
+    id: str
+    title: str | None = None
+    state: str
+    depends_on: list[str]
+    interruption_task_id: str | None = None
+    interruption_source_task_id: str | None = None
+    blocked_by: list[str]
+    ready: bool
+
+
+class TaskRecord(BaseModel):
+    """One Task runtime pair for the detail API."""
+
+    path: str
+    title: str | None = None
+    task: TaskRuntime
+
+
+def _records(
+    manifest: ResolvedManifest, project: str
+) -> dict[str, tuple[Path, TaskRuntime]]:
+    storage = resolve_project_task_storage(manifest, project)
+    if not storage.read_roots:
+        return {}
     try:
-        return archive_task(source, task, destination)
-    except WflowError as error:
+        return load_task_records(*storage.read_roots)
+    except FlowError as error:
         raise ServiceError(str(error)) from error
+
+
+def _title(path: Path) -> str | None:
+    for line in path.with_suffix(".md").read_text(encoding="utf-8").splitlines():
+        if line.startswith("# ") and (title := line[2:].strip()):
+            return title
+    return None
+
+
+def _summary(
+    path: Path, task: TaskRuntime, tasks: dict[str, TaskRuntime]
+) -> TaskSummary:
+    blocked_by = [
+        diagnostic.message for diagnostic in dependency_start_diagnostics(task, tasks)
+    ]
+    return TaskSummary(
+        path=str(path),
+        id=task.id,
+        title=_title(path),
+        state=task.state,
+        depends_on=task.depends_on,
+        interruption_task_id=task.interruption_task_id,
+        interruption_source_task_id=task.interruption_source_task_id,
+        blocked_by=blocked_by,
+        ready=task.state == "draft" and not blocked_by,
+    )
 
 
 def list_project_tasks(
-    manifest: ResolvedManifest,
-    project: str,
+    manifest: ResolvedManifest, project: str
 ) -> tuple[TaskSummary, ...]:
-    """Return active and archived Task summaries from one Project."""
-    storage = resolve_project_task_storage(manifest, project)
-    if not storage.read_roots:
-        return ()
-    try:
-        return list_tasks(*storage.read_roots)
-    except WflowError as error:
-        raise ServiceError(str(error)) from error
+    """Return active and archived Task runtime summaries from one Project."""
+    records = _records(manifest, project)
+    tasks = {task_id: task for task_id, (_, task) in records.items()}
+    return tuple(_summary(path, task, tasks) for path, task in records.values())
 
 
 @dataclass(frozen=True)
@@ -77,27 +111,15 @@ def load_project_task(
     manifest: ResolvedManifest,
     project: str,
     task_id: str,
-) -> TaskDocument:
-    """Load and validate an active or archived Task within one Project."""
-    storage = resolve_project_task_storage(manifest, project)
-    if not storage.read_roots:
-        raise NotFoundError(f"task not found: {project}/{task_id}")
+) -> TaskRecord:
+    """Load one active or archived Task runtime pair within PROJECT."""
+    records = _records(manifest, project)
+    resolved_id = task_id if task_id.startswith("TASK-") else f"TASK-{task_id}"
     try:
-        path = resolve_task_reference(task_id, *storage.read_roots)
-    except WflowError as error:
-        if str(error).startswith("task ID not found:"):
-            raise NotFoundError(f"task not found: {project}/{task_id}") from error
-        raise ServiceError(str(error)) from error
-    try:
-        document = load_task(path)
-        diagnostics = validate_task(document, load_task_workflow())
-    except WflowError as error:
-        raise ServiceError(str(error)) from error
-    if diagnostics:
-        raise ServiceError(
-            "task is invalid: " + "; ".join(item.message for item in diagnostics)
-        )
-    return document
+        path, task = records[resolved_id]
+    except KeyError as error:
+        raise NotFoundError(f"task not found: {project}/{task_id}") from error
+    return TaskRecord(path=str(path), title=_title(path), task=task)
 
 
 def render_project_task_flow(
@@ -105,5 +127,11 @@ def render_project_task_flow(
     project: str,
     task_id: str,
 ) -> str:
-    """Render one validated Project Task as Mermaid."""
-    return render_task_flow(load_project_task(manifest, project, task_id))
+    """Render one Task's runtime relationships as Mermaid."""
+    record = load_project_task(manifest, project, task_id)
+    return "\n".join(
+        [
+            "flowchart TD",
+            f'  {record.task.id.replace("-", "_")}["{record.task.id}"]',
+        ]
+    )

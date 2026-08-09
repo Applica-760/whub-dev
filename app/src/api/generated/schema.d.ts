@@ -472,22 +472,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** AcceptanceCriterion */
-        AcceptanceCriterion: {
-            /** Id */
-            id: string;
-            /** Statement */
-            statement: string;
-        };
-        /** AcceptanceResult */
-        AcceptanceResult: {
-            /** Acceptance */
-            acceptance: string;
-            /** Status */
-            status: string;
-            /** Evidence */
-            evidence?: string[];
-        };
         /** AgentCodexState */
         AgentCodexState: {
             /** Thread Id */
@@ -574,11 +558,6 @@ export interface components {
             project: string;
             /** Content */
             content: string;
-        };
-        /** ChangeRequest */
-        ChangeRequest: {
-            /** Reason */
-            reason: string;
         };
         /** ChangedFileListResponse */
         ChangedFileListResponse: {
@@ -687,53 +666,6 @@ export interface components {
             /** Terminals */
             terminals: components["schemas"]["OperatorTerminal"][];
         };
-        /** PhaseLog */
-        PhaseLog: {
-            /** Value */
-            value: {
-                [key: string]: string;
-            };
-            /**
-             * Deleted
-             * @default false
-             */
-            deleted: boolean;
-        };
-        /** PlanApproval */
-        PlanApproval: {
-            /** Actor */
-            actor: string;
-        };
-        /** PlanPhase */
-        PlanPhase: {
-            /** Title */
-            title: string;
-            /** Acceptance */
-            acceptance?: components["schemas"]["AcceptanceCriterion"][];
-            /** Steps */
-            steps: components["schemas"]["PlanStep"][];
-            /** Log */
-            log?: (string | components["schemas"]["PhaseLog"])[];
-            /**
-             * Deleted
-             * @default false
-             */
-            deleted: boolean;
-        };
-        /** PlanStep */
-        PlanStep: {
-            /** Description */
-            description: string;
-            /** State */
-            state: string;
-            /** Skip Reason */
-            skip_reason?: string | null;
-            /**
-             * Deleted
-             * @default false
-             */
-            deleted: boolean;
-        };
         /** ProjectTasksResponse */
         ProjectTasksResponse: {
             /** Project */
@@ -774,109 +706,73 @@ export interface components {
             /** Git */
             git: string;
         };
-        /** TaskCancellation */
-        TaskCancellation: {
-            /** Reason */
-            reason: string;
-            /** Actor */
-            actor: string;
-        };
-        /** TaskDocument */
-        TaskDocument: {
-            /**
-             * Schema Version
-             * @constant
-             */
-            schema_version: 1;
-            task: components["schemas"]["TaskHeader"];
-            plan?: components["schemas"]["TaskPlan"] | null;
-            /** Approvals */
-            approvals?: components["schemas"]["PlanApproval"][];
-            /** Acceptance Results */
-            acceptance_results?: components["schemas"]["AcceptanceResult"][];
-            /** Change Requests */
-            change_requests?: components["schemas"]["ChangeRequest"][];
-            cancellation?: components["schemas"]["TaskCancellation"] | null;
-            result?: components["schemas"]["TaskResult"] | null;
-        };
         /** TaskGraphResponse */
         TaskGraphResponse: {
             /** Mermaid */
             mermaid: string;
-        };
-        /** TaskHeader */
-        TaskHeader: {
-            /** Id */
-            id: string;
-            /** State */
-            state: string;
-            /** Title */
-            title: string;
-            /** Objective */
-            objective: string;
-            /** Approach */
-            approach?: string[];
-            /** Depends On */
-            depends_on?: string[];
-            /** Interruption Task Id */
-            interruption_task_id?: string | null;
-            /** Interruption Reason */
-            interruption_reason?: string | null;
-            /** Interruption Source Task Id */
-            interruption_source_task_id?: string | null;
         };
         /** TaskListResponse */
         TaskListResponse: {
             /** Tasks */
             tasks: components["schemas"]["TaskSummary"][];
         };
-        /** TaskPlan */
-        TaskPlan: {
-            /** Acceptance */
-            acceptance?: components["schemas"]["AcceptanceCriterion"][];
-            /** Phases */
-            phases: components["schemas"]["PlanPhase"][];
+        /**
+         * TaskRecord
+         * @description One Task runtime pair for the detail API.
+         */
+        TaskRecord: {
+            /** Path */
+            path: string;
+            /** Title */
+            title?: string | null;
+            task: components["schemas"]["TaskRuntime"];
         };
-        /** TaskResult */
-        TaskResult: {
-            /** Summary */
-            summary: string;
+        /**
+         * TaskRuntime
+         * @description Minimal runtime state for one Task Flow instance.
+         */
+        TaskRuntime: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 2;
+            /** Id */
+            id: string;
+            /** Workflow */
+            workflow: string;
+            /** State */
+            state: string;
+            /** Depends On */
+            depends_on?: string[];
+            /** Interruption Task Id */
+            interruption_task_id?: string | null;
+            /** Interruption Source Task Id */
+            interruption_source_task_id?: string | null;
         };
         /**
          * TaskSummary
-         * @description Derived read model for one Task discovered in a directory.
+         * @description Task runtime fields shown in lists and relationship graphs.
          */
         TaskSummary: {
             /** Path */
             path: string;
             /** Id */
-            id?: string | null;
+            id: string;
             /** Title */
             title?: string | null;
             /** State */
-            state?: string | null;
+            state: string;
             /** Depends On */
-            depends_on?: string[];
+            depends_on: string[];
             /** Interruption Task Id */
             interruption_task_id?: string | null;
-            /** Interruption Reason */
-            interruption_reason?: string | null;
             /** Interruption Source Task Id */
             interruption_source_task_id?: string | null;
-            /**
-             * Resumable
-             * @default false
-             */
-            resumable: boolean;
             /** Blocked By */
-            blocked_by?: string[];
-            /**
-             * Ready
-             * @default false
-             */
+            blocked_by: string[];
+            /** Ready */
             ready: boolean;
-            /** Diagnostics */
-            diagnostics?: string[];
         };
         /** TodoListResponse */
         TodoListResponse: {
@@ -1636,7 +1532,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TaskDocument"];
+                    "application/json": components["schemas"]["TaskRecord"];
                 };
             };
             /** @description Validation Error */
