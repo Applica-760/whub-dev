@@ -16,22 +16,24 @@ from whub.services.flow.task.application import (
     resume as resume_persisted_task,
     start_task as start_persisted_task,
 )
-from whub.services.flow.task import (
-    apply_transition,
-    append_task_log,
+from whub.services.flow.task.common import (
     archive_task,
-    available_transitions,
     create_task,
-    interrupt_task,
     load_task,
     load_task_markdown,
-    load_task_records,
-    resume_task,
     task_markdown_path,
-    update_dependency,
     write_task,
     write_task_markdown,
 )
+from whub.services.flow.task.log import append_task_log
+from whub.services.flow.task.query import load_task_records
+from whub.services.flow.task.relation import (
+    interrupt_task,
+    resume_task,
+    update_dependency,
+)
+from whub.services.flow.task.transition import apply_transition
+from whub.services.flow.workflow import available_transitions
 
 
 def _task(task_id: str, state: str = "draft") -> TaskRuntime:
@@ -206,7 +208,9 @@ def test_builtin_workflow_has_no_task_document_guards() -> None:
     task = _task("TASK-001")
     workflow = task_workflow()
     assert {transition.actor for transition in workflow.transitions} == {"user"}
-    assert available_transitions(task, workflow) == ("start_task",)
+    assert available_transitions(
+        workflow, task.state, task.model_dump(mode="python")
+    ) == ("start_task",)
     assert apply_transition(task, workflow, "start_task").state == "in_progress"
     with pytest.raises(FlowError, match="requirement not satisfied"):
         apply_transition(task, workflow, "cancel_task")

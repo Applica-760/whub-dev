@@ -7,18 +7,7 @@ from typing import Any
 from whub.models.flow import TaskRuntime, WorkflowDefinition
 from whub.services.flow.errors import FlowError
 from whub.services.flow.task.integrity import validate_task
-from whub.services.flow.workflow import (
-    apply_transition as apply_workflow_transition,
-    available_transitions as available_workflow_transitions,
-)
-
-
-def available_transitions(
-    task: TaskRuntime, workflow: WorkflowDefinition
-) -> tuple[str, ...]:
-    return available_workflow_transitions(
-        workflow, task.state, task.model_dump(mode="python")
-    )
+from whub.services.flow.workflow import apply_transition as apply_workflow_transition
 
 
 def apply_transition(

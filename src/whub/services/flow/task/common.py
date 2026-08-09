@@ -6,13 +6,12 @@ from collections.abc import Iterator
 from datetime import datetime
 import os
 from pathlib import Path
-import re
 import tempfile
 
 import yaml
 from pydantic import ValidationError
 
-from whub.models.flow import TASK_ID_PATTERN, TaskRuntime
+from whub.models.flow import TaskRuntime
 from whub.services.flow.errors import FlowError
 from whub.utils.apple_double import is_apple_double
 
@@ -33,22 +32,6 @@ def load_task(path: Path) -> TaskRuntime:
 
 def iter_task_paths(root: Path) -> Iterator[Path]:
     return (path for path in root.rglob("*.yaml") if not is_apple_double(path))
-
-
-def resolve_task_reference(reference: str, root: Path) -> Path:
-    task_id = (
-        reference if re.fullmatch(TASK_ID_PATTERN, reference) else f"TASK-{reference}"
-    )
-    matches = [
-        path for path in sorted(iter_task_paths(root)) if _task_id(path) == task_id
-    ]
-    if not matches:
-        raise FlowError(f"task ID not found: {task_id}")
-    if len(matches) > 1:
-        raise FlowError(
-            f"task ID is ambiguous: {task_id}: {', '.join(map(str, matches))}"
-        )
-    return matches[0]
 
 
 def write_task(path: Path, task: TaskRuntime) -> None:

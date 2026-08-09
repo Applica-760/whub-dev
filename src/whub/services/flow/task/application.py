@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import re
 
-from whub.models.flow import TASK_ID_PATTERN, TaskRuntime
+from whub.models.flow import TaskRuntime
 from whub.services.flow.definitions import task_workflow
 from whub.services.flow.errors import FlowError
 from whub.services.flow.task.common import archive_task, write_task_set
@@ -116,14 +115,8 @@ def cancel_task(
 def _active_record(
     records: dict[str, tuple[Path, TaskRuntime]], active_root: Path, task_ref: str
 ) -> tuple[Path, TaskRuntime]:
-    task_id = (
-        task_ref
-        if re.fullmatch(TASK_ID_PATTERN, task_ref)
-        else f"TASK-{task_ref}"
-        if task_ref.isdecimal()
-        else None
-    )
-    if task_id is None or task_id not in records:
+    task_id = f"TASK-{task_ref.removeprefix('TASK-')}"
+    if task_id not in records:
         raise FlowError(f"task ID not found: {task_ref}")
     path, task = records[task_id]
     if not path.is_relative_to(active_root):
