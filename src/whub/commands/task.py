@@ -199,5 +199,5 @@ def log(task_ref: str, payload: str) -> None:
     path, _ = records[task_id]
     if not path.is_relative_to(active_root):
         raise click.ClickException(f"task is archived: {task_id}")
-    _invoke(append_task_log, path, payload, "user")
+    _invoke(append_task_log, path, payload)
     click.echo(f"logged {task_id}")

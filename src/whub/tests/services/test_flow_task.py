@@ -99,17 +99,15 @@ def test_task_log_appends_validated_json_to_markdown(tmp_path) -> None:
     append_task_log(
         path,
         '{"fact":"verified"}',
-        "agent",
         now=datetime(2026, 8, 9, 12, 34, 56),
     )
-    assert load_task_markdown(path) == (
-        "# Task\n\n<!-- whub:task-log:start -->\n"
-        "- 2026-08-09T12:34:56 | agent | fact | verified\n"
-        "<!-- whub:task-log:end -->\n"
+    assert (
+        load_task_markdown(path)
+        == "# Task\n\n- 2026-08-09T12:34:56 | fact | verified\n"
     )
 
     with pytest.raises(FlowError, match="one LogKind key"):
-        append_task_log(path, '{"unknown":"no"}', "agent")
+        append_task_log(path, '{"unknown":"no"}')
 
 
 def test_load_task_records_reads_unique_valid_pairs_across_roots(tmp_path) -> None:

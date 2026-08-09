@@ -725,6 +725,8 @@ export interface components {
             path: string;
             /** Title */
             title?: string | null;
+            /** Markdown */
+            markdown: string;
             task: components["schemas"]["TaskRuntime"];
         };
         /**

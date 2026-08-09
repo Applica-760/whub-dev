@@ -65,7 +65,6 @@ def interrupt(
     append_task_log(
         parent_path,
         json.dumps({"fact": f"interrupted by {started_child.id}: {reason}"}),
-        "user",
     )
     return paused_parent, started_child
 
@@ -108,7 +107,7 @@ def cancel_task(
     updated = apply_transition(
         task, task_workflow(), "cancel_task", {"reason": reason.strip()}
     )
-    append_task_log(path, json.dumps({"fact": f"cancelled: {reason.strip()}"}), "user")
+    append_task_log(path, json.dumps({"fact": f"cancelled: {reason.strip()}"}))
     return archive_task(path, updated, archive_root)
 
 

@@ -526,6 +526,7 @@ def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
     document = TaskRecord(
         path="20260715_task.yaml",
         title="Task view",
+        markdown="# Task view\n",
         task=TaskRuntime(
             schema_version=2,
             id="TASK-003",

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from whub.models.flow import TaskRuntime
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.flow.errors import FlowError
+from whub.services.task.common import load_task_markdown
 from whub.services.task.eligibility import dependency_start_diagnostics
 from whub.services.task.query import load_task_records
 from whub.services.manifest import ResolvedManifest
@@ -35,6 +36,7 @@ class TaskRecord(BaseModel):
 
     path: str
     title: str | None = None
+    markdown: str
     task: TaskRuntime
 
 
@@ -119,7 +121,12 @@ def load_project_task(
         path, task = records[resolved_id]
     except KeyError as error:
         raise NotFoundError(f"task not found: {project}/{task_id}") from error
-    return TaskRecord(path=str(path), title=_title(path), task=task)
+    return TaskRecord(
+        path=str(path),
+        title=_title(path),
+        markdown=load_task_markdown(path),
+        task=task,
+    )
 
 
 def render_project_task_flow(

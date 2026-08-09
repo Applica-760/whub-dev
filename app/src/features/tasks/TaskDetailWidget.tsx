@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import type { TaskResponse } from "../../api/client";
 import { errorMessage } from "../../api/errorMessage";
+import { MarkdownView } from "../../components/MarkdownView";
 import { WidgetFrame } from "../../components/WidgetFrame";
 import { getTask, listTasks } from "./api";
 
@@ -87,6 +88,7 @@ export function TaskDetailWidget({
               Depends on: {(task.task?.depends_on ?? []).join(", ") || "-"}
             </Text>
             <Text>Depended on by: {dependents.join(", ") || "-"}</Text>
+            <MarkdownView content={task.markdown ?? ""} />
           </Stack>
         ) : null}
       </Box>

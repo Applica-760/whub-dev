@@ -28,12 +28,12 @@
 - `whub task log`はAgentが承認なしで実行できる許可コマンドとする。
 - log入力はCLIでJSON形式を強制する。`LogKind` enumを`fact`、`analysis`、`proposal`で定義し、入力JSONの唯一のキーとして使う。
 - CLIは検証済みJSONを、定めた表示形式のMarkdownへ構造化して追記する。AgentはTask本文を自由に更新でき、ログだけは検索・表示に適した構造を保つ。
-- CLIは記録時刻と実行者を補完する。JSON原文は別途保存しない。
+- CLIは記録時刻を補完し、`- <timestamp> | <LogKind> | <message>`としてMarkdown末尾へ追記する。JSON原文は別途保存しない。
 
 ### 人間とAgentの役割
 
 - 通常のTask内容の更新はMarkdownへの直接記述とし、計画を細分化するたびにCLIを要求しない。
-- すべての状態遷移は人間の許可を必要とする。標準Task Flowは`user`を唯一のactorとし、`whub task`はactor入力を公開しない。Agent authとCLI/Web adapterがこの境界を強制する。
+- すべての状態遷移は人間の許可を必要とする。actor属性は持たず、Agent authとCLI/Web adapterがこの境界を強制する。
 - Taskを完了宣言する前に、Agentは実装・検証結果を確認し、Task Markdownへ根拠を記録する。確認不能な完了条件がある場合は、Agentがユーザーへ確認を求める。この行動規約は後続でTask planning Skillへ反映する。
 
 ## 検討テーマ 1: 現行Task YAMLの保存先
@@ -55,7 +55,7 @@
 | acceptance criteria・acceptance result・evidence | 移す | Task Markdown。完了前にAgentが確認・記録するが、Flow serviceのguardにはしない |
 | Phase log | 置換 | `whub task log` がJSONを検証し、Task Markdownへ構造化追記する |
 | plan approval・change request履歴 | 移す | Task Markdownの判断記録。runtime stateには保持しない |
-| cancellation reason・actor | 移す | Task Markdownの構造化ログ。stateはruntime YAMLへ残す |
+| cancellation reason | 移す | Task Markdownの構造化ログ。stateはruntime YAMLへ残す |
 | completion result | 移す | Task Markdownの最終結果・検証記録。stateはruntime YAMLへ残す |
 
 ### この判断で廃止するguard
@@ -83,7 +83,7 @@
 ```
 
 - JSON objectはキーを一つだけ持つ。そのキーは`LogKind`、値は空でない文字列とする。未知のキー、複数のキー、空文字列は受け付けない。
-- CLIが記録時刻と実行者を補完し、Task Markdownの活動ログへ追記する。
+- CLIが記録時刻を補完し、Task Markdown末尾へ活動ログを追記する。
 - JSON原文を別ファイルやYAMLへ保存しない。属性の追加は必要になった時点でschemaを拡張する。
 
 ## 検討テーマ 4: 完了とarchive
