@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import datetime
 import os
 from pathlib import Path
 import re
@@ -51,24 +52,10 @@ def resolve_task_reference(reference: str, root: Path) -> Path:
 
 
 def write_task(path: Path, task: TaskRuntime) -> None:
-    temporary_path: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=path.parent, delete=False
-        ) as temporary:
-            yaml.safe_dump(
-                task.model_dump(mode="json"),
-                temporary,
-                allow_unicode=True,
-                sort_keys=False,
-            )
-            temporary_path = Path(temporary.name)
-        temporary_path.replace(path)
+        _write_text(path, _task_yaml(task))
     except OSError as error:
         raise FlowError(f"failed to write task YAML: {path}: {error}") from error
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
 
 
 def task_markdown_path(task_path: Path) -> Path:
@@ -88,10 +75,53 @@ def load_task_markdown(task_path: Path) -> str:
 def write_task_markdown(task_path: Path, content: str) -> Path:
     path = task_markdown_path(task_path)
     try:
-        path.write_text(content, encoding="utf-8")
+        _write_text(path, content)
     except (OSError, UnicodeError) as error:
         raise FlowError(f"failed to write task Markdown: {path}: {error}") from error
     return path
+
+
+def create_task(
+    root: Path,
+    title: str,
+    objective: str,
+    approaches: tuple[str, ...] = (),
+    now: datetime | None = None,
+    id_roots: tuple[Path, ...] = (),
+) -> tuple[Path, TaskRuntime]:
+    if root.exists() and not root.is_dir():
+        raise FlowError(f"task path is not a directory: {root}")
+    if (
+        not title.strip()
+        or not objective.strip()
+        or any(not item.strip() for item in approaches)
+    ):
+        raise FlowError("task title, objective, and approaches must be non-empty")
+    root.mkdir(parents=True, exist_ok=True)
+    numbers = [
+        int(task_id.removeprefix("TASK-"))
+        for task_root in (root, *id_roots)
+        for candidate in iter_task_paths(task_root)
+        if (task_id := _task_id(candidate)) is not None
+    ]
+    number = max(numbers, default=0) + 1
+    task = TaskRuntime(
+        schema_version=2,
+        id=f"TASK-{number:03}",
+        workflow="WF-001",
+        state="draft",
+    )
+    path = root / f"{(now or datetime.now()):%Y%m%d_%H%M}_task-{number:03}.yaml"
+    try:
+        _create_files(
+            (path, _task_yaml(task)),
+            (task_markdown_path(path), _task_markdown(title, objective, approaches)),
+        )
+    except FileExistsError as error:
+        raise FlowError(f"task path already exists: {error.filename}") from error
+    except OSError as error:
+        raise FlowError(f"failed to create task pair: {path}: {error}") from error
+    return path, task
 
 
 def archive_task(path: Path, task: TaskRuntime, destination_root: Path) -> Path:
@@ -105,9 +135,7 @@ def archive_task(path: Path, task: TaskRuntime, destination_root: Path) -> Path:
         source_yaml_content = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:
         raise FlowError(f"failed to archive task YAML: {path}: {error}") from error
-    yaml_content = yaml.safe_dump(
-        task.model_dump(mode="json"), allow_unicode=True, sort_keys=False
-    )
+    yaml_content = _task_yaml(task)
     try:
         markdown_content = source_markdown.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:
@@ -115,24 +143,16 @@ def archive_task(path: Path, task: TaskRuntime, destination_root: Path) -> Path:
             f"failed to archive task Markdown: {source_markdown}: {error}"
         ) from error
 
-    temporary_paths: list[Path] = []
-    created_paths: list[Path] = []
     removed_yaml = False
     removed_markdown = False
+    destination_created = False
     try:
         destination_root.mkdir(parents=True, exist_ok=True)
-        for target, content in (
+        _create_files(
             (destination, yaml_content),
             (destination_markdown, markdown_content),
-        ):
-            with tempfile.NamedTemporaryFile(
-                mode="w", encoding="utf-8", dir=destination_root, delete=False
-            ) as temporary:
-                temporary.write(content)
-                temporary_path = Path(temporary.name)
-            temporary_paths.append(temporary_path)
-            os.link(temporary_path, target)
-            created_paths.append(target)
+        )
+        destination_created = True
         path.unlink()
         removed_yaml = True
         source_markdown.unlink()
@@ -144,15 +164,64 @@ def archive_task(path: Path, task: TaskRuntime, destination_root: Path) -> Path:
     finally:
         if removed_yaml != removed_markdown:
             if removed_yaml:
-                path.write_text(source_yaml_content, encoding="utf-8")
+                _write_text(path, source_yaml_content)
             if removed_markdown:
-                source_markdown.write_text(markdown_content, encoding="utf-8")
-        if removed_yaml != removed_markdown or not (removed_yaml and removed_markdown):
-            for created_path in created_paths:
+                _write_text(source_markdown, markdown_content)
+        if destination_created and not (removed_yaml and removed_markdown):
+            for created_path in (destination, destination_markdown):
                 created_path.unlink(missing_ok=True)
-        for temporary_path in temporary_paths:
-            temporary_path.unlink(missing_ok=True)
     return destination
+
+
+def _task_yaml(task: TaskRuntime) -> str:
+    return yaml.safe_dump(
+        task.model_dump(mode="json"), allow_unicode=True, sort_keys=False
+    )
+
+
+def _task_markdown(title: str, objective: str, approaches: tuple[str, ...]) -> str:
+    sections = [f"# {title.strip()}", f"## Objective\n\n{objective.strip()}"]
+    if approaches:
+        sections.append(
+            "## Approach\n\n" + "\n".join(f"- {item.strip()}" for item in approaches)
+        )
+    return "\n\n".join(sections) + "\n"
+
+
+def _write_text(path: Path, content: str) -> None:
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent, delete=False
+        ) as temporary:
+            temporary.write(content)
+            temporary_path = Path(temporary.name)
+        temporary_path.replace(path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
+def _create_files(*files: tuple[Path, str]) -> None:
+    temporary_paths: list[Path] = []
+    created_paths: list[Path] = []
+    try:
+        for path, content in files:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=path.parent, delete=False
+            ) as temporary:
+                temporary.write(content)
+                temporary_path = Path(temporary.name)
+            temporary_paths.append(temporary_path)
+            os.link(temporary_path, path)
+            created_paths.append(path)
+    except OSError:
+        for path in created_paths:
+            path.unlink(missing_ok=True)
+        raise
+    finally:
+        for path in temporary_paths:
+            path.unlink(missing_ok=True)
 
 
 def _task_id(path: Path) -> str | None:

@@ -2,6 +2,7 @@
 
 from whub.services.flow.task.common import (
     archive_task,
+    create_task,
     iter_task_paths,
     load_task,
     load_task_markdown,
@@ -31,6 +32,7 @@ __all__ = [
     "apply_transition",
     "archive_task",
     "available_transitions",
+    "create_task",
     "dependency_start_diagnostics",
     "interrupt_task",
     "interruption_resume_diagnostics",

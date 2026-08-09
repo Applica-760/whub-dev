@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pytest
 
 from whub.models.flow import TaskRuntime
@@ -11,6 +13,7 @@ from whub.services.flow.task import (
     apply_transition,
     archive_task,
     available_transitions,
+    create_task,
     interrupt_task,
     load_task,
     load_task_markdown,
@@ -46,6 +49,30 @@ def test_task_markdown_is_a_freeform_sibling_of_runtime_yaml(tmp_path) -> None:
 
     with pytest.raises(FlowError, match="failed to load task Markdown"):
         load_task_markdown(tmp_path / "missing.yaml")
+
+
+def test_create_task_writes_runtime_yaml_and_markdown_pair(tmp_path) -> None:
+    archive = tmp_path / "archive"
+    archive.mkdir()
+    archived = _task("TASK-004", "completed")
+    write_task(archive / "archived.yaml", archived)
+    write_task_markdown(archive / "archived.yaml", "# archived\n")
+
+    path, task = create_task(
+        tmp_path / "active",
+        "Title",
+        "Objective",
+        ("First approach",),
+        now=datetime(2026, 8, 9, 12, 34),
+        id_roots=(archive,),
+    )
+    assert path.name == "20260809_1234_task-005.yaml"
+    assert task == _task("TASK-005")
+    assert load_task(path) == task
+    assert (
+        load_task_markdown(path)
+        == "# Title\n\n## Objective\n\nObjective\n\n## Approach\n\n- First approach\n"
+    )
 
 
 def test_archive_moves_task_yaml_and_markdown_together(tmp_path) -> None:
