@@ -17,6 +17,7 @@ from whub.services.flow.task import (
     interrupt_task,
     load_task,
     load_task_markdown,
+    load_task_records,
     resume_task,
     task_markdown_path,
     update_dependency,
@@ -27,6 +28,12 @@ from whub.services.flow.task import (
 
 def _task(task_id: str, state: str = "draft") -> TaskRuntime:
     return TaskRuntime(schema_version=2, id=task_id, workflow="WF-001", state=state)
+
+
+def _write_pair(path, task: TaskRuntime) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_task(path, task)
+    write_task_markdown(path, f"# {task.id}\n")
 
 
 def test_runtime_yaml_excludes_legacy_task_document(tmp_path) -> None:
@@ -73,6 +80,32 @@ def test_create_task_writes_runtime_yaml_and_markdown_pair(tmp_path) -> None:
         load_task_markdown(path)
         == "# Title\n\n## Objective\n\nObjective\n\n## Approach\n\n- First approach\n"
     )
+
+
+def test_load_task_records_reads_unique_valid_pairs_across_roots(tmp_path) -> None:
+    active = tmp_path / "active"
+    archive = tmp_path / "archive"
+    _write_pair(active / "active.yaml", _task("TASK-001"))
+    _write_pair(archive / "archived.yaml", _task("TASK-002", "completed"))
+
+    records = load_task_records(active, archive)
+    assert {task_id: path.name for task_id, (path, _) in records.items()} == {
+        "TASK-001": "active.yaml",
+        "TASK-002": "archived.yaml",
+    }
+
+
+def test_load_task_records_rejects_duplicates_and_invalid_pairs(tmp_path) -> None:
+    active = tmp_path / "active"
+    archive = tmp_path / "archive"
+    _write_pair(active / "active.yaml", _task("TASK-001"))
+    _write_pair(archive / "archived.yaml", _task("TASK-001", "completed"))
+    with pytest.raises(FlowError, match="duplicate task id"):
+        load_task_records(active, archive)
+
+    _write_pair(active / "paused.yaml", _task("TASK-002", "paused"))
+    with pytest.raises(FlowError, match="task set is invalid"):
+        load_task_records(active)
 
 
 def test_archive_moves_task_yaml_and_markdown_together(tmp_path) -> None:

@@ -26,6 +26,7 @@ from whub.services.flow.task.relation import (
     resume_task,
     update_dependency,
 )
+from whub.services.flow.task.query import load_task_records
 from whub.services.flow.task.transition import apply_transition, available_transitions
 
 __all__ = [
@@ -40,6 +41,7 @@ __all__ = [
     "iter_task_paths",
     "load_task",
     "load_task_markdown",
+    "load_task_records",
     "resolve_task_reference",
     "resume_task",
     "task_markdown_path",
