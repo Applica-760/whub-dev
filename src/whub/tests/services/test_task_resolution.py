@@ -32,7 +32,7 @@ def test_resolves_task_roots_and_existing_read_sets(tmp_path: Path) -> None:
 
     empty = resolve_project_task_storage(manifest, "local")
 
-    assert empty.active_root == hub_root / "wflow/tasks/local"
+    assert empty.active_root == hub_root / "flow/tasks/local"
     assert empty.history_root == project_root / "docs/tasks"
     assert empty.archive_root == project_root / "docs/tasks/done"
     assert empty.read_roots == ()
@@ -44,7 +44,7 @@ def test_resolves_task_roots_and_existing_read_sets(tmp_path: Path) -> None:
     populated = resolve_project_task_storage(manifest, "local")
 
     assert populated.read_roots == (populated.active_root, populated.archive_root)
-    assert populated.id_roots == (populated.history_root,)
+    assert populated.id_roots == (populated.archive_root,)
 
 
 @pytest.mark.parametrize("invalid_root", ["active", "history", "archive"])
@@ -53,7 +53,7 @@ def test_rejects_task_storage_paths_that_are_not_directories(
 ) -> None:
     manifest, hub_root, project_root = _manifest(tmp_path)
     roots = {
-        "active": hub_root / "wflow/tasks/local",
+        "active": hub_root / "flow/tasks/local",
         "history": project_root / "docs/tasks",
         "archive": project_root / "docs/tasks/done",
     }

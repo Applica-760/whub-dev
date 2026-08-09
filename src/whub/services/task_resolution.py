@@ -10,7 +10,7 @@ from whub.services.manifest import ResolvedManifest
 from whub.services.project_content import resolve_project_content_root
 
 
-TASKS_RELATIVE_PATH = Path("wflow/tasks")
+TASKS_RELATIVE_PATH = Path("flow/tasks")
 
 
 @dataclass(frozen=True)
@@ -46,5 +46,5 @@ def resolve_project_task_storage(
         history_root=history_root,
         archive_root=archive_root,
         read_roots=tuple(root for root in (active_root, archive_root) if root.is_dir()),
-        id_roots=(history_root,) if history_root.is_dir() else (),
+        id_roots=(archive_root,) if archive_root.is_dir() else (),
     )
