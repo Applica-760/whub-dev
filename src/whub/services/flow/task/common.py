@@ -58,6 +58,21 @@ def write_task(path: Path, task: TaskRuntime) -> None:
         raise FlowError(f"failed to write task YAML: {path}: {error}") from error
 
 
+def write_task_set(tasks: dict[Path, TaskRuntime]) -> None:
+    """Write related runtime YAML files, restoring earlier writes on failure."""
+    previous: dict[Path, str] = {}
+    written: list[Path] = []
+    try:
+        for path, task in tasks.items():
+            previous[path] = path.read_text(encoding="utf-8")
+            _write_text(path, _task_yaml(task))
+            written.append(path)
+    except (OSError, UnicodeError) as error:
+        for path in written:
+            _write_text(path, previous[path])
+        raise FlowError(f"failed to write Task runtime set: {error}") from error
+
+
 def task_markdown_path(task_path: Path) -> Path:
     if task_path.suffix != ".yaml":
         raise FlowError(f"task path must end in .yaml: {task_path}")

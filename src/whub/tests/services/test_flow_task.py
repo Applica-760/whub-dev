@@ -9,6 +9,13 @@ import pytest
 from whub.models.flow import TaskRuntime
 from whub.services.flow.definitions import task_workflow
 from whub.services.flow.errors import FlowError
+from whub.services.flow.task.application import (
+    cancel_task as cancel_persisted_task,
+    complete_task as complete_persisted_task,
+    interrupt as interrupt_persisted_task,
+    resume as resume_persisted_task,
+    start_task as start_persisted_task,
+)
 from whub.services.flow.task import (
     apply_transition,
     append_task_log,
@@ -127,6 +134,29 @@ def test_load_task_records_rejects_duplicates_and_invalid_pairs(tmp_path) -> Non
     _write_pair(active / "paused.yaml", _task("TASK-002", "paused"))
     with pytest.raises(FlowError, match="task set is invalid"):
         load_task_records(active)
+
+
+def test_persisted_runtime_operations_update_and_archive_pairs(tmp_path) -> None:
+    active = tmp_path / "active"
+    archive = tmp_path / "archive"
+    _write_pair(active / "parent.yaml", _task("TASK-001"))
+    _write_pair(active / "child.yaml", _task("TASK-002"))
+
+    assert start_persisted_task(active, "001").state == "in_progress"
+    paused, started = interrupt_persisted_task(active, "001", "002", "urgent")
+    assert (paused.state, started.state) == ("paused", "in_progress")
+    assert "interrupted by TASK-002: urgent" in load_task_markdown(
+        active / "parent.yaml"
+    )
+
+    assert complete_persisted_task(active, archive, "002") == archive / "child.yaml"
+    assert resume_persisted_task(active, "001", archive).state == "in_progress"
+
+    _write_pair(active / "cancel.yaml", _task("TASK-003"))
+    assert cancel_persisted_task(active, archive, "003", "superseded", archive) == (
+        archive / "cancel.yaml"
+    )
+    assert "cancelled: superseded" in load_task_markdown(archive / "cancel.yaml")
 
 
 def test_archive_moves_task_yaml_and_markdown_together(tmp_path) -> None:
