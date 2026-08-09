@@ -37,8 +37,8 @@ export function TerminalWidget({
   const xtermRef = useRef<XtermViewHandle>(null);
   const decoderRef = useRef(new TextDecoder());
   const terminalOptions = useMemo(
-    () => (taskId ? { macOptionClickForcesSelection: true } : undefined),
-    [taskId],
+    () => ({ macOptionClickForcesSelection: true }),
+    [],
   );
   const handleConnected = useCallback(() => {
     xtermRef.current?.fit(true);

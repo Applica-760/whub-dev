@@ -267,7 +267,7 @@ describe("TerminalWidget", () => {
     expect(window.open).toHaveBeenCalledOnce();
   });
 
-  it("worktree TerminalだけでOption+ドラッグ選択を有効にする", () => {
+  it("すべてのTerminalでOption+ドラッグ選択を有効にする", () => {
     const worktree = render(
       <MantineProvider env="test">
         <TerminalWidget
@@ -293,8 +293,8 @@ describe("TerminalWidget", () => {
       </MantineProvider>,
     );
 
-    expect(terminalMocks.options).not.toHaveProperty(
-      "macOptionClickForcesSelection",
-    );
+    expect(terminalMocks.options).toMatchObject({
+      macOptionClickForcesSelection: true,
+    });
   });
 });
