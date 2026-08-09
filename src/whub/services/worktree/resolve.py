@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath
 
 from whub.models import Host, Manifest, RemoteResource, SymlinkResource, WorktreeDefinition
 from whub.services.errors import ServiceError
-from whub.services.task import load_project_task
+from whub.services.task.task import load_project_task
 
 
 LOCAL_WORKTREE_ROOT = Path("projects/worktrees")

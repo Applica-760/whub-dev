@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from whub.services.manifest import load_manifest
-from whub.services.task import archive_project_task
+from whub.services.task.task import archive_project_task
 from whub.services.task_resolution import (
     ResolvedProjectTaskStorage,
     resolve_project_task_storage,

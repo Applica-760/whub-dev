@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.manifest import ResolvedManifest
 from whub.services.task_resolution import resolve_project_task_storage

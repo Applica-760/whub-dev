@@ -32,7 +32,7 @@ from whub.services.errors import NotFoundError, ServiceError
 from whub.services.agent.codex.attention import ApprovalAttentionStore
 from whub.models import ResourceStatus, WorktreeStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminals
-from whub.services.task import ProjectTasks
+from whub.services.task.task import ProjectTasks
 from whub.services.vault import VaultNode
 from whub.services.worktree.diff import ChangedFile, WorktreeDiff
 from whub.tests.helpers import manifest

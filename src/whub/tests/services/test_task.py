@@ -10,7 +10,7 @@ import yaml
 from whub.models import Manifest
 from whub.services.errors import ServiceError
 from whub.services.manifest import ResolvedManifest, resolve_manifest
-from whub.services.task import list_project_tasks, load_project_task
+from whub.services.task.task import list_project_tasks, load_project_task
 from whub.tests.helpers import manifest_data
 
 
