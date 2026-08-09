@@ -3,6 +3,7 @@ from pathlib import Path
 
 from whub.models.agent.auth import (
     AgentAuth,
+    CommandDecision,
     CommandRule,
     ExtensionTool,
     RegisteredProjectVariable,
@@ -42,8 +43,10 @@ def test_loads_agent_auth_assets() -> None:
 
 
 def test_load_agent_auth_reports_invalid_assets(tmp_path: Path) -> None:
-    data = (ASSETS / "base.yaml").read_text().replace(
-        "read: []", "read: [unknown_scope]", 1
+    data = (
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace("read: []", "read: [unknown_scope]", 1)
     )
     target = tmp_path / "invalid-agent-auth.yaml"
     target.write_text(data)
@@ -59,12 +62,12 @@ def test_load_agent_auth_rejects_invalid_schema(tmp_path: Path) -> None:
             "variables: {}",
             "variables:\n  project:\n    source: registered_project\n    fields: [project]",
         ),
-        (ASSETS / "base.yaml").read_text().replace(
-            "read: []", "read: [current_worktree, current_worktree]", 1
-        ),
-        (ASSETS / "base.yaml").read_text().replace(
-            "policy: deny_all", "outbound: []", 1
-        ),
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace("read: []", "read: [current_worktree, current_worktree]", 1),
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace("policy: deny_all", "outbound: []", 1),
     )
     target = tmp_path / "invalid-agent-auth.yaml"
 
@@ -161,6 +164,23 @@ def test_resolve_agent_auth_loads_packaged_assets() -> None:
 
     assert resolved.auth.grants.extension_tools == ["codegraph"]
     assert [tool.id for tool in resolved.tools] == ["codegraph"]
+
+
+def test_implementer_task_auth_allows_only_logs() -> None:
+    rules = resolve_agent_auth(("implementer",)).auth.grants.commands.prefixes
+    whub_rules = [rule for rule in rules if rule.executable == "whub"]
+
+    log_rule = next(
+        rule
+        for rule in whub_rules
+        if {"kind": "literal", "value": "log"} in rule.model_dump()["arguments"]
+    )
+    assert log_rule.decision is CommandDecision.ALLOW
+    assert all(
+        rule.decision is CommandDecision.PROMPT
+        for rule in whub_rules
+        if rule is not log_rule
+    )
 
 
 def test_resolve_agent_auth_rejects_non_basename_extension_name() -> None:

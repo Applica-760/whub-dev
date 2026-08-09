@@ -67,7 +67,7 @@ def _render_rules(
     return "".join(
         "prefix_rule(\n"
         f"    pattern = {_starlark_list(_rule_arguments(rule, variables))},\n"
-        '    decision = "prompt",\n'
+        f'    decision = "{rule.decision.value}",\n'
         ")\n"
         for rule in rules
     )

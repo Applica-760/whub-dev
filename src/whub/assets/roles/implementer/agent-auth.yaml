@@ -26,6 +26,21 @@ grants:
         arguments: [run, format]
       - executable: npm  # npm run format:check *
         arguments: [run, format:check]
+      # Structured Task logs are safe Agent-side records for the bound Task.
+      - executable: whub  # whub task --project $current_worktree.project log $current_worktree.task *
+        arguments: [task, --project, "$current_worktree.project", log, "$current_worktree.task"]
+        decision: allow
+      # Lifecycle transitions require explicit user confirmation.
+      - executable: whub  # whub task --project $current_worktree.project start $current_worktree.task
+        arguments: [task, --project, "$current_worktree.project", start, "$current_worktree.task"]
+      - executable: whub  # whub task --project $current_worktree.project interrupt $current_worktree.task *
+        arguments: [task, --project, "$current_worktree.project", interrupt, "$current_worktree.task"]
+      - executable: whub  # whub task --project $current_worktree.project resume $current_worktree.task
+        arguments: [task, --project, "$current_worktree.project", resume, "$current_worktree.task"]
+      - executable: whub  # whub task --project $current_worktree.project complete $current_worktree.task
+        arguments: [task, --project, "$current_worktree.project", complete, "$current_worktree.task"]
+      - executable: whub  # whub task --project $current_worktree.project cancel $current_worktree.task *
+        arguments: [task, --project, "$current_worktree.project", cancel, "$current_worktree.task"]
       # Task lifecycleの変更ではなく、対応Taskの計画とStepだけを操作する。
       - executable: wflow  # wflow task --project $current_worktree.project plan insert $current_worktree.task *
         arguments: [task, --project, "$current_worktree.project", plan, insert, "$current_worktree.task"]

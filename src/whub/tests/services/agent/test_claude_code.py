@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from whub.models.agent.auth import EffectiveAuth, ExtensionTool
+from whub.models.agent.auth import CommandDecision, EffectiveAuth, ExtensionTool
 from whub.services.agent.adapters.claude_code import (
     ClaudeCodeAdapterError,
     ClaudeCodeRuntimeRequirement,
@@ -161,6 +161,43 @@ def test_policy_hook_allows_only_granted_commands_and_mcp_tools(
         }
     else:
         assert result.stdout == ""
+
+
+def test_policy_hook_auto_allows_explicitly_allowed_commands(tmp_path: Path) -> None:
+    auth = _auth()
+    rule = auth.grants.commands.prefixes[0].model_copy(
+        update={"decision": CommandDecision.ALLOW}
+    )
+    grants = auth.grants.model_copy(
+        update={
+            "commands": auth.grants.commands.model_copy(update={"prefixes": [rule]})
+        }
+    )
+    hook = tmp_path / "whub_authorize.py"
+    hook.write_text(
+        render(
+            auth.model_copy(update={"grants": grants}),
+            [_codegraph()],
+            {"project": "whub-dev"},
+        ).files[PurePosixPath(".claude/hooks/whub_authorize.py")]
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(hook)],
+        input=json.dumps(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "wflow task --project whub-dev check 078"},
+            }
+        ),
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+
+    assert (
+        json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "allow"
+    )
 
 
 def test_render_rejects_unresolved_variables() -> None:

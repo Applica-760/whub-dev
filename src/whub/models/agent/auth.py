@@ -61,9 +61,15 @@ def _parse_command_token(value: str | dict[str, str]) -> dict[str, str]:
     return {"kind": "literal", "value": value}
 
 
+class CommandDecision(StrEnum):
+    ALLOW = "allow"
+    PROMPT = "prompt"
+
+
 class CommandRule(AgentAuthModel):
     executable: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
     arguments: list[CommandToken] = Field(default_factory=list)
+    decision: CommandDecision = CommandDecision.PROMPT
 
     @field_validator("arguments", mode="before")
     @classmethod
