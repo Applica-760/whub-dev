@@ -27,10 +27,12 @@ from whub.services.flow.task.relation import (
     update_dependency,
 )
 from whub.services.flow.task.query import load_task_records
+from whub.services.flow.task.log import LogKind, append_task_log
 from whub.services.flow.task.transition import apply_transition, available_transitions
 
 __all__ = [
     "apply_transition",
+    "append_task_log",
     "archive_task",
     "available_transitions",
     "create_task",
@@ -42,6 +44,7 @@ __all__ = [
     "load_task",
     "load_task_markdown",
     "load_task_records",
+    "LogKind",
     "resolve_task_reference",
     "resume_task",
     "task_markdown_path",

@@ -11,6 +11,7 @@ from whub.services.flow.definitions import task_workflow
 from whub.services.flow.errors import FlowError
 from whub.services.flow.task import (
     apply_transition,
+    append_task_log,
     archive_task,
     available_transitions,
     create_task,
@@ -80,6 +81,26 @@ def test_create_task_writes_runtime_yaml_and_markdown_pair(tmp_path) -> None:
         load_task_markdown(path)
         == "# Title\n\n## Objective\n\nObjective\n\n## Approach\n\n- First approach\n"
     )
+
+
+def test_task_log_appends_validated_json_to_markdown(tmp_path) -> None:
+    path = tmp_path / "task.yaml"
+    write_task_markdown(path, "# Task\n")
+
+    append_task_log(
+        path,
+        '{"fact":"verified"}',
+        "agent",
+        now=datetime(2026, 8, 9, 12, 34, 56),
+    )
+    assert load_task_markdown(path) == (
+        "# Task\n\n<!-- whub:task-log:start -->\n"
+        "- 2026-08-09T12:34:56 | agent | fact | verified\n"
+        "<!-- whub:task-log:end -->\n"
+    )
+
+    with pytest.raises(FlowError, match="one LogKind key"):
+        append_task_log(path, '{"unknown":"no"}', "agent")
 
 
 def test_load_task_records_reads_unique_valid_pairs_across_roots(tmp_path) -> None:
