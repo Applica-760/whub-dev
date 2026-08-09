@@ -1,17 +1,7 @@
-"""Shared error and diagnostic types for wflow services."""
+"""Compatibility exports for Flow errors."""
 
-from __future__ import annotations
+from whub.services.flow.errors import Diagnostic, FlowError
 
-from dataclasses import dataclass
+WflowError = FlowError
 
-
-class WflowError(Exception):
-    """Raised when a wflow YAML file cannot be loaded or validated."""
-
-
-@dataclass(frozen=True)
-class Diagnostic:
-    """A semantic error in a wflow document."""
-
-    code: str
-    message: str
+__all__ = ["Diagnostic", "WflowError"]
