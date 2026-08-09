@@ -1,0 +1,71 @@
+schema_version: 1
+task:
+  id: TASK-125
+  state: completed
+  title: Web Terminalの軽微なUX修正
+  objective: 通知音、端末サイズ同期、Git Explorerの初期展開を改善し、Agent作業画面の使い勝手と表示の安定性を高める。
+  approach:
+  - 1 Task内を独立したPhaseに分け、通知音素材の選定、端末サイズ不整合の根本原因修正、Agent state所有ファイルを除外するGit Explorer展開修正を順に検証する。worktree利用はユーザー合意済みだが、作成は実装開始時まで保留する。
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: 通知音素材の選定と置換
+    acceptance: []
+    steps:
+    - description: 通知用途に適した短いオーディオ素材を、ライセンス、出典、配布サイズ、反復時の聴きやすさで比較・選定し、利用条件を記録した上でassetとして組み込み、permission_requestとresponse_completedの再生処理および回帰テストを更新する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        completion: ユーザー申告により別セッションで完了済み
+      deleted: false
+    deleted: false
+  - title: Terminalサイズ同期の安定化
+    acceptance: []
+    steps:
+    - description: 初期表示、Terminal切替、折りたたみ解除、WebSocket再接続の各経路でDOM領域、xtermの行列数、PTY/tmuxの行列数を照合して不整合を再現し、初期レイアウト競合の根本原因を修正して回帰テストを追加する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        completion: ユーザー申告により別セッションで完了済み
+      deleted: false
+    deleted: false
+  - title: Git Explorer初期展開の除外
+    acceptance: []
+    steps:
+    - description: Agent stateのfilesとblocksをAgent open生成物のSSOTとしてGit Explorerへ反映し、それらの変更だけでは祖先ディレクトリを初期展開しないようにする。生成物自体の表示と手動展開、および通常の変更ファイルによる初期展開は維持し、境界条件をテストする。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        completion: ユーザー申告により別セッションで完了済み
+      deleted: false
+    deleted: false
+  - title: 総合検証
+    acceptance: []
+    steps:
+    - description: 変更箇所のfocused test、frontend全test、typecheck、build、uv run pytestを実行し、選定した通知音の実ブラウザ再生とTerminalが確保領域全体へ描画されることを手動確認して結果をTask
+        logへ記録する。
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        completion: ユーザー申告により別セッションで完了済み
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results: []
+change_requests: []
+cancellation: null
+result:
+  summary: ユーザー申告により別セッションで全Phase完了済み。

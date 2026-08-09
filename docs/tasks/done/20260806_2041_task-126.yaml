@@ -1,0 +1,87 @@
+schema_version: 1
+task:
+  id: TASK-126
+  state: completed
+  title: ターミナル右列へタスク依存グラフを追加
+  objective: ターミナルページ右列を上下1:2に分割し、上段に対象Projectのタスク依存グラフ、下段に対象Taskの詳細を表示する。Operation選択時はwhub-devを対象にする。
+  approach:
+  - 既存のTaskDependencyGraphWidgetとTaskDetailWidgetを再利用し、TerminalPageの選択コンテキストとterminal.cssの右列レイアウトを最小変更する
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan:
+  acceptance: []
+  phases:
+  - title: UI implementation
+    acceptance:
+    - id: ACC-001
+      statement: Worktree選択時、上段に該当Projectの依存グラフ、下段に紐づくTask詳細が表示される
+    - id: ACC-002
+      statement: Operation選択時、whub-devの依存グラフが表示され、初期状態の詳細は空で、グラフ選択後にそのTask詳細が表示される
+    - id: ACC-003
+      statement: 右列全体がターミナル表示を基準とする高さに収まり、上段と下段が1:2で、超過内容を内部スクロールできる
+    steps:
+    - description: Terminal選択からグラフ対象Projectと詳細対象Taskを導出し、既存Widgetを右列へ組み込む
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 右列をターミナル基準の高さで上下1:2に分割し、各領域のoverflowを制御する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: WorktreeとOperationの表示・選択挙動を回帰テストで固定する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        verification: focused 17 tests、typecheck、build、frontend 52 tests、pytest 580
+          tests、ユーザー実画面確認が成功
+      deleted: false
+    deleted: false
+  - title: Verification and release
+    acceptance:
+    - id: ACC-004
+      statement: frontend buildと全pytestが成功し、operation release後のwhub versionとapp listenを確認できる
+    steps:
+    - description: frontend focused test・typecheck・buildとuv run pytestで回帰検証する
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: 検証済み変更をmainへcommitし、release sourceをcleanにする
+      state: done
+      skip_reason: null
+      deleted: false
+    - description: operation releaseをdeployし、新releaseのversionとlisten portを確認する
+      state: done
+      skip_reason: null
+      deleted: false
+    log:
+    - value:
+        completion: ユーザー申告により別セッションで完了済み
+      deleted: false
+    deleted: false
+approvals:
+- actor: user
+acceptance_results:
+- acceptance: ACC-001
+  status: passed
+  evidence:
+  - ユーザーが開発サーバ実画面でWorktreeのProjectグラフと紐づくTask詳細を確認
+- acceptance: ACC-002
+  status: passed
+  evidence:
+  - ユーザーがOperationのwhub-devグラフ、初期空表示、選択後詳細表示を確認
+- acceptance: ACC-003
+  status: passed
+  evidence:
+  - ユーザーが右列1:2、高さ上限、内部スクロールを確認
+- acceptance: ACC-004
+  status: passed
+  evidence:
+  - ユーザー申告により別セッションでrelease、version、listen portの確認まで完了済み。
+change_requests: []
+cancellation: null
+result:
+  summary: ユーザー申告により別セッションで全Phaseおよび受け入れ条件を完了済み。
