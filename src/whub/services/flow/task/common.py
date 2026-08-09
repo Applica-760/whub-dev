@@ -70,6 +70,29 @@ def write_task(path: Path, task: TaskRuntime) -> None:
             temporary_path.unlink(missing_ok=True)
 
 
+def task_markdown_path(task_path: Path) -> Path:
+    if task_path.suffix != ".yaml":
+        raise FlowError(f"task path must end in .yaml: {task_path}")
+    return task_path.with_suffix(".md")
+
+
+def load_task_markdown(task_path: Path) -> str:
+    path = task_markdown_path(task_path)
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        raise FlowError(f"failed to load task Markdown: {path}: {error}") from error
+
+
+def write_task_markdown(task_path: Path, content: str) -> Path:
+    path = task_markdown_path(task_path)
+    try:
+        path.write_text(content, encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        raise FlowError(f"failed to write task Markdown: {path}: {error}") from error
+    return path
+
+
 def _task_id(path: Path) -> str | None:
     try:
         return load_task(path).id

@@ -3,8 +3,11 @@
 from whub.services.flow.task.common import (
     iter_task_paths,
     load_task,
+    load_task_markdown,
     resolve_task_reference,
+    task_markdown_path,
     write_task,
+    write_task_markdown,
 )
 from whub.services.flow.task.eligibility import (
     dependency_start_diagnostics,
@@ -32,11 +35,14 @@ __all__ = [
     "interruption_start_diagnostics",
     "iter_task_paths",
     "load_task",
+    "load_task_markdown",
     "resolve_task_reference",
     "resume_task",
+    "task_markdown_path",
     "update_dependency",
     "validate_task",
     "validate_task_interruption",
     "validate_task_set",
     "write_task",
+    "write_task_markdown",
 ]
