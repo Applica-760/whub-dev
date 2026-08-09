@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+import os
 from pathlib import Path
 import re
 import tempfile
@@ -91,6 +92,67 @@ def write_task_markdown(task_path: Path, content: str) -> Path:
     except (OSError, UnicodeError) as error:
         raise FlowError(f"failed to write task Markdown: {path}: {error}") from error
     return path
+
+
+def archive_task(path: Path, task: TaskRuntime, destination_root: Path) -> Path:
+    """Move a terminal Task YAML and its Markdown sibling as one pair."""
+    if task.state not in {"completed", "cancelled"}:
+        raise FlowError("only terminal tasks can be archived")
+    source_markdown = task_markdown_path(path)
+    destination = destination_root / path.name
+    destination_markdown = task_markdown_path(destination)
+    try:
+        source_yaml_content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        raise FlowError(f"failed to archive task YAML: {path}: {error}") from error
+    yaml_content = yaml.safe_dump(
+        task.model_dump(mode="json"), allow_unicode=True, sort_keys=False
+    )
+    try:
+        markdown_content = source_markdown.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        raise FlowError(
+            f"failed to archive task Markdown: {source_markdown}: {error}"
+        ) from error
+
+    temporary_paths: list[Path] = []
+    created_paths: list[Path] = []
+    removed_yaml = False
+    removed_markdown = False
+    try:
+        destination_root.mkdir(parents=True, exist_ok=True)
+        for target, content in (
+            (destination, yaml_content),
+            (destination_markdown, markdown_content),
+        ):
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=destination_root, delete=False
+            ) as temporary:
+                temporary.write(content)
+                temporary_path = Path(temporary.name)
+            temporary_paths.append(temporary_path)
+            os.link(temporary_path, target)
+            created_paths.append(target)
+        path.unlink()
+        removed_yaml = True
+        source_markdown.unlink()
+        removed_markdown = True
+    except FileExistsError as error:
+        raise FlowError(f"archived task already exists: {error.filename}") from error
+    except OSError as error:
+        raise FlowError(f"failed to archive task pair: {path}: {error}") from error
+    finally:
+        if removed_yaml != removed_markdown:
+            if removed_yaml:
+                path.write_text(source_yaml_content, encoding="utf-8")
+            if removed_markdown:
+                source_markdown.write_text(markdown_content, encoding="utf-8")
+        if removed_yaml != removed_markdown or not (removed_yaml and removed_markdown):
+            for created_path in created_paths:
+                created_path.unlink(missing_ok=True)
+        for temporary_path in temporary_paths:
+            temporary_path.unlink(missing_ok=True)
+    return destination
 
 
 def _task_id(path: Path) -> str | None:

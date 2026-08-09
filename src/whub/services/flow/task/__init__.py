@@ -1,6 +1,7 @@
 """Task Flow runtime operations."""
 
 from whub.services.flow.task.common import (
+    archive_task,
     iter_task_paths,
     load_task,
     load_task_markdown,
@@ -28,6 +29,7 @@ from whub.services.flow.task.transition import apply_transition, available_trans
 
 __all__ = [
     "apply_transition",
+    "archive_task",
     "available_transitions",
     "dependency_start_diagnostics",
     "interrupt_task",

@@ -9,6 +9,7 @@ from whub.services.flow.definitions import task_workflow
 from whub.services.flow.errors import FlowError
 from whub.services.flow.task import (
     apply_transition,
+    archive_task,
     available_transitions,
     interrupt_task,
     load_task,
@@ -45,6 +46,49 @@ def test_task_markdown_is_a_freeform_sibling_of_runtime_yaml(tmp_path) -> None:
 
     with pytest.raises(FlowError, match="failed to load task Markdown"):
         load_task_markdown(tmp_path / "missing.yaml")
+
+
+def test_archive_moves_task_yaml_and_markdown_together(tmp_path) -> None:
+    source = tmp_path / "active" / "task.yaml"
+    source.parent.mkdir()
+    task = _task("TASK-001", "completed")
+    write_task(source, task)
+    write_task_markdown(source, "# completed\n")
+
+    archived = archive_task(source, task, tmp_path / "archive")
+    assert archived == tmp_path / "archive" / "task.yaml"
+    assert load_task(archived) == task
+    assert load_task_markdown(archived) == "# completed\n"
+    assert not source.exists()
+    assert not task_markdown_path(source).exists()
+
+
+def test_archive_keeps_active_yaml_when_markdown_is_missing(tmp_path) -> None:
+    source = tmp_path / "task.yaml"
+    task = _task("TASK-001", "completed")
+    write_task(source, task)
+
+    with pytest.raises(FlowError, match="failed to archive task Markdown"):
+        archive_task(source, task, tmp_path / "archive")
+    assert load_task(source) == task
+    assert not (tmp_path / "archive" / "task.yaml").exists()
+
+
+def test_archive_rolls_back_yaml_when_destination_markdown_exists(tmp_path) -> None:
+    source = tmp_path / "task.yaml"
+    task = _task("TASK-001", "completed")
+    write_task(source, task)
+    write_task_markdown(source, "# active\n")
+    destination_root = tmp_path / "archive"
+    destination_root.mkdir()
+    (destination_root / "task.md").write_text("# existing\n")
+
+    with pytest.raises(FlowError, match="archived task already exists"):
+        archive_task(source, task, destination_root)
+    assert load_task(source) == task
+    assert load_task_markdown(source) == "# active\n"
+    assert not (destination_root / "task.yaml").exists()
+    assert (destination_root / "task.md").read_text() == "# existing\n"
 
 
 def test_builtin_workflow_has_no_task_document_guards() -> None:
