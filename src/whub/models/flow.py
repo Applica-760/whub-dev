@@ -53,7 +53,6 @@ class TransitionRecord(WorkflowModel):
 
 class WorkflowTransition(WorkflowModel):
     trigger: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
-    actor: Identifier
     from_: StateName | Annotated[list[StateName], Field(min_length=1)] = Field(
         alias="from"
     )

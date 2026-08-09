@@ -112,22 +112,17 @@ def values_at(data: Any, field: str, input_data: dict[str, Any]) -> list[Any]:
     return current
 
 
-def _resolve_value(
-    value: Any, data: dict[str, Any], input_data: dict[str, Any], actor: str
-) -> Any:
-    if value == "$actor":
-        return actor
+def _resolve_value(value: Any, data: dict[str, Any], input_data: dict[str, Any]) -> Any:
     if isinstance(value, str) and value.startswith("$"):
         values = values_at(data, value, input_data)
         if len(values) != 1:
             raise FlowError(f"record value '{value}' does not resolve to one value")
         return values[0]
     if isinstance(value, list):
-        return [_resolve_value(item, data, input_data, actor) for item in value]
+        return [_resolve_value(item, data, input_data) for item in value]
     if isinstance(value, dict):
         return {
-            key: _resolve_value(item, data, input_data, actor)
-            for key, item in value.items()
+            key: _resolve_value(item, data, input_data) for key, item in value.items()
         }
     return value
 
@@ -189,14 +184,11 @@ def apply_transition(
     state: str,
     data: dict[str, Any],
     trigger: str,
-    actor: str,
     input_data: dict[str, Any] | None = None,
     evaluators: Mapping[str, RequirementEvaluator] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Apply one declared transition and return its next state and records."""
     transition = _transition_for(workflow, state, trigger)
-    if actor != transition.actor:
-        raise FlowError(f"trigger '{trigger}' requires actor '{transition.actor}'")
 
     inputs = input_data or {}
     requirement_evaluators = evaluators or {}
@@ -214,7 +206,7 @@ def apply_transition(
         raise FlowError("; ".join(errors))
 
     for record in transition.records:
-        value = _resolve_value(record.value, data, inputs, actor)
+        value = _resolve_value(record.value, data, inputs)
         current = data.get(record.field)
         if isinstance(current, list):
             current.append(value)

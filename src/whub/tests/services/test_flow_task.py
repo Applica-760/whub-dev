@@ -207,7 +207,13 @@ def test_archive_rolls_back_yaml_when_destination_markdown_exists(tmp_path) -> N
 def test_builtin_workflow_has_no_task_document_guards() -> None:
     task = _task("TASK-001")
     workflow = task_workflow()
-    assert {transition.actor for transition in workflow.transitions} == {"user"}
+    assert {transition.trigger for transition in workflow.transitions} == {
+        "start_task",
+        "interrupt_task",
+        "resume_task",
+        "complete_task",
+        "cancel_task",
+    }
     assert available_transitions(
         workflow, task.state, task.model_dump(mode="python")
     ) == ("start_task",)

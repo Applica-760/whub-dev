@@ -25,7 +25,6 @@ def apply_transition(
         task.state,
         task.model_dump(mode="python"),
         trigger,
-        "user",
         input_data,
     )
     data["state"] = state
