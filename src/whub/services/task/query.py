@@ -7,12 +7,12 @@ from pathlib import Path
 from whub.models.flow import TaskRuntime
 from whub.services.flow.definitions import task_workflow
 from whub.services.flow.errors import FlowError
-from whub.services.flow.task.common import (
+from whub.services.task.common import (
     iter_task_paths,
     load_task,
     load_task_markdown,
 )
-from whub.services.flow.task.integrity import validate_task_set
+from whub.services.task.integrity import validate_task_set
 
 
 def load_task_records(

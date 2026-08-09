@@ -8,16 +8,16 @@ from pathlib import Path
 from whub.models.flow import TaskRuntime
 from whub.services.flow.definitions import task_workflow
 from whub.services.flow.errors import FlowError
-from whub.services.flow.task.common import archive_task, write_task_set
-from whub.services.flow.task.eligibility import dependency_start_diagnostics
-from whub.services.flow.task.log import append_task_log
-from whub.services.flow.task.query import load_task_records
-from whub.services.flow.task.relation import (
+from whub.services.task.common import archive_task, write_task_set
+from whub.services.task.eligibility import dependency_start_diagnostics
+from whub.services.task.log import append_task_log
+from whub.services.task.query import load_task_records
+from whub.services.task.relation import (
     interrupt_task,
     resume_task,
     update_dependency,
 )
-from whub.services.flow.task.transition import apply_transition
+from whub.services.task.transition import apply_transition
 
 
 def update_dependency_for_task(

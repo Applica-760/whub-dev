@@ -6,12 +6,12 @@ from collections.abc import Mapping
 
 from whub.models.flow import TaskRuntime, WorkflowDefinition
 from whub.services.flow.errors import Diagnostic, FlowError
-from whub.services.flow.task.eligibility import (
+from whub.services.task.eligibility import (
     interruption_resume_diagnostics,
     interruption_start_diagnostics,
 )
-from whub.services.flow.task.integrity import validate_task_set
-from whub.services.flow.task.transition import apply_transition
+from whub.services.task.integrity import validate_task_set
+from whub.services.task.transition import apply_transition
 
 
 def update_dependency(task: TaskRuntime, dependency: str, add: bool) -> TaskRuntime:

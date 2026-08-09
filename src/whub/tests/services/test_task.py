@@ -9,9 +9,9 @@ import pytest
 from whub.models import Manifest
 from whub.models.flow import TaskRuntime
 from whub.services.errors import ServiceError
-from whub.services.flow.task.common import write_task, write_task_markdown
+from whub.services.task.common import write_task, write_task_markdown
 from whub.services.manifest import ResolvedManifest, resolve_manifest
-from whub.services.task.task import list_project_tasks, load_project_task
+from whub.services.task.project import list_project_tasks, load_project_task
 from whub.tests.helpers import manifest_data
 
 

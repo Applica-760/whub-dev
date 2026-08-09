@@ -11,10 +11,10 @@ import click
 from whub.commands import get_manifest, project_names
 from whub.services.errors import ServiceError
 from whub.services.flow.errors import FlowError
-from whub.services.flow.task import application
-from whub.services.flow.task.common import create_task
-from whub.services.flow.task.log import append_task_log
-from whub.services.flow.task.query import load_task_records
+from whub.services.task import application
+from whub.services.task.common import create_task
+from whub.services.task.log import append_task_log
+from whub.services.task.query import load_task_records
 from whub.services.task_resolution import resolve_project_task_storage
 
 

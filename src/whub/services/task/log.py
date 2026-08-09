@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal, cast, get_args
 
 from whub.services.flow.errors import FlowError
-from whub.services.flow.task.common import load_task_markdown, write_task_markdown
+from whub.services.task.common import load_task_markdown, write_task_markdown
 from whub.utils.managed_block import (
     format_block,
     insert_before_end_marker,

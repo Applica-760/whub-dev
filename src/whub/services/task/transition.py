@@ -6,7 +6,7 @@ from typing import Any
 
 from whub.models.flow import TaskRuntime, WorkflowDefinition
 from whub.services.flow.errors import FlowError
-from whub.services.flow.task.integrity import validate_task
+from whub.services.task.integrity import validate_task
 from whub.services.flow.workflow import apply_transition as apply_workflow_transition
 
 

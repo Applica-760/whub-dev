@@ -9,14 +9,14 @@ import pytest
 from whub.models.flow import TaskRuntime
 from whub.services.flow.definitions import task_workflow
 from whub.services.flow.errors import FlowError
-from whub.services.flow.task.application import (
+from whub.services.task.application import (
     cancel_task as cancel_persisted_task,
     complete_task as complete_persisted_task,
     interrupt as interrupt_persisted_task,
     resume as resume_persisted_task,
     start_task as start_persisted_task,
 )
-from whub.services.flow.task.common import (
+from whub.services.task.common import (
     archive_task,
     create_task,
     load_task,
@@ -25,14 +25,14 @@ from whub.services.flow.task.common import (
     write_task,
     write_task_markdown,
 )
-from whub.services.flow.task.log import append_task_log
-from whub.services.flow.task.query import load_task_records
-from whub.services.flow.task.relation import (
+from whub.services.task.log import append_task_log
+from whub.services.task.query import load_task_records
+from whub.services.task.relation import (
     interrupt_task,
     resume_task,
     update_dependency,
 )
-from whub.services.flow.task.transition import apply_transition
+from whub.services.task.transition import apply_transition
 from whub.services.flow.workflow import available_transitions
 
 

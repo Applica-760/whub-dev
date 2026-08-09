@@ -7,8 +7,8 @@ from contextlib import chdir, contextmanager
 from dataclasses import replace
 from pathlib import Path
 
+from whub.services.errors import ServiceError
 from whub.services.manifest import load_manifest
-from whub.services.task.task import archive_project_task
 from whub.services.task_resolution import (
     ResolvedProjectTaskStorage,
     resolve_project_task_storage,
@@ -16,6 +16,7 @@ from whub.services.task_resolution import (
 from whub.wflow.models.task import TaskDocument
 from whub.wflow.services.errors import WflowError
 from whub.wflow.services.task.common import (
+    archive_task,
     create_task,
     resolve_task_reference,
     write_task,
@@ -47,6 +48,22 @@ from whub.wflow.services.task.relation import (
     update_dependency,
 )
 from whub.wflow.services.task.transition import apply_transition
+
+
+def archive_project_task(
+    manifest,
+    project: str,
+    source: Path,
+    task: TaskDocument,
+) -> Path:
+    """Archive one legacy Wflow Task without depending on Whub Task services."""
+    destination = resolve_project_task_storage(manifest, project).archive_root
+    if task.task.state == "cancelled":
+        destination /= "cancelled"
+    try:
+        return archive_task(source, task, destination)
+    except WflowError as error:
+        raise ServiceError(str(error)) from error
 
 
 @contextmanager

@@ -10,8 +10,8 @@ from pydantic import BaseModel
 from whub.models.flow import TaskRuntime
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.flow.errors import FlowError
-from whub.services.flow.task.eligibility import dependency_start_diagnostics
-from whub.services.flow.task.query import load_task_records
+from whub.services.task.eligibility import dependency_start_diagnostics
+from whub.services.task.query import load_task_records
 from whub.services.manifest import ResolvedManifest
 from whub.services.task_resolution import resolve_project_task_storage
 

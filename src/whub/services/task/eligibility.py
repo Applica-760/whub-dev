@@ -6,7 +6,7 @@ from collections.abc import Mapping
 
 from whub.models.flow import TaskRuntime, WorkflowDefinition
 from whub.services.flow.errors import Diagnostic
-from whub.services.flow.task.integrity import validate_task_set
+from whub.services.task.integrity import validate_task_set
 
 
 def dependency_start_diagnostics(
