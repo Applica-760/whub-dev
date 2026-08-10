@@ -15,7 +15,13 @@ from whub.services.agent.auth import resolve_variables
 from whub.services.agent.context import AGENTS_CONTEXT_PATH, render_context
 from whub.services.agent.tmux_session import open_tmux_session
 from whub.services.errors import ServiceError
-from whub.services.agent.state import _state_path, cleanup, owned_paths, prepare
+from whub.services.agent.state import (
+    _state_path,
+    cleanup,
+    owned_paths,
+    prepare,
+    unchanged_owned_paths,
+)
 
 
 def _plan(content: str = 'sandbox_mode = "workspace-write"\n') -> dict[PurePosixPath, str]:
@@ -153,6 +159,28 @@ def test_state_preserves_external_edits_when_cleaning_owned_block(
     cleanup(hub, "whub-dev", "TASK-095", worktree)
 
     assert path.read_text() == "# Project rules\n\n# User note\n"
+
+
+def test_unchanged_owned_paths_rejects_external_edits_to_managed_file(
+    tmp_path: Path,
+) -> None:
+    hub = tmp_path / "hub"
+    hub.mkdir()
+    (hub / "AGENTS.md").write_text("Hub rules\n")
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    path = worktree / "AGENTS.md"
+    path.write_text("# Project rules\n")
+    prepare(hub, "whub-dev", "TASK-095", worktree, {}, render_context(hub))
+
+    assert path.relative_to(worktree) in unchanged_owned_paths(
+        hub, "whub-dev", "TASK-095", worktree
+    )
+    path.write_text(path.read_text() + "\n# User note\n")
+
+    assert path.relative_to(worktree) not in unchanged_owned_paths(
+        hub, "whub-dev", "TASK-095", worktree
+    )
 
 
 def test_state_rejects_changed_owned_block(tmp_path: Path) -> None:

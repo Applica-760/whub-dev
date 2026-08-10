@@ -18,11 +18,11 @@ Session間では、Task YAML/Markdown pairを作業文脈、Git commitを実装�
 - repo sessionでTaskの目的・範囲・制約を明確にする。
 - ユーザーがworktreeを使うか決定する。
 - 軽微Taskは親repoで実行し、worktreeとAgentのlifecycleを省略する。
-- worktreeを使う場合は、親repoを同期し、`git worktree add`で`tasks/<task-number>`と規約pathを使って作成する。
+- worktreeを使う場合は、親repoを同期し、`whub worktree open <PROJECT> <TTT> --auth <AUTH>`で`tasks/<TTT>`と規約pathを作成する。
 
 ## 引継ぎ
 
-- repo sessionがTask worktreeにAgent sessionを開く。
+- `whub worktree open`がTask worktreeのAgent sessionを開く。
 - worktree sessionはTask YAML/Markdown pairを再読込する。
 - 詳細計画はTask Markdownで固めることを推奨する。Taskの性質に応じて起票時に確定してもよい。
 - ユーザーが計画を承認するまで実装へ進まない。
@@ -35,9 +35,9 @@ Session間では、Task YAML/Markdown pairを作業文脈、Git commitを実装�
 
 ## 回収と統合
 
-- repo sessionがAgent sessionを閉じ、Task worktreeのcleanを確認する。
-- repo sessionがPRを作成し、GitHub上のreviewとrequired checksを確認する。
-- ユーザーが方式を決定した後、repo sessionがmergeとcleanupを実行する。
+- repo sessionがTask worktreeをreviewし、required checksを確認する。
+- `whub worktree close <PROJECT> <TTT>`がclean確認、push、PR作成または取得、merge commit、Agentとworktreeのcleanupを順に実行する。
+- merge前の失敗ではAgent・worktree・branch・PRを残す。merge確認後にcleanupだけ失敗した場合も、mergeは戻さない。
 - repo sessionが親repoを同期してからTaskを完了し、Task履歴をcommit・pushする。
 
 各sessionは担当範囲の終了条件を満たしてから次へ渡す。満たさない場合はTaskを未完了のまま状態を報告する。

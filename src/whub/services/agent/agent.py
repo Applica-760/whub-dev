@@ -23,7 +23,12 @@ from whub.services.agent.tmux_session import (
     open_tmux_session,
     resolve_tmux_session,
 )
-from whub.services.agent.state import cleanup, owned_paths as local_owned_paths, prepare
+from whub.services.agent.state import (
+    cleanup,
+    owned_paths as local_owned_paths,
+    prepare,
+    unchanged_owned_paths as local_unchanged_owned_paths,
+)
 from whub.services.agent import remote_state
 from whub.services.errors import ServiceError
 from whub.services.worktree.resolve import resolve_project_worktree
@@ -132,6 +137,26 @@ def generated_paths(
         )
     assert isinstance(registered.destination, Path)
     return local_owned_paths(workspace_root, project, task_id, registered.destination)
+
+
+def unchanged_generated_paths(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> set[PurePosixPath]:
+    """Return Agent paths safe to ignore in a clean-worktree check."""
+    registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    if registered.is_remote:
+        assert registered.host is not None and isinstance(registered.destination, str)
+        return remote_state.unchanged_owned_paths(
+            workspace_root,
+            project,
+            registered.task_id,
+            registered.host,
+            registered.destination,
+        )
+    assert isinstance(registered.destination, Path)
+    return local_unchanged_owned_paths(
+        workspace_root, project, registered.task_id, registered.destination
+    )
 
 
 def close_agent(

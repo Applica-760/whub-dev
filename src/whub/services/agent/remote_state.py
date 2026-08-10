@@ -41,10 +41,16 @@ def prepare(
         agent_context.blocks,
         {} if previous is None else previous["blocks"],
     )
+    paths = {} if previous is None else dict(previous.get("paths", {}))
+    for relative in created_blocks:
+        content = _read(host, _validate_path(host, worktree, PurePosixPath(relative)))
+        assert content is not None
+        paths[relative] = _digest(content)
     state = {
         "worktree": worktree,
         "files": ({} if previous is None else previous["files"]) | created_files,
         "blocks": ({} if previous is None else previous["blocks"]) | created_blocks,
+        "paths": paths,
     }
     if state["files"] or state["blocks"]:
         _save(state_path, state)
@@ -75,6 +81,27 @@ def owned_paths(
     if state["worktree"] != worktree:
         raise ServiceError("remote Agent state does not match the registered worktree")
     return {PurePosixPath(name) for key in ("files", "blocks") for name in state[key]}
+
+
+def unchanged_owned_paths(
+    workspace_root: Path, project: str, task_id: str, host: Host, worktree: str
+) -> set[PurePosixPath]:
+    """Return remote owned paths whose complete current content is unchanged."""
+    state = _load(_state_path(workspace_root, project, task_id))
+    if state is None:
+        return set()
+    if state["worktree"] != worktree:
+        raise ServiceError("remote Agent state does not match the registered worktree")
+    unchanged: set[PurePosixPath] = set()
+    for key in ("files", "paths"):
+        values = state.get(key, {})
+        assert isinstance(values, dict)
+        for name, expected in values.items():
+            relative = PurePosixPath(name)
+            content = _read(host, _validate_path(host, worktree, relative))
+            if content is not None and _digest(content) == expected:
+                unchanged.add(relative)
+    return unchanged
 
 
 def _remote_path(worktree: str, relative: PurePosixPath) -> str:
@@ -242,6 +269,13 @@ def _load(path: Path) -> dict[str, object] | None:
                 for name, value in data[key].items()
             ):
                 raise ValueError("invalid fields")
+        if "paths" not in data:
+            data["paths"] = {}
+        if not isinstance(data["paths"], dict) or not all(
+            isinstance(name, str) and isinstance(value, str)
+            for name, value in data["paths"].items()
+        ):
+            raise ValueError("invalid fields")
         return data
     except (OSError, ValueError, json.JSONDecodeError) as error:
         raise ServiceError(f"invalid remote Agent state: {path}: {error}") from error

@@ -42,12 +42,12 @@ actor指定は公開しない。Taskを跨ぐ運用は
 - `link`が`.gitignore`で管理するのは`.codegraph/`、`.DS_Store`、`._*`、`.AppleDouble/`だけとする。
 - remote Resourceの参照・編集・実行・復旧は[Remote resource operation](../operations/remote.md)を参照する。
 
-## Agent
+## Worktree and Agent
 
 | コマンド | 直接の挙動 |
 |---|---|
-| `whub agent open <PROJECT> <TASK-ID> --auth <AUTH> [--auth <AUTH>]` | Agent設定を生成し、Taskのtmux sessionへ接続または新規作成。remote Resourceはhost内で起動しSSHでattachする |
-| `whub agent close <PROJECT> <TASK-ID>` | tmux sessionを停止し、未変更のHarness所有設定を削除。remote Resourceの生成物もhost上でcleanupする |
+| `whub worktree open <PROJECT> <TTT> --auth <AUTH> [--auth <AUTH>]` | `tasks/<TTT>`と規約pathでworktreeを作成し、Agent設定を生成してtmux sessionへ接続。remote Resourceはhost内で起動しSSHでattachする |
+| `whub worktree close <PROJECT> <TTT>` | cleanなTask branchをpushしPRを作成または取得してmerge commitでmergeする。成功確認後だけAgent設定・tmux・worktreeをcleanupする |
 | `whub agent attention-hook` | stdinのCodex Hook eventをlocalhost Web appへ転送する。入力・通信・backendの失敗時も成功終了する |
 
 詳細は[Agent harness operation](../operations/agent.md)を参照する。

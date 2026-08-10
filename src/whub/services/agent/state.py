@@ -24,6 +24,7 @@ class _AgentState:
     worktree: Path
     files: Mapping[PurePosixPath, str]
     blocks: Mapping[PurePosixPath, str] = field(default_factory=dict)
+    paths: Mapping[PurePosixPath, str] = field(default_factory=dict)
 
 
 # --- Agent configuration lifecycle ------------------------------------------
@@ -51,15 +52,19 @@ def prepare(
     )
     files = dict({} if previous is None else previous.files)
     blocks = dict({} if previous is None else previous.blocks)
+    paths = dict({} if previous is None else previous.paths)
     files.update(auth)
     files.update(context_files)
     blocks.update(context_blocks)
+    for relative in context_blocks:
+        paths[relative] = _digest(_safe_path(worktree, relative).read_bytes())
     state = _AgentState(
         project,
         task_id,
         worktree,
         files,
         blocks,
+        paths,
     )
     if state.files or state.blocks:
         _save(path, state)
@@ -126,6 +131,29 @@ def owned_paths(
         return set()
     _validate(state, project, task_id, worktree)
     return set(state.files) | set(state.blocks)
+
+
+def unchanged_owned_paths(
+    workspace_root: Path, project: str, task_id: str, worktree: Path
+) -> set[PurePosixPath]:
+    """Return owned paths whose complete current content is unchanged."""
+    state = _load(_state_path(workspace_root, project, task_id))
+    if state is None:
+        return set()
+    _validate(state, project, task_id, worktree)
+    unchanged = {
+        relative
+        for relative, expected_hash in state.files.items()
+        if (target := _safe_path(worktree, relative)).is_file()
+        and _digest(target.read_bytes()) == expected_hash
+    }
+    unchanged.update(
+        relative
+        for relative, expected_hash in state.paths.items()
+        if (target := _safe_path(worktree, relative)).is_file()
+        and _digest(target.read_bytes()) == expected_hash
+    )
+    return unchanged
 
 
 def _state_path(workspace_root: Path, project: str, task_id: str) -> Path:
@@ -259,16 +287,20 @@ def _load(path: Path) -> _AgentState | None:
     try:
         data = yaml.safe_load(path.read_text())
         files = data["files"]
-        if data.get("schema_version") != 3 or not isinstance(files, dict):
+        if data.get("schema_version") not in (3, 4) or not isinstance(files, dict):
             raise ValueError("invalid schema")
         parsed = {PurePosixPath(name): digest for name, digest in files.items()}
         blocks = data.get("blocks")
         if not isinstance(blocks, dict):
             raise ValueError("invalid blocks")
         parsed_blocks = {PurePosixPath(name): digest for name, digest in blocks.items()}
+        stored_paths = data.get("paths", {})
+        if not isinstance(stored_paths, dict):
+            raise ValueError("invalid paths")
+        parsed_paths = {PurePosixPath(name): digest for name, digest in stored_paths.items()}
         if any(
             path.is_absolute() or ".." in path.parts
-            for path in (*parsed, *parsed_blocks)
+            for path in (*parsed, *parsed_blocks, *parsed_paths)
         ):
             raise ValueError("files must be relative")
         return _AgentState(
@@ -277,6 +309,7 @@ def _load(path: Path) -> _AgentState | None:
             Path(data["worktree"]),
             parsed,
             parsed_blocks,
+            parsed_paths,
         )
     except (KeyError, OSError, TypeError, ValueError, yaml.YAMLError) as error:
         raise ServiceError(f"invalid Agent state: {path}: {error}") from error
@@ -285,12 +318,13 @@ def _load(path: Path) -> _AgentState | None:
 def _save(path: Path, state: _AgentState) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = {
-        "schema_version": 3,
+        "schema_version": 4,
         "project": state.project,
         "task_id": state.task_id,
         "worktree": str(state.worktree),
         "files": {str(name): digest for name, digest in state.files.items()},
         "blocks": {str(name): digest for name, digest in state.blocks.items()},
+        "paths": {str(name): digest for name, digest in state.paths.items()},
     }
     with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", dir=path.parent, delete=False

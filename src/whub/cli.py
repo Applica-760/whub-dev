@@ -18,6 +18,7 @@ from whub.commands.release import release
 from whub.commands.status import status
 from whub.commands.task import task
 from whub.commands.todo import todo
+from whub.commands.worktree import worktree
 from whub.core.context import PathError
 from whub.core import release as release_metadata
 
@@ -74,3 +75,4 @@ main.add_command(backlog)
 main.add_command(app)
 main.add_command(agent)
 main.add_command(task)
+main.add_command(worktree)

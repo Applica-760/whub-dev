@@ -3,7 +3,7 @@
 `services/agent/`は、Agent sessionの準備・終了を次の責務へ分ける。依存方向は`agent`から各サービスへ
 向かい、各サービス間で相手の意味論を解釈しない。
 
-- `agent.py`: `whub agent`が呼ぶ公開 API。Taskから規約worktreeを解決し、auth、context、state、sessionを順に調整する。
+- `agent.py`: Worktree operationが呼ぶ公開 API。Taskから規約worktreeを解決し、auth、context、state、sessionを順に調整する。
 - `auth.py`: 権限・拡張機能・変数を解決する。Agent固有adapterは`EffectiveAuth`を変更せず、相対パスと内容からなる
   render planを返す。
 - `context.py`: Hub rootの`AGENTS.md`、`.agents/skills`、baseと選択されたRoleの指示をsnapshot renderする。
@@ -68,7 +68,7 @@ Hub hookはAgent open/closeとbuild・verify・releaseの前提・結果を確�
 pathとbranchを検査する。両者が同じ操作を二重実行しないよう、Hubはlifecycle、worktreeは対象境界だけを
 担当する。
 
-`whub agent close`はtmux sessionを停止してから、記録済みかつ内容hashが一致するfileだけを削除する。
+`whub worktree close`から呼ばれるAgent cleanupはtmux sessionを停止してから、記録済みかつ内容hashが一致するfileだけを削除する。
 変更済みfileは削除せずエラーにして、利用者の手動復旧を待つ。
 
 ## Codex approval attention hook

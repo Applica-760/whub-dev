@@ -8,54 +8,14 @@ from collections.abc import Mapping
 
 import click
 
-from whub.commands import get_manifest
 from whub.core.context import current_context
-from whub.commands import project_names
-from whub.services.agent.agent import close_agent, open_agent
 from whub.services.errors import ServiceError
 from whub.webapp.agent_attention_control import submit as submit_attention_hook
 
 
 @click.group()
 def agent() -> None:
-    """Open Agent worktree shells."""
-
-
-@agent.command()
-@click.argument("project", shell_complete=project_names)
-@click.argument("task")
-@click.option("--auth", "auth_names", multiple=True, required=True)
-@click.pass_context
-def open(
-    ctx: click.Context, project: str, task: str, auth_names: tuple[str, ...]
-) -> None:
-    """Prepare PROJECT/TASK and attach its Agent shell."""
-    context = current_context()
-    try:
-        session = open_agent(
-            get_manifest(ctx),
-            context.workspace_root,
-            project,
-            task,
-            auth_names,
-        )
-    except (OSError, ServiceError) as error:
-        raise click.ClickException(str(error)) from error
-    os.execvp(session.attach_command[0], list(session.attach_command))
-
-
-@agent.command()
-@click.argument("project", shell_complete=project_names)
-@click.argument("task")
-@click.pass_context
-def close(ctx: click.Context, project: str, task: str) -> None:
-    """Stop PROJECT/TASK's Agent shell and remove owned configuration."""
-    context = current_context()
-    try:
-        close_agent(get_manifest(ctx), context.workspace_root, project, task)
-    except (OSError, ServiceError) as error:
-        raise click.ClickException(str(error)) from error
-    click.echo(f"closed {project}/{task}")
+    """Receive Agent lifecycle hooks."""
 
 
 @agent.command(name="attention-hook")

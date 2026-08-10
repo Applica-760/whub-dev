@@ -83,15 +83,14 @@ def _require_destination(destination: Path | str, host: Host | None, project: st
         raise ServiceError(f"worktree not found: {project}/{task_id}")
 
 
-def resolve_project_worktree(
+def resolve_task_worktree(
     manifest: Manifest, workspace_root: Path, project: str, task_id: str
 ) -> ResolvedProjectWorktree:
-    """Load TASK and resolve its conventional worktree when it exists."""
+    """Load TASK and derive its conventional worktree location."""
     task = load_project_task(manifest, project, task_id).task
     resource = _require_worktree_resource(manifest, project)
     assert resource.git is not None and resource.git.branch is not None
     parent, destination, host = _resolve_location(manifest, workspace_root, project, task.id)
-    _require_destination(destination, host, project, task.id)
     return ResolvedProjectWorktree(
         project=project,
         task_id=task.id,
@@ -101,3 +100,14 @@ def resolve_project_worktree(
         base_branch=resource.git.branch,
         host=host,
     )
+
+
+def resolve_project_worktree(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> ResolvedProjectWorktree:
+    """Resolve TASK's conventional worktree, requiring that it exists."""
+    worktree = resolve_task_worktree(manifest, workspace_root, project, task_id)
+    _require_destination(
+        worktree.destination, worktree.host, worktree.project, worktree.task_id
+    )
+    return worktree
