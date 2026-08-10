@@ -3,7 +3,6 @@ import { NavLink, useParams } from "react-router";
 
 import { PageFrame } from "../../components/PageFrame";
 import { TaskDetailWidget } from "./TaskDetailWidget";
-import { TaskFlowGraphWidget } from "./TaskFlowGraphWidget";
 
 export function TaskDetailPage() {
   const { project, taskId } = useParams();
@@ -11,7 +10,6 @@ export function TaskDetailPage() {
   return (
     <PageFrame>
       <Stack gap="md">
-        {taskId && <TaskFlowGraphWidget project={project} taskId={taskId} />}
         <TaskDetailWidget
           action={
             <Anchor component={NavLink} size="sm" to="/tasks">

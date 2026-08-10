@@ -6,7 +6,7 @@ from pathlib import Path
 
 from whub.models import Manifest, WorktreeDefinition
 from whub.services.errors import ServiceError
-from whub.services.task import load_project_task
+from whub.services.task.project import load_project_task
 from whub.services.worktree.definition import save_worktree_definition
 from whub.services.worktree.git import process_detail, run_worktree_git
 from whub.services.worktree.resolve import _resolve_location

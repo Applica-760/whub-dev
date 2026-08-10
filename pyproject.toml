@@ -19,7 +19,6 @@ dependencies = [
 
 [project.scripts]
 whub = "whub.cli:main"
-wflow = "whub.wflow.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]

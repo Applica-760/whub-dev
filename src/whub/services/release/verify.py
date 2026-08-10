@@ -38,8 +38,8 @@ def _verified_release_info(wheel_path: Path, release_id: str) -> ReleaseInfo:
             if len(metadata_names) != 1:
                 raise ReleaseVerifyError("wheel entry points are invalid")
             entry_points = wheel.read(metadata_names[0]).decode()
-            if "whub = " not in entry_points or "wflow = " not in entry_points:
-                raise ReleaseVerifyError("wheel does not contain whub and wflow entry points")
+            if "whub = " not in entry_points:
+                raise ReleaseVerifyError("wheel does not contain whub entry point")
             metadata = json.loads(wheel.read("whub/_build.json"))
     except (KeyError, OSError, UnicodeError, json.JSONDecodeError, zipfile.BadZipFile) as error:
         raise ReleaseVerifyError(f"invalid wheel: {wheel_path}") from error
@@ -103,7 +103,6 @@ def verify_release(
         ).stdout.strip()
         if version != f"whub, version {release.display}":
             raise ReleaseVerifyError("staging whub version does not match release")
-        _run([str(venv / "bin" / "wflow"), "--help"], cwd=staging, isolated=True)
         release_json.write_text(
             json.dumps(
                 {

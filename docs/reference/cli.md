@@ -9,15 +9,17 @@
 
 | コマンド | 直接の挙動 |
 |---|---|
-| `wflow check [WORKFLOW]` | 指定したWorkflow、または組み込みTask Workflowを検証 |
-| `wflow task --project <PROJECT> {ls,check,show}` | Taskの一覧・整合性・進捗を表示 |
-| `wflow task --project <PROJECT> {init,update,acceptance,depends,plan}` | draftまたは進行中Taskを編集 |
-| `wflow task --project <PROJECT> {transition,done,skip,log,accept}` | 状態・Step・log・受入結果を記録 |
-| `wflow task --project <PROJECT> {log-update,log-delete,log-restore}` | 構造化Phase logを修正 |
-| `wflow task --project <PROJECT> {interrupt,resume}` | Taskの割り込み・再開を操作 |
-| `wflow task --project <PROJECT> complete <TASK-REF>` | Taskを完了しProjectの`docs/tasks/done/`へアーカイブ |
+| `whub task --project <PROJECT> init <TITLE> <OBJECTIVE>` | draft TaskのYAML/Markdown pairを作成 |
+| `whub task --project <PROJECT> check <TASK-REF>` | active/archiveのTask pairを検証 |
+| `whub task --project <PROJECT> start <TASK-REF>` | 依存が完了したdraft Taskを開始 |
+| `whub task --project <PROJECT> depends {add,delete} <TASK-REF> <TASK-REF>` | Task依存を更新 |
+| `whub task --project <PROJECT> {interrupt,resume}` | Taskの割り込み・再開を操作 |
+| `whub task --project <PROJECT> {complete,cancel} <TASK-REF>` | terminal stateへ遷移しProjectの`docs/tasks/done/`へpairをarchive |
+| `whub task --project <PROJECT> log <TASK-REF> --log <JSON>` | Markdownへ構造化ログを追記 |
 
-未完了TaskはHub側で管理する。Task操作では`--project`を明示する。Taskを跨ぐ運用は
+未完了TaskはHub側の`flow/tasks/<project>/`で管理する。`docs/tasks/done/`だけを履歴として
+読み、旧`docs/tasks/`のYAMLは参照しない。Task操作では`--project`を明示する。状態遷移の
+actor指定は公開しない。Taskを跨ぐ運用は
 [Task development](../operations/task-development.md)を参照する。
 
 ## ProjectとResource

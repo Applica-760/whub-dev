@@ -89,11 +89,6 @@ export function TaskWidget({
                     {reason}
                   </Text>
                 ))}
-                {(task.diagnostics ?? []).map((diagnostic) => (
-                  <Text c="red" key={diagnostic} size="sm">
-                    {diagnostic}
-                  </Text>
-                ))}
               </Stack>
             ))}
           </Stack>

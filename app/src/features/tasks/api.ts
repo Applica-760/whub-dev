@@ -1,7 +1,6 @@
 import { requestJson } from "../../api/client";
 import type {
   AllTasksResponse,
-  TaskGraphResponse,
   TaskResponse,
   TasksResponse,
 } from "../../api/client";
@@ -26,14 +25,5 @@ export async function getTask(
 ): Promise<TaskResponse> {
   return requestJson<TaskResponse>(
     withProject(`/api/tasks/${encodeURIComponent(taskId)}`, project),
-  );
-}
-
-export async function getTaskFlowGraph(
-  taskId: string,
-  project?: string | null,
-): Promise<TaskGraphResponse> {
-  return requestJson<TaskGraphResponse>(
-    withProject(`/api/tasks/${encodeURIComponent(taskId)}/graph`, project),
   );
 }

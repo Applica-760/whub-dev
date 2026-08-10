@@ -6,23 +6,19 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from whub.services.manifest import load_manifest
-from whub.services.task import (
+from whub.services.task.project import (
     list_all_project_tasks,
     list_project_tasks,
     load_project_task,
-    render_project_task_flow,
+    TaskRecord,
+    TaskSummary,
 )
-from whub.wflow.models.task import TaskDocument, TaskSummary
 
 router = APIRouter(prefix="/api/tasks")
 
 
 class TaskListResponse(BaseModel):
     tasks: list[TaskSummary]
-
-
-class TaskGraphResponse(BaseModel):
-    mermaid: str
 
 
 class ProjectTasksResponse(BaseModel):
@@ -55,16 +51,6 @@ def get_all_tasks() -> AllTasksResponse:
     )
 
 
-@router.get("/{task_id}", response_model=TaskDocument)
-def get_task(task_id: str, project: str = "whub-dev") -> TaskDocument:
+@router.get("/{task_id}", response_model=TaskRecord)
+def get_task(task_id: str, project: str = "whub-dev") -> TaskRecord:
     return load_project_task(load_manifest(), project, task_id)
-
-
-@router.get("/{task_id}/graph", response_model=TaskGraphResponse)
-def get_task_flow_graph(
-    task_id: str,
-    project: str = "whub-dev",
-) -> TaskGraphResponse:
-    return TaskGraphResponse(
-        mermaid=render_project_task_flow(load_manifest(), project, task_id),
-    )

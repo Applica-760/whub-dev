@@ -3,6 +3,7 @@ from pathlib import Path
 
 from whub.models.agent.auth import (
     AgentAuth,
+    CommandDecision,
     CommandRule,
     ExtensionTool,
     RegisteredProjectVariable,
@@ -33,7 +34,13 @@ def test_loads_agent_auth_assets() -> None:
     assert isinstance(base.variables["project"], RegisteredProjectVariable)
     assert isinstance(base.grants.commands.prefixes[0], CommandRule)
     assert isinstance(base.grants.commands.exact[0], CommandRule)
-    variable = base.grants.commands.exact[-1].arguments[2]
+    rule = next(
+        rule
+        for rule in base.grants.commands.prefixes
+        if rule.executable == "whub"
+        and [token.value for token in rule.arguments[:2]] == ["task", "--project"]
+    )
+    variable = rule.arguments[2]
     assert isinstance(variable, VariableReference)
     assert variable.name == "project"
     assert isinstance(
@@ -42,8 +49,10 @@ def test_loads_agent_auth_assets() -> None:
 
 
 def test_load_agent_auth_reports_invalid_assets(tmp_path: Path) -> None:
-    data = (ASSETS / "base.yaml").read_text().replace(
-        "read: []", "read: [unknown_scope]", 1
+    data = (
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace("read: []", "read: [unknown_scope]", 1)
     )
     target = tmp_path / "invalid-agent-auth.yaml"
     target.write_text(data)
@@ -59,12 +68,12 @@ def test_load_agent_auth_rejects_invalid_schema(tmp_path: Path) -> None:
             "variables: {}",
             "variables:\n  project:\n    source: registered_project\n    fields: [project]",
         ),
-        (ASSETS / "base.yaml").read_text().replace(
-            "read: []", "read: [current_worktree, current_worktree]", 1
-        ),
-        (ASSETS / "base.yaml").read_text().replace(
-            "policy: deny_all", "outbound: []", 1
-        ),
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace("read: []", "read: [current_worktree, current_worktree]", 1),
+        (ASSETS / "base.yaml")
+        .read_text()
+        .replace("policy: deny_all", "outbound: []", 1),
     )
     target = tmp_path / "invalid-agent-auth.yaml"
 
@@ -134,7 +143,7 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
         variables={"project": {"source": "registered_project"}},
         prefixes=[
             {
-                "executable": "wflow",
+                "executable": "whub",
                 "arguments": ["task", "--project", "$project", "check"],
             }
         ],
@@ -151,7 +160,7 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
     assert allows_command(effective, ["date"], {})
     assert allows_command(
         effective,
-        ["wflow", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "task", "--project", "whub-dev", "check", "078"],
         {"project": "whub-dev"},
     )
 
@@ -161,6 +170,23 @@ def test_resolve_agent_auth_loads_packaged_assets() -> None:
 
     assert resolved.auth.grants.extension_tools == ["codegraph"]
     assert [tool.id for tool in resolved.tools] == ["codegraph"]
+
+
+def test_implementer_task_auth_allows_only_logs() -> None:
+    rules = resolve_agent_auth(("implementer",)).auth.grants.commands.prefixes
+    whub_rules = [rule for rule in rules if rule.executable == "whub"]
+
+    log_rule = next(
+        rule
+        for rule in whub_rules
+        if {"kind": "literal", "value": "log"} in rule.model_dump()["arguments"]
+    )
+    assert log_rule.decision is CommandDecision.ALLOW
+    assert all(
+        rule.decision is CommandDecision.PROMPT
+        for rule in whub_rules
+        if rule is not log_rule
+    )
 
 
 def test_resolve_agent_auth_rejects_non_basename_extension_name() -> None:
@@ -208,7 +234,7 @@ def test_allows_command_distinguishes_prefix_and_exact_rules() -> None:
         variables={"project": {"source": "registered_project"}},
         prefixes=[
             {
-                "executable": "wflow",
+                "executable": "whub",
                 "arguments": ["task", "--project", "$project", "check"],
             }
         ],
@@ -220,16 +246,16 @@ def test_allows_command_distinguishes_prefix_and_exact_rules() -> None:
     assert not allows_command(effective, ["git", "diff", "--stat"], {})
     assert allows_command(
         effective,
-        ["wflow", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "task", "--project", "whub-dev", "check", "078"],
         {"project": "whub-dev"},
     )
     assert not allows_command(
         effective,
-        ["wflow", "task", "--project", "whub-dev", "show", "078"],
+        ["whub", "task", "--project", "whub-dev", "show", "078"],
         {"project": "whub-dev"},
     )
     assert not allows_command(
         effective,
-        ["wflow", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "task", "--project", "whub-dev", "check", "078"],
         {},
     )

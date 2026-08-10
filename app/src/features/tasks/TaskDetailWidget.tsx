@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import type { TaskResponse } from "../../api/client";
 import { errorMessage } from "../../api/errorMessage";
+import { MarkdownView } from "../../components/MarkdownView";
 import { WidgetFrame } from "../../components/WidgetFrame";
 import { getTask, listTasks } from "./api";
 
@@ -13,10 +14,6 @@ type TaskDetailWidgetProps = {
   action?: ReactNode;
   emptyMessage?: string;
 };
-
-function stepMarker(state: string | null | undefined): string {
-  return { done: "x", skipped: "-" }[state ?? ""] ?? " ";
-}
 
 export function TaskDetailWidget({
   taskId,
@@ -64,14 +61,12 @@ export function TaskDetailWidget({
     void loadTask();
   }, [loadTask]);
 
-  const phases = task?.plan?.phases ?? [];
-
   return (
     <WidgetFrame
       action={action}
       title={
         <Text c="dimmed" fw={600} size="sm">
-          {task?.task?.title ?? "Task"}
+          {task?.title ?? task?.task?.id ?? "Task"}
         </Text>
       }
     >
@@ -86,78 +81,20 @@ export function TaskDetailWidget({
           <Text c="dimmed">Taskを読み込んでいます…</Text>
         ) : task ? (
           <Stack gap="md">
-            {project && <Text>Project: {project}</Text>}
-            <Text>Task ID: {task.task?.id ?? "-"}</Text>
-            <Text>state: {task.task?.state ?? "-"}</Text>
-            <Text>
-              Depends on: {(task.task?.depends_on ?? []).join(", ") || "-"}
-            </Text>
-            <Text>Depended on by: {dependents.join(", ") || "-"}</Text>
-            {(task.task?.approach ?? []).length > 0 && (
-              <Stack gap={2}>
-                <Text fw={600}>Approach</Text>
-                {(task.task?.approach ?? []).map((item, index) => (
-                  <Text key={`${index}-${item}`} pl="md" size="sm">
-                    - {item}
-                  </Text>
-                ))}
-              </Stack>
+            <Text>{`${task.task?.id ?? "-"}(${task.task?.state ?? "-"})`}</Text>
+            {Boolean(task.task?.depends_on?.length || dependents.length) && (
+              <Text>
+                {[
+                  (task.task?.depends_on ?? []).join(", "),
+                  task.task?.id ?? "-",
+                  dependents.join(", "),
+                ]
+                  .filter(Boolean)
+                  .map((ids) => `(${ids})`)
+                  .join(" -> ")}
+              </Text>
             )}
-            {task.plan ? (
-              phases.map((phase, phaseIndex) => (
-                <Stack gap="xs" key={`${phaseIndex}-${phase.title}`}>
-                  <Text
-                    c={phase.deleted ? "dimmed" : undefined}
-                    fw={600}
-                    td={phase.deleted ? "line-through" : undefined}
-                  >
-                    Phase {phaseIndex + 1}: {phase.title}
-                  </Text>
-                  {(phase.steps ?? []).map((step, stepIndex) => (
-                    <Stack gap={0} key={`${stepIndex}-${step.description}`}>
-                      <Text
-                        c={phase.deleted || step.deleted ? "dimmed" : undefined}
-                        pl="xl"
-                        td={
-                          phase.deleted || step.deleted
-                            ? "line-through"
-                            : undefined
-                        }
-                      >
-                        [{stepMarker(step.state)}] {step.description}
-                      </Text>
-                      {step.skip_reason && (
-                        <Text c="dimmed" pl="md" size="sm">
-                          - skipped: {step.skip_reason}
-                        </Text>
-                      )}
-                    </Stack>
-                  ))}
-                  {(phase.log ?? []).map((item, logIndex) => {
-                    const legacy = typeof item === "string";
-                    const [key, value] = legacy
-                      ? [undefined, item]
-                      : Object.entries(item.value)[0];
-                    const text = key ? `[${key}]: ${value}` : value;
-                    return (
-                      <Text
-                        c="dimmed"
-                        key={`${logIndex}-${text}`}
-                        pl="md"
-                        size="sm"
-                        td={
-                          !legacy && item.deleted ? "line-through" : undefined
-                        }
-                      >
-                        - {text}
-                      </Text>
-                    );
-                  })}
-                </Stack>
-              ))
-            ) : (
-              <Text c="dimmed">plan: -</Text>
-            )}
+            <MarkdownView content={task.markdown ?? ""} />
           </Stack>
         ) : null}
       </Box>

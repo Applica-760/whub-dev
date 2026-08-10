@@ -40,6 +40,22 @@ function body(url: string): unknown {
           ready: false,
           depends_on: [],
         },
+        {
+          id: "TASK-030",
+          path: "done/task-030.yaml",
+          title: "完了Task",
+          state: "completed",
+          ready: false,
+          depends_on: [],
+        },
+        {
+          id: "TASK-029",
+          path: "done/task-029.yaml",
+          title: "キャンセルTask",
+          state: "cancelled",
+          ready: false,
+          depends_on: [],
+        },
       ],
     };
   }
@@ -100,5 +116,19 @@ describe("TasksPage", () => {
     expect(screen.getByTestId("location").textContent).toBe(
       "/tasks/whub-dev/TASK-031",
     );
+  });
+
+  it("一覧には終端状態を含む全Taskを表示する", async () => {
+    render(
+      <MantineProvider env="test">
+        <MemoryRouter>
+          <TasksPage />
+        </MemoryRouter>
+      </MantineProvider>,
+    );
+
+    expect(await screen.findByText("031: 横断リスト")).toBeTruthy();
+    expect(screen.getByText("030: 完了Task")).toBeTruthy();
+    expect(screen.getByText("029: キャンセルTask")).toBeTruthy();
   });
 });

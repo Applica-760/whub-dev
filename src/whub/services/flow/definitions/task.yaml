@@ -1,0 +1,33 @@
+schema_version: 1
+
+workflow:
+  id: WF-001
+  name: task
+  initial_state: draft
+  terminal_states: [completed, cancelled]
+
+states: [draft, in_progress, paused, completed, cancelled]
+
+transitions:
+  - trigger: start_task
+    from: draft
+    to: in_progress
+
+  - trigger: interrupt_task
+    from: in_progress
+    to: paused
+
+  - trigger: resume_task
+    from: paused
+    to: in_progress
+
+  - trigger: complete_task
+    from: in_progress
+    to: completed
+
+  - trigger: cancel_task
+    from: [draft, in_progress, paused]
+    to: cancelled
+    requires:
+      - field: $input.reason
+        operator: exists

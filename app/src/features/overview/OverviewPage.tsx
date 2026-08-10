@@ -9,7 +9,6 @@ import { AllTasksWidget } from "../tasks/AllTasksWidget";
 import type { SelectedTask } from "../tasks/AllTasksWidget";
 import { TaskDependencyGraphWidget } from "../tasks/TaskDependencyGraphWidget";
 import { TaskDetailWidget } from "../tasks/TaskDetailWidget";
-import { TaskFlowGraphWidget } from "../tasks/TaskFlowGraphWidget";
 import { TodoFormWidget } from "../todos/TodoFormWidget";
 import { TodoPendingWidget } from "../todos/TodoPendingWidget";
 import { useTodoWidgets } from "../todos/useTodoWidgets";
@@ -64,12 +63,6 @@ export function OverviewPage({ collapsed }: OverviewPageProps) {
           project={selectedTask?.project}
           taskId={selectedTask?.taskId}
         />
-        {selectedTask && (
-          <TaskFlowGraphWidget
-            project={selectedTask.project}
-            taskId={selectedTask.taskId}
-          />
-        )}
       </OverviewSide>
     </OverviewFrame>
   );

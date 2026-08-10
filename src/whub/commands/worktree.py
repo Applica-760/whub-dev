@@ -21,7 +21,7 @@ from whub.services.worktree.pull_request import (
 )
 from whub.services.worktree.resolve import _resolve_location
 from whub.utils.render import render_table
-from whub.wflow.models.task import TASK_ID_PATTERN
+from whub.models.flow import TASK_ID_PATTERN
 
 
 _TASK_ID_PATTERN = re.compile(TASK_ID_PATTERN)

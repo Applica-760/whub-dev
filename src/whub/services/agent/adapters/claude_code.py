@@ -44,11 +44,9 @@ def render(
     tools = _resolve_extension_tools(auth, extension_tools)
     policy = {
         "prefixes": [
-            _rule_arguments(rule, variables) for rule in auth.grants.commands.prefixes
+            _policy_rule(rule, variables) for rule in auth.grants.commands.prefixes
         ],
-        "exact": [
-            _rule_arguments(rule, variables) for rule in auth.grants.commands.exact
-        ],
+        "exact": [_policy_rule(rule, variables) for rule in auth.grants.commands.exact],
         "mcp_tools": [
             f"mcp__{tool.id}__{name}" for tool in tools for name in tool.tools
         ],
@@ -98,6 +96,10 @@ def _rule_arguments(
     return arguments
 
 
+def _policy_rule(rule: CommandRule, variables: Mapping[str, str]) -> dict[str, object]:
+    return {"arguments": _rule_arguments(rule, variables), "decision": rule.decision}
+
+
 def _render_settings() -> str:
     hook = {
         "type": "command",
@@ -142,6 +144,13 @@ def deny(reason):
     )
 
 
+def allow():
+    json.dump(
+        {{"hookSpecificOutput": {{"hookEventName": "PreToolUse", "permissionDecision": "allow"}}}},
+        sys.stdout,
+    )
+
+
 def parse_argv(command):
     if any(character in command for character in SHELL_SYNTAX):
         return None
@@ -151,10 +160,14 @@ def parse_argv(command):
         return None
 
 
-def command_allowed(argv):
-    return any(argv[: len(rule)] == rule for rule in POLICY["prefixes"]) or any(
-        argv == rule for rule in POLICY["exact"]
-    )
+def command_decision(argv):
+    for rule in POLICY["prefixes"]:
+        if argv[: len(rule["arguments"])] == rule["arguments"]:
+            return rule["decision"]
+    for rule in POLICY["exact"]:
+        if argv == rule["arguments"]:
+            return rule["decision"]
+    return None
 
 
 def main():
@@ -167,8 +180,11 @@ def main():
     if tool_name == "Bash":
         command = event.get("tool_input", {{}}).get("command")
         argv = parse_argv(command) if isinstance(command, str) else None
-        if not argv or not command_allowed(argv):
+        decision = command_decision(argv) if argv else None
+        if decision is None:
             deny("command is not granted by Agent auth")
+        elif decision == "allow":
+            allow()
     elif isinstance(tool_name, str) and tool_name.startswith("mcp__"):
         if tool_name not in POLICY["mcp_tools"]:
             deny("MCP tool is not granted by Agent auth")

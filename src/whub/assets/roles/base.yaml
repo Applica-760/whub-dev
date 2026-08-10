@@ -43,13 +43,8 @@ grants:
       - executable: whub  # whub worktree check *
         arguments: [worktree, check]
 
-      # wflow
-      - executable: wflow  # wflow check *
-        arguments: [check]
-      - executable: wflow  # wflow task --project $project check *
+      - executable: whub  # whub task --project $project check *
         arguments: [task, --project, "$project", check]
-      - executable: wflow  # wflow task --project $project show *
-        arguments: [task, --project, "$project", show]
 
       # system metadata
       # dfは対象pathに限定できず、全mountのmetadataを返す。
@@ -79,8 +74,6 @@ grants:
         arguments: [todo]
       - executable: whub  # whub todo -a
         arguments: [todo, -a]
-      - executable: wflow  # wflow task --project $project ls
-        arguments: [task, --project, "$project", ls]
 
   filesystem:
     # scopeはadapterが具体的なpathへ解決する。

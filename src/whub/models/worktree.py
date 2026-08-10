@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from whub.wflow.models.task import TASK_ID_PATTERN
+from whub.models.flow import TASK_ID_PATTERN
 
 TaskId = Annotated[str, Field(pattern=TASK_ID_PATTERN)]
 ProjectName = Annotated[str, Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")]

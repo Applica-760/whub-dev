@@ -5,10 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TaskDetailPage } from "./TaskDetailPage";
 
-vi.mock("./TaskFlowGraphWidget", () => ({
-  TaskFlowGraphWidget: () => null,
-}));
-
 beforeEach(() => {
   vi.stubGlobal(
     "matchMedia",
@@ -37,24 +33,16 @@ describe("TaskDetailPage", () => {
       .fn()
       .mockResolvedValueOnce(
         response({
-          schema_version: 1,
+          path: "done/task-012.yaml",
+          title: "開発モード",
+          markdown: "# 開発モード\n\n確認を速くする",
           task: {
+            schema_version: 2,
             id: "TASK-012",
+            workflow: "WF-001",
             state: "in_progress",
-            title: "開発モード",
-            objective: "確認を速くする",
-            approach: [],
             depends_on: ["TASK-010"],
-            interruption_task_id: null,
-            interruption_reason: null,
-            interruption_source_task_id: null,
           },
-          plan: null,
-          approvals: [],
-          acceptance_results: [],
-          change_requests: [],
-          cancellation: null,
-          result: null,
         }),
       )
       .mockResolvedValueOnce(
@@ -81,11 +69,11 @@ describe("TaskDetailPage", () => {
       </MantineProvider>,
     );
 
-    expect(await screen.findByText("Project: local")).toBeTruthy();
-    expect(await screen.findByText("Task ID: TASK-012")).toBeTruthy();
-    expect(screen.getByText("state: in_progress")).toBeTruthy();
-    expect(screen.getByText("Depends on: TASK-010")).toBeTruthy();
-    expect(screen.getByText("Depended on by: TASK-019, TASK-020")).toBeTruthy();
+    expect(await screen.findByText("TASK-012(in_progress)")).toBeTruthy();
+    expect(
+      screen.getByText("(TASK-010) -> (TASK-012) -> (TASK-019, TASK-020)"),
+    ).toBeTruthy();
+    expect(screen.getByText("確認を速くする")).toBeTruthy();
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/tasks/TASK-012?project=local",
