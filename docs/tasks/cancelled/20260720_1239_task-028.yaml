@@ -1,0 +1,26 @@
+schema_version: 1
+task:
+  id: TASK-028
+  state: cancelled
+  title: whub appがぼやけて見える原因を調査する
+  objective: 以前は鮮明だったwhub appが大きめのディスプレイで全体的にぼやけて見えるようになった原因を、実装変更と実行環境の両面から特定し、再現条件と解決方針を明らかにする
+  approach:
+  - グラフビュー以外も同程度にぼやけることから、Cytoscape固有ではなくアプリ全体の描画経路を対象にする
+  - 同一端末・同一ディスプレイでブラウザ倍率、devicePixelRatio、OSの表示スケーリング、解像度、ハードウェアアクセラレーションを記録し、ぼやけの再現条件を切り分ける
+  - DOM文字・CSS境界・SVG・Canvasを比較し、ブラウザのページ拡大または再描画後に鮮明になる範囲とタイミングを確認する
+  - whub appのCSS、viewport設定、transform・zoom・GPU compositing、フォント指定、CanvasのpixelRatioとリサイズ処理を調査する
+  - 以前は鮮明だった時点との差分として、アプリ実装、依存パッケージ、ビルド成果物、ブラウザ、OS、ディスプレイ設定の変更履歴を確認する
+  - 必要に応じて既知の正常コミットと現行コミットを比較またはbisectし、実装由来か環境由来かを客観的に判定する
+  - CytoscapeのCanvas描画と低DPIは局所的な候補として残すが、アプリ全体のぼやけを説明できない限り根本原因とは判断しない
+  depends_on: []
+  interruption_task_id: null
+  interruption_reason: null
+  interruption_source_task_id: null
+plan: null
+approvals: []
+acceptance_results: []
+change_requests: []
+cancellation:
+  reason: 一時的な問題であり、解決済みのため取消
+  actor: user
+result: null
