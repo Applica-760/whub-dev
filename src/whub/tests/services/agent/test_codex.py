@@ -62,11 +62,11 @@ def _codegraph() -> ExtensionTool:
 def test_render_generates_project_rules_and_mcp_config() -> None:
     plan = render(_auth(), [_codegraph()], {"project": "whub-dev"})
 
-    assert plan.files[PurePosixPath(".codex/rules/whub.rules")] == (
+    assert plan[PurePosixPath(".codex/rules/whub.rules")] == (
         'prefix_rule(\n    pattern = ["whub", "task", "--project", "whub-dev", "check"],\n'
         '    decision = "prompt",\n)\n'
     )
-    config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])
+    config = tomllib.loads(plan[PurePosixPath(".codex/config.toml")])
     assert config["sandbox_mode"] == "workspace-write"
     assert config["approval_policy"] == "on-request"
     assert config["approvals_reviewer"] == "user"
@@ -91,7 +91,7 @@ def test_render_generates_sandbox_config_without_extension_tools() -> None:
 
     plan = render(auth, [], {"project": "whub-dev"})
 
-    config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])
+    config = tomllib.loads(plan[PurePosixPath(".codex/config.toml")])
     assert "mcp_servers" not in config
 
 
@@ -112,7 +112,7 @@ def test_render_allows_explicitly_allowed_command_rules() -> None:
         {"project": "whub-dev"},
     )
 
-    assert 'decision = "allow"' in plan.files[PurePosixPath(".codex/rules/whub.rules")]
+    assert 'decision = "allow"' in plan[PurePosixPath(".codex/rules/whub.rules")]
 
 
 def test_render_never_generates_legacy_attention_hooks() -> None:
@@ -125,10 +125,10 @@ def test_render_never_generates_legacy_attention_hooks() -> None:
 
     plan = render(_auth(), [_codegraph()], variables)
 
-    config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])
+    config = tomllib.loads(plan[PurePosixPath(".codex/config.toml")])
     assert "features" not in config
     assert "hooks" not in config
-    assert PurePosixPath(".codex/hooks/whub_attention.py") not in plan.files
+    assert PurePosixPath(".codex/hooks/whub_attention.py") not in plan
 
 
 def test_render_derives_codex_permissions_from_effective_auth() -> None:
@@ -145,7 +145,7 @@ def test_render_derives_codex_permissions_from_effective_auth() -> None:
         {"project": "whub-dev"},
     )
 
-    config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])
+    config = tomllib.loads(plan[PurePosixPath(".codex/config.toml")])
     assert config["sandbox_mode"] == "read-only"
     assert config["approval_policy"] == "never"
     assert config["approvals_reviewer"] == "auto_review"

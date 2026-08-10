@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 import json
 from pathlib import PurePosixPath
 
@@ -22,18 +21,11 @@ class CodexAdapterError(ValueError):
     """Raised when an effective auth cannot be rendered for Codex."""
 
 
-@dataclass(frozen=True)
-class CodexRenderPlan:
-    """Codex project files generated from Agent authorization."""
-
-    files: Mapping[PurePosixPath, str]
-
-
 def render(
     auth: EffectiveAuth,
     extension_tools: Sequence[ExtensionTool],
     variables: Mapping[str, str],
-) -> CodexRenderPlan:
+) -> dict[PurePosixPath, str]:
     """Render project-scoped Codex configuration without writing files."""
     tools = _resolve_extension_tools(auth, extension_tools)
     files: dict[PurePosixPath, str] = {
@@ -44,7 +36,7 @@ def render(
             auth.grants.commands.prefixes,
             variables,
         )
-    return CodexRenderPlan(files=files)
+    return files
 
 
 def _resolve_extension_tools(

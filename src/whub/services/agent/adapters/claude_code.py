@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
-from enum import StrEnum
 import json
 from pathlib import PurePosixPath
 
@@ -21,25 +19,11 @@ class ClaudeCodeAdapterError(ValueError):
     """Raised when an effective auth cannot be rendered for Claude Code."""
 
 
-class ClaudeCodeRuntimeRequirement(StrEnum):
-    COMMAND_AUTHORIZATION = "command_authorization"
-    FILESYSTEM_AUTHORIZATION = "filesystem_authorization"
-    NETWORK_AUTHORIZATION = "network_authorization"
-
-
-@dataclass(frozen=True)
-class ClaudeCodeRenderPlan:
-    """Claude Code project files and guards that Agent must provide."""
-
-    files: Mapping[PurePosixPath, str]
-    runtime_requirements: frozenset[ClaudeCodeRuntimeRequirement]
-
-
 def render(
     auth: EffectiveAuth,
     extension_tools: Sequence[ExtensionTool],
     variables: Mapping[str, str],
-) -> ClaudeCodeRenderPlan:
+) -> dict[PurePosixPath, str]:
     """Render project-scoped Claude Code configuration without writing files."""
     tools = _resolve_extension_tools(auth, extension_tools)
     policy = {
@@ -51,16 +35,11 @@ def render(
             f"mcp__{tool.id}__{name}" for tool in tools for name in tool.tools
         ],
     }
-    return ClaudeCodeRenderPlan(
-        files={
-            PurePosixPath(".claude/settings.json"): _render_settings(),
-            PurePosixPath(".claude/hooks/whub_authorize.py"): _render_policy_hook(
-                policy
-            ),
-            PurePosixPath(".mcp.json"): _render_mcp_config(tools),
-        },
-        runtime_requirements=_runtime_requirements(auth),
-    )
+    return {
+        PurePosixPath(".claude/settings.json"): _render_settings(),
+        PurePosixPath(".claude/hooks/whub_authorize.py"): _render_policy_hook(policy),
+        PurePosixPath(".mcp.json"): _render_mcp_config(tools),
+    }
 
 
 def _resolve_extension_tools(
@@ -208,19 +187,6 @@ def _render_mcp_config(tools: Sequence[ExtensionTool]) -> str:
             }
         }
     )
-
-
-def _runtime_requirements(
-    auth: EffectiveAuth,
-) -> frozenset[ClaudeCodeRuntimeRequirement]:
-    requirements: set[ClaudeCodeRuntimeRequirement] = {
-        ClaudeCodeRuntimeRequirement.NETWORK_AUTHORIZATION,
-    }
-    if auth.grants.commands.prefixes or auth.grants.commands.exact:
-        requirements.add(ClaudeCodeRuntimeRequirement.COMMAND_AUTHORIZATION)
-    if auth.grants.filesystem.read or auth.grants.filesystem.write:
-        requirements.add(ClaudeCodeRuntimeRequirement.FILESYSTEM_AUTHORIZATION)
-    return frozenset(requirements)
 
 
 def _json(value: object) -> str:

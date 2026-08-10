@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from whub.models import Host, RemoteResource
+from whub.models import Host
 from whub.services.agent.agent import close_agent
 from whub.services.agent.codex import trust as codex_trust
 from whub.services.agent import remote_state
@@ -52,20 +52,10 @@ def test_remote_close_preserves_state_when_tmux_probe_fails(tmp_path: Path) -> N
         destination="/srv/worktrees/whub-dev-120",
         host=_host(),
     )
-    resource = RemoteResource(
-        type="remote",
-        host="home",
-        path="whub-dev",
-        workspace_path="whub-dev",
-    )
     with (
         patch(
             "whub.services.agent.agent.resolve_project_worktree",
             return_value=registered,
-        ),
-        patch(
-            "whub.services.agent.agent.resolve_project_resource",
-            return_value=resource,
         ),
         patch(
             "whub.services.agent.tmux_session.run_ssh_command",

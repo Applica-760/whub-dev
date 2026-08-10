@@ -9,8 +9,7 @@ from whub.models.agent.auth import (
     RegisteredProjectVariable,
     RegisteredTaskWorktreeVariable,
 )
-from whub.models import Host, RemoteResource, SymlinkResource
-from whub.services.agent.adapters.codex import CodexRenderPlan
+from whub.models import Host
 from whub.services.agent.agent import close_agent, open_agent
 from whub.services.agent.auth import resolve_variables
 from whub.services.agent.context import AGENTS_CONTEXT_PATH, render_context
@@ -19,23 +18,12 @@ from whub.services.errors import ServiceError
 from whub.services.agent.state import _state_path, cleanup, owned_paths, prepare
 
 
-@pytest.fixture(autouse=True)
-def local_resource() -> None:
-    with patch(
-        "whub.services.agent.agent.resolve_project_resource",
-        return_value=SymlinkResource(
-            type="symlink", workspace_path="projects/whub-dev", source="/tmp/whub-dev"
-        ),
-    ):
-        yield
-
-
-def _plan(content: str = 'sandbox_mode = "workspace-write"\n') -> CodexRenderPlan:
-    return CodexRenderPlan({PurePosixPath(".codex/config.toml"): content})
+def _plan(content: str = 'sandbox_mode = "workspace-write"\n') -> dict[PurePosixPath, str]:
+    return {PurePosixPath(".codex/config.toml"): content}
 
 
 def test_state_creates_and_cleans_owned_config(tmp_path: Path) -> None:
-    prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan().files)
+    prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan())
 
     path = tmp_path / ".codex/config.toml"
     assert path.read_text() == 'sandbox_mode = "workspace-write"\n'
@@ -55,11 +43,11 @@ def test_state_rejects_different_existing_codex_config(tmp_path: Path) -> None:
         "whub-dev",
         "TASK-095",
         tmp_path,
-        _plan('sandbox_mode = "read-only"\n').files,
+        _plan('sandbox_mode = "read-only"\n'),
     )
 
     with pytest.raises(ServiceError, match="generated config already exists"):
-        prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan().files)
+        prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan())
 
 
 def test_state_does_not_claim_matching_existing_json_config(tmp_path: Path) -> None:
@@ -87,7 +75,7 @@ def test_state_does_not_claim_matching_existing_text_config(tmp_path: Path) -> N
     path.parent.mkdir()
     path.write_text('sandbox_mode = "workspace-write"\n')
 
-    prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan().files)
+    prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan())
     cleanup(tmp_path, "whub-dev", "TASK-095", tmp_path)
 
     assert path.exists()
@@ -95,7 +83,7 @@ def test_state_does_not_claim_matching_existing_text_config(tmp_path: Path) -> N
 
 
 def test_state_preserves_modified_owned_config_and_state(tmp_path: Path) -> None:
-    prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan().files)
+    prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan())
     path = tmp_path / ".codex/config.toml"
     path.write_text("# user change\n")
 
@@ -263,7 +251,7 @@ def test_state_rejects_symlinked_config_directory(tmp_path: Path) -> None:
     (tmp_path / ".codex").symlink_to(target, target_is_directory=True)
 
     with pytest.raises(ServiceError, match="generated config path is a symlink"):
-        prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan().files)
+        prepare(tmp_path, "whub-dev", "TASK-095", tmp_path, _plan())
 
 
 def test_resolve_variables_uses_registered_project_and_worktree() -> None:
@@ -346,7 +334,6 @@ def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
         host=None,
     )
     resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
-    plan = SimpleNamespace(files={})
     session = SimpleNamespace()
 
     with (
@@ -358,8 +345,8 @@ def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
             "whub.services.agent.agent.resolve_agent_auth",
             return_value=resolved_auth,
         ),
-        patch("whub.services.agent.agent.render_codex", return_value=plan),
-        patch("whub.services.agent.agent.render_claude_code", return_value=plan),
+        patch("whub.services.agent.agent.render_codex", return_value={}),
+        patch("whub.services.agent.agent.render_claude_code", return_value={}),
         patch("whub.services.agent.agent.prepare"),
         patch("whub.services.agent.agent.prepare_codex_trust") as trust,
         patch(
@@ -388,7 +375,6 @@ def test_open_agent_projects_context_without_agent_specific_logic(
         host=None,
     )
     resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
-    plan = SimpleNamespace(files={})
     session = SimpleNamespace()
 
     with (
@@ -400,8 +386,8 @@ def test_open_agent_projects_context_without_agent_specific_logic(
             "whub.services.agent.agent.resolve_agent_auth",
             return_value=resolved_auth,
         ),
-        patch("whub.services.agent.agent.render_codex", return_value=plan),
-        patch("whub.services.agent.agent.render_claude_code", return_value=plan),
+        patch("whub.services.agent.agent.render_codex", return_value={}),
+        patch("whub.services.agent.agent.render_claude_code", return_value={}),
         patch("whub.services.agent.agent.prepare_codex_trust"),
         patch("whub.services.agent.agent.open_tmux_session", return_value=session),
     ):
@@ -435,7 +421,7 @@ def test_close_stops_tmux_before_state_cleanup(tmp_path: Path) -> None:
 def test_close_without_tmux_cleans_state_and_is_idempotent(tmp_path: Path) -> None:
     worktree = tmp_path / "worktree"
     worktree.mkdir()
-    prepare(tmp_path, "whub-dev", "TASK-095", worktree, _plan().files)
+    prepare(tmp_path, "whub-dev", "TASK-095", worktree, _plan())
     registered = SimpleNamespace(
         task_id="TASK-095", destination=worktree, host=None
     )
@@ -462,7 +448,7 @@ def test_close_without_tmux_cleans_state_and_is_idempotent(tmp_path: Path) -> No
 def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
     worktree = tmp_path / "worktree"
     worktree.mkdir()
-    prepare(tmp_path, "whub-dev", "TASK-095", worktree, _plan().files)
+    prepare(tmp_path, "whub-dev", "TASK-095", worktree, _plan())
     registered = SimpleNamespace(
         task_id="TASK-095", destination=worktree, host=None
     )
@@ -498,7 +484,6 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
         host=None,
     )
     resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
-    empty_plan = SimpleNamespace(files={})
 
     with (
         patch(
@@ -512,7 +497,7 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
         patch("whub.services.agent.agent.render_codex", return_value=_plan()),
         patch(
             "whub.services.agent.agent.render_claude_code",
-            return_value=empty_plan,
+            return_value={},
         ),
         patch(
             "whub.services.agent.tmux_session.subprocess.run",
@@ -545,16 +530,12 @@ def test_remote_open_uses_remote_state_and_ssh_tmux(tmp_path: Path) -> None:
         mount_root="/srv",
         worktree_root="worktrees",
     )
-    resource = RemoteResource(
-        type="remote", host="remote", path="project", workspace_path="projects/remote"
-    )
     registered = SimpleNamespace(
         task_id="TASK-095", branch="tasks/095",
         destination="/srv/worktrees/whub-dev-095",
         host=host,
     )
     resolved_auth = SimpleNamespace(auth=SimpleNamespace(variables={}), tools=())
-    plan = SimpleNamespace(files={})
     session = SimpleNamespace()
 
     with (
@@ -563,13 +544,10 @@ def test_remote_open_uses_remote_state_and_ssh_tmux(tmp_path: Path) -> None:
             return_value=registered,
         ),
         patch(
-            "whub.services.agent.agent.resolve_project_resource", return_value=resource
-        ),
-        patch(
             "whub.services.agent.agent.resolve_agent_auth", return_value=resolved_auth
         ),
-        patch("whub.services.agent.agent.render_codex", return_value=plan),
-        patch("whub.services.agent.agent.render_claude_code", return_value=plan),
+        patch("whub.services.agent.agent.render_codex", return_value={}),
+        patch("whub.services.agent.agent.render_claude_code", return_value={}),
         patch("whub.services.agent.agent.prepare_remote_codex_trust") as trust,
         patch("whub.services.agent.agent.remote_state.prepare") as state,
         patch(

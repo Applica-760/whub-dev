@@ -8,7 +8,6 @@ import pytest
 from whub.models.agent.auth import CommandDecision, EffectiveAuth, ExtensionTool
 from whub.services.agent.adapters.claude_code import (
     ClaudeCodeAdapterError,
-    ClaudeCodeRuntimeRequirement,
     render,
 )
 
@@ -59,7 +58,7 @@ def _codegraph() -> ExtensionTool:
 def test_render_generates_settings_policy_hook_and_mcp_config() -> None:
     plan = render(_auth(), [_codegraph()], {"project": "whub-dev"})
 
-    settings = json.loads(plan.files[PurePosixPath(".claude/settings.json")])
+    settings = json.loads(plan[PurePosixPath(".claude/settings.json")])
     assert settings["hooks"]["PreToolUse"] == [
         {
             "matcher": "Bash",
@@ -82,7 +81,7 @@ def test_render_generates_settings_policy_hook_and_mcp_config() -> None:
             ],
         },
     ]
-    assert json.loads(plan.files[PurePosixPath(".mcp.json")]) == {
+    assert json.loads(plan[PurePosixPath(".mcp.json")]) == {
         "mcpServers": {
             "codegraph": {
                 "type": "stdio",
@@ -91,15 +90,6 @@ def test_render_generates_settings_policy_hook_and_mcp_config() -> None:
             }
         }
     }
-    assert plan.runtime_requirements == frozenset(
-        {
-            ClaudeCodeRuntimeRequirement.COMMAND_AUTHORIZATION,
-            ClaudeCodeRuntimeRequirement.FILESYSTEM_AUTHORIZATION,
-            ClaudeCodeRuntimeRequirement.NETWORK_AUTHORIZATION,
-        }
-    )
-
-
 @pytest.mark.parametrize(
     ("event", "denied"),
     [
@@ -139,7 +129,7 @@ def test_policy_hook_allows_only_granted_commands_and_mcp_tools(
 ) -> None:
     plan = render(_auth(), [_codegraph()], {"project": "whub-dev"})
     hook = tmp_path / "whub_authorize.py"
-    hook.write_text(plan.files[PurePosixPath(".claude/hooks/whub_authorize.py")])
+    hook.write_text(plan[PurePosixPath(".claude/hooks/whub_authorize.py")])
 
     result = subprocess.run(
         [sys.executable, str(hook)],
@@ -179,7 +169,7 @@ def test_policy_hook_auto_allows_explicitly_allowed_commands(tmp_path: Path) -> 
             auth.model_copy(update={"grants": grants}),
             [_codegraph()],
             {"project": "whub-dev"},
-        ).files[PurePosixPath(".claude/hooks/whub_authorize.py")]
+        )[PurePosixPath(".claude/hooks/whub_authorize.py")]
     )
 
     result = subprocess.run(

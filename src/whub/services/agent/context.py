@@ -39,7 +39,11 @@ def render_context(
             for instruction in (
                 _hub_agents_instructions(workspace_root),
                 _role_instructions(role_names),
-                _branch_instructions(branch),
+                (
+                    f"# Session context\n\n- Registered branch: `{branch}`"
+                    if branch is not None
+                    else ""
+                ),
             )
             if instruction
         )
@@ -109,9 +113,3 @@ def _role_instructions(role_names: Sequence[str]) -> str:
                 f"failed to read Agent role instructions: {path}"
             ) from error
     return "\n\n".join(contents) + "\n"
-
-
-def _branch_instructions(branch: str | None) -> str:
-    if branch is None:
-        return ""
-    return f"# Session context\n\n- Registered branch: `{branch}`"

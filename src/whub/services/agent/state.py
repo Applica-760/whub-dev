@@ -26,12 +26,6 @@ class _AgentState:
     blocks: Mapping[PurePosixPath, str] = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
-class _Materialization:
-    files: Mapping[PurePosixPath, str] = field(default_factory=dict)
-    blocks: Mapping[PurePosixPath, str] = field(default_factory=dict)
-
-
 # --- Agent configuration lifecycle ------------------------------------------
 
 
@@ -48,16 +42,18 @@ def prepare(
     previous = _load(path)
     if previous is not None:
         _validate(previous, project, task_id, worktree)
-    auth = _materialize_auth(worktree, auth_files)
-    context = _materialize_context(
-        worktree, agent_context, {} if previous is None else previous.blocks
+    auth = _materialize_files(worktree, auth_files)
+    context_files = _materialize_files(worktree, agent_context.files)
+    context_blocks = _apply_context_blocks(
+        worktree,
+        agent_context.blocks,
+        {} if previous is None else previous.blocks,
     )
     files = dict({} if previous is None else previous.files)
     blocks = dict({} if previous is None else previous.blocks)
-    files.update(auth.files)
-    files.update(context.files)
-    blocks.update(auth.blocks)
-    blocks.update(context.blocks)
+    files.update(auth)
+    files.update(context_files)
+    blocks.update(context_blocks)
     state = _AgentState(
         project,
         task_id,
@@ -146,13 +142,6 @@ def _state_path(workspace_root: Path, project: str, task_id: str) -> Path:
 # --- Generated file materialization -----------------------------------------
 
 
-def _materialize_auth(
-    worktree: Path,
-    files: Mapping[PurePosixPath, str],
-) -> _Materialization:
-    return _Materialization(files=_materialize_files(worktree, files))
-
-
 def _materialize_files(
     worktree: Path, files: Mapping[PurePosixPath, str]
 ) -> dict[PurePosixPath, str]:
@@ -167,17 +156,6 @@ def _materialize_files(
         target.write_text(content, encoding="utf-8", newline="\n")
         created[relative] = _digest(target.read_bytes())
     return created
-
-
-def _materialize_context(
-    worktree: Path,
-    context: AgentContext,
-    owned_blocks: Mapping[PurePosixPath, str],
-) -> _Materialization:
-    return _Materialization(
-        files=_materialize_files(worktree, context.files),
-        blocks=_apply_context_blocks(worktree, context.blocks, owned_blocks),
-    )
 
 
 # --- Managed context blocks --------------------------------------------------
