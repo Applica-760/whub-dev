@@ -2,8 +2,8 @@ name: implementer
 type: extension
 
 variables:
-  # adapterが現在のAgent実行に紐付くwhub worktree登録から解決する。
-  # worktreeが未登録、またはTaskとの対応が一意でない場合は実行を拒否する。
+  # adapterが現在のAgent実行に紐付く規約worktreeから解決する。
+  # worktreeが存在しない場合は実行を拒否する。
   current_worktree:
     source: registered_task_worktree
     fields: [project, task, path]

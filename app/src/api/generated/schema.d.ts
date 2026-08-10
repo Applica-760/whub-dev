@@ -143,6 +143,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Sessions */
+        get: operations["get_agent_sessions_api_agent_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/daily": {
         parameters: {
             query?: never;
@@ -314,23 +331,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/worktrees": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Worktrees */
-        get: operations["get_worktrees_api_worktrees_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/worktrees/{project}/{task_id}/changes": {
         parameters: {
             query?: never;
@@ -386,6 +386,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AgentSessionListResponse */
+        AgentSessionListResponse: {
+            /** Sessions */
+            sessions: components["schemas"]["AgentSessionResponse"][];
+        };
+        /** AgentSessionResponse */
+        AgentSessionResponse: {
+            /** Project */
+            project: string;
+            /** Task Id */
+            task_id: string;
+            /** Workspace Path */
+            workspace_path: string;
+        };
         /** AllTasksResponse */
         AllTasksResponse: {
             /** Projects */
@@ -728,24 +742,6 @@ export interface components {
             /** State */
             state: string;
         };
-        /** WorktreeListResponse */
-        WorktreeListResponse: {
-            /** Worktrees */
-            worktrees: components["schemas"]["WorktreeResponse"][];
-        };
-        /** WorktreeResponse */
-        WorktreeResponse: {
-            /** Parent Project */
-            parent_project: string | null;
-            /** Task Id */
-            task_id: string | null;
-            /** Branch */
-            branch: string | null;
-            /** Workspace Path */
-            workspace_path: string | null;
-            /** Diagnostics */
-            diagnostics: string[];
-        };
     };
     responses: never;
     parameters: never;
@@ -1072,6 +1068,26 @@ export interface operations {
             };
         };
     };
+    get_agent_sessions_api_agent_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSessionListResponse"];
+                };
+            };
+        };
+    };
     create_daily_entry_api_daily_post: {
         parameters: {
             query?: never;
@@ -1358,26 +1374,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_worktrees_api_worktrees_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorktreeListResponse"];
                 };
             };
         };

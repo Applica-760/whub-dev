@@ -1,8 +1,7 @@
 # Task development
 
 Taskの起票から完了までの役割分担とsession間の引継ぎを扱う。コマンドは
-[CLI reference](../reference/cli.md)、個別手順は[worktree operation](worktree.md)と
-[Agent harness](agent.md)を参照する。
+[CLI reference](../reference/cli.md)と[Agent harness](agent.md)を参照する。
 
 ## 役割
 
@@ -11,7 +10,7 @@ Taskの起票から完了までの役割分担とsession間の引継ぎを扱う
 - worktree session: 詳細計画、実装、検証、commitを担当する。
 - Task YAMLは状態・依存、Task Markdownは目的・文脈・計画・判断・ログ、GitHubはPR・review・checks・merge結果の正本とする。
 
-Session間では、Task YAML/Markdown pairを作業文脈、Git commitを実装結果、worktree登録を作業対象として引き継ぐ。
+Session間では、Task YAML/Markdown pairを作業文脈、Git commitを実装結果、規約上のTask worktreeを作業対象として引き継ぐ。
 会話履歴は引継ぎ対象にしない。
 
 ## 起票
@@ -19,18 +18,18 @@ Session間では、Task YAML/Markdown pairを作業文脈、Git commitを実装�
 - repo sessionでTaskの目的・範囲・制約を明確にする。
 - ユーザーがworktreeを使うか決定する。
 - 軽微Taskは親repoで実行し、worktreeとAgentのlifecycleを省略する。
-- worktreeを使う場合は、親repoを同期してTask worktreeを作成する。
+- worktreeを使う場合は、親repoを同期し、`git worktree add`で`tasks/<task-number>`と規約pathを使って作成する。
 
 ## 引継ぎ
 
-- repo sessionが登録済みTask worktreeにAgent sessionを開く。
+- repo sessionがTask worktreeにAgent sessionを開く。
 - worktree sessionはTask YAML/Markdown pairを再読込する。
 - 詳細計画はTask Markdownで固めることを推奨する。Taskの性質に応じて起票時に確定してもよい。
 - ユーザーが計画を承認するまで実装へ進まない。
 
 ## 実行
 
-- worktree sessionは登録済みTask worktreeだけを変更・検証する。
+- worktree sessionはTask worktreeだけを変更・検証する。
 - 計画・判断をTask Markdownへ記録し、進捗は`whub task log`で追記する。
 - repo sessionへ戻る前にTaskを更新し、実装を検証・commitする。
 

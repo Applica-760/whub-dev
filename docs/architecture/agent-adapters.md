@@ -3,7 +3,7 @@
 `services/agent/`は、Agent sessionの準備・終了を次の責務へ分ける。依存方向は`agent`から各サービスへ
 向かい、各サービス間で相手の意味論を解釈しない。
 
-- `agent.py`: `whub agent`が呼ぶ公開 API。登録済みworktreeを解決し、auth、context、state、sessionを順に調整する。
+- `agent.py`: `whub agent`が呼ぶ公開 API。Taskから規約worktreeを解決し、auth、context、state、sessionを順に調整する。
 - `auth.py`: 権限・拡張機能・変数を解決する。Agent固有adapterは`EffectiveAuth`を変更せず、相対パスと内容からなる
   render planを返す。
 - `context.py`: Hub rootの`AGENTS.md`、`.agents/skills`、baseと選択されたRoleの指示をsnapshot renderする。
@@ -14,9 +14,7 @@
 - `remote_state.py`: remote worktreeに対して、SSH経由で同じ生成物の所有・cleanup契約を実行する。汎用SSH transportと生成物の扱いだけを担い、Agent固有の意味論は持たない。
 - `tmux_session.py`: tmux sessionの開始・停止だけを扱う。
 - `codex/trust.py`: local/remote worktreeごとのCodex trust entryを所有・cleanupする。remote実行時もCodex trustの意味論とlockはこのserviceが持ち、SSHはtransportとしてのみ利用する。
-- `codex/app_server.py`: worktreeごとのCodex App Server processとJSON-RPC状態を所有する。
 - `codex/attention.py`: Codex approval requestの短期in-memory状態を保持する。
-- `webapp/agent_codex_control.py`: `whub agent`からlocal web backendを起動・停止するcontrol clientであり、Codex App Server protocolは扱わない。
 
 `state.prepare`はauthを具体化してからcontextを具体化し、両方の所有情報を一つのstate recordとして保存する。
 contextはHub共通指示とRole指示を`.agents/AGENTS_context.md`へ生成し、既存`AGENTS.md`にはその参照だけを
@@ -38,7 +36,7 @@ Agent serviceがAgentへ渡す指示は、Hub共通、Role、Session固有の三
   copyせず、render時にHub rootまたはworktreeのどちらを基準とするかを明示する。
 - Roleは実行者の責務と許可されたTask操作を扱う。`description.md`がある選択済みextension roleだけを
   Sessionへ渡し、権限定義そのものはagent authを正本とする。
-- Session固有は登録済みのProject、Task、worktreeを束縛する。implementerの変更先はこのworktreeだけであり、
+- Session固有はProject、Task、規約worktreeを束縛する。implementerの変更先はこのworktreeだけであり、
   親Projectのcheckout・`main`・他Taskのworktreeを変更先にしない。未完了TaskのSSOTはHub側
   `flow/tasks/<project>/`であり、Task YAMLの直接編集ではなく、束縛済みProject/Taskへの`whub task`
   操作を使う。
@@ -53,14 +51,13 @@ Skill・adapter設定はAgent serviceが所有する。`close`はStateに記録�
 
 Task YAMLはHubのFlow serviceが一元管理するため、Hub runtime hookはTask操作の場所を制限しない。worktree
 runtime guardは、Agent sessionを開く際に解決した`ResolvedProjectWorktree`を唯一の実行対象とする。
-branch名は再計算せず、`whub worktree create`と同じ`WorktreeDefinition.branch`を使う。定義の`tasks/<task-number>`
-規則とGit worktreeの実branchの一致は既存のworktree検査で確認する。
+branch名はTask IDから`tasks/<task-number>`として導出する。worktreeの存在だけを確認し、Git branch整合はGitへ委ねる。
 
-CodexとClaude Codeへ渡すguard policyには、登録済みworktreeの絶対pathとbranchを含める。両adapterは同じ
+CodexとClaude Codeへ渡すguard policyには、規約worktreeの絶対pathとbranchを含める。両adapterは同じ
 policy rendererを使い、実行前に少なくとも次をblockする。
 
-- session cwdまたはGit top-levelが登録済みworktreeと一致しない操作。
-- 現在branchが登録済みのtask branchと一致しない操作。親Projectのcheckout、`main`、他Taskのworktreeは
+- session cwdまたはGit top-levelが規約worktreeと一致しない操作。
+- 現在branchがtask branchと一致しない操作。親Projectのcheckout、`main`、他Taskのworktreeは
   この条件で対象外となる。
 - worktree外を指定するfile edit、または検証不能なshell構文による境界回避。
 
@@ -82,7 +79,7 @@ Codexのuser-level `~/.codex/hooks.json`は、`PermissionRequest`、`PostToolUse
 
 hookはstdinのJSONから`hook_event_name`、`session_id`、`cwd`、`turn_id`、必要な場合だけ`tool_name`をcontrol planeへ
 送る。`tool_input`や出力は送らない。Operation Terminalのtmux環境では起動時に生成した不変`WHUB_OPERATOR_ID`を加え、
-backendは現在登録済みの`operator_id`を検証する。それ以外は、`cwd`が登録済みAgent worktreeの絶対pathと文字列として
+backendは現在登録済みの`operator_id`を検証する。それ以外は、`cwd`が稼働中Agent worktreeの絶対pathと文字列として
 完全一致する場合だけ、対応する`(project, task_id)`を解決する。登録外・不正な入力は状態を変更せず拒否する。
 
 `PermissionRequest`は対象（worktreeまたはOperation）ごとの権限通知を最新の要求で置換する。`PostToolUse`は同じ

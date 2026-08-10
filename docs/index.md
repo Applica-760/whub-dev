@@ -11,13 +11,11 @@
 
 - [CLI reference](reference/cli.md) — `whub`の公開CLI契約。
 - [Manifest reference](reference/manifest.md) — Project・Resource・hostのmanifest契約。
-- [Worktree reference](reference/worktree.md) — task branch、worktree定義、PR lifecycleの契約。
 
 ## operations
 
 - [Task development](operations/task-development.md) — Task起票からAgent作業、PR、merge、完了までのsession横断手順。
 - [Agent harness](operations/agent.md) — Agent sessionのopen/closeと生成物cleanupの手順。
-- [Worktree operation](operations/worktree.md) — worktreeの作成、PR、merge、cleanupの運用手順。
 - [Operation release](operations/releace.md) — build、verify、applyのrelease手順と復旧条件。
 - [Remote resource operation](operations/remote.md) — remote Resourceの参照・編集・実行の手順。
 - [Remote GUI session](operations/session.md) — remote GUI sessionの予約・接続・観測・終了手順。

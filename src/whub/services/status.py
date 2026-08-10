@@ -5,7 +5,6 @@ from __future__ import annotations
 import shlex
 import subprocess
 from collections import defaultdict
-from dataclasses import replace
 from pathlib import Path
 
 from whub.core.health import inspect_aggregated_mount, inspect_symlink
@@ -17,11 +16,9 @@ from whub.models import (
     Project,
     RemoteResource,
     ResourceStatus,
-    StatusReport,
     SymlinkResource,
 )
 from whub.services.remote.mount import host_mountpoint, host_volume_name
-from whub.services.worktree import collect_worktree_status
 from whub.services.manifest import ResolvedManifest
 
 
@@ -156,7 +153,6 @@ def _collect_remote_infos(
             )
     return infos
 
-
 def collect_resource_status(manifest: ResolvedManifest) -> list[ResourceStatus]:
     targets = [
         TargetItem(target.resource, (manifest, target.data))
@@ -178,20 +174,3 @@ def collect_resource_status(manifest: ResolvedManifest) -> list[ResourceStatus]:
         else:
             infos.append(remote_infos[target.data[1].name])
     return infos
-
-
-def collect_status(manifest: ResolvedManifest, workspace_root: Path) -> StatusReport:
-    """Collect resources and attach each worktree to its parent resource."""
-    resources = collect_resource_status(manifest)
-    grouped: dict[str, list] = {}
-    invalid = []
-    for worktree in collect_worktree_status(manifest, workspace_root):
-        if worktree.parent_project is None:
-            invalid.append(worktree)
-        else:
-            grouped.setdefault(worktree.parent_project, []).append(worktree)
-    attached = tuple(
-        replace(resource, worktrees=tuple(grouped.pop(resource.project, [])))
-        for resource in resources
-    )
-    return StatusReport(attached, tuple([*invalid, *sum(grouped.values(), [])]))

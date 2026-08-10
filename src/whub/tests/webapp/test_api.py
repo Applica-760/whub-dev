@@ -31,7 +31,7 @@ from whub.models.flow import TaskRuntime
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.agent.codex.attention import ApprovalAttentionStore
-from whub.models import ResourceStatus, WorktreeStatus
+from whub.models import ResourceStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminals
 from whub.services.task.project import ProjectTasks, TaskRecord, TaskSummary
 from whub.services.vault import VaultNode
@@ -179,13 +179,16 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
     store = ApprovalAttentionStore()
     local_client = TestClient(client.app, client=("127.0.0.1", 50000))
     context = Mock(workspace_root=Path("/workspace"))
-    inspection = SimpleNamespace(
-        definition=SimpleNamespace(
-            parent_project="whub-dev",
-            task_id="TASK-104",
-            workspace_path="projects/worktrees/whub-dev-104",
-        ),
-        diagnostics=(),
+    tasks = [
+        SimpleNamespace(
+            project="whub-dev", tasks=(SimpleNamespace(id="TASK-104"),)
+        )
+    ]
+    worktree = SimpleNamespace(
+        project="whub-dev",
+        task_id="TASK-104",
+        destination=Path("/workspace/projects/worktrees/whub-dev-104"),
+        host=None,
     )
     with (
         patch(
@@ -194,9 +197,14 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
         ),
         patch("whub.webapp.routers.agent_attention.load_manifest"),
         patch(
-            "whub.webapp.routers.agent_attention.inspect_worktrees",
-            return_value=[inspection],
+            "whub.webapp.routers.agent_attention.list_all_project_tasks",
+            return_value=tasks,
         ),
+        patch(
+            "whub.webapp.routers.agent_attention.resolve_project_worktree",
+            return_value=worktree,
+        ),
+        patch("whub.webapp.routers.agent_attention.resolve_tmux_session"),
         patch("whub.webapp.routers.agent_attention.attention", store),
     ):
         assert (
@@ -584,39 +592,40 @@ def test_get_resource_status_returns_service_results(client: TestClient) -> None
     mock_collect.assert_called_once_with(m)
 
 
-def test_get_worktrees_returns_worktree_status_entries(
+def test_get_agent_sessions_returns_running_sessions(
     client: TestClient, tmp_path: Path
 ) -> None:
     m = manifest()
-    worktree = WorktreeStatus(
-        "local", "TASK-075", "tasks/075", "projects/worktrees/local-075"
-    )
+    session = SimpleNamespace(project="local", task_id="TASK-075")
+    worktree = SimpleNamespace(workspace_path="projects/worktrees/local-075")
     with (
-        patch("whub.webapp.routers.worktrees.load_manifest", return_value=m),
+        patch("whub.webapp.routers.agent_sessions.load_manifest", return_value=m),
         patch(
-            "whub.webapp.routers.worktrees.current_context",
+            "whub.webapp.routers.agent_sessions.current_context",
             return_value=type("Context", (), {"workspace_root": tmp_path})(),
         ),
         patch(
-            "whub.webapp.routers.worktrees.collect_worktree_status",
-            return_value=[worktree],
-        ) as mock_collect,
+            "whub.webapp.routers.agent_sessions.list_agent_sessions",
+            return_value=[session],
+        ) as mock_sessions,
+        patch(
+            "whub.webapp.routers.agent_sessions.resolve_project_worktree",
+            return_value=worktree,
+        ),
     ):
-        response = client.get("/api/worktrees")
+        response = client.get("/api/agent-sessions")
 
     assert response.status_code == 200
     assert response.json() == {
-        "worktrees": [
+        "sessions": [
             {
-                "parent_project": "local",
+                "project": "local",
                 "task_id": "TASK-075",
-                "branch": "tasks/075",
                 "workspace_path": "projects/worktrees/local-075",
-                "diagnostics": [],
             }
         ]
     }
-    mock_collect.assert_called_once_with(m, tmp_path)
+    mock_sessions.assert_called_once_with(m, tmp_path)
 
 
 def test_worktree_diff_endpoints_use_registered_worktree_services(

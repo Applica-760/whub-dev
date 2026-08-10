@@ -19,7 +19,6 @@ import {
   TASKS_PATH,
 } from "./features/tasks/routes";
 import { TodosPage } from "./features/todos/TodosPage";
-import { WorktreesPage } from "./features/worktrees/WorktreesPage";
 
 // react-markdownの依存ツリーを初回チャンクから外すため、Backlog/Vaultは遅延読込する
 const BacklogPage = lazy(() =>
@@ -51,7 +50,6 @@ const navigation: NavigationItem[] = [
   { label: "Todo", to: "/todos" },
   { label: "Inbox", to: "/inbox" },
   { label: "Status", to: "/status" },
-  { label: "Worktrees", to: "/worktrees" },
 ];
 
 export function App() {
@@ -134,7 +132,6 @@ export function App() {
             />
             <Route element={<InboxPage />} path="/inbox" />
             <Route element={<ResourceStatusPage />} path="/status" />
-            <Route element={<WorktreesPage />} path="/worktrees" />
           </Routes>
         </Suspense>
       </AppShell.Main>

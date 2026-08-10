@@ -20,7 +20,9 @@ from whub.services.agent.codex.attention import ApprovalAttention, approval_atte
 from whub.services.errors import ServiceError
 from whub.services.manifest import load_manifest
 from whub.services.operator_terminal import operator_terminal
-from whub.services.worktree import inspect_worktrees
+from whub.services.agent.tmux_session import resolve_tmux_session
+from whub.services.task.project import list_all_project_tasks
+from whub.services.worktree.resolve import resolve_project_worktree
 from whub.webapp.runner import HOST
 
 
@@ -115,14 +117,18 @@ async def attention_stream(websocket: WebSocket) -> None:
 
 def _registered_worktree(cwd: str) -> tuple[str, str]:
     context = current_context()
-    for inspection in inspect_worktrees(load_manifest(), context.workspace_root):
-        definition = inspection.definition
-        if (
-            definition is not None
-            and not inspection.diagnostics
-            and cwd == str(context.workspace_root / definition.workspace_path)
-        ):
-            return definition.parent_project, definition.task_id
+    manifest = load_manifest()
+    for project_tasks in list_all_project_tasks(manifest):
+        for task in project_tasks.tasks:
+            try:
+                worktree = resolve_project_worktree(
+                    manifest, context.workspace_root, project_tasks.project, task.id
+                )
+                resolve_tmux_session(worktree.project, worktree.task_id, worktree.host)
+            except ServiceError:
+                continue
+            if cwd == str(worktree.destination):
+                return worktree.project, worktree.task_id
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
 

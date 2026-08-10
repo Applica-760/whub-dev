@@ -48,7 +48,7 @@ def test_remote_tmux_confirmed_missing_is_idempotent() -> None:
 
 def test_remote_close_preserves_state_when_tmux_probe_fails(tmp_path: Path) -> None:
     registered = SimpleNamespace(
-        definition=SimpleNamespace(task_id="TASK-120"),
+        task_id="TASK-120",
         destination="/srv/worktrees/whub-dev-120",
         host=_host(),
     )

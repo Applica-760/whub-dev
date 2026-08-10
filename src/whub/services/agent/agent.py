@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from whub.core.target import (
@@ -26,6 +27,7 @@ from whub.services.agent.codex.trust import prepare_remote as prepare_remote_cod
 from whub.services.agent.tmux_session import (
     close_tmux_session,
     open_tmux_session,
+    resolve_tmux_session,
 )
 from whub.services.agent.state import cleanup, owned_paths as local_owned_paths, prepare
 from whub.services.agent import remote_state
@@ -34,6 +36,33 @@ from whub.services.worktree.resolve import (
     ResolvedProjectWorktree,
     resolve_project_worktree,
 )
+from whub.services.task.project import list_all_project_tasks
+
+
+@dataclass(frozen=True)
+class AgentSession:
+    """One running Agent tmux session with a valid conventional worktree."""
+
+    project: str
+    task_id: str
+
+
+def list_agent_sessions(
+    manifest: Manifest, workspace_root: Path
+) -> tuple[AgentSession, ...]:
+    """List running Agent sessions; stale tmux sessions are omitted."""
+    sessions: list[AgentSession] = []
+    for project_tasks in list_all_project_tasks(manifest):
+        for task in project_tasks.tasks:
+            try:
+                worktree = resolve_project_worktree(
+                    manifest, workspace_root, project_tasks.project, task.id
+                )
+                resolve_tmux_session(worktree.project, worktree.task_id, worktree.host)
+            except (OSError, ServiceError):
+                continue
+            sessions.append(AgentSession(worktree.project, worktree.task_id))
+    return tuple(sessions)
 
 
 def open_agent(
@@ -49,7 +78,7 @@ def open_agent(
     variables = resolve_variables(
         resolved_auth.auth.variables,
         project,
-        registered.definition.task_id,
+        registered.task_id,
         registered.destination,
     )
     plans = (
@@ -59,7 +88,7 @@ def open_agent(
     files = {
         relative: content for plan in plans for relative, content in plan.files.items()
     }
-    context = render_context(workspace_root, auth_names, registered.definition.branch)
+    context = render_context(workspace_root, auth_names, registered.branch)
     try:
         resource = resolve_project_resource(manifest, project)
     except TargetError as error:
@@ -70,16 +99,16 @@ def open_agent(
         prepare(
             workspace_root,
             project,
-            item.definition.task_id,
+            item.task_id,
             item.destination,
             files,
             context,
         )
         prepare_codex_trust(
-            workspace_root, project, item.definition.task_id, item.destination
+            workspace_root, project, item.task_id, item.destination
         )
         return open_tmux_session(
-            project, item.definition.task_id, item.destination, workspace_root
+            project, item.task_id, item.destination, workspace_root
         )
 
     def remote(_: RemoteResource, item: ResolvedProjectWorktree) -> TmuxSession:
@@ -87,14 +116,14 @@ def open_agent(
         prepare_remote_codex_trust(
             workspace_root,
             project,
-            item.definition.task_id,
+            item.task_id,
             item.host,
             item.destination,
         )
         remote_state.prepare(
             workspace_root,
             project,
-            item.definition.task_id,
+            item.task_id,
             item.host,
             item.destination,
             files,
@@ -102,7 +131,7 @@ def open_agent(
         )
         return open_tmux_session(
             project,
-            item.definition.task_id,
+            item.task_id,
             item.destination,
             workspace_root,
             item.host,
@@ -137,26 +166,26 @@ def close_agent(
 
     def local(_: SymlinkResource, item: ResolvedProjectWorktree) -> None:
         assert isinstance(item.destination, Path)
-        close_tmux_session(project, item.definition.task_id)
+        close_tmux_session(project, item.task_id)
         cleanup_codex_trust(
-            workspace_root, project, item.definition.task_id, item.destination
+            workspace_root, project, item.task_id, item.destination
         )
-        cleanup(workspace_root, project, item.definition.task_id, item.destination)
+        cleanup(workspace_root, project, item.task_id, item.destination)
 
     def remote(_: RemoteResource, item: ResolvedProjectWorktree) -> None:
         assert item.host is not None and isinstance(item.destination, str)
-        close_tmux_session(project, item.definition.task_id, item.host)
+        close_tmux_session(project, item.task_id, item.host)
         cleanup_remote_codex_trust(
             workspace_root,
             project,
-            item.definition.task_id,
+            item.task_id,
             item.host,
             item.destination,
         )
         remote_state.cleanup(
             workspace_root,
             project,
-            item.definition.task_id,
+            item.task_id,
             item.host,
             item.destination,
         )

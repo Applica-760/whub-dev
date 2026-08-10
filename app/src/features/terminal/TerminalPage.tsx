@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { requestJson } from "../../api/client";
 import { GroupedListRow } from "../../components/GroupedList";
 import { WidgetFrame } from "../../components/WidgetFrame";
-import type { WorktreeItem } from "../worktrees/api";
-import { useWorktrees } from "../worktrees/useWorktrees";
+import type { AgentSession } from "./agentSessions";
+import { useAgentSessions } from "./agentSessions";
 import { DiffPane } from "./DiffPane";
 import { TerminalWidget } from "./TerminalWidget";
 import { useApprovalAttention } from "./useApprovalAttention";
@@ -16,22 +16,11 @@ import { TaskDetailWidget } from "../tasks/TaskDetailWidget";
 
 import "./terminal.css";
 
-type TerminalWorktree = WorktreeItem & {
-  parent_project: string;
-  task_id: string;
-};
 type OperatorTerminal = { operator_id: string };
 type OperatorTerminals = { terminals: OperatorTerminal[] };
 
-function terminalWorktrees(worktrees: WorktreeItem[]): TerminalWorktree[] {
-  return worktrees.filter(
-    (worktree): worktree is TerminalWorktree =>
-      worktree.parent_project !== null && worktree.task_id !== null,
-  );
-}
-
-function worktreeValue(worktree: WorktreeItem) {
-  return `${worktree.parent_project}/${worktree.task_id}`;
+function worktreeValue(worktree: AgentSession) {
+  return `${worktree.project}/${worktree.task_id}`;
 }
 
 function operatorValue(operatorId: string) {
@@ -45,10 +34,10 @@ type TerminalPageProps = {
 export function TerminalPage({
   collapsed = { left: false, right: false },
 }: TerminalPageProps) {
-  const { error, loading, worktrees } = useWorktrees();
+  const { error, loading, sessions } = useAgentSessions();
   const { acknowledgeOperator, acknowledgeWorktree, attention } =
     useApprovalAttention();
-  const terminals = useMemo(() => terminalWorktrees(worktrees), [worktrees]);
+  const terminals = sessions;
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
   const [operators, setOperators] = useState<OperatorTerminal[]>([]);
   const [operatorError, setOperatorError] = useState<string | null>(null);
@@ -65,10 +54,10 @@ export function TerminalPage({
   );
   const graphProject = selectedOperator
     ? "whub-dev"
-    : (selectedWorktree?.parent_project ?? null);
+    : (selectedWorktree?.project ?? null);
   const detailProject = selectedOperator
     ? selectedOperationTask?.project
-    : selectedWorktree?.parent_project;
+    : selectedWorktree?.project;
   const detailTaskId = selectedOperator
     ? selectedOperationTask?.taskId
     : selectedWorktree?.task_id;
@@ -80,11 +69,11 @@ export function TerminalPage({
       const item = pendingAttention.find(
         (attentionItem) =>
           attentionItem.target === "worktree" &&
-          attentionItem.project === worktree.parent_project &&
+          attentionItem.project === worktree.project &&
           attentionItem.task_id === worktree.task_id,
       );
       if (item)
-        void acknowledgeWorktree(worktree.parent_project, worktree.task_id);
+        void acknowledgeWorktree(worktree.project, worktree.task_id);
     },
     [acknowledgeWorktree, pendingAttention, terminals],
   );
@@ -159,7 +148,7 @@ export function TerminalPage({
         void acknowledgeOperator(selectedOperator.operator_id);
       else if (selectedWorktree)
         void acknowledgeWorktree(
-          selectedWorktree.parent_project,
+          selectedWorktree.project,
           selectedWorktree.task_id,
         );
     };
@@ -335,7 +324,7 @@ export function TerminalPage({
           ) : selectedWorktree ? (
             <TerminalWidget
               key={selectedTerminal}
-              project={selectedWorktree.parent_project}
+              project={selectedWorktree.project}
               resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}`}
               taskId={selectedWorktree.task_id}
             />
@@ -413,11 +402,11 @@ export function TerminalPage({
             ))}
             {loading ? (
               <Text c="dimmed" p="md">
-                worktreeを読み込んでいます…
+                Agent sessionを読み込んでいます…
               </Text>
             ) : terminals.length === 0 ? (
               <Text c="dimmed" p="md">
-                worktreeがありません
+                Agent sessionがありません
               </Text>
             ) : (
               terminals.map((worktree, index) => (
@@ -428,7 +417,7 @@ export function TerminalPage({
                     pendingAttention.some(
                       (item) =>
                         item.target === "worktree" &&
-                        item.project === worktree.parent_project &&
+                        item.project === worktree.project &&
                         item.task_id === worktree.task_id,
                     ) ? (
                       <Group gap={4} wrap="nowrap">
@@ -436,7 +425,7 @@ export function TerminalPage({
                           .filter(
                             (item) =>
                               item.target === "worktree" &&
-                              item.project === worktree.parent_project &&
+                              item.project === worktree.project &&
                               item.task_id === worktree.task_id,
                           )
                           .map((item) => (
@@ -459,7 +448,7 @@ export function TerminalPage({
                   }
                   selected={worktreeValue(worktree) === selectedTerminal}
                   subtitle={worktree.task_id}
-                  title={worktree.parent_project}
+                  title={worktree.project}
                   withDivider={index < terminals.length - 1}
                 />
               ))
@@ -473,7 +462,7 @@ export function TerminalPage({
         </aside>
       </section>
       <DiffPane
-        project={selectedWorktree?.parent_project}
+        project={selectedWorktree?.project}
         taskId={selectedWorktree?.task_id}
         workspacePath={selectedWorktree?.workspace_path}
       />

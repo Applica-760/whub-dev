@@ -21,8 +21,8 @@ whub appを、単一利用者が複数のCoding Agentを監督・操作する主
 1. worktreeのライフサイクルと命名規約を定義する
    - Task、worktree、Agent sessionの一意な対応と、作成・再利用・終了・削除の条件を決める。
 
-2. `whub worktree` でworktreeを決定論的に操作する
-   - git worktreeの作成・一覧・切替・削除と、対応するproject symlinkの作成を扱う。
+2. git worktreeを規約pathとTask branchで操作する
+   - 作成・一覧・切替・削除とPR操作はgitとghへ委ねる。
 
 3. worktreeをproject resourceとして認識・状態表示する
    - 元projectとの関係、branch、mount状態、作業pathを利用者が把握できるようにする。

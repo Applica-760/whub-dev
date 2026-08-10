@@ -12,6 +12,7 @@ from whub.models import ManifestError
 from whub.services.errors import NotFoundError, ServiceError
 from whub.webapp.routers.backlog import router as backlog_router
 from whub.webapp.routers.agent_attention import router as agent_attention_router
+from whub.webapp.routers.agent_sessions import router as agent_sessions_router
 from whub.webapp.routers.daily import router as daily_router
 from whub.webapp.routers.inbox import router as inbox_router
 from whub.webapp.routers.operator_terminal import (
@@ -24,7 +25,6 @@ from whub.webapp.routers.tasks import router as tasks_router
 from whub.webapp.routers.terminal import terminal
 from whub.webapp.routers.todos import router as todos_router
 from whub.webapp.routers.vault import router as vault_router
-from whub.webapp.routers.worktrees import router as worktrees_router
 from whub.webapp.routers.worktree_diff import router as worktree_diff_router
 
 
@@ -68,6 +68,7 @@ def create_api_app() -> FastAPI:
     app.include_router(projects_router)
     app.include_router(backlog_router)
     app.include_router(agent_attention_router)
+    app.include_router(agent_sessions_router)
     app.include_router(daily_router)
     app.include_router(inbox_router)
     app.include_router(status_router)
@@ -78,7 +79,6 @@ def create_api_app() -> FastAPI:
         "/api/operator-terminals/{operator_id}", operator_terminal_socket
     )
     app.include_router(vault_router)
-    app.include_router(worktrees_router)
     app.include_router(worktree_diff_router)
 
     @app.get("/api/health")

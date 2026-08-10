@@ -26,7 +26,7 @@ let approvalAttention: ApprovalAttention[] = [
 ];
 let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
-let deferWorktrees = false;
+let deferSessions = false;
 let changedFiles: {
   path: string;
   status: string;
@@ -95,7 +95,7 @@ vi.mock("../tasks/TaskDependencyGraphWidget", () => ({
 beforeEach(() => {
   operationStarts = 0;
   operatorTerminals = [];
-  deferWorktrees = false;
+  deferSessions = false;
   changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
   worktreeFile = {
     path: "src/main.py",
@@ -208,24 +208,20 @@ beforeEach(() => {
           ok: true,
           json: async () => worktreeFile,
         });
-      if (deferWorktrees) return new Promise(() => {});
+      if (deferSessions) return new Promise(() => {});
       return Promise.resolve({
         ok: true,
         json: async () => ({
-          worktrees: [
+          sessions: [
             {
-              parent_project: "whub-dev",
+              project: "whub-dev",
               task_id: "TASK-099",
-              branch: "tasks/099",
               workspace_path: "projects/worktrees/whub-dev-099",
-              diagnostics: [],
             },
             {
-              parent_project: "vault",
+              project: "vault",
               task_id: "TASK-101",
-              branch: "tasks/101",
               workspace_path: "projects/worktrees/vault-101",
-              diagnostics: [],
             },
           ],
         }),
@@ -471,12 +467,12 @@ describe("TerminalPage", () => {
 
   it("worktreeの探索中でも既存Operationを先に表示する", async () => {
     operatorTerminals = [{ operator_id: "operator-1" }];
-    deferWorktrees = true;
+    deferSessions = true;
 
     renderPage();
 
     expect(await screen.findByText("Operation / workspace-hub")).toBeTruthy();
-    expect(screen.getByText("worktreeを読み込んでいます…")).toBeTruthy();
+    expect(screen.getByText("Agent sessionを読み込んでいます…")).toBeTruthy();
     expect(
       screen
         .getByRole("button", { name: /Operation 1/ })

@@ -28,7 +28,7 @@ actor指定は公開しない。Taskを跨ぐ運用は
 |---|---|
 | `whub init --workspace-root <PATH> [--force]` | 固定contextへworkspace rootを設定 |
 | `whub ls` | Project名、Resource type、workspace pathを表示 |
-| `whub status` | Resourceと登録済みworktreeの状態を診断 |
+| `whub status` | Resourceの状態を診断 |
 | `whub link` | manifestのlocal Resourceをworkspaceへsymlink |
 | `whub cd <PROJECT> [--plain]` | local Resourceへ移動、またはremote ResourceへSSH接続 |
 | `whub remote mount [PROJECT] [-a]` | remote hostをsshfs mountし、Resourceのworkspace symlinkを作成 |
@@ -41,18 +41,6 @@ actor指定は公開しない。Taskを跨ぐ運用は
 
 - `link`が`.gitignore`で管理するのは`.codegraph/`、`.DS_Store`、`._*`、`.AppleDouble/`だけとする。
 - remote Resourceの参照・編集・実行・復旧は[Remote resource operation](../operations/remote.md)を参照する。
-
-## Worktree
-
-| コマンド | 直接の挙動 |
-|---|---|
-| `whub worktree create <PROJECT> <TTT>` | 未完了TaskからTask branchとpathを導出し、worktreeを登録・作成 |
-| `whub worktree check` | 全登録のidentityとdiagnosticを読み取り専用で表示 |
-| `whub worktree remove <PROJECT> <TTT>` | cleanかつ整合したTask worktreeと定義YAMLを削除 |
-| `whub worktree pull-request <PROJECT> <TTT>` | Task branchをpushし、既存PRを返すかPRを作成 |
-| `whub worktree merge <PROJECT> <TTT> --method {merge,squash,rebase}` | 一致するPRをmergeし、確認後にTask worktreeをcleanup |
-
-- 詳細は[Worktree reference](worktree.md)、運用は[Worktree operation](../operations/worktree.md)を参照する。
 
 ## Agent
 
@@ -82,7 +70,7 @@ actor指定は公開しない。Taskを跨ぐ運用は
 | `whub app down` | managed Web app serverを停止 |
 | `whub remote session <COMMAND>` | remote GUI sessionを予約・観測・削除 |
 
-Web appはTask YAMLを更新しない。`/worktrees`は登録済みworktreeの読み取り専用表示とする。
+Web appはTask YAMLを更新しない。Terminalは稼働中Agent sessionだけを表示する。
 Remote GUI sessionの運用は[Remote GUI session](../operations/session.md)を参照する。
 
 ## Operation release

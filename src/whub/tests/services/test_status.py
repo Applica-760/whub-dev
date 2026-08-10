@@ -6,8 +6,8 @@ from subprocess import CompletedProcess
 from unittest.mock import patch
 
 from whub.core.health import ResourceHealth
-from whub.models import GitInfo, Manifest, ResourceStatus, WorktreeStatus
-from whub.services.status import _parse_probe, collect_resource_status, collect_status
+from whub.models import GitInfo, Manifest
+from whub.services.status import _parse_probe, collect_resource_status
 from whub.tests.helpers import manifest
 
 
@@ -49,28 +49,6 @@ def test_collects_local_and_remote_statuses() -> None:
 
 def test_returns_empty_list_without_resources() -> None:
     assert collect_resource_status(Manifest(projects=[])) == []
-
-
-def test_collect_status_attaches_worktrees_to_their_parent_resource(tmp_path) -> None:
-    resources = [ResourceStatus("local", "ok", "symlink")]
-    attached = WorktreeStatus(
-        "local", "TASK-075", "tasks/075", "projects/worktrees/local-075"
-    )
-    invalid = WorktreeStatus(
-        None, None, None, None, ("invalid worktree definition YAML: invalid.yaml",)
-    )
-    with (
-        patch("whub.services.status.collect_resource_status", return_value=resources),
-        patch(
-            "whub.services.status.collect_worktree_status",
-            return_value=[attached, invalid],
-        ),
-    ):
-        report = collect_status(manifest(), tmp_path)
-
-    assert report.resources[0].worktrees == (attached,)
-    assert report.invalid_worktrees == (invalid,)
-    assert report.unhealthy
 
 
 def test_marks_unreachable_remote_and_preserves_mount_state() -> None:

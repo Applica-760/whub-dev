@@ -32,8 +32,8 @@ agent authはcommand、filesystem、network、外部ツールを対象とする�
 `grants.network.policy`は現在`deny_all`だけを受け付け、Agent processへ継続的なnetwork accessを許可しない。Web検索はextension tool経由で行う。git fetchは登録済みremoteに対するexact commandだけを許可する。パッケージのインストールとcurlは、ユーザー承認した一回限りのharness仲介操作とし、Agent processのnetwork policyを緩めない。
 
 `variables`はroleの権限評価に使う、adapterが解決または検証する値である。
-`registered_task_worktree`は、現在のAgentに割り当てられた登録済みworktreeから`project`、`task`、`path`を
-解決する。未解決または複数候補の場合、adapterは実行を拒否する。
+`registered_task_worktree`は、現在のAgentに割り当てられた規約worktreeから`project`、`task`、`path`を
+解決する。未解決の場合、adapterは実行を拒否する。
 `registered_project`はargvの値がwhubに登録済みのProject名であることを検証し、未登録なら実行を拒否する。
 
 `grants.commands.prefixes`と`grants.commands.exact`は、固定`executable`と順序付きの`arguments` token列でargvを

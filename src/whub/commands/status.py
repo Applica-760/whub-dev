@@ -5,8 +5,7 @@ from __future__ import annotations
 import click
 
 from whub.commands import get_manifest
-from whub.core.context import current_context
-from whub.services.status import collect_status
+from whub.services.status import collect_resource_status
 from whub.utils.render import render_table
 
 
@@ -15,10 +14,8 @@ from whub.utils.render import render_table
 def status(ctx: click.Context) -> None:
     """Show health of all resources."""
     manifest = get_manifest(ctx)
-    report = collect_status(manifest, current_context().workspace_root)
-    statuses = report.resources
-    worktrees = report.worktrees
-    if not statuses and not worktrees:
+    statuses = collect_resource_status(manifest)
+    if not statuses:
         click.echo("  (no resources)")
         return
 
@@ -32,19 +29,8 @@ def status(ctx: click.Context) -> None:
             right_align={5},
         )
 
-    diagnostics = [item for item in worktrees if item.diagnostics]
-    if worktrees:
-        click.echo()
-        suffix = "ok" if not diagnostics else f"{len(diagnostics)} diagnostic"
-        click.echo(f"worktrees: {len(worktrees)} registered, {suffix}")
-    for item in diagnostics:
-        identity = (
-            f"{item.parent_project}/{item.task_id}"
-            if item.parent_project is not None and item.task_id is not None
-            else "invalid registration"
-        )
-        for diagnostic in item.diagnostics:
-            click.echo(f"  {identity}: {diagnostic}")
-
-    if report.unhealthy:
+    if any(
+        item.state != "ok" or item.mount in {"stale", "unreadable"}
+        for item in statuses
+    ):
         raise click.exceptions.Exit(1)

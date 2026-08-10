@@ -33,7 +33,7 @@ whub appを、複数のCoding Agentを並列に動かし、人間が必要な判
 ## Parallel execution
 
 - `1 Task = 1 worktree = 1 Agent session` を基本単位とする。
-- `whub worktree` により、git worktreeの実行と対応するproject symlinkの作成を決定論的に行う。
+- git worktreeをTask branchと規約pathで決定論的に操作する。
 - ブラウザを閉じてもAgent sessionは維持され、あとから再接続できる。
 - tmuxをsessionの永続化に利用する。
 

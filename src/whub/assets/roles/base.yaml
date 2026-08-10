@@ -40,9 +40,6 @@ grants:
         arguments: [ls]
       - executable: whub  # whub shell-init *
         arguments: [shell-init]
-      - executable: whub  # whub worktree check *
-        arguments: [worktree, check]
-
       - executable: whub  # whub task --project $project check *
         arguments: [task, --project, "$project", check]
 

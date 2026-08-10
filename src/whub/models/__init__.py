@@ -18,14 +18,8 @@ from whub.models.agent.auth import (
     ExtensionToolCatalog,
 )
 from whub.models.session import SessionDescriptor, SessionPane, SessionTmux
-from whub.models.status import ResourceStatus, StatusReport, WorktreeStatus
+from whub.models.status import ResourceStatus
 from whub.models.todo import PRIORITY_EMOJI, Todo, Todos
-from whub.models.worktree import (
-    GitWorktree,
-    WorktreeDefinition,
-    WorktreeDefinitionRecord,
-    WorktreeInspection,
-)
 
 __all__ = [
     "AgentAuth",
@@ -34,7 +28,6 @@ __all__ = [
     "ExtensionToolCatalog",
     "EffectiveAuth",
     "GitInfo",
-    "GitWorktree",
     "Host",
     "Manifest",
     "ManifestError",
@@ -47,12 +40,6 @@ __all__ = [
     "SessionPane",
     "SessionTmux",
     "SymlinkResource",
-    "StatusReport",
     "Todo",
     "Todos",
-    "WorktreeDefinition",
-    "WorktreeDefinitionRecord",
-    "WorktreeInspection",
-    "WorktreeStatus",
-    "WorktreeStatus",
 ]
