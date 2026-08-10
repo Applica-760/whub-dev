@@ -40,7 +40,7 @@ Agent serviceがAgentへ渡す指示は、Hub共通、Role、Session固有の三
   Sessionへ渡し、権限定義そのものはagent authを正本とする。
 - Session固有は登録済みのProject、Task、worktreeを束縛する。implementerの変更先はこのworktreeだけであり、
   親Projectのcheckout・`main`・他Taskのworktreeを変更先にしない。未完了TaskのSSOTはHub側
-  `wflow/tasks/<project>/`であり、Task YAMLの直接編集ではなく、束縛済みProject/Taskへの`wflow task`
+  `flow/tasks/<project>/`であり、Task YAMLの直接編集ではなく、束縛済みProject/Taskへの`whub task`
   操作を使う。
 - Project固有指示はAgent serviceが生成しない既存内容であり、管理blockの外側を変更・削除しない。
 
@@ -51,7 +51,7 @@ Skill・adapter設定はAgent serviceが所有する。`close`はStateに記録�
 
 ## Worktree runtime guard
 
-Task YAMLはHubのwflow層が一元管理するため、Hub runtime hookはTask操作の場所を制限しない。worktree
+Task YAMLはHubのFlow serviceが一元管理するため、Hub runtime hookはTask操作の場所を制限しない。worktree
 runtime guardは、Agent sessionを開く際に解決した`ResolvedProjectWorktree`を唯一の実行対象とする。
 branch名は再計算せず、`whub worktree create`と同じ`WorktreeDefinition.branch`を使う。定義の`tasks/<task-number>`
 規則とGit worktreeの実branchの一致は既存のworktree検査で確認する。
@@ -64,7 +64,7 @@ policy rendererを使い、実行前に少なくとも次をblockする。
   この条件で対象外となる。
 - worktree外を指定するfile edit、または検証不能なshell構文による境界回避。
 
-guardの対象外であるTask YAML操作は、中央storageを正本とする既存の`wflow task`契約に委ねる。hookは
+guardの対象外であるTask YAML操作は、中央storageを正本とする既存の`whub task`契約に委ねる。hookは
 filesystem・process全体を完全に隔離する仕組みではないため、adapterが表現できるsandbox境界と併用する。
 
 Hub hookはAgent open/closeとbuild・verify・releaseの前提・結果を確認する。worktree hookは実行対象の

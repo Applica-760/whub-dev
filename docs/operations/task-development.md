@@ -9,9 +9,9 @@ Taskの起票から完了までの役割分担とsession間の引継ぎを扱う
 - ユーザー: worktree利用、計画、同期操作、merge方式を決定する。
 - repo session: Task起票、親repo、worktree、Agent、PR、merge、Task完了を管理する。
 - worktree session: 詳細計画、実装、検証、commitを担当する。
-- Task YAMLは計画・進捗・判断、GitHubはPR・review・checks・merge結果の正本とする。
+- Task YAMLは状態・依存、Task Markdownは目的・文脈・計画・判断・ログ、GitHubはPR・review・checks・merge結果の正本とする。
 
-Session間では、Task YAMLを作業文脈、Git commitを実装結果、worktree登録を作業対象として引き継ぐ。
+Session間では、Task YAML/Markdown pairを作業文脈、Git commitを実装結果、worktree登録を作業対象として引き継ぐ。
 会話履歴は引継ぎ対象にしない。
 
 ## 起票
@@ -24,14 +24,14 @@ Session間では、Task YAMLを作業文脈、Git commitを実装結果、worktr
 ## 引継ぎ
 
 - repo sessionが登録済みTask worktreeにAgent sessionを開く。
-- worktree sessionはTask YAMLを再読込する。
-- 詳細計画はworktree側で固めることを推奨する。Taskの性質に応じて起票時に確定してもよい。
+- worktree sessionはTask YAML/Markdown pairを再読込する。
+- 詳細計画はTask Markdownで固めることを推奨する。Taskの性質に応じて起票時に確定してもよい。
 - ユーザーが計画を承認するまで実装へ進まない。
 
 ## 実行
 
 - worktree sessionは登録済みTask worktreeだけを変更・検証する。
-- 計画・進捗・判断をTask YAMLへ記録する。
+- 計画・判断をTask Markdownへ記録し、進捗は`whub task log`で追記する。
 - repo sessionへ戻る前にTaskを更新し、実装を検証・commitする。
 
 ## 回収と統合

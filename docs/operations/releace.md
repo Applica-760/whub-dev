@@ -1,10 +1,10 @@
 
 # Whub operation release
 
-開発checkoutから、PATH上の`whub`と`wflow`が参照するoperation releaseを更新する手順を定義する。
+開発checkoutから、PATH上の`whub`が参照するoperation releaseを更新する手順を定義する。
 releaseは`~/.whub/releases/<release-id>`配下の`artifact/`・`venv/`・`release.json`からなるimmutable unitとし、検証が完了するまで`current`を変更しない。
 
-release操作だけは、古い`current` releaseの実装に依存しないよう、cleanな開発checkoutのPython moduleとして実行する。通常の`whub`・`wflow`操作は引き続きPATH上のCLIを使う。
+release操作だけは、古い`current` releaseの実装に依存しないよう、cleanな開発checkoutのPython moduleとして実行する。通常の操作は引き続きPATH上の`whub` CLIを使う。
 
 releaseは運用作業であり、Taskの起票・worktreeの作成・Task計画の承認を必要としない。変更済みでcleanな親repositoryをpushしてから、この手順を実行する。
 
@@ -53,9 +53,9 @@ lsof -nP -iTCP:8710 -sTCP:LISTEN
 ## `whub release verify <release-id>`
 
 - staging wheelのpackage version・刻印commit・SHA-256を確認する。
-- wheelに`whub/webapp/dist/index.html`とassets、`whub`・`wflow`のentry pointが含まれることを確認する。
+- wheelに`whub/webapp/dist/index.html`とassets、`whub`のentry pointが含まれることを確認する。
 - staging内にvenvを作成し、`uv pip install --python <venv>/bin/python <wheel>`で非editable installする。
-- staging venvの絶対パスで`whub --version`と`wflow --help`を実行し、release-idと一致することを確認する。
+- staging venvの絶対パスで`whub --version`と`whub task --help`を実行し、release-idと一致することを確認する。
 - staging venvの実行は`PYTHONPATH`・`VIRTUAL_ENV`を遮断した環境で行う。呼び出し側の`PYTHONPATH`を継承すると、wheelではなく開発checkoutのsrcを検証してしまう。applyでのvenv再作成も同様に遮断する。
 - 成功時にwheel hashと検証結果を含む`release.json`をstagingへ記録する。失敗時は`current`を変更しない。
 - verify失敗時は旧currentの`whub app`を再起動する。
@@ -67,5 +67,5 @@ lsof -nP -iTCP:8710 -sTCP:LISTEN
 - venvは絶対pathを含むため、配置後のrelease pathでwheelから再作成する。
 - `~/.whub/releases/current`を新releaseへatomicに切り替える。
 - 確認を求めず最後まで実行し、新releaseの`whub app`を必ず起動する。
-- `~/.local/bin/whub`と`~/.local/bin/wflow`は`current/venv/bin/`を参照し続けるため、再起動後のappと次回起動から新releaseが使われる。
+- `~/.local/bin/whub`は`current/venv/bin/`を参照し続けるため、再起動後のappと次回起動から新releaseが使われる。
 - applyまたはapp再起動が失敗した場合は旧`current`へ戻し、旧releaseの`whub app`を再起動する。旧releaseはrollback用に削除しない。

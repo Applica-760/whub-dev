@@ -1,6 +1,6 @@
 # CLI reference
 
-`whub`と`wflow`の公開コマンド構文、引数、直接の挙動を定める。通常の実行contextは
+`whub`の公開コマンド構文、引数、直接の挙動を定める。通常の実行contextは
 `~/.whub`に固定する。実行順序・判断・復旧は各operationを参照する。
 
 引数とoptionの全一覧は各commandの`--help`を正とする。

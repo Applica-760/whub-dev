@@ -9,7 +9,7 @@
 
 ## reference
 
-- [CLI reference](reference/cli.md) — `whub`と`wflow`の公開CLI契約。
+- [CLI reference](reference/cli.md) — `whub`の公開CLI契約。
 - [Manifest reference](reference/manifest.md) — Project・Resource・hostのmanifest契約。
 - [Worktree reference](reference/worktree.md) — task branch、worktree定義、PR lifecycleの契約。
 
