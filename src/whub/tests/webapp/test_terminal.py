@@ -6,12 +6,16 @@ import asyncio
 import os
 import socket
 import threading
+from subprocess import CompletedProcess
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import anyio
 import pytest
 
 from whub.models.agent.terminal_bridge import TerminalAccessMode, TerminalSessionRef
+from whub.models import Host
+from whub.core.remote import build_ssh_command
 from whub.services.agent.terminal_bridge import TerminalAttachment
 from whub.webapp.routers.terminal import access, terminal
 
@@ -52,6 +56,14 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
         session = TerminalSessionRef(project="whub-dev", task_id="TASK-100")
 
         with (
+            patch.dict(
+                terminal.__globals__,
+                {
+                    "load_manifest": Mock(),
+                    "current_context": Mock(return_value=SimpleNamespace(workspace_root=None)),
+                    "resolve_project_worktree": Mock(return_value=SimpleNamespace(host=None)),
+                },
+            ),
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
             patch("whub.webapp.terminal_bridge.attach", return_value=attachment),
         ):
@@ -97,6 +109,14 @@ def test_disconnect_releases_control_for_immediate_reconnect() -> None:
         session = TerminalSessionRef(project="whub-dev", task_id="TASK-100")
 
         with (
+            patch.dict(
+                terminal.__globals__,
+                {
+                    "load_manifest": Mock(),
+                    "current_context": Mock(return_value=SimpleNamespace(workspace_root=None)),
+                    "resolve_project_worktree": Mock(return_value=SimpleNamespace(host=None)),
+                },
+            ),
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
             patch("whub.webapp.terminal_bridge.attach", side_effect=attachments),
         ):
@@ -145,6 +165,14 @@ def test_attachment_cleanup_does_not_block_the_event_loop() -> None:
         attachment.close = Mock(side_effect=slow_close)
 
         with (
+            patch.dict(
+                terminal.__globals__,
+                {
+                    "load_manifest": Mock(),
+                    "current_context": Mock(return_value=SimpleNamespace(workspace_root=None)),
+                    "resolve_project_worktree": Mock(return_value=SimpleNamespace(host=None)),
+                },
+            ),
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
             patch("whub.webapp.terminal_bridge.attach", return_value=attachment),
         ):
@@ -159,6 +187,51 @@ def test_attachment_cleanup_does_not_block_the_event_loop() -> None:
 
         attachment.close.assert_called_once_with()
         os.close(attachment.master_fd)
+        peer.close()
+
+    asyncio.run(exercise())
+
+
+def test_remote_worktree_uses_ssh_attach_command() -> None:
+    async def exercise() -> None:
+        websocket = FakeWebSocket()
+        server, peer = socket.socketpair()
+        attachment = TerminalAttachment(server.detach(), Mock(poll=Mock(return_value=0)))
+        host = Host(
+            hostname="ssh.test.invalid",
+            user="test-user",
+            identity_file="/test/identity",
+            mount_root="/srv",
+        )
+
+        with (
+            patch.dict(
+                terminal.__globals__,
+                {
+                    "load_manifest": Mock(),
+                    "current_context": Mock(return_value=SimpleNamespace(workspace_root=None)),
+                    "resolve_project_worktree": Mock(return_value=SimpleNamespace(host=host)),
+                },
+            ),
+            patch(
+                "whub.services.agent.tmux_session.run_ssh_command",
+                return_value=CompletedProcess([], 0, "", ""),
+            ),
+            patch("whub.webapp.terminal_bridge.attach", return_value=attachment) as attach,
+        ):
+            bridge = asyncio.create_task(terminal(websocket, "la-il", "TASK-017"))
+            await websocket.messages.put({"type": "websocket.disconnect"})
+            async with asyncio.timeout(1):
+                await bridge
+
+        assert attach.call_args.args[0].attach_command == tuple(
+            build_ssh_command(
+                host,
+                "exec tmux attach-session -t =whub-la-il-TASK-017",
+                tty=True,
+            )
+        )
+        assert attachment.master_fd == -1
         peer.close()
 
     asyncio.run(exercise())

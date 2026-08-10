@@ -12,10 +12,19 @@ from whub.models import Host
 from whub.services.errors import ServiceError
 
 
-def resolve_tmux_session(project: str, task_id: str) -> TmuxSession:
+def resolve_tmux_session(
+    project: str, task_id: str, host: Host | None = None
+) -> TmuxSession:
     """Return an existing Agent tmux session without creating one."""
     name = session_name(project, task_id)
     target = session_target(name)
+    if host is not None:
+        if not _remote_session_exists(host, target):
+            raise ServiceError(f"Agent tmux session is unavailable: {project}/{task_id}")
+        return TmuxSession(
+            name,
+            tuple(build_ssh_command(host, f"exec tmux attach-session -t {target}", tty=True)),
+        )
     try:
         result = subprocess.run(
             tmux_command("has-session", "-t", target), capture_output=True, text=True
