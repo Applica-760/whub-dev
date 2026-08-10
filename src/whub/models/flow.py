@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Mapping
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
@@ -110,6 +111,21 @@ class TaskRuntime(WorkflowModel):
     interruption_source_task_id: (
         Annotated[str, Field(pattern=TASK_ID_PATTERN)] | None
     ) = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_schema_v1(cls, value: object) -> object:
+        if not isinstance(value, Mapping) or value.get("schema_version") != 1:
+            return value
+        task = value.get("task")
+        if not isinstance(task, Mapping):
+            return value
+        return {
+            "schema_version": 2,
+            "id": task.get("id"),
+            "workflow": "WF-001",
+            "state": task.get("state"),
+        }
 
     @model_validator(mode="after")
     def _validate_relations(self) -> TaskRuntime:

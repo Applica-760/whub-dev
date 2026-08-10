@@ -66,6 +66,8 @@ def load_task_markdown(task_path: Path) -> str:
     path = task_markdown_path(task_path)
     try:
         return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return _legacy_task_markdown(task_path)
     except (OSError, UnicodeError) as error:
         raise FlowError(f"failed to load task Markdown: {path}: {error}") from error
 
@@ -184,6 +186,30 @@ def _task_markdown(title: str, objective: str, approaches: tuple[str, ...]) -> s
             "## Approach\n\n" + "\n".join(f"- {item.strip()}" for item in approaches)
         )
     return "\n\n".join(sections) + "\n"
+
+
+def _legacy_task_markdown(path: Path) -> str:
+    try:
+        value = yaml.load(path.read_text(encoding="utf-8"), Loader=_SAFE_LOADER)
+    except (OSError, UnicodeError, yaml.YAMLError) as error:
+        raise FlowError(
+            f"failed to load task Markdown: {path.with_suffix('.md')}: {error}"
+        ) from error
+    if not isinstance(value, dict) or value.get("schema_version") != 1:
+        raise FlowError(f"failed to load task Markdown: {path.with_suffix('.md')}")
+    task = value.get("task")
+    if not isinstance(task, dict):
+        raise FlowError(f"failed to load task Markdown: {path.with_suffix('.md')}")
+    title = task.get("title") if isinstance(task.get("title"), str) else task.get("id")
+    if not isinstance(title, str) or not title.strip():
+        raise FlowError(f"failed to load task Markdown: {path.with_suffix('.md')}")
+    objective = task.get("objective") if isinstance(task.get("objective"), str) else ""
+    approaches = task.get("approach")
+    if not isinstance(approaches, list) or not all(
+        isinstance(item, str) for item in approaches
+    ):
+        approaches = []
+    return _task_markdown(title, objective, tuple(approaches))
 
 
 def _write_text(path: Path, content: str) -> None:

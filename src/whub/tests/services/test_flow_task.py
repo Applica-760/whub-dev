@@ -46,15 +46,23 @@ def _write_pair(path, task: TaskRuntime) -> None:
     write_task_markdown(path, f"# {task.id}\n")
 
 
-def test_runtime_yaml_excludes_legacy_task_document(tmp_path) -> None:
+def test_runtime_yaml_normalizes_legacy_task_document(tmp_path) -> None:
     path = tmp_path / "task.yaml"
     task = _task("TASK-001")
     write_task(path, task)
     assert load_task(path) == task
 
-    path.write_text("schema_version: 1\ntask:\n  id: TASK-001\n  state: draft\n")
-    with pytest.raises(FlowError, match="failed to load task YAML"):
-        load_task(path)
+    path.write_text(
+        "schema_version: 1\ntask:\n  id: TASK-001\n  state: completed\n"
+        "  depends_on:\n  - TASK-002\n  interruption_source_task_id: TASK-003\n"
+    )
+    assert load_task(path) == TaskRuntime(
+        schema_version=2,
+        id="TASK-001",
+        workflow="WF-001",
+        state="completed",
+    )
+    assert load_task_markdown(path) == "# TASK-001\n\n## Objective\n\n\n"
 
 
 def test_task_markdown_is_a_freeform_sibling_of_runtime_yaml(tmp_path) -> None:
