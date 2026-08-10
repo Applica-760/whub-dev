@@ -270,67 +270,6 @@ def test_hook_events_identify_an_active_operator_by_immutable_id(
     assert all(item["operator_id"] == "operator-3" for item in acknowledged.json())
 
 
-def test_agent_codex_session_is_owned_by_the_local_web_backend(
-    client: TestClient, tmp_path: Path
-) -> None:
-    assert client.post("/api/agent-codex/whub-dev/TASK-104/session").status_code == 403
-
-    dist_dir = tmp_path / "local-dist"
-    dist_dir.mkdir()
-    (dist_dir / "index.html").write_text("<main>whub</main>")
-    local_client = TestClient(create_app(dist_dir), client=("127.0.0.1", 50000))
-    context = Mock(workspace_root=tmp_path)
-    registered = SimpleNamespace(destination=Path("/workspace/worktree"))
-    with (
-        patch(
-            "whub.webapp.routers.agent_codex.current_context",
-            return_value=context,
-        ),
-        patch(
-            "whub.webapp.routers.agent_codex.load_manifest",
-            return_value=manifest(),
-        ),
-        patch(
-            "whub.webapp.routers.agent_codex.resolve_project_worktree",
-            return_value=registered,
-        ),
-        patch("whub.webapp.routers.agent_codex.app_servers.open") as open_server,
-        patch("whub.webapp.routers.agent_codex.app_servers.close") as close_server,
-    ):
-        assert (
-            local_client.post("/api/agent-codex/whub-dev/TASK-104/session").status_code
-            == 204
-        )
-        assert (
-            local_client.delete(
-                "/api/agent-codex/whub-dev/TASK-104/session"
-            ).status_code
-            == 204
-        )
-
-    open_server.assert_called_once_with(
-        "whub-dev", "TASK-104", Path("/workspace/worktree")
-    )
-    close_server.assert_called_once_with("whub-dev", "TASK-104")
-
-
-def test_agent_codex_state_returns_app_server_errors(client: TestClient) -> None:
-    session = Mock()
-    session.snapshot.return_value = {
-        "thread_id": None,
-        "active_turn_id": None,
-        "messages": [],
-        "approvals": [],
-        "error": "Codex App Server returned invalid JSON",
-    }
-
-    with patch("whub.webapp.routers.agent_codex.app_servers.get", return_value=session):
-        response = client.get("/api/agent-codex/whub-dev/TASK-104")
-
-    assert response.status_code == 200
-    assert response.json()["error"] == "Codex App Server returned invalid JSON"
-
-
 def test_todo_mutations_use_services(client: TestClient) -> None:
     # ケース2
     item = _todo(1)

@@ -7,7 +7,6 @@ import { WidgetFrame } from "../../components/WidgetFrame";
 import type { WorktreeItem } from "../worktrees/api";
 import { useWorktrees } from "../worktrees/useWorktrees";
 import { DiffPane } from "./DiffPane";
-import { CodexPanel } from "./CodexPanel";
 import { TerminalWidget } from "./TerminalWidget";
 import { useApprovalAttention } from "./useApprovalAttention";
 import type { TerminalCollapseState } from "./useTerminalCollapse";
@@ -23,7 +22,6 @@ type TerminalWorktree = WorktreeItem & {
 };
 type OperatorTerminal = { operator_id: string };
 type OperatorTerminals = { terminals: OperatorTerminal[] };
-type PanelMode = "terminal" | "agent";
 
 function terminalWorktrees(worktrees: WorktreeItem[]): TerminalWorktree[] {
   return worktrees.filter(
@@ -56,7 +54,6 @@ export function TerminalPage({
   const [operatorError, setOperatorError] = useState<string | null>(null);
   const [operatorsLoaded, setOperatorsLoaded] = useState(false);
   const [operatorPending, setOperatorPending] = useState(false);
-  const [panelMode, setPanelMode] = useState<PanelMode>("terminal");
   const [selectedOperationTask, setSelectedOperationTask] =
     useState<SelectedTask | null>(null);
   const selectedWorktree = terminals.find(
@@ -109,7 +106,6 @@ export function TerminalPage({
   const openTerminal = useCallback(
     (value: string) => {
       setSelectedTerminal(value);
-      setPanelMode("terminal");
       acknowledgeTerminal(value);
     },
     [acknowledgeTerminal],
@@ -156,10 +152,6 @@ export function TerminalPage({
           : null;
     });
   }, [loading, operators, operatorsLoaded, terminals]);
-
-  useEffect(() => {
-    if (!selectedWorktree) setPanelMode("terminal");
-  }, [selectedWorktree]);
 
   useEffect(() => {
     const acknowledgeSelected = () => {
@@ -332,44 +324,8 @@ export function TerminalPage({
             />
           </div>
         </aside>
-        <WidgetFrame
-          action={
-            <Group gap={4}>
-              <Button
-                aria-pressed={panelMode === "terminal"}
-                onClick={() => {
-                  setPanelMode("terminal");
-                  if (selectedWorktree)
-                    acknowledgeTerminal(worktreeValue(selectedWorktree));
-                }}
-                size="compact-xs"
-                variant={panelMode === "terminal" ? "light" : "subtle"}
-              >
-                Terminal
-              </Button>
-              <Button
-                aria-pressed={panelMode === "agent"}
-                disabled={!selectedWorktree}
-                onClick={() => setPanelMode("agent")}
-                size="compact-xs"
-                variant={panelMode === "agent" ? "light" : "subtle"}
-              >
-                Agent
-              </Button>
-            </Group>
-          }
-          title={
-            <Text fw={600}>
-              {panelMode === "terminal" ? "Terminal" : "Agent"}
-            </Text>
-          }
-        >
-          {panelMode === "agent" && selectedWorktree ? (
-            <CodexPanel
-              project={selectedWorktree.parent_project}
-              taskId={selectedWorktree.task_id}
-            />
-          ) : selectedOperator ? (
+        <WidgetFrame title={<Text fw={600}>Terminal</Text>}>
+          {selectedOperator ? (
             <TerminalWidget
               endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
               key={selectedTerminal}

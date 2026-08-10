@@ -14,8 +14,6 @@ from whub.commands import project_names
 from whub.services.agent.agent import close_agent, open_agent
 from whub.services.errors import ServiceError
 from whub.webapp.agent_attention_control import submit as submit_attention_hook
-from whub.webapp.agent_codex_control import start as start_app_server
-from whub.webapp.agent_codex_control import stop as stop_app_server
 
 
 @click.group()
@@ -41,7 +39,6 @@ def open(
             task,
             auth_names,
         )
-        start_app_server(context, project, task)
     except (OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
     os.execvp(session.attach_command[0], list(session.attach_command))
@@ -54,17 +51,10 @@ def open(
 def close(ctx: click.Context, project: str, task: str) -> None:
     """Stop PROJECT/TASK's Agent shell and remove owned configuration."""
     context = current_context()
-    control_error: ServiceError | None = None
     try:
-        try:
-            stop_app_server(context, project, task)
-        except ServiceError as error:
-            control_error = error
         close_agent(get_manifest(ctx), context.workspace_root, project, task)
     except (OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
-    if control_error is not None:
-        raise click.ClickException(str(control_error))
     click.echo(f"closed {project}/{task}")
 
 

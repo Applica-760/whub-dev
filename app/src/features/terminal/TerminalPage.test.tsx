@@ -24,7 +24,6 @@ let approvalAttention: ApprovalAttention[] = [
     acknowledged: false,
   },
 ];
-let agentError: string | null = null;
 let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
 let deferWorktrees = false;
@@ -94,7 +93,6 @@ vi.mock("../tasks/TaskDependencyGraphWidget", () => ({
 }));
 
 beforeEach(() => {
-  agentError = null;
   operationStarts = 0;
   operatorTerminals = [];
   deferWorktrees = false;
@@ -173,19 +171,6 @@ beforeEach(() => {
             }));
             return approvalAttention;
           },
-        });
-      if (url.includes("/api/agent-codex/"))
-        return Promise.resolve({
-          ok: true,
-          json: async () =>
-            init?.method === "POST"
-              ? undefined
-              : {
-                  active_turn_id: null,
-                  messages: [],
-                  approvals: [],
-                  error: agentError,
-                },
         });
       if (url.startsWith("/api/tasks/"))
         return Promise.resolve({
@@ -678,24 +663,6 @@ describe("TerminalPage", () => {
     );
   });
 
-  it("TerminalとAgentを右ペインで切り替える", async () => {
-    renderPage();
-
-    const terminal = await screen.findByRole("button", { name: "Terminal" });
-    const agent = screen.getByRole("button", { name: "Agent" });
-    expect(terminal.getAttribute("aria-pressed")).toBe("true");
-    expect(agent.getAttribute("aria-pressed")).toBe("false");
-    expect(screen.queryByPlaceholderText("Codexへ依頼…")).toBeNull();
-    await waitFor(() => expect(agent.getAttribute("disabled")).toBeNull());
-
-    fireEvent.click(agent);
-
-    await waitFor(() =>
-      expect(agent.getAttribute("aria-pressed")).toBe("true"),
-    );
-    expect(await screen.findByPlaceholderText("Codexへ依頼…")).toBeTruthy();
-  });
-
   it("左右ペインの折りたたみ状態をTerminalのresize signalへ反映する", async () => {
     const view = renderPage();
     const terminal = await screen.findByText("whub-dev / TASK-099");
@@ -714,40 +681,4 @@ describe("TerminalPage", () => {
     );
   });
 
-  it("Codex promptをJSONとして送信する", async () => {
-    renderPage();
-
-    const agent = await screen.findByRole("button", { name: "Agent" });
-    await waitFor(() => expect(agent.getAttribute("disabled")).toBeNull());
-    fireEvent.click(agent);
-    fireEvent.change(await screen.findByPlaceholderText("Codexへ依頼…"), {
-      target: { value: "こんにちは" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "送信" }));
-
-    await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith(
-        "/api/agent-codex/whub-dev/TASK-099/turns",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: "こんにちは" }),
-        },
-      ),
-    );
-  });
-
-  it("Codex App Serverのエラーを表示する", async () => {
-    agentError = "Codex App Server returned invalid JSON";
-    renderPage();
-
-    await screen.findByRole("button", { name: "Terminal" });
-    const agent = screen.getByRole("button", { name: "Agent" });
-    await waitFor(() => expect(agent.getAttribute("disabled")).toBeNull());
-    fireEvent.click(agent);
-
-    expect(
-      await screen.findByText("Codex App Server returned invalid JSON"),
-    ).toBeTruthy();
-  });
 });

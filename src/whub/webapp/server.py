@@ -12,7 +12,6 @@ from whub.models import ManifestError
 from whub.services.errors import NotFoundError, ServiceError
 from whub.webapp.routers.backlog import router as backlog_router
 from whub.webapp.routers.agent_attention import router as agent_attention_router
-from whub.webapp.routers.agent_codex import router as agent_codex_router
 from whub.webapp.routers.daily import router as daily_router
 from whub.webapp.routers.inbox import router as inbox_router
 from whub.webapp.routers.operator_terminal import (
@@ -69,7 +68,6 @@ def create_api_app() -> FastAPI:
     app.include_router(projects_router)
     app.include_router(backlog_router)
     app.include_router(agent_attention_router)
-    app.include_router(agent_codex_router)
     app.include_router(daily_router)
     app.include_router(inbox_router)
     app.include_router(status_router)
