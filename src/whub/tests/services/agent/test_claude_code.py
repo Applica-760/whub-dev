@@ -21,7 +21,7 @@ def _auth() -> EffectiveAuth:
                 "commands": {
                     "prefixes": [
                         {
-                            "executable": "wflow",
+                            "executable": "whub",
                             "arguments": [
                                 "task",
                                 "--project",
@@ -106,7 +106,7 @@ def test_render_generates_settings_policy_hook_and_mcp_config() -> None:
         (
             {
                 "tool_name": "Bash",
-                "tool_input": {"command": "wflow task --project whub-dev check 078"},
+                "tool_input": {"command": "whub task --project whub-dev check 078"},
             },
             False,
         ),
@@ -122,7 +122,7 @@ def test_render_generates_settings_policy_hook_and_mcp_config() -> None:
             {
                 "tool_name": "Bash",
                 "tool_input": {
-                    "command": "wflow task --project whub-dev check 078 && rm -rf /"
+                    "command": "whub task --project whub-dev check 078 && rm -rf /"
                 },
             },
             True,
@@ -187,7 +187,7 @@ def test_policy_hook_auto_allows_explicitly_allowed_commands(tmp_path: Path) -> 
         input=json.dumps(
             {
                 "tool_name": "Bash",
-                "tool_input": {"command": "wflow task --project whub-dev check 078"},
+                "tool_input": {"command": "whub task --project whub-dev check 078"},
             }
         ),
         capture_output=True,

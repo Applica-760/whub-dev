@@ -68,7 +68,7 @@ def _wheel(context: WhubContext, release_id: str, *, valid_webapp: bool = True) 
         )
         archive.writestr(
             "whub-0.1.0.dist-info/entry_points.txt",
-            "[console_scripts]\nwhub = whub.cli:main\nwflow = whub.wflow.cli:main\n",
+            "[console_scripts]\nwhub = whub.cli:main\n",
         )
         if valid_webapp:
             archive.writestr("whub/webapp/dist/index.html", "<html></html>")
@@ -200,7 +200,7 @@ def test_verify_records_wheel_hash_after_staging_smoke_test(monkeypatch, tmp_pat
         if command[:3] == ["uv", "venv", "--clear"]:
             venv = Path(command[-1])
             (venv / "bin").mkdir(parents=True)
-            for executable in ("python", "whub", "wflow"):
+            for executable in ("python", "whub"):
                 (venv / "bin" / executable).touch()
         if command[-1] == "--version":
             return _result(command, stdout="whub, version 0.1.0 (commit " + "a" * 40 + ")\n")
@@ -219,7 +219,6 @@ def test_verify_records_wheel_hash_after_staging_smoke_test(monkeypatch, tmp_pat
         "wheel_sha256": expected_hash,
         "verified": True,
     }
-    assert [str(wheel.parents[1] / "venv" / "bin" / "wflow"), "--help"] in calls
 
 
 def test_verify_isolates_staging_venv_from_caller_interpreter_vars(
@@ -240,7 +239,7 @@ def test_verify_isolates_staging_venv_from_caller_interpreter_vars(
         if command[:3] == ["uv", "venv", "--clear"]:
             venv = Path(command[-1])
             (venv / "bin").mkdir(parents=True)
-            for executable in ("python", "whub", "wflow"):
+            for executable in ("python", "whub"):
                 (venv / "bin" / executable).touch()
         if command[-1] == "--version":
             return _result(command, stdout="whub, version 0.1.0 (commit " + "a" * 40 + ")\n")

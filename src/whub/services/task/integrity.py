@@ -107,6 +107,7 @@ def validate_task_set(
     return tuple(
         (task_id, diagnostic)
         for task_id, task in tasks.items()
+        if not task.legacy
         for diagnostic in (
             *validate_task(task, workflow),
             *validate_task_interruption(task, tasks),

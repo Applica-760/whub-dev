@@ -111,6 +111,7 @@ class TaskRuntime(WorkflowModel):
     interruption_source_task_id: (
         Annotated[str, Field(pattern=TASK_ID_PATTERN)] | None
     ) = None
+    legacy: bool = Field(default=False, exclude=True)
 
     @model_validator(mode="before")
     @classmethod
@@ -125,6 +126,10 @@ class TaskRuntime(WorkflowModel):
             "id": task.get("id"),
             "workflow": "WF-001",
             "state": task.get("state"),
+            "depends_on": task.get("depends_on", []),
+            "interruption_task_id": task.get("interruption_task_id"),
+            "interruption_source_task_id": task.get("interruption_source_task_id"),
+            "legacy": True,
         }
 
     @model_validator(mode="after")

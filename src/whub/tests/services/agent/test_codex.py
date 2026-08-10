@@ -24,7 +24,7 @@ def _auth() -> EffectiveAuth:
                 "commands": {
                     "prefixes": [
                         {
-                            "executable": "wflow",
+                            "executable": "whub",
                             "arguments": [
                                 "task",
                                 "--project",
@@ -63,7 +63,7 @@ def test_render_generates_project_rules_and_mcp_config() -> None:
     plan = render(_auth(), [_codegraph()], {"project": "whub-dev"})
 
     assert plan.files[PurePosixPath(".codex/rules/whub.rules")] == (
-        'prefix_rule(\n    pattern = ["wflow", "task", "--project", "whub-dev", "check"],\n'
+        'prefix_rule(\n    pattern = ["whub", "task", "--project", "whub-dev", "check"],\n'
         '    decision = "prompt",\n)\n'
     )
     config = tomllib.loads(plan.files[PurePosixPath(".codex/config.toml")])

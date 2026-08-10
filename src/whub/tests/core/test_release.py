@@ -10,7 +10,6 @@ import pytest
 
 from whub.core import release
 from whub.cli import main as whub_main
-from whub.wflow.cli import main as wflow_main
 
 
 def test_source_package_has_version_without_commit(monkeypatch, tmp_path: Path) -> None:
@@ -89,7 +88,7 @@ def test_rejects_invalid_source_commit(
 
 @pytest.mark.parametrize(
     ("command", "program_name"),
-    [(whub_main, "whub"), (wflow_main, "wflow")],
+    [(whub_main, "whub")],
 )
 def test_cli_version_reports_package_and_commit(
     monkeypatch,

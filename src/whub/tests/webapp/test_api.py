@@ -605,25 +605,6 @@ def test_all_tasks_endpoint_returns_per_project_results(client: TestClient) -> N
     mock_list_all.assert_called_once_with(m)
 
 
-def test_task_flow_graph_endpoint_returns_service_result(client: TestClient) -> None:
-    m = manifest()
-    with (
-        patch("whub.webapp.routers.tasks.load_manifest", return_value=m),
-        patch(
-            "whub.webapp.routers.tasks.render_project_task_flow",
-            return_value="flowchart TD\n  phase_001",
-        ) as mock_flow_graph,
-    ):
-        flow_response = client.get(
-            "/api/tasks/TASK-003/graph",
-            params={"project": "local"},
-        )
-
-    assert flow_response.status_code == 200
-    assert flow_response.json() == {"mermaid": "flowchart TD\n  phase_001"}
-    mock_flow_graph.assert_called_once_with(m, "local", "TASK-003")
-
-
 def test_get_resource_status_returns_service_results(client: TestClient) -> None:
     # ケース9
     m = manifest()

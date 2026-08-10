@@ -53,7 +53,7 @@ def _records(
 
 
 def _title(path: Path) -> str | None:
-    for line in path.with_suffix(".md").read_text(encoding="utf-8").splitlines():
+    for line in load_task_markdown(path).splitlines():
         if line.startswith("# ") and (title := line[2:].strip()):
             return title
     return None
@@ -126,19 +126,4 @@ def load_project_task(
         title=_title(path),
         markdown=load_task_markdown(path),
         task=task,
-    )
-
-
-def render_project_task_flow(
-    manifest: ResolvedManifest,
-    project: str,
-    task_id: str,
-) -> str:
-    """Render one Task's runtime relationships as Mermaid."""
-    record = load_project_task(manifest, project, task_id)
-    return "\n".join(
-        [
-            "flowchart TD",
-            f'  {record.task.id.replace("-", "_")}["{record.task.id}"]',
-        ]
     )

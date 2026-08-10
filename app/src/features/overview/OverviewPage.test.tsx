@@ -25,10 +25,6 @@ vi.mock("../../components/TaskDependencyGraph", () => ({
     )),
 }));
 
-vi.mock("../../components/MermaidDiagram", () => ({
-  MermaidDiagram: ({ chart }: { chart: string }) => <div>{chart}</div>,
-}));
-
 const TASKS_BY_PROJECT: Record<string, unknown[]> = {
   "whub-dev": [
     {
@@ -100,11 +96,10 @@ function body(url: string): unknown {
       })),
     };
   }
-  if (url.includes("/graph")) {
-    return { mermaid: "flowchart TD" };
-  }
   if (url.startsWith("/api/tasks/")) {
-    return taskDetail(decodeURIComponent(url.slice("/api/tasks/".length).split("?")[0]));
+    return taskDetail(
+      decodeURIComponent(url.slice("/api/tasks/".length).split("?")[0]),
+    );
   }
   if (url.startsWith("/api/tasks")) {
     const project = new URLSearchParams(url.split("?")[1] ?? "").get("project");
@@ -171,8 +166,7 @@ describe("OverviewPage", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /001: 整理/ }));
 
-    expect(await screen.findByText("Task ID: TASK-001")).toBeTruthy();
-    expect(screen.getByText("Project: vault")).toBeTruthy();
+    expect(await screen.findByText("TASK-001(in_progress)")).toBeTruthy();
     expect(screen.getByTestId("location").textContent).toBe("/");
   });
 
@@ -183,7 +177,7 @@ describe("OverviewPage", () => {
       await screen.findByRole("button", { name: "グラフのノード TASK-031" }),
     );
 
-    expect(await screen.findByText("Task ID: TASK-031")).toBeTruthy();
+    expect(await screen.findByText("TASK-031(in_progress)")).toBeTruthy();
     expect(screen.getByTestId("location").textContent).toBe("/");
   });
 
@@ -191,12 +185,14 @@ describe("OverviewPage", () => {
     renderOverview();
 
     // 選択後にタブを別Projectへ移し、依存グラフだけが切替先Projectへ追従することを見る
-    fireEvent.click(await screen.findByRole("button", { name: /031: 横断リスト/ }));
-    expect(await screen.findByText("Task ID: TASK-031")).toBeTruthy();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /031: 横断リスト/ }),
+    );
+    expect(await screen.findByText("TASK-031(in_progress)")).toBeTruthy();
 
     fireEvent.click(await screen.findByRole("tab", { name: "vault" }));
 
-    expect(await screen.findByText("Task ID: TASK-031")).toBeTruthy();
+    expect(await screen.findByText("TASK-031(in_progress)")).toBeTruthy();
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(
       "/api/tasks?project=vault",
       undefined,

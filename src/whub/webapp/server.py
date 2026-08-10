@@ -27,7 +27,6 @@ from whub.webapp.routers.todos import router as todos_router
 from whub.webapp.routers.vault import router as vault_router
 from whub.webapp.routers.worktrees import router as worktrees_router
 from whub.webapp.routers.worktree_diff import router as worktree_diff_router
-from whub.wflow.services import WflowError
 
 
 def create_api_app() -> FastAPI:
@@ -46,14 +45,6 @@ def create_api_app() -> FastAPI:
     def service_error_handler(
         request: Request,
         error: ServiceError,
-    ) -> JSONResponse:
-        del request
-        return JSONResponse(status_code=400, content={"detail": str(error)})
-
-    @app.exception_handler(WflowError)
-    def wflow_error_handler(
-        request: Request,
-        error: WflowError,
     ) -> JSONResponse:
         del request
         return JSONResponse(status_code=400, content={"detail": str(error)})

@@ -314,23 +314,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/tasks/{task_id}/graph": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Task Flow Graph */
-        get: operations["get_task_flow_graph_api_tasks__task_id__graph_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/operator-terminals": {
         parameters: {
             query?: never;
@@ -705,11 +688,6 @@ export interface components {
             tmux: string;
             /** Git */
             git: string;
-        };
-        /** TaskGraphResponse */
-        TaskGraphResponse: {
-            /** Mermaid */
-            mermaid: string;
         };
         /** TaskListResponse */
         TaskListResponse: {
@@ -1535,39 +1513,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskRecord"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_task_flow_graph_api_tasks__task_id__graph_get: {
-        parameters: {
-            query?: {
-                project?: string;
-            };
-            header?: never;
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TaskGraphResponse"];
                 };
             };
             /** @description Validation Error */

@@ -81,13 +81,19 @@ export function TaskDetailWidget({
           <Text c="dimmed">Taskを読み込んでいます…</Text>
         ) : task ? (
           <Stack gap="md">
-            {project && <Text>Project: {project}</Text>}
-            <Text>Task ID: {task.task?.id ?? "-"}</Text>
-            <Text>state: {task.task?.state ?? "-"}</Text>
-            <Text>
-              Depends on: {(task.task?.depends_on ?? []).join(", ") || "-"}
-            </Text>
-            <Text>Depended on by: {dependents.join(", ") || "-"}</Text>
+            <Text>{`${task.task?.id ?? "-"}(${task.task?.state ?? "-"})`}</Text>
+            {Boolean(task.task?.depends_on?.length || dependents.length) && (
+              <Text>
+                {[
+                  (task.task?.depends_on ?? []).join(", "),
+                  task.task?.id ?? "-",
+                  dependents.join(", "),
+                ]
+                  .filter(Boolean)
+                  .map((ids) => `(${ids})`)
+                  .join(" -> ")}
+              </Text>
+            )}
             <MarkdownView content={task.markdown ?? ""} />
           </Stack>
         ) : null}

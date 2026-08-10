@@ -60,10 +60,10 @@ describe("TaskDetailWidget", () => {
 
     renderWidget(<TaskDetailWidget project="local" taskId="TASK-012" />);
 
-    expect(await screen.findByText("Project: local")).toBeTruthy();
-    expect(screen.getByText("Task ID: TASK-012")).toBeTruthy();
-    expect(screen.getByText("Depends on: TASK-010")).toBeTruthy();
-    expect(screen.getByText("Depended on by: TASK-019")).toBeTruthy();
+    expect(await screen.findByText("TASK-012(in_progress)")).toBeTruthy();
+    expect(
+      screen.getByText("(TASK-010) -> (TASK-012) -> (TASK-019)"),
+    ).toBeTruthy();
     expect(screen.getByText("確認を速くする")).toBeTruthy();
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,

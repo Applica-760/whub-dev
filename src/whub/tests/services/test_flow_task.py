@@ -61,6 +61,9 @@ def test_runtime_yaml_normalizes_legacy_task_document(tmp_path) -> None:
         id="TASK-001",
         workflow="WF-001",
         state="completed",
+        depends_on=["TASK-002"],
+        interruption_source_task_id="TASK-003",
+        legacy=True,
     )
     assert load_task_markdown(path) == "# TASK-001\n\n## Objective\n\n\n"
 

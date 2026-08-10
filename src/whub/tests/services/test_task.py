@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 
 from whub.models import Manifest
 from whub.models.flow import TaskRuntime
@@ -60,6 +61,35 @@ def _write_task(
     write_task_markdown(path, f"# {title}\n")
 
 
+def _write_legacy_task(
+    root: Path,
+    filename: str,
+    task_id: str,
+    *,
+    state: str = "draft",
+    depends_on: list[str] | None = None,
+    title: str = "Legacy Task",
+) -> None:
+    path = root / filename
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": 1,
+                "task": {
+                    "id": task_id,
+                    "state": state,
+                    "title": title,
+                    "objective": "Legacy objective",
+                    "depends_on": depends_on or [],
+                },
+            },
+            allow_unicode=True,
+            sort_keys=False,
+        )
+    )
+
+
 def test_list_project_tasks_includes_active_and_archived_tasks(
     task_storage: tuple[ResolvedManifest, Path, Path],
 ) -> None:
@@ -97,6 +127,28 @@ def test_project_task_list_derives_dependencies_across_active_and_archive(
 
     assert tasks["TASK-122"].ready is True
     assert tasks["TASK-122"].blocked_by == []
+
+
+def test_project_task_reader_keeps_legacy_active_dependencies_and_markdown(
+    task_storage: tuple[ResolvedManifest, Path, Path],
+) -> None:
+    manifest, active_root, archive_root = task_storage
+    _write_task(archive_root, "completed.yaml", "TASK-120", state="completed")
+    _write_legacy_task(
+        active_root,
+        "legacy.yaml",
+        "TASK-121",
+        depends_on=["TASK-120"],
+        title="Legacy active",
+    )
+
+    tasks = {task.id: task for task in list_project_tasks(manifest, "local")}
+    record = load_project_task(manifest, "local", "121")
+
+    assert tasks["TASK-121"].depends_on == ["TASK-120"]
+    assert tasks["TASK-121"].ready is True
+    assert tasks["TASK-121"].title == "Legacy active"
+    assert record.markdown == "# Legacy active\n\n## Objective\n\nLegacy objective\n"
 
 
 def test_project_task_list_resolves_interruptions_across_active_and_archive(

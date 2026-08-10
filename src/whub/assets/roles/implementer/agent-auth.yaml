@@ -41,17 +41,6 @@ grants:
         arguments: [task, --project, "$current_worktree.project", complete, "$current_worktree.task"]
       - executable: whub  # whub task --project $current_worktree.project cancel $current_worktree.task *
         arguments: [task, --project, "$current_worktree.project", cancel, "$current_worktree.task"]
-      # Task lifecycleの変更ではなく、対応Taskの計画とStepだけを操作する。
-      - executable: wflow  # wflow task --project $current_worktree.project plan insert $current_worktree.task *
-        arguments: [task, --project, "$current_worktree.project", plan, insert, "$current_worktree.task"]
-      - executable: wflow  # wflow task --project $current_worktree.project plan delete $current_worktree.task *
-        arguments: [task, --project, "$current_worktree.project", plan, delete, "$current_worktree.task"]
-      - executable: wflow  # wflow task --project $current_worktree.project plan restore $current_worktree.task *
-        arguments: [task, --project, "$current_worktree.project", plan, restore, "$current_worktree.task"]
-      - executable: wflow  # wflow task --project $current_worktree.project plan update $current_worktree.task *
-        arguments: [task, --project, "$current_worktree.project", plan, update, "$current_worktree.task"]
-      - executable: wflow  # wflow task --project $current_worktree.project done $current_worktree.task *
-        arguments: [task, --project, "$current_worktree.project", done, "$current_worktree.task"]
     exact:
       - executable: git  # git fetch
         arguments: [fetch]

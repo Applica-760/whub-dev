@@ -34,7 +34,13 @@ def test_loads_agent_auth_assets() -> None:
     assert isinstance(base.variables["project"], RegisteredProjectVariable)
     assert isinstance(base.grants.commands.prefixes[0], CommandRule)
     assert isinstance(base.grants.commands.exact[0], CommandRule)
-    variable = base.grants.commands.exact[-1].arguments[2]
+    rule = next(
+        rule
+        for rule in base.grants.commands.prefixes
+        if rule.executable == "whub"
+        and [token.value for token in rule.arguments[:2]] == ["task", "--project"]
+    )
+    variable = rule.arguments[2]
     assert isinstance(variable, VariableReference)
     assert variable.name == "project"
     assert isinstance(
@@ -137,7 +143,7 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
         variables={"project": {"source": "registered_project"}},
         prefixes=[
             {
-                "executable": "wflow",
+                "executable": "whub",
                 "arguments": ["task", "--project", "$project", "check"],
             }
         ],
@@ -154,7 +160,7 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
     assert allows_command(effective, ["date"], {})
     assert allows_command(
         effective,
-        ["wflow", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "task", "--project", "whub-dev", "check", "078"],
         {"project": "whub-dev"},
     )
 
@@ -228,7 +234,7 @@ def test_allows_command_distinguishes_prefix_and_exact_rules() -> None:
         variables={"project": {"source": "registered_project"}},
         prefixes=[
             {
-                "executable": "wflow",
+                "executable": "whub",
                 "arguments": ["task", "--project", "$project", "check"],
             }
         ],
@@ -240,16 +246,16 @@ def test_allows_command_distinguishes_prefix_and_exact_rules() -> None:
     assert not allows_command(effective, ["git", "diff", "--stat"], {})
     assert allows_command(
         effective,
-        ["wflow", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "task", "--project", "whub-dev", "check", "078"],
         {"project": "whub-dev"},
     )
     assert not allows_command(
         effective,
-        ["wflow", "task", "--project", "whub-dev", "show", "078"],
+        ["whub", "task", "--project", "whub-dev", "show", "078"],
         {"project": "whub-dev"},
     )
     assert not allows_command(
         effective,
-        ["wflow", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "task", "--project", "whub-dev", "check", "078"],
         {},
     )
