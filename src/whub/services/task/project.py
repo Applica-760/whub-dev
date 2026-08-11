@@ -128,13 +128,15 @@ def list_all_active_project_tasks(
     manifest: ResolvedManifest,
 ) -> tuple[ProjectTasks, ...]:
     """Return active Hub Task summaries without reading Project histories."""
-    return tuple(
-        ProjectTasks(
-            project=project.name,
-            tasks=list_active_project_tasks(manifest, project.name),
-        )
-        for project in manifest.projects
-    )
+    results: list[ProjectTasks] = []
+    for project in manifest.projects:
+        try:
+            tasks = list_active_project_tasks(manifest, project.name)
+        except (ServiceError, OSError) as error:
+            results.append(ProjectTasks(project=project.name, error=str(error)))
+            continue
+        results.append(ProjectTasks(project=project.name, tasks=tasks))
+    return tuple(results)
 
 
 def load_project_task(
