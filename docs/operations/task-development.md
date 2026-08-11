@@ -35,9 +35,9 @@ Session間では、Task YAML/Markdown pairを作業文脈、Git commitを実装�
 
 ## 回収と統合
 
-- repo sessionがTask worktreeをreviewし、required checksを確認してから、`whub worktree close`の実行可否をユーザーへ確認する。承認後だけ実行する。
-- `whub worktree close <PROJECT> <TTT>`がclean確認、push、PR作成または取得、merge commit、Agentとworktreeのcleanupを順に実行する。
-- merge前の失敗ではAgent・worktree・branch・PRを残す。merge確認後にcleanupだけ失敗した場合も、mergeは戻さない。
+- repo sessionは`whub worktree pr <PROJECT> <TTT>`でPRを作成し、GitHub上でreviewとrequired checksを確認する。
+- ユーザーが承認してから`whub worktree close <PROJECT> <TTT>`を実行する。closeはAgent生成ファイルをcleanupしてからPRをmergeし、worktreeを削除する。
+- merge前の失敗ではworktree・branch・PRを残す。Agent cleanup後のmerge失敗ではsessionを再openして復旧できる。merge確認後にworktree削除だけ失敗した場合も、mergeは戻さない。
 - repo sessionが親repoを同期してからTaskを完了し、Task履歴をcommit・pushする。
 
 各sessionは担当範囲の終了条件を満たしてから次へ渡す。満たさない場合はTaskを未完了のまま状態を報告する。

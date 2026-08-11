@@ -57,9 +57,35 @@ def open_project_worktree(
 def close_project_worktree(
     manifest: Manifest, workspace_root: Path, project: str, task_id: str
 ) -> str:
-    """Merge one clean task branch, then close its Agent and worktree."""
+    """Clean Agent files, merge one task PR, then remove its worktree."""
     worktree = resolve_project_worktree(manifest, workspace_root, project, task_id)
     _require_clean_worktree(manifest, workspace_root, worktree)
+    close_agent(manifest, workspace_root, project, worktree.task_id)
+    url, head_oid = _push_and_create_pull_request(worktree)
+    _run_gh(worktree, "pr", "merge", url, "--merge", "--match-head-commit", head_oid)
+    state = _run_gh(worktree, "pr", "view", url, "--json", "state", "--jq", ".state")
+    if state.stdout.strip() != "MERGED":
+        raise ServiceError(f"pull request was not merged: {url}")
+    try:
+        _run_git(worktree, "worktree", "remove", str(worktree.destination))
+    except (OSError, ServiceError) as error:
+        raise ServiceError(
+            f"pull request merged but cleanup failed: {error}"
+        ) from error
+    return url
+
+
+def create_project_pull_request(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> str:
+    """Push one clean task branch and create or return its pull request."""
+    worktree = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    _require_clean_worktree(manifest, workspace_root, worktree)
+    url, _ = _push_and_create_pull_request(worktree)
+    return url
+
+
+def _push_and_create_pull_request(worktree: ResolvedProjectWorktree) -> tuple[str, str]:
     _run_git(worktree, "push", "--set-upstream", "origin", worktree.branch)
     head_oid = _run_git(worktree, "rev-parse", "HEAD").stdout.strip()
     if not head_oid:
@@ -67,18 +93,7 @@ def close_project_worktree(
     url, pr_head_oid = _find_or_create_pull_request(worktree)
     if pr_head_oid != head_oid:
         raise ServiceError(f"pull request head does not match local HEAD: {url}")
-    _run_gh(worktree, "pr", "merge", url, "--merge", "--match-head-commit", head_oid)
-    state = _run_gh(worktree, "pr", "view", url, "--json", "state", "--jq", ".state")
-    if state.stdout.strip() != "MERGED":
-        raise ServiceError(f"pull request was not merged: {url}")
-    try:
-        close_agent(manifest, workspace_root, project, worktree.task_id)
-        _run_git(worktree, "worktree", "remove", str(worktree.destination))
-    except (OSError, ServiceError) as error:
-        raise ServiceError(
-            f"pull request merged but cleanup failed: {error}"
-        ) from error
-    return url
+    return url, head_oid
 
 
 def _destination_exists(worktree: ResolvedProjectWorktree) -> bool:

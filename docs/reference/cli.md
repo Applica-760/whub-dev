@@ -47,7 +47,8 @@ actor指定は公開しない。Taskを跨ぐ運用は
 | コマンド | 直接の挙動 |
 |---|---|
 | `whub worktree open <PROJECT> <TTT> --auth <AUTH> [--auth <AUTH>]` | `tasks/<TTT>`と規約pathでworktreeを作成し、Agent設定を生成してtmux sessionへ接続。remote Resourceはhost内で起動しSSHでattachする |
-| `whub worktree close <PROJECT> <TTT>` | cleanなTask branchをpushしPRを作成または取得してmerge commitでmergeする。成功確認後だけAgent設定・tmux・worktreeをcleanupする |
+| `whub worktree pr <PROJECT> <TTT>` | Agent生成ファイル以外がcleanなTask branchをpushし、PRを作成または取得する。merge・Agent cleanup・worktree削除は行わない |
+| `whub worktree close <PROJECT> <TTT>` | Agent生成ファイルをcleanupしてからPRをmergeし、成功確認後にworktreeを削除する |
 | `whub agent attention-hook` | stdinのCodex Hook eventをlocalhost Web appへ転送する。入力・通信・backendの失敗時も成功終了する |
 
 詳細は[Agent harness operation](../operations/agent.md)を参照する。

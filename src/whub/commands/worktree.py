@@ -13,6 +13,7 @@ from whub.models.flow import TASK_ID_PATTERN
 from whub.services.errors import ServiceError
 from whub.services.worktree.operation import (
     close_project_worktree,
+    create_project_pull_request,
     open_project_worktree,
 )
 
@@ -60,7 +61,7 @@ def open(
 )
 @click.pass_context
 def close(ctx: click.Context, project: str, task_id: str) -> None:
-    """Merge PROJECT/TTT, then remove its Agent and worktree."""
+    """Clean Agent files, merge PROJECT/TTT, then remove its worktree."""
     context = current_context()
     try:
         url = close_project_worktree(
@@ -69,3 +70,21 @@ def close(ctx: click.Context, project: str, task_id: str) -> None:
     except (OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"merged {project}/{task_id}: {url}")
+
+
+@worktree.command()
+@click.argument("project", shell_complete=project_names)
+@click.argument(
+    "task_id", metavar="TTT", callback=lambda _ctx, _param, value: _task_id(value)
+)
+@click.pass_context
+def pr(ctx: click.Context, project: str, task_id: str) -> None:
+    """Push PROJECT/TTT and create or return its pull request."""
+    context = current_context()
+    try:
+        url = create_project_pull_request(
+            get_manifest(ctx), context.workspace_root, project, task_id
+        )
+    except (OSError, ServiceError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"pull request {project}/{task_id}: {url}")
