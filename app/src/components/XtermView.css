@@ -29,7 +29,7 @@
   --xterm-bright-white: #f0f6fc;
 
   box-sizing: border-box;
-  height: 54rem;
+  height: max(22rem, calc(100dvh - 10rem));
   min-width: 0;
   padding: 0.5rem;
   width: 100%;

@@ -1,10 +1,11 @@
 import { requestJson } from "../../api/client";
 import { errorMessage } from "../../api/errorMessage";
+import { listProjects } from "../projects/api";
 import type { paths } from "../../api/generated/schema";
 import { useCallback, useEffect, useState } from "react";
 
 type AgentSessionList =
-  paths["/api/agent-sessions"]["get"]["responses"][200]["content"]["application/json"];
+  paths["/api/agent-sessions/{project}"]["get"]["responses"][200]["content"]["application/json"];
 export type AgentSession = AgentSessionList["sessions"][number];
 
 export function useAgentSessions() {
@@ -15,10 +16,28 @@ export function useAgentSessions() {
     setLoading(true);
     setError(null);
     try {
-      setSessions((await requestJson<AgentSessionList>("/api/agent-sessions")).sessions);
+      const projects = await listProjects();
+      let pending = projects.length;
+      if (!pending) setLoading(false);
+      for (const project of projects)
+        void requestJson<AgentSessionList>(
+          `/api/agent-sessions/${encodeURIComponent(project)}`,
+        )
+          .then((listed) =>
+            setSessions((current) => [...current, ...listed.sessions]),
+          )
+          .catch((requestError) => {
+            const message = `${project}: ${errorMessage(requestError)}`;
+            setError((current) =>
+              current ? `${current}\n${message}` : message,
+            );
+          })
+          .finally(() => {
+            pending -= 1;
+            if (!pending) setLoading(false);
+          });
     } catch (requestError) {
       setError(errorMessage(requestError));
-    } finally {
       setLoading(false);
     }
   }, []);

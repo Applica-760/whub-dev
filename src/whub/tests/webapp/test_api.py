@@ -613,7 +613,7 @@ def test_get_agent_sessions_returns_running_sessions(
             return_value=worktree,
         ),
     ):
-        response = client.get("/api/agent-sessions")
+        response = client.get("/api/agent-sessions/local")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -625,7 +625,7 @@ def test_get_agent_sessions_returns_running_sessions(
             }
         ]
     }
-    mock_sessions.assert_called_once_with(m, tmp_path)
+    mock_sessions.assert_called_once_with(m, tmp_path, "local")
 
 
 def test_worktree_diff_endpoints_use_registered_worktree_services(

@@ -22,8 +22,8 @@ class AgentSessionListResponse(BaseModel):
     sessions: list[AgentSessionResponse]
 
 
-@router.get("", response_model=AgentSessionListResponse)
-def get_agent_sessions() -> AgentSessionListResponse:
+@router.get("/{project}", response_model=AgentSessionListResponse)
+def get_agent_sessions(project: str) -> AgentSessionListResponse:
     manifest = load_manifest()
     workspace_root = current_context().workspace_root
     return AgentSessionListResponse(
@@ -35,6 +35,6 @@ def get_agent_sessions() -> AgentSessionListResponse:
                     manifest, workspace_root, item.project, item.task_id
                 ).workspace_path,
             )
-            for item in list_agent_sessions(manifest, workspace_root)
+            for item in list_agent_sessions(manifest, workspace_root, project)
         ]
     )

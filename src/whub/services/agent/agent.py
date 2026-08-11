@@ -32,7 +32,7 @@ from whub.services.agent.state import (
 from whub.services.agent import remote_state
 from whub.services.errors import ServiceError
 from whub.services.worktree.resolve import resolve_project_worktree
-from whub.services.task.project import list_all_project_tasks
+from whub.services.task.project import list_project_tasks
 
 
 @dataclass(frozen=True)
@@ -44,20 +44,19 @@ class AgentSession:
 
 
 def list_agent_sessions(
-    manifest: Manifest, workspace_root: Path
+    manifest: Manifest, workspace_root: Path, project: str
 ) -> tuple[AgentSession, ...]:
-    """List running Agent sessions; stale tmux sessions are omitted."""
+    """List one Project's running Agent sessions; stale tmux sessions are omitted."""
     sessions: list[AgentSession] = []
-    for project_tasks in list_all_project_tasks(manifest):
-        for task in project_tasks.tasks:
-            try:
-                worktree = resolve_project_worktree(
-                    manifest, workspace_root, project_tasks.project, task.id
-                )
-                resolve_tmux_session(worktree.project, worktree.task_id, worktree.host)
-            except (OSError, ServiceError):
-                continue
-            sessions.append(AgentSession(worktree.project, worktree.task_id))
+    for task in list_project_tasks(manifest, project):
+        try:
+            worktree = resolve_project_worktree(
+                manifest, workspace_root, project, task.id
+            )
+            resolve_tmux_session(worktree.project, worktree.task_id, worktree.host)
+        except (OSError, ServiceError):
+            continue
+        sessions.append(AgentSession(worktree.project, worktree.task_id))
     return tuple(sessions)
 
 

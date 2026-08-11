@@ -72,8 +72,7 @@ export function TerminalPage({
           attentionItem.project === worktree.project &&
           attentionItem.task_id === worktree.task_id,
       );
-      if (item)
-        void acknowledgeWorktree(worktree.project, worktree.task_id);
+      if (item) void acknowledgeWorktree(worktree.project, worktree.task_id);
     },
     [acknowledgeWorktree, pendingAttention, terminals],
   );
@@ -400,6 +399,49 @@ export function TerminalPage({
                 withDivider={operators.length > 1 || terminals.length > 0}
               />
             ))}
+            {terminals.map((worktree, index) => (
+              <GroupedListRow
+                key={worktreeValue(worktree)}
+                onClick={() => openTerminal(worktreeValue(worktree))}
+                rightSection={
+                  pendingAttention.some(
+                    (item) =>
+                      item.target === "worktree" &&
+                      item.project === worktree.project &&
+                      item.task_id === worktree.task_id,
+                  ) ? (
+                    <Group gap={4} wrap="nowrap">
+                      {pendingAttention
+                        .filter(
+                          (item) =>
+                            item.target === "worktree" &&
+                            item.project === worktree.project &&
+                            item.task_id === worktree.task_id,
+                        )
+                        .map((item) => (
+                          <Badge
+                            color={
+                              item.event === "permission_request"
+                                ? "yellow"
+                                : "blue"
+                            }
+                            key={item.event}
+                            size="sm"
+                          >
+                            {item.event === "permission_request"
+                              ? "承認待ち"
+                              : "応答終了"}
+                          </Badge>
+                        ))}
+                    </Group>
+                  ) : undefined
+                }
+                selected={worktreeValue(worktree) === selectedTerminal}
+                subtitle={worktree.task_id}
+                title={worktree.project}
+                withDivider={index < terminals.length - 1}
+              />
+            ))}
             {loading ? (
               <Text c="dimmed" p="md">
                 Agent sessionを読み込んでいます…
@@ -408,51 +450,7 @@ export function TerminalPage({
               <Text c="dimmed" p="md">
                 Agent sessionがありません
               </Text>
-            ) : (
-              terminals.map((worktree, index) => (
-                <GroupedListRow
-                  key={worktreeValue(worktree)}
-                  onClick={() => openTerminal(worktreeValue(worktree))}
-                  rightSection={
-                    pendingAttention.some(
-                      (item) =>
-                        item.target === "worktree" &&
-                        item.project === worktree.project &&
-                        item.task_id === worktree.task_id,
-                    ) ? (
-                      <Group gap={4} wrap="nowrap">
-                        {pendingAttention
-                          .filter(
-                            (item) =>
-                              item.target === "worktree" &&
-                              item.project === worktree.project &&
-                              item.task_id === worktree.task_id,
-                          )
-                          .map((item) => (
-                            <Badge
-                              color={
-                                item.event === "permission_request"
-                                  ? "yellow"
-                                  : "blue"
-                              }
-                              key={item.event}
-                              size="sm"
-                            >
-                              {item.event === "permission_request"
-                                ? "承認待ち"
-                                : "応答終了"}
-                            </Badge>
-                          ))}
-                      </Group>
-                    ) : undefined
-                  }
-                  selected={worktreeValue(worktree) === selectedTerminal}
-                  subtitle={worktree.task_id}
-                  title={worktree.project}
-                  withDivider={index < terminals.length - 1}
-                />
-              ))
-            )}
+            ) : null}
             {(error || operatorError) && (
               <Alert color="red" m="md">
                 {error ?? operatorError}

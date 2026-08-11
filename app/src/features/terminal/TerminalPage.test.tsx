@@ -27,6 +27,7 @@ let approvalAttention: ApprovalAttention[] = [
 let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
 let deferSessions = false;
+let deferredSessionProject: string | null = null;
 let changedFiles: {
   path: string;
   status: string;
@@ -96,6 +97,7 @@ beforeEach(() => {
   operationStarts = 0;
   operatorTerminals = [];
   deferSessions = false;
+  deferredSessionProject = null;
   changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
   worktreeFile = {
     path: "src/main.py",
@@ -208,23 +210,40 @@ beforeEach(() => {
           ok: true,
           json: async () => worktreeFile,
         });
-      if (deferSessions) return new Promise(() => {});
+      if (url === "/api/projects")
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ projects: ["whub-dev", "vault"] }),
+        });
+      if (url.startsWith("/api/agent-sessions/")) {
+        const project = url.split("/").at(-1);
+        if (deferSessions || project === deferredSessionProject)
+          return new Promise(() => {});
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            sessions:
+              project === "whub-dev"
+                ? [
+                    {
+                      project: "whub-dev",
+                      task_id: "TASK-099",
+                      workspace_path: "projects/worktrees/whub-dev-099",
+                    },
+                  ]
+                : [
+                    {
+                      project: "vault",
+                      task_id: "TASK-101",
+                      workspace_path: "projects/worktrees/vault-101",
+                    },
+                  ],
+          }),
+        });
+      }
       return Promise.resolve({
         ok: true,
-        json: async () => ({
-          sessions: [
-            {
-              project: "whub-dev",
-              task_id: "TASK-099",
-              workspace_path: "projects/worktrees/whub-dev-099",
-            },
-            {
-              project: "vault",
-              task_id: "TASK-101",
-              workspace_path: "projects/worktrees/vault-101",
-            },
-          ],
-        }),
+        json: async () => ({}),
       });
     }),
   );
@@ -256,7 +275,7 @@ describe("TerminalPage", () => {
       expect(firstTerminal.getAttribute("aria-pressed")).toBe("true"),
     );
     expect(screen.getByText("whub-dev / TASK-099")).toBeTruthy();
-    expect(await screen.findByText("Task ID: TASK-099")).toBeTruthy();
+    expect(await screen.findByText("TASK-099(in_progress)")).toBeTruthy();
     expect(screen.getByText("Task graph: whub-dev")).toBeTruthy();
     expect(await screen.findByText("src")).toBeTruthy();
     expect(await screen.findByText("new")).toBeTruthy();
@@ -276,9 +295,9 @@ describe("TerminalPage", () => {
     expect(secondTerminal.getAttribute("aria-pressed")).toBe("true");
     expect(screen.getAllByText("vault / TASK-101")).not.toHaveLength(0);
     expect(screen.getByText("Task graph: vault")).toBeTruthy();
-    expect(await screen.findByText("Task ID: TASK-101")).toBeTruthy();
+    expect(await screen.findByText("TASK-101(in_progress)")).toBeTruthy();
     fireEvent.click(screen.getByText("Task graph: vault"));
-    expect(screen.getByText("Task ID: TASK-101")).toBeTruthy();
+    expect(screen.getByText("TASK-101(in_progress)")).toBeTruthy();
     expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
     expect(terminalUnmounts).toEqual(["whub-dev / TASK-099"]);
     expect(fetch).toHaveBeenCalledWith(
@@ -458,7 +477,7 @@ describe("TerminalPage", () => {
 
     fireEvent.click(graph);
 
-    expect(await screen.findByText("Task ID: TASK-126")).toBeTruthy();
+    expect(await screen.findByText("TASK-126(in_progress)")).toBeTruthy();
     expect(fetch).toHaveBeenCalledWith(
       "/api/tasks/TASK-126?project=whub-dev",
       undefined,
@@ -478,6 +497,17 @@ describe("TerminalPage", () => {
         .getByRole("button", { name: /Operation 1/ })
         .getAttribute("aria-pressed"),
     ).toBe("true");
+  });
+
+  it("遅いProjectを待たずに取得済みAgent sessionを表示する", async () => {
+    deferredSessionProject = "vault";
+    renderPage();
+
+    expect(
+      await screen.findByRole("button", { name: /whub-dev.*TASK-099/ }),
+    ).toBeTruthy();
+    expect(screen.getByText("Agent sessionを読み込んでいます…")).toBeTruthy();
+    expect(screen.queryByText("vault / TASK-101")).toBeNull();
   });
 
   it("承認待ちのTerminalをExplorerバッジと選択行で示す", async () => {
@@ -676,5 +706,4 @@ describe("TerminalPage", () => {
       ":true:false",
     );
   });
-
 });

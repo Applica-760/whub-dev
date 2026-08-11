@@ -143,7 +143,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/agent-sessions": {
+    "/api/agent-sessions/{project}": {
         parameters: {
             query?: never;
             header?: never;
@@ -151,7 +151,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Agent Sessions */
-        get: operations["get_agent_sessions_api_agent_sessions_get"];
+        get: operations["get_agent_sessions_api_agent_sessions__project__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1068,11 +1068,13 @@ export interface operations {
             };
         };
     };
-    get_agent_sessions_api_agent_sessions_get: {
+    get_agent_sessions_api_agent_sessions__project__get: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                project: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -1084,6 +1086,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentSessionListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
