@@ -39,6 +39,7 @@ lsof -nP -iTCP:8710 -sTCP:LISTEN
 ## `whub release deploy --source <path>`
 
 - build、verify、applyを順に実行し、buildで決定したrelease-idを後続処理へ引き継ぐ。
+- verify済みの同一release-idがstagingに残っている場合は、build/verifyを繰り返さずapplyから再開する。
 - 各処理の停止・復旧条件は、それぞれの単独コマンドと同じである。
 
 ## `whub release build --source <path>`
@@ -66,6 +67,6 @@ lsof -nP -iTCP:8710 -sTCP:LISTEN
 - staging unitを`~/.whub/releases/<release-id>`へatomicに配置し、既存の同一release-idは上書きしない。
 - venvは絶対pathを含むため、配置後のrelease pathでwheelから再作成する。
 - `~/.whub/releases/current`を新releaseへatomicに切り替える。
-- 確認を求めず最後まで実行し、新releaseの`whub app`を必ず起動する。
+- 確認を求めず最後まで実行し、新releaseの`venv/bin/whub app`を明示して起動し、`/api/health`が応答するまで成功としない。
 - `~/.local/bin/whub`は`current/venv/bin/`を参照し続けるため、再起動後のappと次回起動から新releaseが使われる。
 - applyまたはapp再起動が失敗した場合は旧`current`へ戻し、旧releaseの`whub app`を再起動する。旧releaseはrollback用に削除しない。

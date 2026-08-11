@@ -6,10 +6,14 @@ import json
 import os
 from pathlib import Path
 import re
+import time
+from urllib.error import URLError
+from urllib.request import urlopen
 
 from whub.core.context import WhubContext, current_context
 from whub.services.errors import ServiceError
 from whub.services.release.shared import ReleaseCommandError, _operation_whub, _restart_operation_app, _run, _wheel_sha256
+from whub.webapp.runner import read_pid_record
 
 
 class ReleaseApplyError(ServiceError):
@@ -97,6 +101,23 @@ def _install_release_venv(release_path: Path) -> None:
     _run([str(venv / "bin" / "whub"), "--version"], cwd=release_path, isolated=True)
 
 
+def _wait_for_operation_app(context: WhubContext) -> None:
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        try:
+            process = read_pid_record(context.app_pid_path)
+            if process is not None:
+                with urlopen(
+                    f"http://127.0.0.1:{process.port}/api/health", timeout=0.2
+                ) as response:
+                    if json.loads(response.read()) == {"status": "ok"}:
+                        return
+        except (OSError, URLError, ValueError, json.JSONDecodeError):
+            pass
+        time.sleep(0.05)
+    raise ReleaseApplyError("new release app did not become healthy")
+
+
 def apply_release(
     release_id: str,
     *,
@@ -128,6 +149,7 @@ def apply_release(
             cwd=target,
             isolated=True,
         )
+        _wait_for_operation_app(context)
         return ReleaseApplication(release_id, target)
     except (OSError, ReleaseApplyError, ReleaseCommandError) as caught:
         error = (

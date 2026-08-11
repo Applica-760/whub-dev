@@ -38,6 +38,7 @@ class ReleaseBuild:
 
     release_id: str
     wheel_path: Path
+    verified: bool = False
 
 
 def _source_release(source: Path) -> ReleaseInfo:
@@ -101,7 +102,10 @@ def build_release(
     app_stopped = False
 
     if (staging / "release.json").exists():
-        raise ReleaseBuildError(f"release is already verified: {release.release_id}")
+        wheels = list(artifact_dir.glob("whub-*.whl"))
+        if len(wheels) != 1:
+            raise ReleaseBuildError(f"expected one wheel in {artifact_dir}")
+        return ReleaseBuild(release.release_id, wheels[0], verified=True)
 
     try:
         _stop_operation_app(cwd=source)
