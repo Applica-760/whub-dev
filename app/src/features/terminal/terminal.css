@@ -35,6 +35,10 @@
     height: 100%;
     margin-top: 0;
   }
+
+  .explorer-page .whub-box {
+    overflow: hidden;
+  }
 }
 
 .terminal-widget {
@@ -203,6 +207,34 @@
 }
 .diff-file {
   color: var(--mantine-color-dimmed);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--mantine-color-dimmed);
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-title {
+  color: var(--mantine-color-violet-5);
+}
+
+.hljs-string,
+.hljs-attr {
+  color: var(--mantine-color-green-6);
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-built_in {
+  color: var(--mantine-color-orange-5);
+}
+
+.hljs-function,
+.hljs-params,
+.hljs-type {
+  color: var(--mantine-color-blue-5);
 }
 
 @media (max-width: 48rem) {

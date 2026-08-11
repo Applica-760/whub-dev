@@ -345,6 +345,15 @@ describe("TerminalPage", () => {
     });
 
     expect(await screen.findByText("File changes")).toBeTruthy();
+
+    fireEvent.keyDown(document.body, {
+      code: "KeyE",
+      key: "E",
+      metaKey: true,
+      shiftKey: true,
+    });
+
+    expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
   });
 
   it("Git Explorerで変更ファイルへの経路を初期展開し、状態と右クリックコピーを反映する", async () => {

@@ -1,4 +1,5 @@
 import { Alert, Box, Group, Loader, ScrollArea, Text } from "@mantine/core";
+import { CodeHighlight } from "@mantine/code-highlight";
 import {
   IconChevronRight,
   IconFile,
@@ -11,6 +12,7 @@ import type { ReactNode } from "react";
 import { requestJson } from "../../../api/client";
 import { errorMessage } from "../../../api/errorMessage";
 import { WidgetFrame } from "../../../components/WidgetFrame";
+import { fileLanguage } from "../fileLanguage";
 
 type HubEntry = {
   name: string;
@@ -162,9 +164,11 @@ export function HubExplorerPage() {
             </Text>
           ) : (
             <ScrollArea h="100%">
-              <Box className="diff-content" component="pre">
-                {file.content}
-              </Box>
+              <CodeHighlight
+                code={file.content ?? ""}
+                language={fileLanguage(selectedPath)}
+                withCopyButton={false}
+              />
             </ScrollArea>
           )}
         </WidgetFrame>

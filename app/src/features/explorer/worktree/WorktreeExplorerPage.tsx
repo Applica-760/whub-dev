@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 
 import { errorMessage } from "../../../api/errorMessage";
 import { WidgetFrame } from "../../../components/WidgetFrame";
+import { highlightLine } from "../fileLanguage";
 import { fetchChangedFiles, fetchWorktreeDiff } from "./api";
 import type { ChangedFile, WorktreeFile } from "./api";
 
@@ -352,9 +353,12 @@ export function WorktreeExplorerPage({
                   <span className="diff-line-number">{line.oldLine ?? ""}</span>
                   <span className="diff-line-number">{line.newLine ?? ""}</span>
                   <span className="diff-line-prefix">{line.prefix}</span>
-                  <span className="diff-line-content">
-                    {line.content || " "}
-                  </span>
+                  <span
+                    className="diff-line-content"
+                    dangerouslySetInnerHTML={{
+                      __html: highlightLine(line.content || " ", selectedPath),
+                    }}
+                  />
                 </div>
               ))}
             </Box>

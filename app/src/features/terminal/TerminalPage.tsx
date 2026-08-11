@@ -263,7 +263,7 @@ export function TerminalPage({
       }
       if (event.code === "KeyE") {
         event.preventDefault();
-        navigate("/terminal/explorer");
+        navigate(explorer ? "/terminal" : "/terminal/explorer");
         return;
       }
       if (!event.target.closest(".xterm-view")) return;
