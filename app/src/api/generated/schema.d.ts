@@ -228,6 +228,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Active Tasks */
+        get: operations["get_active_tasks_api_tasks_active_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/all": {
         parameters: {
             query?: never;
@@ -237,6 +254,40 @@ export interface paths {
         };
         /** Get All Tasks */
         get: operations["get_all_tasks_api_tasks_all_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/active/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get All Active Tasks */
+        get: operations["get_all_active_tasks_api_tasks_active_all_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/active/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Active Task */
+        get: operations["get_active_task_api_tasks_active__task_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -323,6 +374,40 @@ export interface paths {
         };
         /** Get Vault Note */
         get: operations["get_vault_note_api_vault_note_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hub-explorer/directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Hub Directory */
+        get: operations["get_hub_directory_api_hub_explorer_directory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hub-explorer/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Hub File */
+        get: operations["get_hub_file_api_hub_explorer_file_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -527,6 +612,43 @@ export interface components {
             tool_name?: string | null;
             /** Operator Id */
             operator_id?: string | null;
+        };
+        /** HubDirectoryResponse */
+        HubDirectoryResponse: {
+            /** Entries */
+            entries: components["schemas"]["HubEntry"][];
+        };
+        /**
+         * HubEntry
+         * @description One visible entry in a Hub Explorer directory.
+         */
+        HubEntry: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "directory" | "file";
+            /** Expandable */
+            expandable: boolean;
+        };
+        /**
+         * HubFile
+         * @description Displayable text file state.
+         */
+        HubFile: {
+            /** Path */
+            path: string;
+            /** Content */
+            content: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "text" | "binary" | "unreadable";
         };
         /** InboxResponse */
         InboxResponse: {
@@ -1216,6 +1338,37 @@ export interface operations {
             };
         };
     };
+    get_active_tasks_api_tasks_active_get: {
+        parameters: {
+            query?: {
+                project?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_all_tasks_api_tasks_all_get: {
         parameters: {
             query?: never;
@@ -1232,6 +1385,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AllTasksResponse"];
+                };
+            };
+        };
+    };
+    get_all_active_tasks_api_tasks_active_all_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllTasksResponse"];
+                };
+            };
+        };
+    };
+    get_active_task_api_tasks_active__task_id__get: {
+        parameters: {
+            query?: {
+                project?: string;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1376,6 +1582,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VaultNoteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_hub_directory_api_hub_explorer_directory_get: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HubDirectoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_hub_file_api_hub_explorer_file_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HubFile"];
                 };
             };
             /** @description Validation Error */

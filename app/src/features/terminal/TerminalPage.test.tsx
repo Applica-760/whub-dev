@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { useEffect } from "react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalPage } from "./TerminalPage";
@@ -215,6 +216,11 @@ beforeEach(() => {
           ok: true,
           json: async () => worktreeFile,
         });
+      if (url.startsWith("/api/hub-explorer/directory"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ entries: [] }),
+        });
       if (url === "/api/projects")
         return Promise.resolve({
           ok: true,
@@ -259,16 +265,29 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderPage() {
+function renderPage(path = "/terminal") {
   return render(
     <MantineProvider env="test">
-      <TerminalPage />
+      <MemoryRouter initialEntries={[path]}>
+        <TerminalPage />
+      </MemoryRouter>
     </MantineProvider>,
   );
 }
 
+async function renderWorktreeExplorer() {
+  const view = renderPage();
+  fireEvent.keyDown(await screen.findByText("whub-dev / TASK-099"), {
+    code: "KeyE",
+    key: "E",
+    metaKey: true,
+    shiftKey: true,
+  });
+  return view;
+}
+
 describe("TerminalPage", () => {
-  it("Task詳細・端末・ExplorerとGit差分を表示する", async () => {
+  it("Task詳細・端末とTerminal一覧を表示する", async () => {
     const { container } = renderPage();
     const firstTerminal = await screen.findByRole("button", {
       name: /whub-dev.*TASK-099/,
@@ -282,17 +301,11 @@ describe("TerminalPage", () => {
     expect(screen.getByText("whub-dev / TASK-099")).toBeTruthy();
     expect(await screen.findByText("TASK-099(in_progress)")).toBeTruthy();
     expect(screen.getByText("Task graph: whub-dev")).toBeTruthy();
-    expect(await screen.findByText("src")).toBeTruthy();
-    expect(await screen.findByText("new")).toBeTruthy();
-    expect(
-      container.querySelector(".diff-addition .diff-line-prefix")?.textContent,
-    ).toBe("+");
-    expect(screen.getByText("unchanged")).toBeTruthy();
     expect(container.querySelectorAll(".terminal-layout")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-panel")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-graph")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-detail")).toHaveLength(1);
-    expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(1);
+    expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(0);
 
     fireEvent.click(secondTerminal);
 
@@ -305,10 +318,33 @@ describe("TerminalPage", () => {
     expect(screen.getByText("TASK-101(in_progress)")).toBeTruthy();
     expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
     expect(terminalUnmounts).toEqual(["whub-dev / TASK-099"]);
+  });
+
+  it("直接アクセスしたExplorerではHub rootを表示する", async () => {
+    renderPage("/terminal/explorer");
+
+    expect(
+      await screen.findByText("ファイルを選択してください。"),
+    ).toBeTruthy();
     expect(fetch).toHaveBeenCalledWith(
-      "/api/worktrees/vault/TASK-101/changes",
+      "/api/hub-explorer/directory",
       undefined,
     );
+    expect(screen.queryByText("whub-dev / TASK-099")).toBeNull();
+  });
+
+  it("⌘⇧EをTerminal内の任意の位置からExplorerへ遷移する", async () => {
+    renderPage();
+    await screen.findByText("whub-dev / TASK-099");
+
+    fireEvent.keyDown(document.body, {
+      code: "KeyE",
+      key: "E",
+      metaKey: true,
+      shiftKey: true,
+    });
+
+    expect(await screen.findByText("File changes")).toBeTruthy();
   });
 
   it("Git Explorerで変更ファイルへの経路を初期展開し、状態と右クリックコピーを反映する", async () => {
@@ -317,7 +353,7 @@ describe("TerminalPage", () => {
       { path: "draft.txt", status: "A", previous_path: null },
       { path: "unchanged/note.txt", status: "", previous_path: null },
     ];
-    const { container } = renderPage();
+    const { container } = await renderWorktreeExplorer();
 
     const source = await screen.findByText("src");
     expect(await screen.findByText("main.py")).toBeTruthy();
@@ -368,7 +404,7 @@ describe("TerminalPage", () => {
       { path: "a.txt", status: "", previous_path: null },
       { path: "src/a.py", status: "", previous_path: null },
     ];
-    const { container } = renderPage();
+    const { container } = await renderWorktreeExplorer();
 
     await screen.findByText("src");
     const rootLabels = Array.from(
@@ -398,7 +434,7 @@ describe("TerminalPage", () => {
         agent_generated: false,
       },
     ];
-    renderPage();
+    await renderWorktreeExplorer();
 
     const agents = await screen.findByText(".agents");
     expect(await screen.findByText("main.py")).toBeTruthy();
@@ -416,7 +452,7 @@ describe("TerminalPage", () => {
       diff: "",
       state: "binary",
     };
-    renderPage();
+    await renderWorktreeExplorer();
 
     expect(
       await screen.findByText("バイナリファイルは表示できません。"),
@@ -441,7 +477,7 @@ describe("TerminalPage", () => {
       diff: "",
       state,
     };
-    renderPage();
+    await renderWorktreeExplorer();
 
     expect(await screen.findByText(message)).toBeTruthy();
   });
@@ -555,10 +591,10 @@ describe("TerminalPage", () => {
     expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
   });
 
-  it("xterm上の⌘⇧OでOperationを起動する", async () => {
+  it("⌘⇧OでOperationを起動する", async () => {
     renderPage();
 
-    fireEvent.keyDown(await screen.findByText("whub-dev / TASK-099"), {
+    fireEvent.keyDown(document.body, {
       code: "KeyO",
       key: "O",
       metaKey: true,
@@ -670,19 +706,19 @@ describe("TerminalPage", () => {
     });
     renderPage();
     await screen.findByText("応答終了");
+    await screen.findByText("whub-dev / TASK-099");
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "visible",
     });
-    fireEvent(document, new Event("visibilitychange"));
-
-    await waitFor(() =>
+    await waitFor(() => {
+      fireEvent(document, new Event("visibilitychange"));
       expect(fetch).toHaveBeenCalledWith(
         "/api/agent-attention/whub-dev/TASK-099/acknowledge",
         { method: "POST" },
-      ),
-    );
+      );
+    });
   });
 
   it("明示的に選択したTerminalの承認待ちだけを既読化する", async () => {
@@ -721,7 +757,9 @@ describe("TerminalPage", () => {
 
     view.rerender(
       <MantineProvider env="test">
-        <TerminalPage collapsed={{ left: true, right: false }} />
+        <MemoryRouter initialEntries={["/terminal"]}>
+          <TerminalPage collapsed={{ left: true, right: false }} />
+        </MemoryRouter>
       </MantineProvider>,
     );
 

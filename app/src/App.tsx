@@ -43,7 +43,12 @@ const TERMINAL_PATH = "/terminal";
 
 const navigation: NavigationItem[] = [
   { label: "Overview", to: OVERVIEW_PATH },
-  { label: "Terminal", to: TERMINAL_PATH },
+  {
+    label: "Terminal",
+    to: TERMINAL_PATH,
+    isActive: (pathname) =>
+      pathname === TERMINAL_PATH || pathname.startsWith(`${TERMINAL_PATH}/`),
+  },
   { label: "Task", to: TASKS_PATH, isActive: isTasksRoute },
   { label: "Backlog", to: "/backlog" },
   { label: "Vault", to: "/vault" },
@@ -91,7 +96,7 @@ export function App() {
                 onToggle={overviewCollapse.toggle}
               />
             )}
-            {location.pathname === TERMINAL_PATH && (
+            {location.pathname.startsWith(TERMINAL_PATH) && (
               <OverviewCollapseToggles
                 collapsed={terminalCollapse.collapsed}
                 onToggle={terminalCollapse.toggle}
@@ -122,7 +127,7 @@ export function App() {
             <Route element={<TodosPage />} path="/todos" />
             <Route
               element={<TerminalPage collapsed={terminalCollapse.collapsed} />}
-              path={TERMINAL_PATH}
+              path={`${TERMINAL_PATH}/*`}
             />
             <Route element={<TasksPage />} path="/tasks" />
             <Route element={<TaskDetailPage />} path={TASK_DETAIL_PATH} />

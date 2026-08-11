@@ -35,6 +35,7 @@ from whub.models import ResourceStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminals
 from whub.services.task.project import ProjectTasks, TaskRecord, TaskSummary
 from whub.services.vault import VaultNode
+from whub.services.hub_explorer import HubEntry, HubFile
 from whub.services.worktree.diff import ChangedFile, WorktreeDiff
 from whub.tests.helpers import manifest
 from whub.webapp.routers import agent_attention
@@ -784,6 +785,39 @@ def test_vault_endpoints_use_services(client: TestClient) -> None:
     assert note_response.status_code == 200
     assert note_response.json() == {"path": "mind/idea.md", "content": "# idea\n"}
     mock_read.assert_called_once_with(m, "mind/idea.md")
+
+
+def test_hub_explorer_endpoints_use_services(
+    client: TestClient, tmp_path: Path
+) -> None:
+    entries = [
+        HubEntry(name="docs", path="docs", type="directory", expandable=True),
+    ]
+    file = HubFile(path="docs/guide.md", content="guide", state="text")
+    context = type("Context", (), {"workspace_root": tmp_path})()
+    with (
+        patch(
+            "whub.webapp.routers.hub_explorer.current_context",
+            return_value=context,
+        ),
+        patch(
+            "whub.webapp.routers.hub_explorer.list_hub_directory",
+            return_value=entries,
+        ) as mock_directory,
+        patch(
+            "whub.webapp.routers.hub_explorer.read_hub_file",
+            return_value=file,
+        ) as mock_file,
+    ):
+        directory_response = client.get("/api/hub-explorer/directory")
+        file_response = client.get(
+            "/api/hub-explorer/file", params={"path": "docs/guide.md"}
+        )
+
+    assert directory_response.json() == {"entries": [entries[0].model_dump()]}
+    assert file_response.json() == file.model_dump()
+    mock_directory.assert_called_once_with(tmp_path, "")
+    mock_file.assert_called_once_with(tmp_path, "docs/guide.md")
 
 
 def test_service_errors_are_mapped_to_http_responses(client: TestClient) -> None:

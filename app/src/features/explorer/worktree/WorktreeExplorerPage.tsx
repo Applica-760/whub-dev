@@ -8,12 +8,12 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
-import { errorMessage } from "../../api/errorMessage";
-import { WidgetFrame } from "../../components/WidgetFrame";
-import { fetchChangedFiles, fetchWorktreeDiff } from "./diffApi";
-import type { ChangedFile, WorktreeFile } from "./diffApi";
+import { errorMessage } from "../../../api/errorMessage";
+import { WidgetFrame } from "../../../components/WidgetFrame";
+import { fetchChangedFiles, fetchWorktreeDiff } from "./api";
+import type { ChangedFile, WorktreeFile } from "./api";
 
-type DiffPaneProps = {
+type WorktreeExplorerPageProps = {
   project: string | undefined;
   taskId: string | undefined;
   workspacePath: string | null | undefined;
@@ -144,7 +144,11 @@ function changeCount(content: string) {
   );
 }
 
-export function DiffPane({ project, taskId, workspacePath }: DiffPaneProps) {
+export function WorktreeExplorerPage({
+  project,
+  taskId,
+  workspacePath,
+}: WorktreeExplorerPageProps) {
   const [files, setFiles] = useState<ChangedFile[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [file, setFile] = useState<WorktreeFile | null>(null);

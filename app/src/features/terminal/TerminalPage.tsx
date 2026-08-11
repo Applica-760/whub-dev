@@ -1,19 +1,20 @@
 import { ActionIcon, Alert, Badge, Button, Group, Text } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 
 import { requestJson } from "../../api/client";
 import { GroupedListRow } from "../../components/GroupedList";
 import { WidgetFrame } from "../../components/WidgetFrame";
 import type { AgentSession } from "./agentSessions";
 import { useAgentSessions } from "./agentSessions";
-import { DiffPane } from "./DiffPane";
 import { TerminalWidget } from "./TerminalWidget";
 import { useApprovalAttention } from "./useApprovalAttention";
 import type { TerminalCollapseState } from "./useTerminalCollapse";
 import type { SelectedTask } from "../tasks/AllTasksWidget";
 import { TaskDependencyGraphWidget } from "../tasks/TaskDependencyGraphWidget";
 import { TaskDetailWidget } from "../tasks/TaskDetailWidget";
+import { TerminalExplorerPage } from "../explorer/TerminalExplorerPage";
 
 import "./terminal.css";
 
@@ -35,6 +36,8 @@ type TerminalPageProps = {
 export function TerminalPage({
   collapsed = { left: false, right: false },
 }: TerminalPageProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { error, loading, sessions } = useAgentSessions();
   const { acknowledgeOperator, acknowledgeWorktree, attention } =
     useApprovalAttention();
@@ -62,6 +65,7 @@ export function TerminalPage({
   const detailTaskId = selectedOperator
     ? selectedOperationTask?.taskId
     : selectedWorktree?.task_id;
+  const explorer = location.pathname === "/terminal/explorer";
 
   const acknowledgeTerminal = useCallback(
     (value: string) => {
@@ -125,6 +129,7 @@ export function TerminalPage({
 
   useEffect(() => {
     setSelectedTerminal((current) => {
+      if (explorer && current === null) return null;
       if (!operatorsLoaded) return current;
       if (
         operators.some(
@@ -140,7 +145,7 @@ export function TerminalPage({
           ? worktreeValue(terminals[0])
           : null;
     });
-  }, [loading, operators, operatorsLoaded, terminals]);
+  }, [explorer, loading, operators, operatorsLoaded, terminals]);
 
   useEffect(() => {
     const acknowledgeSelected = () => {
@@ -245,8 +250,7 @@ export function TerminalPage({
         !event.shiftKey ||
         event.altKey ||
         event.ctrlKey ||
-        !(event.target instanceof Element) ||
-        !event.target.closest(".xterm-view")
+        !(event.target instanceof Element)
       )
         return;
 
@@ -257,6 +261,12 @@ export function TerminalPage({
         }
         return;
       }
+      if (event.code === "KeyE") {
+        event.preventDefault();
+        navigate("/terminal/explorer");
+        return;
+      }
+      if (!event.target.closest(".xterm-view")) return;
       if (event.code === "KeyX") {
         if (selectedOperator && !operatorPending) {
           event.preventDefault();
@@ -290,7 +300,10 @@ export function TerminalPage({
     startOperator,
     stopOperator,
     terminalValues,
+    navigate,
   ]);
+
+  if (explorer) return <TerminalExplorerPage worktree={selectedWorktree} />;
 
   return (
     <main className="terminal-page">
@@ -470,11 +483,6 @@ export function TerminalPage({
           </WidgetFrame>
         </aside>
       </section>
-      <DiffPane
-        project={selectedWorktree?.project}
-        taskId={selectedWorktree?.task_id}
-        workspacePath={selectedWorktree?.workspace_path}
-      />
     </main>
   );
 }

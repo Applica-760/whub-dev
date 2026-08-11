@@ -14,6 +14,7 @@ from whub.webapp.routers.backlog import router as backlog_router
 from whub.webapp.routers.agent_attention import router as agent_attention_router
 from whub.webapp.routers.agent_sessions import router as agent_sessions_router
 from whub.webapp.routers.daily import router as daily_router
+from whub.webapp.routers.hub_explorer import router as hub_explorer_router
 from whub.webapp.routers.inbox import router as inbox_router
 from whub.webapp.routers.operator_terminal import (
     operator_terminal_socket,
@@ -79,6 +80,7 @@ def create_api_app() -> FastAPI:
         "/api/operator-terminals/{operator_id}", operator_terminal_socket
     )
     app.include_router(vault_router)
+    app.include_router(hub_explorer_router)
     app.include_router(worktree_diff_router)
 
     @app.get("/api/health")

@@ -1,5 +1,5 @@
-import { requestJson } from "../../api/client";
-import type { paths } from "../../api/generated/schema";
+import { requestJson } from "../../../api/client";
+import type { paths } from "../../../api/generated/schema";
 
 type ChangedFilesResponse =
   paths["/api/worktrees/{project}/{task_id}/changes"]["get"]["responses"][200]["content"]["application/json"];

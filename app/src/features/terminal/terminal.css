@@ -30,6 +30,11 @@
   .terminal-diff-layout {
     margin-top: 1rem;
   }
+
+  .terminal-diff-layout.explorer-page {
+    height: 100%;
+    margin-top: 0;
+  }
 }
 
 .terminal-widget {
@@ -205,6 +210,10 @@
   .terminal-diff-layout {
     height: auto;
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .terminal-diff-layout.explorer-page {
+    height: auto;
   }
 
   .terminal-task-panel {
