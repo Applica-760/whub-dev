@@ -64,12 +64,18 @@ function resolveOptions(
   };
   const fontFamily = cssValue(styles, "--xterm-font-family");
   const fontSize = cssNumber(styles, "--xterm-font-size");
+  const fontWeight = cssNumber(styles, "--xterm-font-weight");
+  const fontWeightBold = cssNumber(styles, "--xterm-font-weight-bold");
   const lineHeight = cssNumber(styles, "--xterm-line-height");
+  const letterSpacing = cssNumber(styles, "--xterm-letter-spacing");
   const minimumContrastRatio = cssNumber(styles, "--xterm-minimum-contrast");
 
   if (fontFamily) resolved.fontFamily = fontFamily;
   if (fontSize !== undefined) resolved.fontSize = fontSize;
+  if (fontWeight !== undefined) resolved.fontWeight = fontWeight;
+  if (fontWeightBold !== undefined) resolved.fontWeightBold = fontWeightBold;
   if (lineHeight !== undefined) resolved.lineHeight = lineHeight;
+  if (letterSpacing !== undefined) resolved.letterSpacing = letterSpacing;
   if (minimumContrastRatio !== undefined) {
     resolved.minimumContrastRatio = minimumContrastRatio;
   }

@@ -85,7 +85,10 @@ beforeEach(() => {
               "--xterm-font-family":
                 '"SFMono-Regular", "SF Mono", "Noto Sans Mono CJK JP", "Noto Sans Mono", Menlo, Monaco, Consolas, monospace',
               "--xterm-font-size": "15",
+              "--xterm-font-weight": "400",
+              "--xterm-font-weight-bold": "600",
               "--xterm-line-height": "1.25",
+              "--xterm-letter-spacing": "0",
               "--xterm-minimum-contrast": "4.5",
               "--xterm-background": "#0d1117",
               "--xterm-foreground": "#c9d1d9",
@@ -137,7 +140,10 @@ describe("XtermView", () => {
       fontFamily:
         '"SFMono-Regular", "SF Mono", "Noto Sans Mono CJK JP", "Noto Sans Mono", Menlo, Monaco, Consolas, monospace',
       fontSize: 15,
+      fontWeight: 400,
+      fontWeightBold: 600,
       lineHeight: 1.25,
+      letterSpacing: 0,
       minimumContrastRatio: 4.5,
       theme: {
         background: "#0d1117",
