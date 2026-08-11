@@ -1,0 +1,7 @@
+schema_version: 2
+id: TASK-135
+workflow: WF-001
+state: cancelled
+depends_on: []
+interruption_task_id: null
+interruption_source_task_id: null
