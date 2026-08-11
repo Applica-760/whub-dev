@@ -20,14 +20,12 @@ releaseは運用作業であり、Taskの起票・worktreeの作成・Task計画
 
 ```sh
 source=/path/to/whub
-PYTHONPATH="$source/src" uv run --project "$source" python -m whub app down
 PYTHONPATH="$source/src" uv run --project "$source" python -m whub release deploy --source "$source"
 ```
 
-`app down`は`app stopped`または`app not running`で成功することを確認してから
-`deploy`を実行する。managed appのプロセスグループへSIGTERM/SIGKILLを送れない実行環境では
-`PermissionError`になる。この場合は同じ環境で`deploy`を再試行せず、プロセスを管理できる
-実行環境で`app down`を成功させてからreleaseを再開する。失敗した`deploy`は`current`を変更しない。
+`deploy`はbuild開始時にmanaged appを停止する。managed appのプロセスグループへ
+SIGTERM/SIGKILLを送れない実行環境では`deploy`が失敗する。この場合はプロセスを管理できる
+実行環境からreleaseを再開する。失敗した`deploy`は`current`を変更しない。
 
 apply後は、作業中shellのPATHを使わず、次で新releaseとapp起動を確認する。
 
