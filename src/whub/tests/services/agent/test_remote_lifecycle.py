@@ -54,7 +54,7 @@ def test_remote_close_preserves_state_when_tmux_probe_fails(tmp_path: Path) -> N
     )
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_conventional_worktree",
             return_value=registered,
         ),
         patch(

@@ -20,8 +20,8 @@ from whub.services.agent.codex.trust import prepare as prepare_codex_trust
 from whub.services.agent.codex.trust import prepare_remote as prepare_remote_codex_trust
 from whub.services.agent.tmux_session import (
     close_tmux_session,
+    list_tmux_sessions,
     open_tmux_session,
-    resolve_tmux_session,
 )
 from whub.services.agent.state import (
     cleanup,
@@ -31,8 +31,10 @@ from whub.services.agent.state import (
 )
 from whub.services.agent import remote_state
 from whub.services.errors import ServiceError
-from whub.services.worktree.resolve import resolve_project_worktree
-from whub.services.task.project import list_project_tasks
+from whub.services.worktree.resolve import (
+    resolve_conventional_worktree,
+    resolve_worktree,
+)
 
 
 @dataclass(frozen=True)
@@ -41,22 +43,25 @@ class AgentSession:
 
     project: str
     task_id: str
+    workspace_path: str
 
 
 def list_agent_sessions(
     manifest: Manifest, workspace_root: Path, project: str
 ) -> tuple[AgentSession, ...]:
     """List one Project's running Agent sessions; stale tmux sessions are omitted."""
+    worktree = resolve_worktree(manifest, workspace_root, project, "TASK-0")
     sessions: list[AgentSession] = []
-    for task in list_project_tasks(manifest, project):
+    for task_id in list_tmux_sessions(project, worktree.host):
         try:
-            worktree = resolve_project_worktree(
-                manifest, workspace_root, project, task.id
+            worktree = resolve_conventional_worktree(
+                manifest, workspace_root, project, task_id
             )
-            resolve_tmux_session(worktree.project, worktree.task_id, worktree.host)
         except (OSError, ServiceError):
             continue
-        sessions.append(AgentSession(worktree.project, worktree.task_id))
+        sessions.append(
+            AgentSession(worktree.project, worktree.task_id, worktree.workspace_path)
+        )
     return tuple(sessions)
 
 
@@ -68,7 +73,9 @@ def open_agent(
     auth_names: tuple[str, ...],
 ) -> TmuxSession:
     """Prepare PROJECT/TASK and return its tmux session."""
-    registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    registered = resolve_conventional_worktree(
+        manifest, workspace_root, project, task_id
+    )
     resolved_auth = resolve_agent_auth(auth_names)
     variables = resolve_variables(
         resolved_auth.auth.variables,
@@ -128,7 +135,9 @@ def generated_paths(
     manifest: Manifest, workspace_root: Path, project: str, task_id: str
 ) -> set[PurePosixPath]:
     """Return Agent-owned paths for one registered local or remote worktree."""
-    registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    registered = resolve_conventional_worktree(
+        manifest, workspace_root, project, task_id
+    )
     if registered.is_remote:
         assert isinstance(registered.destination, str)
         return remote_state.owned_paths(
@@ -142,7 +151,9 @@ def unchanged_generated_paths(
     manifest: Manifest, workspace_root: Path, project: str, task_id: str
 ) -> set[PurePosixPath]:
     """Return Agent paths safe to ignore in a clean-worktree check."""
-    registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    registered = resolve_conventional_worktree(
+        manifest, workspace_root, project, task_id
+    )
     if registered.is_remote:
         assert registered.host is not None and isinstance(registered.destination, str)
         return remote_state.unchanged_owned_paths(
@@ -162,7 +173,9 @@ def close_agent(
     manifest: Manifest, workspace_root: Path, project: str, task_id: str
 ) -> None:
     """Stop PROJECT/TASK's session and clean its owned configuration."""
-    registered = resolve_project_worktree(manifest, workspace_root, project, task_id)
+    registered = resolve_conventional_worktree(
+        manifest, workspace_root, project, task_id
+    )
     if registered.host is None:
         assert isinstance(registered.destination, Path)
         close_tmux_session(project, registered.task_id)

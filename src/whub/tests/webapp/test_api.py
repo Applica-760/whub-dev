@@ -180,9 +180,7 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
     local_client = TestClient(client.app, client=("127.0.0.1", 50000))
     context = Mock(workspace_root=Path("/workspace"))
     tasks = [
-        SimpleNamespace(
-            project="whub-dev", tasks=(SimpleNamespace(id="TASK-104"),)
-        )
+        SimpleNamespace(project="whub-dev", tasks=(SimpleNamespace(id="TASK-104"),))
     ]
     worktree = SimpleNamespace(
         project="whub-dev",
@@ -596,8 +594,11 @@ def test_get_agent_sessions_returns_running_sessions(
     client: TestClient, tmp_path: Path
 ) -> None:
     m = manifest()
-    session = SimpleNamespace(project="local", task_id="TASK-075")
-    worktree = SimpleNamespace(workspace_path="projects/worktrees/local-075")
+    session = SimpleNamespace(
+        project="local",
+        task_id="TASK-075",
+        workspace_path="projects/worktrees/local-075",
+    )
     with (
         patch("whub.webapp.routers.agent_sessions.load_manifest", return_value=m),
         patch(
@@ -608,10 +609,6 @@ def test_get_agent_sessions_returns_running_sessions(
             "whub.webapp.routers.agent_sessions.list_agent_sessions",
             return_value=[session],
         ) as mock_sessions,
-        patch(
-            "whub.webapp.routers.agent_sessions.resolve_project_worktree",
-            return_value=worktree,
-        ),
     ):
         response = client.get("/api/agent-sessions/local")
 

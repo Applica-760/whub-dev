@@ -21,6 +21,7 @@ from whub.services.worktree.resolve import (
     ResolvedProjectWorktree,
     resolve_project_worktree,
     resolve_task_worktree,
+    resolve_worktree,
 )
 
 
@@ -32,9 +33,12 @@ def open_project_worktree(
     auth_names: tuple[str, ...],
 ) -> TmuxSession:
     """Create one conventional worktree, then prepare and open its Agent."""
-    worktree = resolve_task_worktree(manifest, workspace_root, project, task_id)
+    worktree = resolve_worktree(manifest, workspace_root, project, task_id)
     if _destination_exists(worktree):
-        return open_agent(manifest, workspace_root, project, worktree.task_id, auth_names)
+        return open_agent(
+            manifest, workspace_root, project, worktree.task_id, auth_names
+        )
+    worktree = resolve_task_worktree(manifest, workspace_root, project, task_id)
     created_branch = _add_worktree(worktree)
     try:
         return open_agent(
@@ -44,7 +48,9 @@ def open_project_worktree(
         try:
             _rollback_open(worktree, created_branch)
         except ServiceError as rollback_error:
-            raise ServiceError(f"Agent open failed: {error}; rollback failed: {rollback_error}") from error
+            raise ServiceError(
+                f"Agent open failed: {error}; rollback failed: {rollback_error}"
+            ) from error
         raise
 
 
@@ -69,7 +75,9 @@ def close_project_worktree(
         close_agent(manifest, workspace_root, project, worktree.task_id)
         _run_git(worktree, "worktree", "remove", str(worktree.destination))
     except (OSError, ServiceError) as error:
-        raise ServiceError(f"pull request merged but cleanup failed: {error}") from error
+        raise ServiceError(
+            f"pull request merged but cleanup failed: {error}"
+        ) from error
     return url
 
 
@@ -78,9 +86,12 @@ def _destination_exists(worktree: ResolvedProjectWorktree) -> bool:
         assert isinstance(worktree.destination, Path)
         return worktree.destination.exists()
     assert isinstance(worktree.destination, str)
-    return run_ssh_command(
-        worktree.host, f"test -e {shlex.quote(worktree.destination)}"
-    ).returncode == 0
+    return (
+        run_ssh_command(
+            worktree.host, f"test -e {shlex.quote(worktree.destination)}"
+        ).returncode
+        == 0
+    )
 
 
 def _add_worktree(worktree: ResolvedProjectWorktree) -> bool:
@@ -92,7 +103,13 @@ def _add_worktree(worktree: ResolvedProjectWorktree) -> bool:
         arguments = ("worktree", "add", str(worktree.destination), worktree.branch)
         created_branch = False
     elif branch.returncode == 1:
-        arguments = ("worktree", "add", "-b", worktree.branch, str(worktree.destination))
+        arguments = (
+            "worktree",
+            "add",
+            "-b",
+            worktree.branch,
+            str(worktree.destination),
+        )
         created_branch = True
     else:
         raise ServiceError("git branch lookup failed: " + process_detail(branch))
@@ -110,7 +127,9 @@ def _rollback_open(worktree: ResolvedProjectWorktree, created_branch: bool) -> N
         raise ServiceError("git worktree rollback failed: " + process_detail(result))
     if not created_branch:
         return
-    result = run_worktree_git(worktree.host, worktree.parent, "branch", "-D", worktree.branch)
+    result = run_worktree_git(
+        worktree.host, worktree.parent, "branch", "-D", worktree.branch
+    )
     if result.returncode != 0:
         raise ServiceError("git branch rollback failed: " + process_detail(result))
 
@@ -136,7 +155,9 @@ def _require_clean_worktree(
     }
     dirty = [path for path in _status_paths(status.stdout) if path not in ignored]
     if dirty:
-        raise ServiceError(f"worktree has uncommitted changes: {worktree.workspace_path}")
+        raise ServiceError(
+            f"worktree has uncommitted changes: {worktree.workspace_path}"
+        )
 
 
 def _status_paths(output: str) -> list[str]:
@@ -159,7 +180,9 @@ def _status_paths(output: str) -> list[str]:
     return paths
 
 
-def _run_git(worktree: ResolvedProjectWorktree, *arguments: str) -> subprocess.CompletedProcess[str]:
+def _run_git(
+    worktree: ResolvedProjectWorktree, *arguments: str
+) -> subprocess.CompletedProcess[str]:
     result = run_worktree_git(worktree.host, worktree.destination, *arguments)
     if result.returncode != 0:
         raise ServiceError("git " + arguments[0] + " failed: " + process_detail(result))
@@ -173,7 +196,10 @@ def _run_gh(
         if worktree.host is None:
             assert isinstance(worktree.destination, Path)
             result = subprocess.run(
-                ["gh", *arguments], cwd=worktree.destination, capture_output=True, text=True
+                ["gh", *arguments],
+                cwd=worktree.destination,
+                capture_output=True,
+                text=True,
             )
         else:
             assert isinstance(worktree.destination, str)
@@ -191,8 +217,16 @@ def _run_gh(
 def _find_or_create_pull_request(worktree: ResolvedProjectWorktree) -> tuple[str, str]:
     listed = _run_gh(
         worktree,
-        "pr", "list", "--head", worktree.branch, "--base", worktree.base_branch,
-        "--state", "open", "--json", "url,headRefOid",
+        "pr",
+        "list",
+        "--head",
+        worktree.branch,
+        "--base",
+        worktree.base_branch,
+        "--state",
+        "open",
+        "--json",
+        "url,headRefOid",
     )
     try:
         pull_requests = json.loads(listed.stdout)
@@ -201,13 +235,23 @@ def _find_or_create_pull_request(worktree: ResolvedProjectWorktree) -> tuple[str
     except (TypeError, json.JSONDecodeError) as error:
         raise ServiceError("gh PR lookup returned invalid data") from error
     if len(pull_requests) > 1:
-        raise ServiceError(f"multiple open pull requests found: {worktree.project}/{worktree.task_id}")
+        raise ServiceError(
+            f"multiple open pull requests found: {worktree.project}/{worktree.task_id}"
+        )
     if pull_requests:
         return _pull_request(pull_requests[0])
     created = _run_gh(
         worktree,
-        "pr", "create", "--base", worktree.base_branch, "--head", worktree.branch,
-        "--title", worktree.task_id, "--body", "",
+        "pr",
+        "create",
+        "--base",
+        worktree.base_branch,
+        "--head",
+        worktree.branch,
+        "--title",
+        worktree.task_id,
+        "--body",
+        "",
     )
     url = created.stdout.strip()
     if not url:

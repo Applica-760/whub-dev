@@ -71,7 +71,9 @@ def _resolve_location(
     raise AssertionError(f"unsupported resource: {resource!r}")
 
 
-def _require_destination(destination: Path | str, host: Host | None, project: str, task_id: str) -> None:
+def _require_destination(
+    destination: Path | str, host: Host | None, project: str, task_id: str
+) -> None:
     if host is None:
         assert isinstance(destination, Path)
         exists = destination.is_dir()
@@ -83,18 +85,19 @@ def _require_destination(destination: Path | str, host: Host | None, project: st
         raise ServiceError(f"worktree not found: {project}/{task_id}")
 
 
-def resolve_task_worktree(
+def resolve_worktree(
     manifest: Manifest, workspace_root: Path, project: str, task_id: str
 ) -> ResolvedProjectWorktree:
-    """Load TASK and derive its conventional worktree location."""
-    task = load_project_task(manifest, project, task_id).task
+    """Derive TASK's conventional worktree location without reading Tasks."""
     resource = _require_worktree_resource(manifest, project)
     assert resource.git is not None and resource.git.branch is not None
-    parent, destination, host = _resolve_location(manifest, workspace_root, project, task.id)
+    parent, destination, host = _resolve_location(
+        manifest, workspace_root, project, task_id
+    )
     return ResolvedProjectWorktree(
         project=project,
-        task_id=task.id,
-        branch=f"tasks/{task.id.removeprefix('TASK-')}",
+        task_id=task_id,
+        branch=f"tasks/{task_id.removeprefix('TASK-')}",
         parent=parent,
         destination=destination,
         base_branch=resource.git.branch,
@@ -102,12 +105,30 @@ def resolve_task_worktree(
     )
 
 
+def resolve_task_worktree(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> ResolvedProjectWorktree:
+    """Load TASK, then derive its conventional worktree location."""
+    task = load_project_task(manifest, project, task_id).task
+    return resolve_worktree(manifest, workspace_root, project, task.id)
+
+
+def resolve_conventional_worktree(
+    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+) -> ResolvedProjectWorktree:
+    """Resolve TASK's conventional worktree without reading Task records."""
+    worktree = resolve_worktree(manifest, workspace_root, project, task_id)
+    _require_destination(
+        worktree.destination, worktree.host, worktree.project, worktree.task_id
+    )
+    return worktree
+
+
 def resolve_project_worktree(
     manifest: Manifest, workspace_root: Path, project: str, task_id: str
 ) -> ResolvedProjectWorktree:
     """Resolve TASK's conventional worktree, requiring that it exists."""
     worktree = resolve_task_worktree(manifest, workspace_root, project, task_id)
-    _require_destination(
-        worktree.destination, worktree.host, worktree.project, worktree.task_id
+    return resolve_conventional_worktree(
+        manifest, workspace_root, worktree.project, worktree.task_id
     )
-    return worktree

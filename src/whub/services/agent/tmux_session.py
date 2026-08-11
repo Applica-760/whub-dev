@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import shlex
 import subprocess
 
@@ -20,10 +21,16 @@ def resolve_tmux_session(
     target = session_target(name)
     if host is not None:
         if not _remote_session_exists(host, target):
-            raise ServiceError(f"Agent tmux session is unavailable: {project}/{task_id}")
+            raise ServiceError(
+                f"Agent tmux session is unavailable: {project}/{task_id}"
+            )
         return TmuxSession(
             name,
-            tuple(build_ssh_command(host, f"exec tmux attach-session -t {target}", tty=True)),
+            tuple(
+                build_ssh_command(
+                    host, f"exec tmux attach-session -t {target}", tty=True
+                )
+            ),
         )
     try:
         result = subprocess.run(
@@ -34,6 +41,33 @@ def resolve_tmux_session(
     if result.returncode:
         raise ServiceError(f"Agent tmux session is unavailable: {project}/{task_id}")
     return TmuxSession(name, tuple(tmux_command("attach-session", "-t", target)))
+
+
+def list_tmux_sessions(project: str, host: Host | None = None) -> tuple[str, ...]:
+    """List running Agent Task IDs for PROJECT."""
+    prefix = session_name(project, "TASK") + "-"
+    if host is None:
+        try:
+            result = subprocess.run(
+                tmux_command("list-sessions", "-F", "#{session_name}"),
+                capture_output=True,
+                text=True,
+            )
+        except OSError as error:
+            raise ServiceError(f"tmux is unavailable: {error}") from error
+    else:
+        result = run_ssh_command(host, "tmux list-sessions -F '#{session_name}'")
+    if result.returncode == 1:
+        return ()
+    if result.returncode:
+        detail = result.stderr.strip() or f"exit status {result.returncode}"
+        raise ServiceError(f"failed to list tmux sessions: {detail}")
+    pattern = re.compile(re.escape(prefix) + r"([0-9]+)$")
+    return tuple(
+        f"TASK-{match.group(1)}"
+        for name in result.stdout.splitlines()
+        if (match := pattern.fullmatch(name))
+    )
 
 
 def open_tmux_session(
@@ -59,7 +93,11 @@ def open_tmux_session(
                 raise ServiceError(f"failed to start remote tmux: {detail}")
         return TmuxSession(
             name,
-            tuple(build_ssh_command(host, f"exec tmux attach-session -t {target}", tty=True)),
+            tuple(
+                build_ssh_command(
+                    host, f"exec tmux attach-session -t {target}", tty=True
+                )
+            ),
         )
 
     assert isinstance(worktree, Path)

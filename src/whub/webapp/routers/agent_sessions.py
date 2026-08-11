@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from whub.core.context import current_context
 from whub.services.agent.agent import list_agent_sessions
 from whub.services.manifest import load_manifest
-from whub.services.worktree.resolve import resolve_project_worktree
 
 
 router = APIRouter(prefix="/api/agent-sessions")
@@ -31,9 +30,7 @@ def get_agent_sessions(project: str) -> AgentSessionListResponse:
             AgentSessionResponse(
                 project=item.project,
                 task_id=item.task_id,
-                workspace_path=resolve_project_worktree(
-                    manifest, workspace_root, item.project, item.task_id
-                ).workspace_path,
+                workspace_path=item.workspace_path,
             )
             for item in list_agent_sessions(manifest, workspace_root, project)
         ]
