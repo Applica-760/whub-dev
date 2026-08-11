@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import date
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
@@ -35,7 +35,7 @@ from whub.models import ResourceStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminals
 from whub.services.task.project import ProjectTasks, TaskRecord, TaskSummary
 from whub.services.vault import VaultNode
-from whub.services.worktree.diff import ChangedFile, WorktreeDiff
+from whub.services.hub_explorer import HubEntry, HubFile
 from whub.tests.helpers import manifest
 from whub.webapp.routers import agent_attention
 from whub.webapp.server import create_app
@@ -682,61 +682,6 @@ def test_get_agent_sessions_omits_unavailable_remote_project(
     assert response.json() == {"sessions": []}
 
 
-def test_worktree_diff_endpoints_use_registered_worktree_services(
-    client: TestClient, tmp_path: Path
-) -> None:
-    m = manifest()
-    files = [ChangedFile(path="src/main.py", status="M")]
-    diff = WorktreeDiff(
-        path="src/main.py",
-        content="new\n",
-        diff="@@ -1 +1 @@\n-old\n+new\n",
-        state="text",
-    )
-    context = type("Context", (), {"workspace_root": tmp_path})()
-    with (
-        patch("whub.webapp.routers.worktree_diff.load_manifest", return_value=m),
-        patch(
-            "whub.webapp.routers.worktree_diff.current_context", return_value=context
-        ),
-        patch(
-            "whub.webapp.routers.worktree_diff.list_changed_files", return_value=files
-        ) as mock_files,
-        patch(
-            "whub.webapp.routers.worktree_diff.generated_paths",
-            return_value={PurePosixPath("src/main.py")},
-        ) as mock_generated,
-        patch(
-            "whub.webapp.routers.worktree_diff.read_changed_file_diff",
-            return_value=diff,
-        ) as mock_diff,
-    ):
-        files_response = client.get("/api/worktrees/local/TASK-072/changes")
-        diff_response = client.get(
-            "/api/worktrees/local/TASK-072/diff", params={"path": "src/main.py"}
-        )
-
-    assert files_response.json() == {
-        "files": [
-            {
-                "path": "src/main.py",
-                "status": "M",
-                "previous_path": None,
-                "agent_generated": True,
-            }
-        ]
-    }
-    assert diff_response.json() == {
-        "path": "src/main.py",
-        "content": diff.content,
-        "diff": diff.diff,
-        "state": diff.state,
-    }
-    mock_files.assert_called_once_with(m, tmp_path, "local", "TASK-072")
-    mock_generated.assert_called_once_with(m, tmp_path, "local", "TASK-072")
-    mock_diff.assert_called_once_with(m, tmp_path, "local", "TASK-072", "src/main.py")
-
-
 def test_vault_endpoints_use_services(client: TestClient) -> None:
     # ケース10
     m = manifest()
@@ -784,6 +729,41 @@ def test_vault_endpoints_use_services(client: TestClient) -> None:
     assert note_response.status_code == 200
     assert note_response.json() == {"path": "mind/idea.md", "content": "# idea\n"}
     mock_read.assert_called_once_with(m, "mind/idea.md")
+
+
+def test_hub_explorer_endpoints_use_services(
+    client: TestClient, tmp_path: Path
+) -> None:
+    entries = [
+        HubEntry(name="docs", path="docs", type="directory", expandable=True),
+    ]
+    file = HubFile(path="docs/guide.md", content="guide", state="text")
+    m = manifest()
+    context = type("Context", (), {"workspace_root": tmp_path})()
+    with (
+        patch(
+            "whub.webapp.routers.hub_explorer.current_context",
+            return_value=context,
+        ),
+        patch("whub.webapp.routers.hub_explorer.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.hub_explorer.list_hub_directory",
+            return_value=entries,
+        ) as mock_directory,
+        patch(
+            "whub.webapp.routers.hub_explorer.read_hub_file",
+            return_value=file,
+        ) as mock_file,
+    ):
+        directory_response = client.get("/api/hub-explorer/directory")
+        file_response = client.get(
+            "/api/hub-explorer/file", params={"path": "docs/guide.md"}
+        )
+
+    assert directory_response.json() == {"entries": [entries[0].model_dump()]}
+    assert file_response.json() == file.model_dump()
+    mock_directory.assert_called_once_with(m, tmp_path, "")
+    mock_file.assert_called_once_with(m, tmp_path, "docs/guide.md")
 
 
 def test_service_errors_are_mapped_to_http_responses(client: TestClient) -> None:

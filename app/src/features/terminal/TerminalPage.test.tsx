@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { useEffect } from "react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalPage } from "./TerminalPage";
@@ -28,24 +29,6 @@ let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
 let deferSessions = false;
 let deferredSessionProject: string | null = null;
-let changedFiles: {
-  path: string;
-  status: string;
-  previous_path: string | null;
-  agent_generated?: boolean;
-}[] = [{ path: "src/main.py", status: "M", previous_path: null }];
-let worktreeFile: {
-  path: string;
-  content: string | null;
-  diff: string;
-  state: string;
-} = {
-  path: "src/main.py",
-  content: "new\nunchanged\n",
-  diff: "@@ -1 +1 @@\n-old\n+new",
-  state: "text",
-};
-let clipboardWrite = vi.fn();
 let terminalMounts: string[] = [];
 let terminalUnmounts: string[] = [];
 
@@ -98,20 +81,8 @@ beforeEach(() => {
   operatorTerminals = [];
   deferSessions = false;
   deferredSessionProject = null;
-  changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
-  worktreeFile = {
-    path: "src/main.py",
-    content: "new\nunchanged\n",
-    diff: "@@ -1 +1 @@\n-old\n+new",
-    state: "text",
-  };
-  clipboardWrite = vi.fn();
   terminalMounts = [];
   terminalUnmounts = [];
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: { writeText: clipboardWrite },
-  });
   approvalAttention = [
     {
       target: "worktree",
@@ -203,17 +174,10 @@ beforeEach(() => {
           ok: true,
           json: async () => ({ tasks: [] }),
         });
-      if (url.includes("/changes"))
+      if (url.startsWith("/api/hub-explorer/directory"))
         return Promise.resolve({
           ok: true,
-          json: async () => ({
-            files: changedFiles,
-          }),
-        });
-      if (url.includes("/diff?"))
-        return Promise.resolve({
-          ok: true,
-          json: async () => worktreeFile,
+          json: async () => ({ entries: [] }),
         });
       if (url === "/api/projects")
         return Promise.resolve({
@@ -259,16 +223,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderPage() {
+function renderPage(path = "/terminal") {
   return render(
     <MantineProvider env="test">
-      <TerminalPage />
+      <MemoryRouter initialEntries={[path]}>
+        <TerminalPage />
+      </MemoryRouter>
     </MantineProvider>,
   );
 }
 
 describe("TerminalPage", () => {
-  it("Task詳細・端末・ExplorerとGit差分を表示する", async () => {
+  it("Task詳細・端末とTerminal一覧を表示する", async () => {
     const { container } = renderPage();
     const firstTerminal = await screen.findByRole("button", {
       name: /whub-dev.*TASK-099/,
@@ -282,12 +248,6 @@ describe("TerminalPage", () => {
     expect(screen.getByText("whub-dev / TASK-099")).toBeTruthy();
     expect(await screen.findByText("TASK-099(in_progress)")).toBeTruthy();
     expect(screen.getByText("Task graph: whub-dev")).toBeTruthy();
-    expect(await screen.findByText("src")).toBeTruthy();
-    expect(await screen.findByText("new")).toBeTruthy();
-    expect(
-      container.querySelector(".diff-addition .diff-line-prefix")?.textContent,
-    ).toBe("+");
-    expect(screen.getByText("unchanged")).toBeTruthy();
     expect(container.querySelectorAll(".terminal-layout")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-panel")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-graph")).toHaveLength(1);
@@ -305,145 +265,62 @@ describe("TerminalPage", () => {
     expect(screen.getByText("TASK-101(in_progress)")).toBeTruthy();
     expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
     expect(terminalUnmounts).toEqual(["whub-dev / TASK-099"]);
+  });
+
+  it("直接アクセスしたExplorerではHub rootを表示する", async () => {
+    renderPage("/terminal/explorer");
+
+    expect(
+      await screen.findByText("ファイルを選択してください。"),
+    ).toBeTruthy();
     expect(fetch).toHaveBeenCalledWith(
-      "/api/worktrees/vault/TASK-101/changes",
+      "/api/hub-explorer/directory",
       undefined,
     );
+    expect(screen.queryByText("whub-dev / TASK-099")).toBeNull();
   });
 
-  it("Git Explorerで変更ファイルへの経路を初期展開し、状態と右クリックコピーを反映する", async () => {
-    changedFiles = [
-      { path: "src/nested/main.py", status: "M", previous_path: null },
-      { path: "draft.txt", status: "A", previous_path: null },
-      { path: "unchanged/note.txt", status: "", previous_path: null },
-    ];
-    const { container } = renderPage();
-
-    const source = await screen.findByText("src");
-    expect(await screen.findByText("main.py")).toBeTruthy();
-    expect(
-      container
-        .querySelector(".diff-tree-chevron")
-        ?.getAttribute("data-expanded"),
-    ).toBe("true");
-    expect(
-      container
-        .querySelectorAll(".diff-tree-chevron")[1]
-        ?.getAttribute("data-expanded"),
-    ).toBe("true");
-    expect(
-      container
-        .querySelectorAll(".diff-tree-chevron")[2]
-        ?.getAttribute("data-expanded"),
-    ).toBeNull();
-    expect(container.querySelector('[data-changed="true"]')).toBeTruthy();
-    expect(container.querySelector('[data-new="true"]')).toBeTruthy();
-
-    fireEvent.click(source);
-    expect(screen.queryByText("main.py")).toBeNull();
-    expect(
-      container
-        .querySelector(".diff-tree-chevron")
-        ?.getAttribute("data-expanded"),
-    ).toBeNull();
-
-    fireEvent.click(source);
-    expect(await screen.findByText("main.py")).toBeTruthy();
-    expect(
-      container.querySelector(".diff-tree-children")?.getAttribute("style"),
-    ).toBeNull();
-    expect(
-      container.querySelector(".diff-tree-guide")?.getAttribute("style"),
-    ).toContain("inset-inline-start: 22px");
-    fireEvent.contextMenu(screen.getByText("main.py"));
-    expect(clipboardWrite).toHaveBeenCalledWith(
-      "projects/worktrees/whub-dev-099/src/nested/main.py",
+  it("⌘⇧EをTerminal内の任意の位置からExplorerへ遷移する", async () => {
+    renderPage();
+    await screen.findByText("whub-dev / TASK-099");
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/hub-explorer/directory",
+        undefined,
+      ),
     );
-  });
+    const hubRequests = () =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([input]) =>
+          String(input).startsWith("/api/hub-explorer"),
+        ).length;
+    expect(hubRequests()).toBe(1);
 
-  it("ディレクトリを各階層でファイルより先に名前順で表示する", async () => {
-    changedFiles = [
-      { path: "z.txt", status: "", previous_path: null },
-      { path: "src/z.py", status: "", previous_path: null },
-      { path: "a.txt", status: "", previous_path: null },
-      { path: "src/a.py", status: "", previous_path: null },
-    ];
-    const { container } = renderPage();
-
-    await screen.findByText("src");
-    const rootLabels = Array.from(
-      container.querySelectorAll(".diff-tree-node"),
-    ).map((node) => node.textContent?.trim());
-    expect(rootLabels).toEqual(["src", "a.txt", "z.txt"]);
-
-    fireEvent.click(screen.getByText("src"));
-    const labels = Array.from(
-      container.querySelectorAll(".diff-tree-node"),
-    ).map((node) => node.textContent?.trim());
-    expect(labels).toEqual(["src", "a.py", "z.py", "a.txt", "z.txt"]);
-  });
-
-  it("Agent生成物だけの祖先を初期展開せず、手動展開は維持する", async () => {
-    changedFiles = [
-      {
-        path: ".agents/AGENTS_context.md",
-        status: "M",
-        previous_path: null,
-        agent_generated: true,
-      },
-      {
-        path: "src/main.py",
-        status: "M",
-        previous_path: null,
-        agent_generated: false,
-      },
-    ];
-    renderPage();
-
-    const agents = await screen.findByText(".agents");
-    expect(await screen.findByText("main.py")).toBeTruthy();
-    expect(screen.queryByText("AGENTS_context.md")).toBeNull();
-
-    fireEvent.click(agents);
-
-    expect(await screen.findByText("AGENTS_context.md")).toBeTruthy();
-  });
-
-  it("バイナリファイルの本文を表示しない", async () => {
-    worktreeFile = {
-      path: "src/main.py",
-      content: null,
-      diff: "",
-      state: "binary",
-    };
-    renderPage();
+    fireEvent.keyDown(document.body, {
+      code: "KeyE",
+      key: "E",
+      metaKey: true,
+      shiftKey: true,
+    });
 
     expect(
-      await screen.findByText("バイナリファイルは表示できません。"),
+      await screen.findByText("ファイルを選択してください。"),
     ).toBeTruthy();
-  });
+    expect(hubRequests()).toBe(1);
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalUnmounts).toEqual([]);
 
-  it.each([
-    {
-      content: "",
-      message: "空のファイルです。",
-      state: "text",
-    },
-    {
-      content: null,
-      message: "ファイルを読み込めません。",
-      state: "unreadable",
-    },
-  ])("$stateファイルの表示状態を示す", async ({ content, message, state }) => {
-    worktreeFile = {
-      path: "src/main.py",
-      content,
-      diff: "",
-      state,
-    };
-    renderPage();
+    fireEvent.keyDown(document.body, {
+      code: "KeyE",
+      key: "E",
+      metaKey: true,
+      shiftKey: true,
+    });
 
-    expect(await screen.findByText(message)).toBeTruthy();
+    expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalUnmounts).toEqual([]);
   });
 
   it("複数Operationを起動・選択・個別終了できる", async () => {
@@ -555,10 +432,10 @@ describe("TerminalPage", () => {
     expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
   });
 
-  it("xterm上の⌘⇧OでOperationを起動する", async () => {
+  it("⌘⇧OでOperationを起動する", async () => {
     renderPage();
 
-    fireEvent.keyDown(await screen.findByText("whub-dev / TASK-099"), {
+    fireEvent.keyDown(document.body, {
       code: "KeyO",
       key: "O",
       metaKey: true,
@@ -670,19 +547,19 @@ describe("TerminalPage", () => {
     });
     renderPage();
     await screen.findByText("応答終了");
+    await screen.findByText("whub-dev / TASK-099");
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "visible",
     });
-    fireEvent(document, new Event("visibilitychange"));
-
-    await waitFor(() =>
+    await waitFor(() => {
+      fireEvent(document, new Event("visibilitychange"));
       expect(fetch).toHaveBeenCalledWith(
         "/api/agent-attention/whub-dev/TASK-099/acknowledge",
         { method: "POST" },
-      ),
-    );
+      );
+    });
   });
 
   it("明示的に選択したTerminalの承認待ちだけを既読化する", async () => {
@@ -721,7 +598,9 @@ describe("TerminalPage", () => {
 
     view.rerender(
       <MantineProvider env="test">
-        <TerminalPage collapsed={{ left: true, right: false }} />
+        <MemoryRouter initialEntries={["/terminal"]}>
+          <TerminalPage collapsed={{ left: true, right: false }} />
+        </MemoryRouter>
       </MantineProvider>,
     );
 
