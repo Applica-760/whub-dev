@@ -130,10 +130,6 @@
   color: var(--mantine-color-green-7);
 }
 
-.diff-tree-node[data-new="true"] {
-  color: var(--mantine-color-green-7);
-}
-
 .diff-tree-node[data-changed="true"]::after {
   background: currentColor;
   border-radius: 50%;
@@ -227,33 +223,6 @@
   min-height: 0;
 }
 
-.file-content {
-  font-family: var(--mantine-font-family-monospace);
-  font-size: var(--mantine-font-size-sm);
-  line-height: 1.5;
-  margin: 0;
-  min-width: max-content;
-  padding: 0.75rem;
-}
-
-.file-line {
-  display: grid;
-  grid-template-columns: 3.5rem minmax(max-content, 1fr);
-  min-height: 1.5em;
-}
-
-.file-line-number {
-  border-right: 1px solid var(--whub-color-border);
-  color: var(--whub-color-text-subtle);
-  padding-right: 0.5rem;
-  text-align: right;
-  user-select: none;
-}
-
-.file-line code {
-  padding-left: 0.75rem;
-}
-
 .diff-line {
   display: grid;
   grid-template-columns: 2.75rem 2.75rem 1.25rem minmax(max-content, 1fr);
@@ -274,12 +243,6 @@
 
 .diff-line-prefix {
   padding-right: 0.25rem;
-}
-
-.diff-meta {
-  border-bottom: 1px solid var(--whub-color-border);
-  font-family: var(--mantine-font-family-monospace);
-  overflow-wrap: anywhere;
 }
 
 .diff-addition {
