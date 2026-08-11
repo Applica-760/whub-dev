@@ -55,7 +55,7 @@
 }
 
 .terminal-diff-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+  grid-template-columns: minmax(12rem, 0.75fr) minmax(0, 4fr);
 }
 
 .terminal-explorer {
