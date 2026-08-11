@@ -9,9 +9,9 @@ type WidgetFrameProps = {
 
 export function WidgetFrame({ title, action, children }: WidgetFrameProps) {
   return (
-    <Stack gap={6} h="100%">
+    <Stack gap={2} h="100%">
       {(title || action) && (
-        <Group justify="space-between" px="sm" wrap="nowrap">
+        <Group justify="space-between" px="xs" wrap="nowrap">
           {title}
           {action}
         </Group>

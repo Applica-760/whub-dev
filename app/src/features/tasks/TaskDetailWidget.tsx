@@ -14,6 +14,7 @@ type TaskDetailWidgetProps = {
   action?: ReactNode;
   emptyMessage?: string;
   active?: boolean;
+  hideTitle?: boolean;
 };
 
 export function TaskDetailWidget({
@@ -22,6 +23,7 @@ export function TaskDetailWidget({
   action,
   emptyMessage = "Taskを選択してください",
   active = false,
+  hideTitle = false,
 }: TaskDetailWidgetProps) {
   const [task, setTask] = useState<TaskResponse | null>(null);
   const [dependents, setDependents] = useState<string[]>([]);
@@ -67,9 +69,11 @@ export function TaskDetailWidget({
     <WidgetFrame
       action={action}
       title={
-        <Text c="dimmed" fw={600} size="sm">
-          {task?.title ?? task?.task?.id ?? "Task"}
-        </Text>
+        hideTitle ? undefined : (
+          <Text c="dimmed" fw={600} size="sm">
+            {task?.title ?? task?.task?.id ?? "Task"}
+          </Text>
+        )
       }
     >
       <Box p="md">

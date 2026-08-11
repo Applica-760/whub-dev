@@ -287,7 +287,6 @@ describe("TerminalWidget", () => {
       <MantineProvider env="test">
         <TerminalWidget
           endpoint="/api/operator-terminals/operator-1"
-          label="Operation / workspace-hub"
           resizeSignal="initial"
         />
       </MantineProvider>,

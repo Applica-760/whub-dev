@@ -54,7 +54,7 @@ textarea {
   color: var(--whub-color-text-muted);
   display: flex;
   font-weight: 600;
-  height: 38px;
+  height: 32px;
   padding: 0 18px;
   text-decoration: none;
 }

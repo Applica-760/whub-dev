@@ -13,6 +13,7 @@ type TaskDependencyGraphWidgetProps = {
   height?: CSSProperties["height"];
   onSelectTask?: (project: string, taskId: string) => void;
   active?: boolean;
+  hideTitle?: boolean;
 };
 
 export function TaskDependencyGraphWidget({
@@ -20,6 +21,7 @@ export function TaskDependencyGraphWidget({
   height,
   onSelectTask,
   active = false,
+  hideTitle = false,
 }: TaskDependencyGraphWidgetProps) {
   const { tasks, loading, error } = useTasks(project, active);
   const navigate = useNavigate();
@@ -40,9 +42,11 @@ export function TaskDependencyGraphWidget({
   return (
     <WidgetFrame
       title={
-        <Text c="dimmed" fw={600} size="sm">
-          Task dependencies
-        </Text>
+        hideTitle ? undefined : (
+          <Text c="dimmed" fw={600} size="sm">
+            Task dependencies
+          </Text>
+        )
       }
     >
       <Box h="100%" p="md">

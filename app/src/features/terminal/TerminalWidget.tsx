@@ -1,4 +1,4 @@
-import { Alert, Text } from "@mantine/core";
+import { Alert } from "@mantine/core";
 import { useCallback, useMemo, useRef } from "react";
 
 import { XtermView } from "../../components/XtermView";
@@ -8,8 +8,8 @@ import { useTerminalConnection } from "./useTerminalConnection";
 type TerminalWidgetProps = {
   resizeSignal: string;
 } & (
-  | { endpoint: string; label: string; project?: never; taskId?: never }
-  | { endpoint?: never; label?: never; project: string; taskId: string }
+  | { endpoint: string; project?: never; taskId?: never }
+  | { endpoint?: never; project: string; taskId: string }
 );
 
 function openWebLink(event: MouseEvent, uri: string) {
@@ -29,7 +29,6 @@ function openWebLink(event: MouseEvent, uri: string) {
 
 export function TerminalWidget({
   endpoint,
-  label,
   project,
   resizeSignal,
   taskId,
@@ -56,7 +55,7 @@ export function TerminalWidget({
   });
 
   return (
-    <>
+    <div className="terminal-widget">
       {error && (
         <Alert color="red" m="md">
           {error}
@@ -70,9 +69,6 @@ export function TerminalWidget({
         ref={xtermRef}
         resizeSignal={resizeSignal}
       />
-      <Text c="dimmed" px="md" pb="md" size="sm">
-        {label ?? `${project} / ${taskId}`}
-      </Text>
-    </>
+    </div>
   );
 }

@@ -51,17 +51,17 @@ let terminalUnmounts: string[] = [];
 
 vi.mock("./TerminalWidget", () => ({
   TerminalWidget: ({
-    label,
+    endpoint,
     project,
     resizeSignal,
     taskId,
   }: {
-    label?: string;
+    endpoint?: string;
     project?: string;
     resizeSignal: string;
     taskId?: string;
   }) => {
-    const terminal = label ?? `${project} / ${taskId}`;
+    const terminal = endpoint ? "Operation terminal" : `${project} / ${taskId}`;
     useEffect(() => {
       terminalMounts.push(terminal);
       return () => {
@@ -173,6 +173,11 @@ beforeEach(() => {
             }));
             return approvalAttention;
           },
+        });
+      if (url.startsWith("/api/tasks/active?"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ tasks: [] }),
         });
       if (url.startsWith("/api/tasks/"))
         return Promise.resolve({
@@ -447,14 +452,14 @@ describe("TerminalPage", () => {
       name: "Operationを起動",
     });
     fireEvent.click(start);
-    expect(await screen.findByText("Operation / workspace-hub")).toBeTruthy();
+    expect(await screen.findByText("Operation terminal")).toBeTruthy();
 
     fireEvent.click(start);
     expect(
-      await screen.findByRole("switch", { name: "Operation operator-2を停止" }),
+      await screen.findByRole("button", { name: "Operation operator-2を停止" }),
     ).toBeTruthy();
     fireEvent.click(
-      screen.getByRole("switch", { name: "Operation operator-1を停止" }),
+      screen.getByRole("button", { name: "Operation operator-1を停止" }),
     );
 
     await waitFor(() =>
@@ -463,7 +468,7 @@ describe("TerminalPage", () => {
       }),
     );
     expect(
-      screen.queryByRole("switch", { name: "Operation operator-1を停止" }),
+      screen.queryByRole("button", { name: "Operation operator-1を停止" }),
     ).toBeNull();
   });
 
@@ -479,7 +484,7 @@ describe("TerminalPage", () => {
 
     expect(await screen.findByText("TASK-126(in_progress)")).toBeTruthy();
     expect(fetch).toHaveBeenCalledWith(
-      "/api/tasks/TASK-126?project=whub-dev",
+      "/api/tasks/active/TASK-126?project=whub-dev",
       undefined,
     );
   });
@@ -490,7 +495,7 @@ describe("TerminalPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("Operation / workspace-hub")).toBeTruthy();
+    expect(await screen.findByText("Operation terminal")).toBeTruthy();
     expect(screen.getByText("Agent sessionを読み込んでいます…")).toBeTruthy();
     expect(
       screen
@@ -565,7 +570,25 @@ describe("TerminalPage", () => {
         method: "POST",
       }),
     );
-    expect(await screen.findByText("Operation / workspace-hub")).toBeTruthy();
+    expect(await screen.findByText("Operation terminal")).toBeTruthy();
+  });
+
+  it("xterm上の⌘⇧Xで選択中のOperationを終了する", async () => {
+    operatorTerminals = [{ operator_id: "operator-1" }];
+    renderPage();
+
+    fireEvent.keyDown(await screen.findByText("Operation terminal"), {
+      code: "KeyX",
+      key: "X",
+      metaKey: true,
+      shiftKey: true,
+    });
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith("/api/operator-terminals/operator-1", {
+        method: "DELETE",
+      }),
+    );
   });
 
   it("承認待ちをブラウザタブのタイトルとfaviconで示す", async () => {

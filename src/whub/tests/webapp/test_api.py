@@ -661,6 +661,27 @@ def test_get_agent_sessions_returns_running_sessions(
     mock_sessions.assert_called_once_with(m, tmp_path, "local")
 
 
+def test_get_agent_sessions_omits_unavailable_remote_project(
+    client: TestClient, tmp_path: Path
+) -> None:
+    m = manifest()
+    with (
+        patch("whub.webapp.routers.agent_sessions.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.agent_sessions.current_context",
+            return_value=type("Context", (), {"workspace_root": tmp_path})(),
+        ),
+        patch(
+            "whub.webapp.routers.agent_sessions.list_agent_sessions",
+            side_effect=ServiceError("remote unavailable"),
+        ),
+    ):
+        response = client.get("/api/agent-sessions/remote")
+
+    assert response.status_code == 200
+    assert response.json() == {"sessions": []}
+
+
 def test_worktree_diff_endpoints_use_registered_worktree_services(
     client: TestClient, tmp_path: Path
 ) -> None:

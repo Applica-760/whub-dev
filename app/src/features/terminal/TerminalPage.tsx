@@ -1,4 +1,5 @@
-import { Alert, Badge, Button, Group, Switch, Text } from "@mantine/core";
+import { ActionIcon, Alert, Badge, Button, Group, Text } from "@mantine/core";
+import { IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { requestJson } from "../../api/client";
@@ -256,6 +257,13 @@ export function TerminalPage({
         }
         return;
       }
+      if (event.code === "KeyX") {
+        if (selectedOperator && !operatorPending) {
+          event.preventDefault();
+          void stopOperator(selectedOperator.operator_id);
+        }
+        return;
+      }
       if (
         !terminalValues.length ||
         (event.key !== "ArrowUp" && event.key !== "ArrowDown")
@@ -276,9 +284,11 @@ export function TerminalPage({
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [
     operatorPending,
+    selectedOperator,
     selectedTerminal,
     selectTerminal,
     startOperator,
+    stopOperator,
     terminalValues,
   ]);
 
@@ -297,6 +307,7 @@ export function TerminalPage({
             <TaskDependencyGraphWidget
               active
               height="100%"
+              hideTitle
               onSelectTask={selectedOperator ? selectOperationTask : undefined}
               project={graphProject}
             />
@@ -309,17 +320,17 @@ export function TerminalPage({
                   ? "グラフからTaskを選択してください"
                   : "Terminalを選択してください"
               }
+              hideTitle
               project={detailProject}
               taskId={detailTaskId}
             />
           </div>
         </aside>
-        <WidgetFrame title={<Text fw={600}>Terminal</Text>}>
+        <WidgetFrame>
           {selectedOperator ? (
             <TerminalWidget
               endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
               key={selectedTerminal}
-              label="Operation / workspace-hub"
               resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}`}
             />
           ) : selectedWorktree ? (
@@ -339,7 +350,7 @@ export function TerminalPage({
           className="terminal-explorer"
           data-collapsed={collapsed.left || undefined}
         >
-          <WidgetFrame title={<Text fw={600}>Explorer</Text>}>
+          <WidgetFrame>
             <Group justify="space-between" m="md">
               <Text fw={500}>Operations</Text>
               <Button
@@ -378,25 +389,23 @@ export function TerminalPage({
                             : "応答終了"}
                         </Badge>
                       ))}
-                    <Switch
+                    <ActionIcon
                       aria-label={`Operation ${operator.operator_id}を停止`}
-                      checked
-                      color="green"
                       disabled={operatorPending}
                       onClick={(event) => {
                         event.stopPropagation();
+                        void stopOperator(operator.operator_id);
                       }}
-                      onChange={() => void stopOperator(operator.operator_id)}
-                      offLabel="OFF"
-                      onLabel="ON"
-                      size="md"
-                    />
+                      title="Operationを終了"
+                      variant="subtle"
+                    >
+                      <IconX aria-hidden size={16} stroke={1.5} />
+                    </ActionIcon>
                   </Group>
                 }
                 selected={
                   selectedTerminal === operatorValue(operator.operator_id)
                 }
-                subtitle="workspace-hub"
                 title={`Operation ${index + 1}`}
                 withDivider={operators.length > 1 || terminals.length > 0}
               />

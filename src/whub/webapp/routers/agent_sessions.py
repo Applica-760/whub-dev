@@ -4,7 +4,9 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from whub.core.context import current_context
+from whub.models import RemoteResource
 from whub.services.agent.agent import list_agent_sessions
+from whub.services.errors import ServiceError
 from whub.services.manifest import load_manifest
 
 
@@ -25,6 +27,14 @@ class AgentSessionListResponse(BaseModel):
 def get_agent_sessions(project: str) -> AgentSessionListResponse:
     manifest = load_manifest()
     workspace_root = current_context().workspace_root
+    resolved = manifest.resolve_project(project)
+    if resolved is not None and isinstance(resolved.resource, RemoteResource):
+        try:
+            sessions = list_agent_sessions(manifest, workspace_root, project)
+        except ServiceError:
+            return AgentSessionListResponse(sessions=[])
+    else:
+        sessions = list_agent_sessions(manifest, workspace_root, project)
     return AgentSessionListResponse(
         sessions=[
             AgentSessionResponse(
@@ -32,6 +42,6 @@ def get_agent_sessions(project: str) -> AgentSessionListResponse:
                 task_id=item.task_id,
                 workspace_path=item.workspace_path,
             )
-            for item in list_agent_sessions(manifest, workspace_root, project)
+            for item in sessions
         ]
     )

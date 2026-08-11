@@ -58,7 +58,7 @@ export function App() {
   const terminalCollapse = useTerminalCollapse();
 
   return (
-    <AppShell header={{ height: 47 }} padding={0}>
+    <AppShell header={{ height: 40 }} padding={0}>
       <AppShell.Header className="whub-header">
         <Group align="end" gap="xl" h="100%" px="md" wrap="nowrap">
           <Text fw={700} pb={10}>
