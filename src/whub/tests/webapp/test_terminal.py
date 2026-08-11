@@ -52,7 +52,9 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
     async def exercise() -> None:
         websocket = FakeWebSocket()
         server, peer = socket.socketpair()
-        attachment = TerminalAttachment(server.detach(), Mock(poll=Mock(return_value=0)))
+        attachment = TerminalAttachment(
+            server.detach(), Mock(poll=Mock(return_value=0))
+        )
         session = TerminalSessionRef(project="whub-dev", task_id="TASK-100")
 
         with (
@@ -60,15 +62,23 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
                 terminal.__globals__,
                 {
                     "load_manifest": Mock(),
-                    "current_context": Mock(return_value=SimpleNamespace(workspace_root=None)),
-                    "resolve_project_worktree": Mock(return_value=SimpleNamespace(host=None)),
+                    "current_context": Mock(
+                        return_value=SimpleNamespace(workspace_root=None)
+                    ),
+                    "resolve_conventional_worktree": Mock(
+                        return_value=SimpleNamespace(host=None)
+                    ),
                 },
             ),
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
             patch("whub.webapp.terminal_bridge.attach", return_value=attachment),
         ):
-            bridge = asyncio.create_task(terminal(websocket, session.project, session.task_id))
-            await websocket.messages.put({"type": "websocket.receive", "text": '{"type":"claim"}'})
+            bridge = asyncio.create_task(
+                terminal(websocket, session.project, session.task_id)
+            )
+            await websocket.messages.put(
+                {"type": "websocket.receive", "text": '{"type":"claim"}'}
+            )
             await websocket.messages.put(
                 {"type": "websocket.receive", "text": '{"type":"input","data":"l"}'}
             )
@@ -88,7 +98,9 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
                 await bridge
 
         assert websocket.accepted
-        assert access.access_mode(session, str(id(websocket))) is TerminalAccessMode.VIEWER
+        assert (
+            access.access_mode(session, str(id(websocket))) is TerminalAccessMode.VIEWER
+        )
         with pytest.raises(OSError):
             os.fstat(attachment.master_fd)
         peer.close()
@@ -113,8 +125,12 @@ def test_disconnect_releases_control_for_immediate_reconnect() -> None:
                 terminal.__globals__,
                 {
                     "load_manifest": Mock(),
-                    "current_context": Mock(return_value=SimpleNamespace(workspace_root=None)),
-                    "resolve_project_worktree": Mock(return_value=SimpleNamespace(host=None)),
+                    "current_context": Mock(
+                        return_value=SimpleNamespace(workspace_root=None)
+                    ),
+                    "resolve_conventional_worktree": Mock(
+                        return_value=SimpleNamespace(host=None)
+                    ),
                 },
             ),
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
@@ -154,7 +170,9 @@ def test_attachment_cleanup_does_not_block_the_event_loop() -> None:
     async def exercise() -> None:
         websocket = FakeWebSocket()
         server, peer = socket.socketpair()
-        attachment = TerminalAttachment(server.detach(), Mock(poll=Mock(return_value=0)))
+        attachment = TerminalAttachment(
+            server.detach(), Mock(poll=Mock(return_value=0))
+        )
         cleanup_started = threading.Event()
         allow_cleanup = threading.Event()
 
@@ -169,8 +187,12 @@ def test_attachment_cleanup_does_not_block_the_event_loop() -> None:
                 terminal.__globals__,
                 {
                     "load_manifest": Mock(),
-                    "current_context": Mock(return_value=SimpleNamespace(workspace_root=None)),
-                    "resolve_project_worktree": Mock(return_value=SimpleNamespace(host=None)),
+                    "current_context": Mock(
+                        return_value=SimpleNamespace(workspace_root=None)
+                    ),
+                    "resolve_conventional_worktree": Mock(
+                        return_value=SimpleNamespace(host=None)
+                    ),
                 },
             ),
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
@@ -196,7 +218,9 @@ def test_remote_worktree_uses_ssh_attach_command() -> None:
     async def exercise() -> None:
         websocket = FakeWebSocket()
         server, peer = socket.socketpair()
-        attachment = TerminalAttachment(server.detach(), Mock(poll=Mock(return_value=0)))
+        attachment = TerminalAttachment(
+            server.detach(), Mock(poll=Mock(return_value=0))
+        )
         host = Host(
             hostname="ssh.test.invalid",
             user="test-user",
@@ -209,15 +233,21 @@ def test_remote_worktree_uses_ssh_attach_command() -> None:
                 terminal.__globals__,
                 {
                     "load_manifest": Mock(),
-                    "current_context": Mock(return_value=SimpleNamespace(workspace_root=None)),
-                    "resolve_project_worktree": Mock(return_value=SimpleNamespace(host=host)),
+                    "current_context": Mock(
+                        return_value=SimpleNamespace(workspace_root=None)
+                    ),
+                    "resolve_conventional_worktree": Mock(
+                        return_value=SimpleNamespace(host=host)
+                    ),
                 },
             ),
             patch(
                 "whub.services.agent.tmux_session.run_ssh_command",
                 return_value=CompletedProcess([], 0, "", ""),
             ),
-            patch("whub.webapp.terminal_bridge.attach", return_value=attachment) as attach,
+            patch(
+                "whub.webapp.terminal_bridge.attach", return_value=attachment
+            ) as attach,
         ):
             bridge = asyncio.create_task(terminal(websocket, "la-il", "TASK-017"))
             await websocket.messages.put({"type": "websocket.disconnect"})

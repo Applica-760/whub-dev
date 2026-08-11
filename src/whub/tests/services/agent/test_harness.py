@@ -10,10 +10,15 @@ from whub.models.agent.auth import (
     RegisteredTaskWorktreeVariable,
 )
 from whub.models import Host
-from whub.services.agent.agent import close_agent, open_agent
+from whub.services.agent.agent import (
+    AgentSession,
+    close_agent,
+    list_agent_sessions,
+    open_agent,
+)
 from whub.services.agent.auth import resolve_variables
 from whub.services.agent.context import AGENTS_CONTEXT_PATH, render_context
-from whub.services.agent.tmux_session import open_tmux_session
+from whub.services.agent.tmux_session import list_tmux_sessions, open_tmux_session
 from whub.services.errors import ServiceError
 from whub.services.agent.state import (
     _state_path,
@@ -24,7 +29,9 @@ from whub.services.agent.state import (
 )
 
 
-def _plan(content: str = 'sandbox_mode = "workspace-write"\n') -> dict[PurePosixPath, str]:
+def _plan(
+    content: str = 'sandbox_mode = "workspace-write"\n',
+) -> dict[PurePosixPath, str]:
     return {PurePosixPath(".codex/config.toml"): content}
 
 
@@ -339,13 +346,76 @@ def test_start_tmux_session_creates_codex_from_hub_root(tmp_path: Path) -> None:
     ]
 
 
+def test_lists_running_agent_sessions_without_reading_tasks(tmp_path: Path) -> None:
+    worktree = SimpleNamespace(host=None)
+    session = SimpleNamespace(
+        project="local",
+        task_id="TASK-095",
+        workspace_path="projects/worktrees/local-095",
+    )
+    with (
+        patch("whub.services.agent.agent.resolve_worktree", return_value=worktree),
+        patch(
+            "whub.services.agent.agent.list_tmux_sessions",
+            return_value=("TASK-095", "TASK-096"),
+        ) as listed,
+        patch(
+            "whub.services.agent.agent.resolve_conventional_worktree",
+            side_effect=[session, ServiceError("worktree not found")],
+        ),
+    ):
+        assert list_agent_sessions(None, tmp_path, "local") == (
+            AgentSession("local", "TASK-095", "projects/worktrees/local-095"),
+        )
+
+    listed.assert_called_once_with("local", None)
+
+
+def test_lists_local_tmux_sessions_by_project() -> None:
+    with patch(
+        "whub.services.agent.tmux_session.subprocess.run",
+        return_value=CompletedProcess(
+            [], 0, "whub-local-TASK-095\nother\nwhub-local-TASK-x\n", ""
+        ),
+    ):
+        assert list_tmux_sessions("local") == ("TASK-095",)
+
+
+def test_lists_remote_agent_sessions_with_remote_tmux(tmp_path: Path) -> None:
+    host = Host(
+        hostname="ssh.test.invalid",
+        user="test-user",
+        identity_file="/test/identity",
+        mount_root="/srv",
+    )
+    worktree = SimpleNamespace(host=host)
+    session = SimpleNamespace(
+        project="remote",
+        task_id="TASK-095",
+        workspace_path="/srv/worktrees/remote-095",
+    )
+    with (
+        patch("whub.services.agent.agent.resolve_worktree", return_value=worktree),
+        patch(
+            "whub.services.agent.agent.list_tmux_sessions", return_value=("TASK-095",)
+        ) as listed,
+        patch(
+            "whub.services.agent.agent.resolve_conventional_worktree",
+            return_value=session,
+        ),
+    ):
+        assert list_agent_sessions(None, tmp_path, "remote") == (
+            AgentSession("remote", "TASK-095", "/srv/worktrees/remote-095"),
+        )
+
+    listed.assert_called_once_with("remote", host)
+
+
 def test_start_stops_before_tmux_when_worktree_validation_fails(tmp_path: Path) -> None:
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
-            side_effect=ServiceError(
-                "worktree not found: whub-dev/TASK-095"
-            ),
+            "whub.services.agent.agent.resolve_conventional_worktree",
+            side_effect=ServiceError("worktree not found: whub-dev/TASK-095"),
         ),
         patch("whub.services.agent.tmux_session.subprocess.run") as run,
         pytest.raises(ServiceError, match="worktree not found"),
@@ -357,7 +427,8 @@ def test_start_stops_before_tmux_when_worktree_validation_fails(tmp_path: Path) 
 
 def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
     registered = SimpleNamespace(
-        task_id="TASK-095", branch="tasks/095",
+        task_id="TASK-095",
+        branch="tasks/095",
         destination=tmp_path,
         host=None,
     )
@@ -366,7 +437,7 @@ def test_open_agent_uses_the_registered_task_id(tmp_path: Path) -> None:
 
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_conventional_worktree",
             return_value=registered,
         ),
         patch(
@@ -398,7 +469,8 @@ def test_open_agent_projects_context_without_agent_specific_logic(
     worktree.mkdir()
     (worktree / "AGENTS.md").write_text("# Project rules\n")
     registered = SimpleNamespace(
-        task_id="TASK-095", branch="tasks/095",
+        task_id="TASK-095",
+        branch="tasks/095",
         destination=worktree,
         host=None,
     )
@@ -407,7 +479,7 @@ def test_open_agent_projects_context_without_agent_specific_logic(
 
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_conventional_worktree",
             return_value=registered,
         ),
         patch(
@@ -428,12 +500,10 @@ def test_open_agent_projects_context_without_agent_specific_logic(
 
 
 def test_close_stops_tmux_before_state_cleanup(tmp_path: Path) -> None:
-    registered = SimpleNamespace(
-        task_id="TASK-095", destination=tmp_path, host=None
-    )
+    registered = SimpleNamespace(task_id="TASK-095", destination=tmp_path, host=None)
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_conventional_worktree",
             return_value=registered,
         ),
         patch("whub.services.agent.agent.close_tmux_session") as stop,
@@ -450,13 +520,11 @@ def test_close_without_tmux_cleans_state_and_is_idempotent(tmp_path: Path) -> No
     worktree = tmp_path / "worktree"
     worktree.mkdir()
     prepare(tmp_path, "whub-dev", "TASK-095", worktree, _plan())
-    registered = SimpleNamespace(
-        task_id="TASK-095", destination=worktree, host=None
-    )
+    registered = SimpleNamespace(task_id="TASK-095", destination=worktree, host=None)
 
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_conventional_worktree",
             return_value=registered,
         ),
         patch(
@@ -477,13 +545,11 @@ def test_close_tmux_stop_failure_does_not_cleanup_state(tmp_path: Path) -> None:
     worktree = tmp_path / "worktree"
     worktree.mkdir()
     prepare(tmp_path, "whub-dev", "TASK-095", worktree, _plan())
-    registered = SimpleNamespace(
-        task_id="TASK-095", destination=worktree, host=None
-    )
+    registered = SimpleNamespace(task_id="TASK-095", destination=worktree, host=None)
 
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_conventional_worktree",
             return_value=registered,
         ),
         patch(
@@ -507,7 +573,8 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
     worktree = tmp_path / "worktree"
     worktree.mkdir()
     registered = SimpleNamespace(
-        task_id="TASK-095", branch="tasks/095",
+        task_id="TASK-095",
+        branch="tasks/095",
         destination=worktree,
         host=None,
     )
@@ -515,7 +582,7 @@ def test_open_restarts_missing_tmux_without_replacing_state(tmp_path: Path) -> N
 
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_conventional_worktree",
             return_value=registered,
         ),
         patch(
@@ -559,7 +626,8 @@ def test_remote_open_uses_remote_state_and_ssh_tmux(tmp_path: Path) -> None:
         worktree_root="worktrees",
     )
     registered = SimpleNamespace(
-        task_id="TASK-095", branch="tasks/095",
+        task_id="TASK-095",
+        branch="tasks/095",
         destination="/srv/worktrees/whub-dev-095",
         host=host,
     )
@@ -568,7 +636,7 @@ def test_remote_open_uses_remote_state_and_ssh_tmux(tmp_path: Path) -> None:
 
     with (
         patch(
-            "whub.services.agent.agent.resolve_project_worktree",
+            "whub.services.agent.agent.resolve_conventional_worktree",
             return_value=registered,
         ),
         patch(
