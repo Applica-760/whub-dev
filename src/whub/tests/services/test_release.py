@@ -284,6 +284,11 @@ def test_apply_moves_verified_release_and_switches_current(monkeypatch, tmp_path
     envs: list[dict[str, str] | None] = []
     monkeypatch.setenv("PYTHONPATH", "/checkout/src")
     monkeypatch.setenv("VIRTUAL_ENV", "/other/venv")
+    waited: list[WhubContext] = []
+    monkeypatch.setattr(
+        "whub.services.release.apply._wait_for_operation_app",
+        lambda value: waited.append(value),
+    )
 
     def run(command, *, cwd, capture_output, text, env=None):
         del cwd, capture_output, text
@@ -315,6 +320,7 @@ def test_apply_moves_verified_release_and_switches_current(monkeypatch, tmp_path
     for env in envs:
         assert "PYTHONPATH" not in env
         assert "VIRTUAL_ENV" not in env
+    assert waited == [context]
 
 
 def test_apply_failure_restores_current_and_staging(monkeypatch, tmp_path: Path) -> None:
@@ -323,6 +329,10 @@ def test_apply_failure_restores_current_and_staging(monkeypatch, tmp_path: Path)
     staging = _verified_staging(context, release_id)
     old_release = (context.releases_dir / "current").resolve()
     calls: list[list[str]] = []
+    monkeypatch.setattr(
+        "whub.services.release.apply._wait_for_operation_app",
+        lambda value: None,
+    )
 
     def run(command, *, cwd, capture_output, text, env=None):
         del cwd, capture_output, text, env

@@ -44,7 +44,8 @@ def deploy(source: Path) -> None:
     """Build, verify, and apply one operation release."""
     try:
         built = build_release(source)
-        verify_release(built.release_id)
+        if not built.verified:
+            verify_release(built.release_id)
         result = apply_release(built.release_id)
     except ServiceError as error:
         raise click.ClickException(str(error)) from error

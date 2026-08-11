@@ -74,6 +74,29 @@ def test_deploy_builds_verifies_and_applies_one_release(
     assert result.output == f"deployed 0.1.0+g12345678: {release_path}\n"
 
 
+def test_deploy_resumes_verified_release(monkeypatch, tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    wheel = tmp_path / "whub-0.1.0-py3-none-any.whl"
+    release_path = tmp_path / "releases" / "0.1.0+g12345678"
+    monkeypatch.setattr(
+        "whub.commands.release.build_release",
+        lambda value: ReleaseBuild("0.1.0+g12345678", wheel, verified=True),
+    )
+    monkeypatch.setattr(
+        "whub.commands.release.verify_release",
+        lambda value: (_ for _ in ()).throw(AssertionError("must not verify")),
+    )
+    monkeypatch.setattr(
+        "whub.commands.release.apply_release",
+        lambda value: ReleaseApplication("0.1.0+g12345678", release_path),
+    )
+
+    result = CliRunner().invoke(main, ["release", "deploy", "--source", str(source)])
+
+    assert result.exit_code == 0
+
+
 def test_verify_reports_verified_release(monkeypatch, tmp_path: Path) -> None:
     wheel = tmp_path / "whub-0.1.0-py3-none-any.whl"
     monkeypatch.setattr(
