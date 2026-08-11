@@ -794,12 +794,14 @@ def test_hub_explorer_endpoints_use_services(
         HubEntry(name="docs", path="docs", type="directory", expandable=True),
     ]
     file = HubFile(path="docs/guide.md", content="guide", state="text")
+    m = manifest()
     context = type("Context", (), {"workspace_root": tmp_path})()
     with (
         patch(
             "whub.webapp.routers.hub_explorer.current_context",
             return_value=context,
         ),
+        patch("whub.webapp.routers.hub_explorer.load_manifest", return_value=m),
         patch(
             "whub.webapp.routers.hub_explorer.list_hub_directory",
             return_value=entries,
@@ -816,8 +818,8 @@ def test_hub_explorer_endpoints_use_services(
 
     assert directory_response.json() == {"entries": [entries[0].model_dump()]}
     assert file_response.json() == file.model_dump()
-    mock_directory.assert_called_once_with(tmp_path, "")
-    mock_file.assert_called_once_with(tmp_path, "docs/guide.md")
+    mock_directory.assert_called_once_with(m, tmp_path, "")
+    mock_file.assert_called_once_with(m, tmp_path, "docs/guide.md")
 
 
 def test_service_errors_are_mapped_to_http_responses(client: TestClient) -> None:

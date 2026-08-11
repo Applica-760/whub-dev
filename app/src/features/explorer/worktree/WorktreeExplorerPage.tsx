@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 
 import { errorMessage } from "../../../api/errorMessage";
 import { WidgetFrame } from "../../../components/WidgetFrame";
+import { FileTabs } from "../FileTabs";
 import { highlightLine } from "../fileLanguage";
 import { fetchChangedFiles, fetchWorktreeDiff } from "./api";
 import type { ChangedFile, WorktreeFile } from "./api";
@@ -152,6 +153,7 @@ export function WorktreeExplorerPage({
 }: WorktreeExplorerPageProps) {
   const [files, setFiles] = useState<ChangedFile[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [recentPaths, setRecentPaths] = useState<string[]>([]);
   const [file, setFile] = useState<WorktreeFile | null>(null);
   const [loading, setLoading] = useState(false);
   const [diffLoading, setDiffLoading] = useState(false);
@@ -162,6 +164,7 @@ export function WorktreeExplorerPage({
     if (!project || !taskId) {
       setFiles([]);
       setSelectedPath(null);
+      setRecentPaths([]);
       return;
     }
     let cancelled = false;
@@ -172,6 +175,11 @@ export function WorktreeExplorerPage({
         if (!cancelled) {
           setFiles(response.files);
           setSelectedPath(response.files[0]?.path ?? null);
+          setRecentPaths(
+            response.files[0] && !response.files[0].agent_generated
+              ? [response.files[0].path]
+              : [],
+          );
           setExpanded(expandedDirectories(response.files));
         }
       })
@@ -217,6 +225,16 @@ export function WorktreeExplorerPage({
     const relativePath = workspacePath ? `${workspacePath}/${path}` : path;
     void navigator.clipboard?.writeText(relativePath);
   };
+  const selectFile = (path: string) => {
+    setSelectedPath(path);
+    setRecentPaths((current) =>
+      current.includes(path) ? current : [...current, path].slice(-8),
+    );
+  };
+  const closeFile = (path: string) => {
+    setRecentPaths((current) => current.filter((item) => item !== path));
+    if (selectedPath === path) setSelectedPath(null);
+  };
   const renderTree = (nodes: ExplorerNode[], depth = 0): ReactNode =>
     nodes.map((node) => {
       const directory = node.children.length > 0;
@@ -238,7 +256,7 @@ export function WorktreeExplorerPage({
                       : next.add(node.path);
                     return next;
                   })
-                : setSelectedPath(node.path)
+                : selectFile(node.path)
             }
             onContextMenu={(event) => {
               event.preventDefault();
@@ -292,79 +310,98 @@ export function WorktreeExplorerPage({
     });
 
   return (
-    <section className="terminal-diff-layout">
-      <WidgetFrame title={<Text fw={600}>Explorer</Text>}>
-        <ScrollArea h="100%" p="xs">
-          {loading ? (
-            <Loader m="md" size="sm" />
-          ) : files.length ? (
-            renderTree(data)
-          ) : (
-            <Text c="dimmed" p="md">
-              変更ファイルはありません。
-            </Text>
-          )}
-        </ScrollArea>
-      </WidgetFrame>
-      <WidgetFrame title={<Text fw={600}>File changes</Text>}>
-        {selectedPath && (
-          <Group className="diff-meta" gap="xs" px="md" py="sm">
-            <Text c="dimmed" size="sm">
-              {selectedPath}
-            </Text>
-            <Text c="green" fw={600} size="sm">
-              +{changes.added}
-            </Text>
-            <Text c="red" fw={600} size="sm">
-              -{changes.deleted}
-            </Text>
-          </Group>
-        )}
-        {error ? (
-          <Alert color="red" m="md">
-            {error}
-          </Alert>
-        ) : diffLoading ? (
-          <Loader m="md" size="sm" />
-        ) : !selectedPath ? (
-          <Text c="dimmed" p="md">
-            変更ファイルを選択してください。
-          </Text>
-        ) : file?.state === "binary" ? (
-          <Text c="dimmed" p="md">
-            バイナリファイルは表示できません。
-          </Text>
-        ) : file?.state === "unreadable" ? (
-          <Text c="dimmed" p="md">
-            ファイルを読み込めません。
-          </Text>
-        ) : file?.content === "" ? (
-          <Text c="dimmed" p="md">
-            空のファイルです。
-          </Text>
-        ) : (
-          <ScrollArea h="100%">
-            <Box className="diff-content" component="pre">
-              {lines.map((line, index) => (
-                <div
-                  className={`diff-line diff-${line.kind}`}
-                  key={`${index}-${line.content}`}
-                >
-                  <span className="diff-line-number">{line.oldLine ?? ""}</span>
-                  <span className="diff-line-number">{line.newLine ?? ""}</span>
-                  <span className="diff-line-prefix">{line.prefix}</span>
-                  <span
-                    className="diff-line-content"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightLine(line.content || " ", selectedPath),
-                    }}
-                  />
-                </div>
-              ))}
-            </Box>
+    <main className="terminal-page">
+      <section className="terminal-diff-layout explorer-page">
+        <WidgetFrame>
+          <ScrollArea h="100%" p="xs">
+            {loading ? (
+              <Loader m="md" size="sm" />
+            ) : files.length ? (
+              renderTree(data)
+            ) : (
+              <Text c="dimmed" p="md">
+                変更ファイルはありません。
+              </Text>
+            )}
           </ScrollArea>
-        )}
-      </WidgetFrame>
-    </section>
+        </WidgetFrame>
+        <WidgetFrame>
+          <div className="explorer-file">
+            <FileTabs
+              onClose={closeFile}
+              onSelect={selectFile}
+              paths={recentPaths}
+              selectedPath={selectedPath}
+            />
+            {selectedPath && (
+              <Group className="diff-meta" gap="xs" px="md" py="sm">
+                <Text c="dimmed" size="sm">
+                  {selectedPath}
+                </Text>
+                <Text c="green" fw={600} size="sm">
+                  +{changes.added}
+                </Text>
+                <Text c="red" fw={600} size="sm">
+                  -{changes.deleted}
+                </Text>
+              </Group>
+            )}
+            <div className="explorer-file-body">
+              {error ? (
+                <Alert color="red" m="md">
+                  {error}
+                </Alert>
+              ) : diffLoading ? (
+                <Loader m="md" size="sm" />
+              ) : !selectedPath ? (
+                <Text c="dimmed" p="md">
+                  変更ファイルを選択してください。
+                </Text>
+              ) : file?.state === "binary" ? (
+                <Text c="dimmed" p="md">
+                  バイナリファイルは表示できません。
+                </Text>
+              ) : file?.state === "unreadable" ? (
+                <Text c="dimmed" p="md">
+                  ファイルを読み込めません。
+                </Text>
+              ) : file?.content === "" ? (
+                <Text c="dimmed" p="md">
+                  空のファイルです。
+                </Text>
+              ) : (
+                <ScrollArea h="100%">
+                  <Box className="diff-content" component="pre">
+                    {lines.map((line, index) => (
+                      <div
+                        className={`diff-line diff-${line.kind}`}
+                        key={`${index}-${line.content}`}
+                      >
+                        <span className="diff-line-number">
+                          {line.oldLine ?? ""}
+                        </span>
+                        <span className="diff-line-number">
+                          {line.newLine ?? ""}
+                        </span>
+                        <span className="diff-line-prefix">{line.prefix}</span>
+                        <span
+                          className="diff-line-content"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightLine(
+                              line.content || " ",
+                              selectedPath,
+                            ),
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </Box>
+                </ScrollArea>
+              )}
+            </div>
+          </div>
+        </WidgetFrame>
+      </section>
+    </main>
   );
 }

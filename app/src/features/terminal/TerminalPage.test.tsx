@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalPage } from "./TerminalPage";
 import type { ApprovalAttention } from "./attentionApi";
+import { WorktreeExplorerPage } from "../explorer/worktree/WorktreeExplorerPage";
 
 let approvalAttention: ApprovalAttention[] = [
   {
@@ -276,14 +277,15 @@ function renderPage(path = "/terminal") {
 }
 
 async function renderWorktreeExplorer() {
-  const view = renderPage();
-  fireEvent.keyDown(await screen.findByText("whub-dev / TASK-099"), {
-    code: "KeyE",
-    key: "E",
-    metaKey: true,
-    shiftKey: true,
-  });
-  return view;
+  return render(
+    <MantineProvider env="test">
+      <WorktreeExplorerPage
+        project="whub-dev"
+        taskId="TASK-099"
+        workspacePath="projects/worktrees/whub-dev-099"
+      />
+    </MantineProvider>,
+  );
 }
 
 describe("TerminalPage", () => {
@@ -305,7 +307,7 @@ describe("TerminalPage", () => {
     expect(container.querySelectorAll(".terminal-task-panel")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-graph")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-detail")).toHaveLength(1);
-    expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(0);
+    expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(1);
 
     fireEvent.click(secondTerminal);
 
@@ -336,6 +338,19 @@ describe("TerminalPage", () => {
   it("⌘⇧EをTerminal内の任意の位置からExplorerへ遷移する", async () => {
     renderPage();
     await screen.findByText("whub-dev / TASK-099");
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/hub-explorer/directory",
+        undefined,
+      ),
+    );
+    const hubRequests = () =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([input]) =>
+          String(input).startsWith("/api/hub-explorer"),
+        ).length;
+    expect(hubRequests()).toBe(1);
 
     fireEvent.keyDown(document.body, {
       code: "KeyE",
@@ -344,7 +359,12 @@ describe("TerminalPage", () => {
       shiftKey: true,
     });
 
-    expect(await screen.findByText("File changes")).toBeTruthy();
+    expect(
+      await screen.findByText("ファイルを選択してください。"),
+    ).toBeTruthy();
+    expect(hubRequests()).toBe(1);
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalUnmounts).toEqual([]);
 
     fireEvent.keyDown(document.body, {
       code: "KeyE",
@@ -354,6 +374,8 @@ describe("TerminalPage", () => {
     });
 
     expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalUnmounts).toEqual([]);
   });
 
   it("Git Explorerで変更ファイルへの経路を初期展開し、状態と右クリックコピーを反映する", async () => {
@@ -365,7 +387,7 @@ describe("TerminalPage", () => {
     const { container } = await renderWorktreeExplorer();
 
     const source = await screen.findByText("src");
-    expect(await screen.findByText("main.py")).toBeTruthy();
+    expect((await screen.findAllByText("main.py")).length).toBeGreaterThan(0);
     expect(
       container
         .querySelector(".diff-tree-chevron")
@@ -385,7 +407,11 @@ describe("TerminalPage", () => {
     expect(container.querySelector('[data-new="true"]')).toBeTruthy();
 
     fireEvent.click(source);
-    expect(screen.queryByText("main.py")).toBeNull();
+    expect(
+      Array.from(container.querySelectorAll(".diff-tree-node")).map(
+        (node) => node.textContent,
+      ),
+    ).not.toContain("main.py");
     expect(
       container
         .querySelector(".diff-tree-chevron")
@@ -393,14 +419,14 @@ describe("TerminalPage", () => {
     ).toBeNull();
 
     fireEvent.click(source);
-    expect(await screen.findByText("main.py")).toBeTruthy();
+    expect((await screen.findAllByText("main.py")).length).toBeGreaterThan(0);
     expect(
       container.querySelector(".diff-tree-children")?.getAttribute("style"),
     ).toBeNull();
     expect(
       container.querySelector(".diff-tree-guide")?.getAttribute("style"),
     ).toContain("inset-inline-start: 22px");
-    fireEvent.contextMenu(screen.getByText("main.py"));
+    fireEvent.contextMenu(screen.getAllByText("main.py")[0]);
     expect(clipboardWrite).toHaveBeenCalledWith(
       "projects/worktrees/whub-dev-099/src/nested/main.py",
     );

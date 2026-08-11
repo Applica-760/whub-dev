@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from whub.core.context import current_context
+from whub.services.manifest import load_manifest
 from whub.services.hub_explorer import (
     HubEntry,
     HubFile,
@@ -24,10 +25,12 @@ class HubDirectoryResponse(BaseModel):
 @router.get("/directory", response_model=HubDirectoryResponse)
 def get_hub_directory(path: str = "") -> HubDirectoryResponse:
     return HubDirectoryResponse(
-        entries=list_hub_directory(current_context().workspace_root, path)
+        entries=list_hub_directory(
+            load_manifest(), current_context().workspace_root, path
+        )
     )
 
 
 @router.get("/file", response_model=HubFile)
 def get_hub_file(path: str) -> HubFile:
-    return read_hub_file(current_context().workspace_root, path)
+    return read_hub_file(load_manifest(), current_context().workspace_root, path)

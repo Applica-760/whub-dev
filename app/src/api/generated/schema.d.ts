@@ -634,6 +634,11 @@ export interface components {
             type: "directory" | "file";
             /** Expandable */
             expandable: boolean;
+            /**
+             * Changed
+             * @default false
+             */
+            changed: boolean;
         };
         /**
          * HubFile
@@ -649,6 +654,11 @@ export interface components {
              * @enum {string}
              */
             state: "text" | "binary" | "unreadable";
+            /**
+             * Diff
+             * @default
+             */
+            diff: string;
         };
         /** InboxResponse */
         InboxResponse: {

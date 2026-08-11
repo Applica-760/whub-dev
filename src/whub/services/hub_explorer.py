@@ -9,7 +9,9 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from whub.services.errors import NotFoundError
+from whub.services.errors import NotFoundError, ServiceError
+from whub.services.manifest import ResolvedManifest
+from whub.services.worktree.git import process_detail, run_git
 
 
 class HubEntry(BaseModel):
@@ -19,6 +21,7 @@ class HubEntry(BaseModel):
     path: str
     type: Literal["directory", "file"]
     expandable: bool
+    changed: bool = False
 
 
 class HubFile(BaseModel):
@@ -27,9 +30,14 @@ class HubFile(BaseModel):
     path: str
     content: str | None
     state: Literal["text", "binary", "unreadable"]
+    diff: str = ""
 
 
-def list_hub_directory(root: Path, relative_path: str = "") -> list[HubEntry]:
+def list_hub_directory(
+    manifest: ResolvedManifest,
+    root: Path,
+    relative_path: str = "",
+) -> list[HubEntry]:
     """List one logical Hub directory, excluding Git metadata."""
     directory, parts = _resolve_logical_path(root, relative_path)
     if not directory.is_dir() or _contains_git(directory.resolve()):
@@ -56,12 +64,17 @@ def list_hub_directory(root: Path, relative_path: str = "") -> list[HubEntry]:
                 path=path,
                 type="directory" if directory_entry else "file",
                 expandable=directory_entry and target not in ancestors,
+                changed=_path_has_changes(manifest, root, path),
             )
         )
     return entries
 
 
-def read_hub_file(root: Path, relative_path: str) -> HubFile:
+def read_hub_file(
+    manifest: ResolvedManifest,
+    root: Path,
+    relative_path: str,
+) -> HubFile:
     """Read one logical Hub text file without exposing Git metadata."""
     target, _ = _resolve_logical_path(root, relative_path)
     try:
@@ -81,7 +94,12 @@ def read_hub_file(root: Path, relative_path: str) -> HubFile:
     if b"\0" in content:
         return HubFile(path=relative_path, content=None, state="binary")
     try:
-        return HubFile(path=relative_path, content=content.decode(), state="text")
+        return HubFile(
+            path=relative_path,
+            content=content.decode(),
+            state="text",
+            diff=_file_diff(manifest, root, relative_path, resolved),
+        )
     except UnicodeDecodeError:
         return HubFile(path=relative_path, content=None, state="binary")
 
@@ -106,3 +124,109 @@ def _ancestor_targets(root: Path, parts: tuple[str, ...]) -> set[Path]:
 
 def _contains_git(path: Path) -> bool:
     return ".git" in path.parts
+
+
+def _git_context(
+    manifest: ResolvedManifest,
+    root: Path,
+    relative_path: str,
+) -> tuple[Path, str] | None:
+    parts = PurePosixPath(relative_path).parts
+    if not parts:
+        return None
+    if parts[0] == "whub-dev":
+        project = manifest.resolve_project("whub-dev")
+    else:
+        return None
+    if project is None or project.resource is None or project.resource.git is None:
+        return None
+    branch = project.resource.git.branch
+    if branch is None:
+        return None
+    target, _ = _resolve_logical_path(root, relative_path)
+    result = run_git(target.parent if target.is_file() else target, "rev-parse", "--show-toplevel")
+    if result.returncode != 0:
+        return None
+    return Path(result.stdout.strip()), branch
+
+
+def _path_has_changes(
+    manifest: ResolvedManifest,
+    root: Path,
+    relative_path: str,
+) -> bool:
+    context = _git_context(manifest, root, relative_path)
+    if context is None:
+        return False
+    repository, branch = context
+    target, _ = _resolve_logical_path(root, relative_path)
+    try:
+        repo_path = str(target.resolve().relative_to(repository))
+    except ValueError:
+        return False
+    changed = run_git(repository, "diff", "--quiet", branch, "--", repo_path)
+    if changed.returncode == 1:
+        return True
+    if changed.returncode != 0:
+        raise ServiceError("git diff failed: " + process_detail(changed))
+    untracked = run_git(
+        repository,
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "--",
+        repo_path,
+    )
+    if untracked.returncode != 0:
+        raise ServiceError("git ls-files failed: " + process_detail(untracked))
+    return bool(untracked.stdout.strip())
+
+
+def _file_diff(
+    manifest: ResolvedManifest,
+    root: Path,
+    relative_path: str,
+    target: Path,
+) -> str:
+    context = _git_context(manifest, root, relative_path)
+    if context is None:
+        return ""
+    repository, branch = context
+    try:
+        repo_path = str(target.relative_to(repository))
+    except ValueError:
+        return ""
+    if _path_has_changes(manifest, root, relative_path):
+        untracked = run_git(
+            repository,
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            repo_path,
+        )
+        if untracked.stdout.strip():
+            result = run_git(
+                repository,
+                "diff",
+                "--no-index",
+                "--no-ext-diff",
+                "--unified=3",
+                "--",
+                "/dev/null",
+                repo_path,
+            )
+        else:
+            result = run_git(
+                repository,
+                "diff",
+                "--no-ext-diff",
+                "--unified=3",
+                branch,
+                "--",
+                repo_path,
+            )
+        if result.returncode not in (0, 1):
+            raise ServiceError("git diff failed: " + process_detail(result))
+        return result.stdout
+    return ""

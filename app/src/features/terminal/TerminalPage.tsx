@@ -301,188 +301,196 @@ export function TerminalPage({
     stopOperator,
     terminalValues,
     navigate,
+    explorer,
   ]);
 
-  if (explorer) return <TerminalExplorerPage worktree={selectedWorktree} />;
-
   return (
-    <main className="terminal-page">
-      <section
-        className="terminal-layout"
-        data-explorer-collapsed={collapsed.left || undefined}
-        data-task-collapsed={collapsed.right || undefined}
-      >
-        <aside
-          className="terminal-task-panel"
-          data-collapsed={collapsed.right || undefined}
-        >
-          <div className="terminal-task-graph">
-            <TaskDependencyGraphWidget
-              active
-              height="100%"
-              hideTitle
-              onSelectTask={selectedOperator ? selectOperationTask : undefined}
-              project={graphProject}
-            />
-          </div>
-          <div className="terminal-task-detail">
-            <TaskDetailWidget
-              active
-              emptyMessage={
-                selectedOperator
-                  ? "グラフからTaskを選択してください"
-                  : "Terminalを選択してください"
-              }
-              hideTitle
-              project={detailProject}
-              taskId={detailTaskId}
-            />
-          </div>
-        </aside>
-        <WidgetFrame>
-          {selectedOperator ? (
-            <TerminalWidget
-              endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
-              key={selectedTerminal}
-              resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}`}
-            />
-          ) : selectedWorktree ? (
-            <TerminalWidget
-              key={selectedTerminal}
-              project={selectedWorktree.project}
-              resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}`}
-              taskId={selectedWorktree.task_id}
-            />
-          ) : (
-            <Text c="dimmed" p="md">
-              表示できる端末はありません。
-            </Text>
-          )}
-        </WidgetFrame>
-        <aside
-          className="terminal-explorer"
-          data-collapsed={collapsed.left || undefined}
-        >
-          <WidgetFrame>
-            <Group justify="space-between" m="md">
-              <Text fw={500}>Operations</Text>
-              <Button
-                aria-label="Operationを起動"
-                disabled={operatorPending}
-                onClick={() => void startOperator()}
-                size="xs"
-              >
-                起動
-              </Button>
-            </Group>
-            {operators.map((operator, index) => (
-              <GroupedListRow
-                key={operator.operator_id}
-                onClick={() => openOperator(operator.operator_id)}
-                rightSection={
-                  <Group gap={4} wrap="nowrap">
-                    {pendingAttention
-                      .filter(
-                        (item) =>
-                          item.target === "operator" &&
-                          item.operator_id === operator.operator_id,
-                      )
-                      .map((item) => (
-                        <Badge
-                          color={
-                            item.event === "permission_request"
-                              ? "yellow"
-                              : "blue"
-                          }
-                          key={item.event}
-                          size="sm"
+    <>
+      <div hidden={explorer}>
+        <main className="terminal-page">
+          <section
+            className="terminal-layout"
+            data-explorer-collapsed={collapsed.left || undefined}
+            data-task-collapsed={collapsed.right || undefined}
+          >
+            <aside
+              className="terminal-task-panel"
+              data-collapsed={collapsed.right || undefined}
+            >
+              <div className="terminal-task-graph">
+                <TaskDependencyGraphWidget
+                  active
+                  height="100%"
+                  hideTitle
+                  onSelectTask={
+                    selectedOperator ? selectOperationTask : undefined
+                  }
+                  project={graphProject}
+                />
+              </div>
+              <div className="terminal-task-detail">
+                <TaskDetailWidget
+                  active
+                  emptyMessage={
+                    selectedOperator
+                      ? "グラフからTaskを選択してください"
+                      : "Terminalを選択してください"
+                  }
+                  hideTitle
+                  project={detailProject}
+                  taskId={detailTaskId}
+                />
+              </div>
+            </aside>
+            <WidgetFrame>
+              {selectedOperator ? (
+                <TerminalWidget
+                  endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
+                  key={selectedTerminal}
+                  resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}:${explorer}`}
+                />
+              ) : selectedWorktree ? (
+                <TerminalWidget
+                  key={selectedTerminal}
+                  project={selectedWorktree.project}
+                  resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}:${explorer}`}
+                  taskId={selectedWorktree.task_id}
+                />
+              ) : (
+                <Text c="dimmed" p="md">
+                  表示できる端末はありません。
+                </Text>
+              )}
+            </WidgetFrame>
+            <aside
+              className="terminal-explorer"
+              data-collapsed={collapsed.left || undefined}
+            >
+              <WidgetFrame>
+                <Group justify="space-between" m="md">
+                  <Text fw={500}>Operations</Text>
+                  <Button
+                    aria-label="Operationを起動"
+                    disabled={operatorPending}
+                    onClick={() => void startOperator()}
+                    size="xs"
+                  >
+                    起動
+                  </Button>
+                </Group>
+                {operators.map((operator, index) => (
+                  <GroupedListRow
+                    key={operator.operator_id}
+                    onClick={() => openOperator(operator.operator_id)}
+                    rightSection={
+                      <Group gap={4} wrap="nowrap">
+                        {pendingAttention
+                          .filter(
+                            (item) =>
+                              item.target === "operator" &&
+                              item.operator_id === operator.operator_id,
+                          )
+                          .map((item) => (
+                            <Badge
+                              color={
+                                item.event === "permission_request"
+                                  ? "yellow"
+                                  : "blue"
+                              }
+                              key={item.event}
+                              size="sm"
+                            >
+                              {item.event === "permission_request"
+                                ? "承認待ち"
+                                : "応答終了"}
+                            </Badge>
+                          ))}
+                        <ActionIcon
+                          aria-label={`Operation ${operator.operator_id}を停止`}
+                          disabled={operatorPending}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void stopOperator(operator.operator_id);
+                          }}
+                          title="Operationを終了"
+                          variant="subtle"
                         >
-                          {item.event === "permission_request"
-                            ? "承認待ち"
-                            : "応答終了"}
-                        </Badge>
-                      ))}
-                    <ActionIcon
-                      aria-label={`Operation ${operator.operator_id}を停止`}
-                      disabled={operatorPending}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void stopOperator(operator.operator_id);
-                      }}
-                      title="Operationを終了"
-                      variant="subtle"
-                    >
-                      <IconX aria-hidden size={16} stroke={1.5} />
-                    </ActionIcon>
-                  </Group>
-                }
-                selected={
-                  selectedTerminal === operatorValue(operator.operator_id)
-                }
-                title={`Operation ${index + 1}`}
-                withDivider={operators.length > 1 || terminals.length > 0}
-              />
-            ))}
-            {terminals.map((worktree, index) => (
-              <GroupedListRow
-                key={worktreeValue(worktree)}
-                onClick={() => openTerminal(worktreeValue(worktree))}
-                rightSection={
-                  pendingAttention.some(
-                    (item) =>
-                      item.target === "worktree" &&
-                      item.project === worktree.project &&
-                      item.task_id === worktree.task_id,
-                  ) ? (
-                    <Group gap={4} wrap="nowrap">
-                      {pendingAttention
-                        .filter(
-                          (item) =>
-                            item.target === "worktree" &&
-                            item.project === worktree.project &&
-                            item.task_id === worktree.task_id,
-                        )
-                        .map((item) => (
-                          <Badge
-                            color={
-                              item.event === "permission_request"
-                                ? "yellow"
-                                : "blue"
-                            }
-                            key={item.event}
-                            size="sm"
-                          >
-                            {item.event === "permission_request"
-                              ? "承認待ち"
-                              : "応答終了"}
-                          </Badge>
-                        ))}
-                    </Group>
-                  ) : undefined
-                }
-                selected={worktreeValue(worktree) === selectedTerminal}
-                subtitle={worktree.task_id}
-                title={worktree.project}
-                withDivider={index < terminals.length - 1}
-              />
-            ))}
-            {loading ? (
-              <Text c="dimmed" p="md">
-                Agent sessionを読み込んでいます…
-              </Text>
-            ) : terminals.length === 0 ? (
-              <Text c="dimmed" p="md">
-                Agent sessionがありません
-              </Text>
-            ) : null}
-            {(error || operatorError) && (
-              <Alert color="red" m="md">
-                {error ?? operatorError}
-              </Alert>
-            )}
-          </WidgetFrame>
-        </aside>
-      </section>
-    </main>
+                          <IconX aria-hidden size={16} stroke={1.5} />
+                        </ActionIcon>
+                      </Group>
+                    }
+                    selected={
+                      selectedTerminal === operatorValue(operator.operator_id)
+                    }
+                    title={`Operation ${index + 1}`}
+                    withDivider={operators.length > 1 || terminals.length > 0}
+                  />
+                ))}
+                {terminals.map((worktree, index) => (
+                  <GroupedListRow
+                    key={worktreeValue(worktree)}
+                    onClick={() => openTerminal(worktreeValue(worktree))}
+                    rightSection={
+                      pendingAttention.some(
+                        (item) =>
+                          item.target === "worktree" &&
+                          item.project === worktree.project &&
+                          item.task_id === worktree.task_id,
+                      ) ? (
+                        <Group gap={4} wrap="nowrap">
+                          {pendingAttention
+                            .filter(
+                              (item) =>
+                                item.target === "worktree" &&
+                                item.project === worktree.project &&
+                                item.task_id === worktree.task_id,
+                            )
+                            .map((item) => (
+                              <Badge
+                                color={
+                                  item.event === "permission_request"
+                                    ? "yellow"
+                                    : "blue"
+                                }
+                                key={item.event}
+                                size="sm"
+                              >
+                                {item.event === "permission_request"
+                                  ? "承認待ち"
+                                  : "応答終了"}
+                              </Badge>
+                            ))}
+                        </Group>
+                      ) : undefined
+                    }
+                    selected={worktreeValue(worktree) === selectedTerminal}
+                    subtitle={worktree.task_id}
+                    title={worktree.project}
+                    withDivider={index < terminals.length - 1}
+                  />
+                ))}
+                {loading ? (
+                  <Text c="dimmed" p="md">
+                    Agent sessionを読み込んでいます…
+                  </Text>
+                ) : terminals.length === 0 ? (
+                  <Text c="dimmed" p="md">
+                    Agent sessionがありません
+                  </Text>
+                ) : null}
+                {(error || operatorError) && (
+                  <Alert color="red" m="md">
+                    {error ?? operatorError}
+                  </Alert>
+                )}
+              </WidgetFrame>
+            </aside>
+          </section>
+        </main>
+      </div>
+      <div hidden={!explorer}>
+        <TerminalExplorerPage />
+      </div>
+    </>
   );
 }

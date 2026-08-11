@@ -1,5 +1,4 @@
 import { Alert, Box, Group, Loader, ScrollArea, Text } from "@mantine/core";
-import { CodeHighlight } from "@mantine/code-highlight";
 import {
   IconChevronRight,
   IconFile,
@@ -12,27 +11,109 @@ import type { ReactNode } from "react";
 import { requestJson } from "../../../api/client";
 import { errorMessage } from "../../../api/errorMessage";
 import { WidgetFrame } from "../../../components/WidgetFrame";
-import { fileLanguage } from "../fileLanguage";
+import { FileTabs } from "../FileTabs";
+import { highlightLine } from "../fileLanguage";
 
 type HubEntry = {
   name: string;
   path: string;
   type: "directory" | "file";
   expandable: boolean;
+  changed: boolean;
 };
 
 type HubFile = {
   path: string;
   content: string | null;
   state: "text" | "binary" | "unreadable";
+  diff: string;
 };
 
+type RenderedFileLine = {
+  content: string;
+  kind: "addition" | "context" | "deletion" | "hunk";
+  newLine: number | null;
+  oldLine: number | null;
+  prefix: string;
+};
+
+const EXPLORER_STATE_KEY = "whub.hub-explorer";
+
+function restoredState() {
+  try {
+    const value = JSON.parse(localStorage.getItem(EXPLORER_STATE_KEY) ?? "{}");
+    return {
+      expanded: new Set<string>(value.expanded ?? []),
+      recentPaths: Array.isArray(value.recentPaths) ? value.recentPaths : [],
+      selectedPath:
+        typeof value.selectedPath === "string" ? value.selectedPath : null,
+    };
+  } catch {
+    return { expanded: new Set<string>(), recentPaths: [], selectedPath: null };
+  }
+}
+
+function renderedFileLines(content: string, diff: string): RenderedFileLine[] {
+  const insertions = new Map<number, RenderedFileLine[]>();
+  const additions = new Set<number>();
+  let oldLine = 0;
+  let newLine = 0;
+  const insert = (line: number, item: RenderedFileLine) => {
+    insertions.set(line, [...(insertions.get(line) ?? []), item]);
+  };
+  for (const line of diff.split("\n")) {
+    const hunk = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+    if (hunk) {
+      oldLine = Number(hunk[1]);
+      newLine = Number(hunk[2]);
+      insert(newLine, {
+        content: line,
+        kind: "hunk",
+        oldLine: null,
+        newLine: null,
+        prefix: "",
+      });
+    } else if (line.startsWith("-") && !line.startsWith("---")) {
+      insert(newLine, {
+        content: line.slice(1),
+        kind: "deletion",
+        oldLine: oldLine++,
+        newLine: null,
+        prefix: "-",
+      });
+    } else if (line.startsWith("+") && !line.startsWith("+++")) {
+      additions.add(newLine++);
+    } else if (line.startsWith(" ")) {
+      oldLine++;
+      newLine++;
+    }
+  }
+  const lines = content.split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  return lines
+    .flatMap((line, index): RenderedFileLine[] => [
+      ...(insertions.get(index + 1) ?? []),
+      {
+        content: line,
+        kind: additions.has(index + 1) ? "addition" : "context",
+        oldLine: null,
+        newLine: index + 1,
+        prefix: additions.has(index + 1) ? "+" : " ",
+      },
+    ])
+    .concat(insertions.get(lines.length + 1) ?? []);
+}
+
 export function HubExplorerPage() {
+  const initial = restoredState();
   const [directories, setDirectories] = useState<Record<string, HubEntry[]>>(
     {},
   );
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(initial.expanded);
+  const [selectedPath, setSelectedPath] = useState<string | null>(
+    initial.selectedPath,
+  );
+  const [recentPaths, setRecentPaths] = useState<string[]>(initial.recentPaths);
   const [file, setFile] = useState<HubFile | null>(null);
   const [loading, setLoading] = useState(true);
   const [fileLoading, setFileLoading] = useState(false);
@@ -44,6 +125,27 @@ export function HubExplorerPage() {
       .catch((requestError) => setError(errorMessage(requestError)))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    for (const path of expanded) {
+      requestJson<{ entries: HubEntry[] }>(
+        `/api/hub-explorer/directory?path=${encodeURIComponent(path)}`,
+      ).then(({ entries }) =>
+        setDirectories((current) => ({ ...current, [path]: entries })),
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      EXPLORER_STATE_KEY,
+      JSON.stringify({
+        expanded: [...expanded],
+        recentPaths,
+        selectedPath,
+      }),
+    );
+  }, [expanded, recentPaths, selectedPath]);
 
   useEffect(() => {
     if (!selectedPath) return;
@@ -74,6 +176,25 @@ export function HubExplorerPage() {
       .catch((requestError) => setError(errorMessage(requestError)));
   };
 
+  const selectFile = (path: string) => {
+    setSelectedPath(path);
+    setRecentPaths((current) =>
+      current.includes(path) ? current : [...current, path].slice(-8),
+    );
+  };
+  const closeFile = (path: string) => {
+    setRecentPaths((current) => current.filter((item) => item !== path));
+    if (selectedPath === path) {
+      setSelectedPath(
+        recentPaths.filter((item) => item !== path).at(-1) ?? null,
+      );
+    }
+  };
+  const lines =
+    file?.state === "text" && file.content !== null
+      ? renderedFileLines(file.content, file.diff)
+      : [];
+
   const renderTree = (entries: HubEntry[], depth = 0): ReactNode =>
     entries.map((entry) => {
       const directory = entry.type === "directory";
@@ -82,9 +203,10 @@ export function HubExplorerPage() {
         <Box key={entry.path}>
           <Group
             className="diff-tree-node"
+            data-changed={entry.changed || undefined}
             gap={6}
             onClick={() =>
-              directory ? toggleDirectory(entry) : setSelectedPath(entry.path)
+              directory ? toggleDirectory(entry) : selectFile(entry.path)
             }
             py={3}
             style={{ paddingInlineStart: 8 + depth * 16 }}
@@ -136,7 +258,7 @@ export function HubExplorerPage() {
   return (
     <main className="terminal-page">
       <section className="terminal-diff-layout explorer-page">
-        <WidgetFrame title={<Text fw={600}>Explorer</Text>}>
+        <WidgetFrame>
           <ScrollArea h="100%" p="xs">
             {loading ? (
               <Loader m="md" size="sm" />
@@ -145,32 +267,62 @@ export function HubExplorerPage() {
             )}
           </ScrollArea>
         </WidgetFrame>
-        <WidgetFrame title={<Text fw={600}>{selectedPath ?? "File"}</Text>}>
-          {error ? (
-            <Alert color="red" m="md">
-              {error}
-            </Alert>
-          ) : fileLoading ? (
-            <Loader m="md" size="sm" />
-          ) : !selectedPath ? (
-            <Text c="dimmed" p="md">
-              ファイルを選択してください。
-            </Text>
-          ) : file?.state !== "text" ? (
-            <Text c="dimmed" p="md">
-              {file?.state === "binary"
-                ? "バイナリファイルは表示できません。"
-                : "ファイルを読み込めません。"}
-            </Text>
-          ) : (
-            <ScrollArea h="100%">
-              <CodeHighlight
-                code={file.content ?? ""}
-                language={fileLanguage(selectedPath)}
-                withCopyButton={false}
-              />
-            </ScrollArea>
-          )}
+        <WidgetFrame>
+          <div className="explorer-file">
+            <FileTabs
+              onClose={closeFile}
+              onSelect={selectFile}
+              paths={recentPaths}
+              selectedPath={selectedPath}
+            />
+            <div className="explorer-file-body">
+              {error ? (
+                <Alert color="red" m="md">
+                  {error}
+                </Alert>
+              ) : fileLoading ? (
+                <Loader m="md" size="sm" />
+              ) : !selectedPath ? (
+                <Text c="dimmed" p="md">
+                  ファイルを選択してください。
+                </Text>
+              ) : file?.state !== "text" ? (
+                <Text c="dimmed" p="md">
+                  {file?.state === "binary"
+                    ? "バイナリファイルは表示できません。"
+                    : "ファイルを読み込めません。"}
+                </Text>
+              ) : (
+                <ScrollArea h="100%">
+                  <Box className="diff-content" component="pre">
+                    {lines.map((line, index) => (
+                      <div
+                        className={`diff-line diff-${line.kind}`}
+                        key={`${index}-${line.content}`}
+                      >
+                        <span className="diff-line-number">
+                          {line.oldLine ?? ""}
+                        </span>
+                        <span className="diff-line-number">
+                          {line.newLine ?? ""}
+                        </span>
+                        <span className="diff-line-prefix">{line.prefix}</span>
+                        <span
+                          className="diff-line-content"
+                          dangerouslySetInnerHTML={{
+                            __html: highlightLine(
+                              line.content || " ",
+                              selectedPath,
+                            ),
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </Box>
+                </ScrollArea>
+              )}
+            </div>
+          </div>
         </WidgetFrame>
       </section>
     </main>
