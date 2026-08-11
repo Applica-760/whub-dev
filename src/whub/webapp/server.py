@@ -26,7 +26,6 @@ from whub.webapp.routers.tasks import router as tasks_router
 from whub.webapp.routers.terminal import terminal
 from whub.webapp.routers.todos import router as todos_router
 from whub.webapp.routers.vault import router as vault_router
-from whub.webapp.routers.worktree_diff import router as worktree_diff_router
 
 
 def create_api_app() -> FastAPI:
@@ -81,7 +80,6 @@ def create_api_app() -> FastAPI:
     )
     app.include_router(vault_router)
     app.include_router(hub_explorer_router)
-    app.include_router(worktree_diff_router)
 
     @app.get("/api/health")
     def health() -> dict[str, str]:

@@ -12,7 +12,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalPage } from "./TerminalPage";
 import type { ApprovalAttention } from "./attentionApi";
-import { WorktreeExplorerPage } from "../explorer/worktree/WorktreeExplorerPage";
 
 let approvalAttention: ApprovalAttention[] = [
   {
@@ -30,24 +29,6 @@ let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
 let deferSessions = false;
 let deferredSessionProject: string | null = null;
-let changedFiles: {
-  path: string;
-  status: string;
-  previous_path: string | null;
-  agent_generated?: boolean;
-}[] = [{ path: "src/main.py", status: "M", previous_path: null }];
-let worktreeFile: {
-  path: string;
-  content: string | null;
-  diff: string;
-  state: string;
-} = {
-  path: "src/main.py",
-  content: "new\nunchanged\n",
-  diff: "@@ -1 +1 @@\n-old\n+new",
-  state: "text",
-};
-let clipboardWrite = vi.fn();
 let terminalMounts: string[] = [];
 let terminalUnmounts: string[] = [];
 
@@ -100,20 +81,8 @@ beforeEach(() => {
   operatorTerminals = [];
   deferSessions = false;
   deferredSessionProject = null;
-  changedFiles = [{ path: "src/main.py", status: "M", previous_path: null }];
-  worktreeFile = {
-    path: "src/main.py",
-    content: "new\nunchanged\n",
-    diff: "@@ -1 +1 @@\n-old\n+new",
-    state: "text",
-  };
-  clipboardWrite = vi.fn();
   terminalMounts = [];
   terminalUnmounts = [];
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: { writeText: clipboardWrite },
-  });
   approvalAttention = [
     {
       target: "worktree",
@@ -205,18 +174,6 @@ beforeEach(() => {
           ok: true,
           json: async () => ({ tasks: [] }),
         });
-      if (url.includes("/changes"))
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            files: changedFiles,
-          }),
-        });
-      if (url.includes("/diff?"))
-        return Promise.resolve({
-          ok: true,
-          json: async () => worktreeFile,
-        });
       if (url.startsWith("/api/hub-explorer/directory"))
         return Promise.resolve({
           ok: true,
@@ -272,18 +229,6 @@ function renderPage(path = "/terminal") {
       <MemoryRouter initialEntries={[path]}>
         <TerminalPage />
       </MemoryRouter>
-    </MantineProvider>,
-  );
-}
-
-async function renderWorktreeExplorer() {
-  return render(
-    <MantineProvider env="test">
-      <WorktreeExplorerPage
-        project="whub-dev"
-        taskId="TASK-099"
-        workspacePath="projects/worktrees/whub-dev-099"
-      />
     </MantineProvider>,
   );
 }
@@ -376,145 +321,6 @@ describe("TerminalPage", () => {
     expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
     expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
     expect(terminalUnmounts).toEqual([]);
-  });
-
-  it("Git Explorerで変更ファイルへの経路を初期展開し、状態と右クリックコピーを反映する", async () => {
-    changedFiles = [
-      { path: "src/nested/main.py", status: "M", previous_path: null },
-      { path: "draft.txt", status: "A", previous_path: null },
-      { path: "unchanged/note.txt", status: "", previous_path: null },
-    ];
-    const { container } = await renderWorktreeExplorer();
-
-    const source = await screen.findByText("src");
-    expect((await screen.findAllByText("main.py")).length).toBeGreaterThan(0);
-    expect(
-      container
-        .querySelector(".diff-tree-chevron")
-        ?.getAttribute("data-expanded"),
-    ).toBe("true");
-    expect(
-      container
-        .querySelectorAll(".diff-tree-chevron")[1]
-        ?.getAttribute("data-expanded"),
-    ).toBe("true");
-    expect(
-      container
-        .querySelectorAll(".diff-tree-chevron")[2]
-        ?.getAttribute("data-expanded"),
-    ).toBeNull();
-    expect(container.querySelector('[data-changed="true"]')).toBeTruthy();
-    expect(container.querySelector('[data-new="true"]')).toBeTruthy();
-
-    fireEvent.click(source);
-    expect(
-      Array.from(container.querySelectorAll(".diff-tree-node")).map(
-        (node) => node.textContent,
-      ),
-    ).not.toContain("main.py");
-    expect(
-      container
-        .querySelector(".diff-tree-chevron")
-        ?.getAttribute("data-expanded"),
-    ).toBeNull();
-
-    fireEvent.click(source);
-    expect((await screen.findAllByText("main.py")).length).toBeGreaterThan(0);
-    expect(
-      container.querySelector(".diff-tree-children")?.getAttribute("style"),
-    ).toBeNull();
-    expect(
-      container.querySelector(".diff-tree-guide")?.getAttribute("style"),
-    ).toContain("inset-inline-start: 22px");
-    fireEvent.contextMenu(screen.getAllByText("main.py")[0]);
-    expect(clipboardWrite).toHaveBeenCalledWith(
-      "projects/worktrees/whub-dev-099/src/nested/main.py",
-    );
-  });
-
-  it("ディレクトリを各階層でファイルより先に名前順で表示する", async () => {
-    changedFiles = [
-      { path: "z.txt", status: "", previous_path: null },
-      { path: "src/z.py", status: "", previous_path: null },
-      { path: "a.txt", status: "", previous_path: null },
-      { path: "src/a.py", status: "", previous_path: null },
-    ];
-    const { container } = await renderWorktreeExplorer();
-
-    await screen.findByText("src");
-    const rootLabels = Array.from(
-      container.querySelectorAll(".diff-tree-node"),
-    ).map((node) => node.textContent?.trim());
-    expect(rootLabels).toEqual(["src", "a.txt", "z.txt"]);
-
-    fireEvent.click(screen.getByText("src"));
-    const labels = Array.from(
-      container.querySelectorAll(".diff-tree-node"),
-    ).map((node) => node.textContent?.trim());
-    expect(labels).toEqual(["src", "a.py", "z.py", "a.txt", "z.txt"]);
-  });
-
-  it("Agent生成物だけの祖先を初期展開せず、手動展開は維持する", async () => {
-    changedFiles = [
-      {
-        path: ".agents/AGENTS_context.md",
-        status: "M",
-        previous_path: null,
-        agent_generated: true,
-      },
-      {
-        path: "src/main.py",
-        status: "M",
-        previous_path: null,
-        agent_generated: false,
-      },
-    ];
-    await renderWorktreeExplorer();
-
-    const agents = await screen.findByText(".agents");
-    expect(await screen.findByText("main.py")).toBeTruthy();
-    expect(screen.queryByText("AGENTS_context.md")).toBeNull();
-
-    fireEvent.click(agents);
-
-    expect(await screen.findByText("AGENTS_context.md")).toBeTruthy();
-  });
-
-  it("バイナリファイルの本文を表示しない", async () => {
-    worktreeFile = {
-      path: "src/main.py",
-      content: null,
-      diff: "",
-      state: "binary",
-    };
-    await renderWorktreeExplorer();
-
-    expect(
-      await screen.findByText("バイナリファイルは表示できません。"),
-    ).toBeTruthy();
-  });
-
-  it.each([
-    {
-      content: "",
-      message: "空のファイルです。",
-      state: "text",
-    },
-    {
-      content: null,
-      message: "ファイルを読み込めません。",
-      state: "unreadable",
-    },
-  ])("$stateファイルの表示状態を示す", async ({ content, message, state }) => {
-    worktreeFile = {
-      path: "src/main.py",
-      content,
-      diff: "",
-      state,
-    };
-    await renderWorktreeExplorer();
-
-    expect(await screen.findByText(message)).toBeTruthy();
   });
 
   it("複数Operationを起動・選択・個別終了できる", async () => {
