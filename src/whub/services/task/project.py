@@ -87,6 +87,21 @@ def list_project_tasks(
     return tuple(_summary(path, task, tasks) for path, task in records.values())
 
 
+def list_active_project_tasks(
+    manifest: ResolvedManifest, project: str
+) -> tuple[TaskSummary, ...]:
+    """Return only active Hub Tasks for one Project."""
+    storage = resolve_project_task_storage(manifest, project)
+    if not storage.active_root.is_dir():
+        return ()
+    try:
+        records = load_task_records(storage.active_root)
+    except FlowError as error:
+        raise ServiceError(str(error)) from error
+    tasks = {task_id: task for task_id, (_, task) in records.items()}
+    return tuple(_summary(path, task, tasks) for path, task in records.values())
+
+
 @dataclass(frozen=True)
 class ProjectTasks:
     """One Project's Task summaries, or the error that prevented reading them."""
@@ -109,6 +124,19 @@ def list_all_project_tasks(manifest: ResolvedManifest) -> tuple[ProjectTasks, ..
     return tuple(results)
 
 
+def list_all_active_project_tasks(
+    manifest: ResolvedManifest,
+) -> tuple[ProjectTasks, ...]:
+    """Return active Hub Task summaries without reading Project histories."""
+    return tuple(
+        ProjectTasks(
+            project=project.name,
+            tasks=list_active_project_tasks(manifest, project.name),
+        )
+        for project in manifest.projects
+    )
+
+
 def load_project_task(
     manifest: ResolvedManifest,
     project: str,
@@ -126,4 +154,25 @@ def load_project_task(
         title=_title(path),
         markdown=load_task_markdown(path),
         task=task,
+    )
+
+
+def load_active_project_task(
+    manifest: ResolvedManifest, project: str, task_id: str
+) -> TaskRecord:
+    """Load one active Hub Task without accessing Project history."""
+    storage = resolve_project_task_storage(manifest, project)
+    if not storage.active_root.is_dir():
+        raise NotFoundError(f"task not found: {project}/{task_id}")
+    try:
+        records = load_task_records(storage.active_root)
+    except FlowError as error:
+        raise ServiceError(str(error)) from error
+    resolved_id = task_id if task_id.startswith("TASK-") else f"TASK-{task_id}"
+    try:
+        path, task = records[resolved_id]
+    except KeyError as error:
+        raise NotFoundError(f"task not found: {project}/{task_id}") from error
+    return TaskRecord(
+        path=str(path), title=_title(path), markdown=load_task_markdown(path), task=task
     )

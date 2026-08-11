@@ -13,6 +13,7 @@ type TaskDetailWidgetProps = {
   project?: string | null;
   action?: ReactNode;
   emptyMessage?: string;
+  active?: boolean;
 };
 
 export function TaskDetailWidget({
@@ -20,6 +21,7 @@ export function TaskDetailWidget({
   project,
   action,
   emptyMessage = "Taskを選択してください",
+  active = false,
 }: TaskDetailWidgetProps) {
   const [task, setTask] = useState<TaskResponse | null>(null);
   const [dependents, setDependents] = useState<string[]>([]);
@@ -37,8 +39,8 @@ export function TaskDetailWidget({
     setLoading(true);
     try {
       const [loadedTask, taskList] = await Promise.all([
-        getTask(taskId, project),
-        listTasks(project),
+        getTask(taskId, project, active),
+        listTasks(project, active),
       ]);
       setTask(loadedTask);
       setDependents(
@@ -55,7 +57,7 @@ export function TaskDetailWidget({
     } finally {
       setLoading(false);
     }
-  }, [project, taskId]);
+  }, [active, project, taskId]);
 
   useEffect(() => {
     void loadTask();

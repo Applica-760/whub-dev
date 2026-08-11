@@ -295,6 +295,7 @@ export function TerminalPage({
         >
           <div className="terminal-task-graph">
             <TaskDependencyGraphWidget
+              active
               height="100%"
               onSelectTask={selectedOperator ? selectOperationTask : undefined}
               project={graphProject}
@@ -302,6 +303,7 @@ export function TerminalPage({
           </div>
           <div className="terminal-task-detail">
             <TaskDetailWidget
+              active
               emptyMessage={
                 selectedOperator
                   ? "グラフからTaskを選択してください"

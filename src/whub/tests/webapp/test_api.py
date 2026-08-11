@@ -180,9 +180,7 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
     local_client = TestClient(client.app, client=("127.0.0.1", 50000))
     context = Mock(workspace_root=Path("/workspace"))
     tasks = [
-        SimpleNamespace(
-            project="whub-dev", tasks=(SimpleNamespace(id="TASK-104"),)
-        )
+        SimpleNamespace(project="whub-dev", tasks=(SimpleNamespace(id="TASK-104"),))
     ]
     worktree = SimpleNamespace(
         project="whub-dev",
@@ -549,6 +547,42 @@ def test_all_tasks_endpoint_returns_per_project_results(client: TestClient) -> N
             },
         ],
     }
+    mock_list_all.assert_called_once_with(m)
+
+
+def test_active_task_endpoints_do_not_read_project_history(client: TestClient) -> None:
+    summary = TaskSummary(
+        path="20260811_task.yaml",
+        id="TASK-001",
+        title="Active Task",
+        state="draft",
+        depends_on=[],
+        blocked_by=[],
+        ready=True,
+    )
+    m = manifest()
+    results = (ProjectTasks(project="local", tasks=(summary,)),)
+    with (
+        patch("whub.webapp.routers.tasks.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.tasks.list_active_project_tasks",
+            return_value=(summary,),
+        ) as mock_list,
+        patch(
+            "whub.webapp.routers.tasks.list_all_active_project_tasks",
+            return_value=results,
+        ) as mock_list_all,
+    ):
+        response = client.get("/api/tasks/active", params={"project": "local"})
+        all_response = client.get("/api/tasks/active/all")
+
+    assert response.json() == {"tasks": [summary.model_dump()]}
+    assert all_response.json() == {
+        "projects": [
+            {"project": "local", "tasks": [summary.model_dump()], "error": None}
+        ]
+    }
+    mock_list.assert_called_once_with(m, "local")
     mock_list_all.assert_called_once_with(m)
 
 

@@ -6,7 +6,7 @@ import type { TasksResponse } from "../../api/client";
 
 export type TaskSummary = TasksResponse["tasks"][number];
 
-export function useTasks(project?: string | null) {
+export function useTasks(project?: string | null, active = false) {
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [loading, setLoading] = useState(project !== null);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export function useTasks(project?: string | null) {
     setError(null);
     setTasks([]);
     try {
-      const response = await listTasks(project);
+      const response = await listTasks(project, active);
       if (currentRequest === requestId.current) {
         setTasks(response.tasks);
       }
@@ -38,7 +38,7 @@ export function useTasks(project?: string | null) {
         setLoading(false);
       }
     }
-  }, [project]);
+  }, [active, project]);
 
   useEffect(() => {
     void refresh();

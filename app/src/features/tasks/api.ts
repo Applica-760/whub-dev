@@ -11,19 +11,26 @@ function withProject(path: string, project?: string | null): string {
 
 export async function listTasks(
   project?: string | null,
+  active = false,
 ): Promise<TasksResponse> {
-  return requestJson<TasksResponse>(withProject("/api/tasks", project));
+  return requestJson<TasksResponse>(
+    withProject(active ? "/api/tasks/active" : "/api/tasks", project),
+  );
 }
 
-export async function listAllTasks(): Promise<AllTasksResponse> {
-  return requestJson<AllTasksResponse>("/api/tasks/all");
+export async function listAllActiveTasks(): Promise<AllTasksResponse> {
+  return requestJson<AllTasksResponse>("/api/tasks/active/all");
 }
 
 export async function getTask(
   taskId: string,
   project?: string | null,
+  active = false,
 ): Promise<TaskResponse> {
   return requestJson<TaskResponse>(
-    withProject(`/api/tasks/${encodeURIComponent(taskId)}`, project),
+    withProject(
+      `${active ? "/api/tasks/active" : "/api/tasks"}/${encodeURIComponent(taskId)}`,
+      project,
+    ),
   );
 }

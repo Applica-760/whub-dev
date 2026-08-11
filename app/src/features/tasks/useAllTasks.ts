@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { errorMessage } from "../../api/errorMessage";
-import { listAllTasks } from "./api";
+import { listAllActiveTasks } from "./api";
 import type { TaskSummary } from "./useTasks";
 
 export type ProjectTaskSummary = TaskSummary & { project: string };
@@ -20,7 +20,7 @@ export function useAllTasks() {
     setLoading(true);
     setError(null);
     try {
-      const response = await listAllTasks();
+      const response = await listAllActiveTasks();
       if (currentRequest !== requestId.current) {
         return;
       }

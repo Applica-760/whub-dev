@@ -12,14 +12,16 @@ type TaskDependencyGraphWidgetProps = {
   project: string | null;
   height?: CSSProperties["height"];
   onSelectTask?: (project: string, taskId: string) => void;
+  active?: boolean;
 };
 
 export function TaskDependencyGraphWidget({
   project,
   height,
   onSelectTask,
+  active = false,
 }: TaskDependencyGraphWidgetProps) {
-  const { tasks, loading, error } = useTasks(project);
+  const { tasks, loading, error } = useTasks(project, active);
   const navigate = useNavigate();
   const handleSelectTask = useCallback(
     (taskId: string) => {

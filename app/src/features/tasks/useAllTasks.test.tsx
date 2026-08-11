@@ -38,7 +38,7 @@ describe("useAllTasks", () => {
     const { result } = renderHook(() => useAllTasks());
 
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(fetchMock).toHaveBeenCalledWith("/api/tasks/all", undefined);
+    expect(fetchMock).toHaveBeenCalledWith("/api/tasks/active/all", undefined);
     expect(result.current.tasks).toEqual([
       { id: "TASK-031", path: "a.yaml", depends_on: [], project: "whub-dev" },
       { id: "TASK-001", path: "b.yaml", depends_on: [], project: "vault" },

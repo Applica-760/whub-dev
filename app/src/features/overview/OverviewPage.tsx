@@ -46,6 +46,7 @@ export function OverviewPage({ collapsed }: OverviewPageProps) {
       <OverviewColumn>
         <TodoPendingWidget controller={todoController} showAllLink />
         <TaskDependencyGraphWidget
+          active
           height={480}
           onSelectTask={handleSelectTask}
           project={projectSelection.selectedProject}
@@ -59,6 +60,7 @@ export function OverviewPage({ collapsed }: OverviewPageProps) {
       </OverviewColumn>
       <OverviewSide collapsed={collapsed.right} side="right">
         <TaskDetailWidget
+          active
           emptyMessage="リストまたはグラフからTaskを選択してください"
           project={selectedTask?.project}
           taskId={selectedTask?.taskId}
