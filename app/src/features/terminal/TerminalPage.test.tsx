@@ -31,6 +31,7 @@ let deferSessions = false;
 let deferredSessionProject: string | null = null;
 let includeSessionlessProject = false;
 let terminalMounts: string[] = [];
+let terminalActiveAtMount: boolean[] = [];
 let terminalUnmounts: string[] = [];
 
 vi.mock("./TerminalWidget", () => ({
@@ -50,6 +51,7 @@ vi.mock("./TerminalWidget", () => ({
     const terminal = endpoint ? "Operation terminal" : `${project} / ${taskId}`;
     useEffect(() => {
       terminalMounts.push(terminal);
+      terminalActiveAtMount.push(Boolean(active));
       return () => {
         terminalUnmounts.push(terminal);
       };
@@ -90,6 +92,7 @@ beforeEach(() => {
   deferredSessionProject = null;
   includeSessionlessProject = false;
   terminalMounts = [];
+  terminalActiveAtMount = [];
   terminalUnmounts = [];
   approvalAttention = [
     {
@@ -400,6 +403,72 @@ describe("TerminalPage", () => {
     expect(
       screen.queryByRole("button", { name: "Operation operator-1を停止" }),
     ).toBeNull();
+  });
+
+  it("選択中OperationのTerminalだけを再読み込みする", async () => {
+    operatorTerminals = [{ operator_id: "operator-1" }];
+    renderPage();
+
+    expect(await screen.findByText("Operation terminal")).toBeTruthy();
+    expect(terminalMounts).toEqual(["Operation terminal"]);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Operationを再読み込み: operator-1",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(terminalUnmounts).toEqual(["Operation terminal"]),
+    );
+    expect(terminalMounts).toEqual([
+      "Operation terminal",
+      "Operation terminal",
+    ]);
+    expect(terminalActiveAtMount).toEqual([true, true]);
+    expect(
+      vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "DELETE"),
+    ).toBe(false);
+  });
+
+  it("非選択Worktreeを選択して可視状態で再読み込みする", async () => {
+    renderPage();
+    const firstTerminal = await screen.findByRole("button", {
+      name: /whub-dev.*TASK-099/,
+    });
+    const secondTerminal = screen.getByRole("button", {
+      name: /vault.*TASK-101/,
+    });
+
+    fireEvent.click(secondTerminal);
+    await waitFor(() =>
+      expect(secondTerminal.getAttribute("aria-pressed")).toBe("true"),
+    );
+    fireEvent.click(firstTerminal);
+    await waitFor(() =>
+      expect(firstTerminal.getAttribute("aria-pressed")).toBe("true"),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Terminalを再読み込み: TASK-101 (vault)",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(secondTerminal.getAttribute("aria-pressed")).toBe("true"),
+    );
+    expect(screen.getByText("vault / TASK-101").dataset.active).toBe("true");
+    expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe(
+      "false",
+    );
+    expect(terminalMounts).toEqual([
+      "whub-dev / TASK-099",
+      "vault / TASK-101",
+      "vault / TASK-101",
+    ]);
+    expect(terminalActiveAtMount).toEqual([true, true, true]);
+    expect(terminalUnmounts).toEqual(["vault / TASK-101"]);
   });
 
   it("Operationではwhub-devのグラフ選択後にTask詳細を表示する", async () => {

@@ -1,5 +1,5 @@
 import { ActionIcon, Alert, Badge, Button, Group, Text } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
+import { IconRefresh, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
@@ -48,6 +48,9 @@ export function TerminalPage({
   const [operatorsLoaded, setOperatorsLoaded] = useState(false);
   const [operatorPending, setOperatorPending] = useState(false);
   const [mountedTerminals, setMountedTerminals] = useState<string[]>([]);
+  const [terminalReloads, setTerminalReloads] = useState<
+    Record<string, number>
+  >({});
   const [selectedOperationTask, setSelectedOperationTask] =
     useState<SelectedTask | null>(null);
   const selectedWorktree = terminals.find(
@@ -120,6 +123,17 @@ export function TerminalPage({
       else openTerminal(value);
     },
     [openOperator, openTerminal, operators],
+  );
+
+  const reloadTerminal = useCallback(
+    (value: string) => {
+      selectTerminal(value);
+      setTerminalReloads((current) => ({
+        ...current,
+        [value]: (current[value] ?? 0) + 1,
+      }));
+    },
+    [selectTerminal],
   );
 
   const selectOperationTask = useCallback((project: string, taskId: string) => {
@@ -362,6 +376,7 @@ export function TerminalPage({
                         <TerminalWidget
                           active={active}
                           endpoint={`/api/operator-terminals/${encodeURIComponent(operator.operator_id)}`}
+                          key={terminalReloads[value] ?? 0}
                           resizeSignal={`${value}:${active}:${collapsed.left}:${collapsed.right}:${explorer}`}
                         />
                       </div>
@@ -380,6 +395,7 @@ export function TerminalPage({
                       >
                         <TerminalWidget
                           active={active}
+                          key={terminalReloads[value] ?? 0}
                           project={worktree.project}
                           resizeSignal={`${value}:${active}:${collapsed.left}:${collapsed.right}:${explorer}`}
                           taskId={worktree.task_id}
@@ -438,6 +454,17 @@ export function TerminalPage({
                             </Badge>
                           ))}
                         <ActionIcon
+                          aria-label={`Operationを再読み込み: ${operator.operator_id}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            reloadTerminal(operatorValue(operator.operator_id));
+                          }}
+                          title="Terminalを再読み込み"
+                          variant="subtle"
+                        >
+                          <IconRefresh aria-hidden size={16} stroke={1.5} />
+                        </ActionIcon>
+                        <ActionIcon
                           aria-label={`Operation ${operator.operator_id}を停止`}
                           disabled={operatorPending}
                           onClick={(event) => {
@@ -463,37 +490,41 @@ export function TerminalPage({
                     key={worktreeValue(worktree)}
                     onClick={() => openTerminal(worktreeValue(worktree))}
                     rightSection={
-                      pendingAttention.some(
-                        (item) =>
-                          item.target === "worktree" &&
-                          item.project === worktree.project &&
-                          item.task_id === worktree.task_id,
-                      ) ? (
-                        <Group gap={4} wrap="nowrap">
-                          {pendingAttention
-                            .filter(
-                              (item) =>
-                                item.target === "worktree" &&
-                                item.project === worktree.project &&
-                                item.task_id === worktree.task_id,
-                            )
-                            .map((item) => (
-                              <Badge
-                                color={
-                                  item.event === "permission_request"
-                                    ? "yellow"
-                                    : "blue"
-                                }
-                                key={item.event}
-                                size="sm"
-                              >
-                                {item.event === "permission_request"
-                                  ? "承認待ち"
-                                  : "応答終了"}
-                              </Badge>
-                            ))}
-                        </Group>
-                      ) : undefined
+                      <Group gap={4} wrap="nowrap">
+                        {pendingAttention
+                          .filter(
+                            (item) =>
+                              item.target === "worktree" &&
+                              item.project === worktree.project &&
+                              item.task_id === worktree.task_id,
+                          )
+                          .map((item) => (
+                            <Badge
+                              color={
+                                item.event === "permission_request"
+                                  ? "yellow"
+                                  : "blue"
+                              }
+                              key={item.event}
+                              size="sm"
+                            >
+                              {item.event === "permission_request"
+                                ? "承認待ち"
+                                : "応答終了"}
+                            </Badge>
+                          ))}
+                        <ActionIcon
+                          aria-label={`Terminalを再読み込み: ${worktree.task_id} (${worktree.project})`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            reloadTerminal(worktreeValue(worktree));
+                          }}
+                          title="Terminalを再読み込み"
+                          variant="subtle"
+                        >
+                          <IconRefresh aria-hidden size={16} stroke={1.5} />
+                        </ActionIcon>
+                      </Group>
                     }
                     selected={worktreeValue(worktree) === selectedTerminal}
                     subtitle={worktree.task_id}
