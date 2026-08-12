@@ -29,8 +29,8 @@ def resolve_tmux_session(
             tuple(
                 build_ssh_command(
                     host,
-                    f"exec tmux set-option -t {target} mouse on \\; "
-                    f"attach-session -t {target}",
+                    f"exec tmux set-option -t {name} mouse on \\; "
+                    f"attach-session -t {name}",
                     tty=True,
                 )
             ),
@@ -99,8 +99,8 @@ def open_tmux_session(
             tuple(
                 build_ssh_command(
                     host,
-                    f"exec tmux set-option -t {target} mouse on \\; "
-                    f"attach-session -t {target}",
+                    f"exec tmux set-option -t {name} mouse on \\; "
+                    f"attach-session -t {name}",
                     tty=True,
                 )
             ),
