@@ -94,6 +94,7 @@ export type XtermViewHandle = {
 };
 
 type XtermViewProps = {
+  active?: boolean;
   onData: (data: string) => void;
   onLink?: (event: MouseEvent, uri: string) => void;
   onResize: (dimensions: XtermDimensions) => void;
@@ -102,7 +103,11 @@ type XtermViewProps = {
 };
 
 export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
-  function XtermView({ onData, onLink, onResize, options, resizeSignal }, ref) {
+  function XtermView(
+    { active = true, onData, onLink, onResize, options, resizeSignal },
+    ref,
+  ) {
+    const activeRef = useRef(active);
     const elementRef = useRef<HTMLDivElement>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const onDataRef = useRef(onData);
@@ -111,6 +116,7 @@ export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
     const lastDimensionsRef = useRef<XtermDimensions | null>(null);
     const terminalRef = useRef<Terminal | null>(null);
     const linksEnabled = onLink !== undefined;
+    activeRef.current = active;
 
     useEffect(() => {
       onDataRef.current = onData;
@@ -121,7 +127,7 @@ export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
     const fit = useCallback((forceResize = false) => {
       const fitAddon = fitAddonRef.current;
       const terminal = terminalRef.current;
-      if (!fitAddon || !terminal) {
+      if (!activeRef.current || !fitAddon || !terminal) {
         return;
       }
 
@@ -180,9 +186,10 @@ export const XtermView = forwardRef<XtermViewHandle, XtermViewProps>(
     }, [fit, linksEnabled, options]);
 
     useEffect(() => {
+      if (!active) return;
       const animationFrame = requestAnimationFrame(() => fit());
       return () => cancelAnimationFrame(animationFrame);
-    }, [fit, resizeSignal]);
+    }, [active, fit, resizeSignal]);
 
     return <div className="xterm-view" ref={elementRef} />;
   },

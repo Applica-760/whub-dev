@@ -87,7 +87,7 @@ class FakeWebSocket {
     this.dispatch("open", new Event("open"));
   }
 
-  message(data: ArrayBuffer) {
+  message(data: ArrayBuffer | string) {
     this.dispatch("message", new MessageEvent("message", { data }));
   }
 
@@ -133,11 +133,12 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe("TerminalWidget", () => {
-  it("接続中の入力を捨て、接続後は構造化frameを送り、破棄時にleaseを解放する", () => {
+  it("接続前の入力失敗を表示し、接続後は構造化frameを送り、破棄時にleaseを解放する", () => {
     const view = render(
       <MantineProvider env="test">
         <TerminalWidget
@@ -151,6 +152,9 @@ describe("TerminalWidget", () => {
 
     act(() => terminalMocks.inputHandler?.("before-open"));
     expect(socket.sent).toEqual([]);
+    expect(
+      screen.getByText("端末に未接続のため入力を送信できません。"),
+    ).toBeTruthy();
 
     act(() => socket.open());
     act(() => terminalMocks.inputHandler?.("1"));
@@ -168,6 +172,82 @@ describe("TerminalWidget", () => {
     expect(JSON.parse(socket.sent.at(-1) ?? "{}")).toEqual({ type: "release" });
     expect(socket.readyState).toBe(FakeWebSocket.CLOSED);
     expect(screen.queryByText("端末接続が切断されました。")).toBeNull();
+  });
+
+  it("切断後に再接続してcontrollerを再取得し、protocol errorを表示する", () => {
+    vi.useFakeTimers();
+    render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          project="whub-dev"
+          resizeSignal="initial"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+    const first = FakeWebSocket.instances[0];
+    act(() => first.open());
+
+    act(() => first.close());
+    expect(screen.getByText("端末接続が切断されました。")).toBeTruthy();
+    act(() => terminalMocks.inputHandler?.("disconnected"));
+    expect(
+      screen.getByText("端末に未接続のため入力を送信できません。"),
+    ).toBeTruthy();
+
+    act(() => vi.advanceTimersByTime(1_000));
+    const second = FakeWebSocket.instances[1];
+    act(() => second.open());
+    expect(JSON.parse(second.sent[0])).toEqual({ type: "claim" });
+
+    act(() =>
+      second.message(
+        JSON.stringify({ type: "error", detail: "controller unavailable" }),
+      ),
+    );
+    expect(screen.getByText("controller unavailable")).toBeTruthy();
+  });
+
+  it("非表示中はresizeとfocusを行わず、再選択してもTerminalを再生成しない", () => {
+    const view = render(
+      <MantineProvider env="test">
+        <TerminalWidget
+          active={false}
+          project="whub-dev"
+          resizeSignal="inactive"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+    const socket = FakeWebSocket.instances[0];
+    act(() => socket.open());
+
+    expect(socket.sent.map((frame) => JSON.parse(frame))).toEqual([
+      { type: "claim" },
+    ]);
+    expect(terminalMocks.fit).not.toHaveBeenCalled();
+    expect(terminalMocks.focus).not.toHaveBeenCalled();
+
+    view.rerender(
+      <MantineProvider env="test">
+        <TerminalWidget
+          active
+          project="whub-dev"
+          resizeSignal="active"
+          taskId="TASK-100"
+        />
+      </MantineProvider>,
+    );
+
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(terminalMocks.dispose).not.toHaveBeenCalled();
+    expect(terminalMocks.fit).toHaveBeenCalledOnce();
+    expect(terminalMocks.focus).toHaveBeenCalledOnce();
+    expect(JSON.parse(socket.sent.at(-1) ?? "{}")).toEqual({
+      type: "resize",
+      columns: 80,
+      rows: 24,
+    });
   });
 
   it("分割されたUTF-8バイナリフレームを一文字として表示する", () => {

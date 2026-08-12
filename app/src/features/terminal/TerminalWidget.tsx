@@ -1,11 +1,12 @@
 import { Alert } from "@mantine/core";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { XtermView } from "../../components/XtermView";
 import type { XtermViewHandle } from "../../components/XtermView";
 import { useTerminalConnection } from "./useTerminalConnection";
 
 type TerminalWidgetProps = {
+  active?: boolean;
   resizeSignal: string;
 } & (
   | { endpoint: string; project?: never; taskId?: never }
@@ -28,18 +29,23 @@ function openWebLink(event: MouseEvent, uri: string) {
 }
 
 export function TerminalWidget({
+  active = true,
   endpoint,
   project,
   resizeSignal,
   taskId,
 }: TerminalWidgetProps) {
+  const activeRef = useRef(active);
+  const previousActiveRef = useRef(active);
   const xtermRef = useRef<XtermViewHandle>(null);
   const decoderRef = useRef(new TextDecoder());
   const terminalOptions = useMemo(
     () => ({ macOptionClickForcesSelection: true }),
     [],
   );
+  activeRef.current = active;
   const handleConnected = useCallback(() => {
+    if (!activeRef.current) return;
     xtermRef.current?.fit(true);
     xtermRef.current?.focus();
   }, []);
@@ -53,6 +59,10 @@ export function TerminalWidget({
     onConnected: handleConnected,
     onOutput: handleOutput,
   });
+  useEffect(() => {
+    if (active && !previousActiveRef.current) xtermRef.current?.focus();
+    previousActiveRef.current = active;
+  }, [active]);
 
   return (
     <div className="terminal-widget">
@@ -62,6 +72,7 @@ export function TerminalWidget({
         </Alert>
       )}
       <XtermView
+        active={active}
         onData={sendInput}
         onLink={openWebLink}
         onResize={sendResize}

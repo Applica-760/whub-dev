@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { XtermDimensions } from "../../components/XtermView";
 
+const RECONNECT_DELAY_MS = 1_000;
+
 type UseTerminalConnectionOptions = {
   endpoint: string;
   onConnected: () => void;
@@ -25,11 +27,17 @@ export function useTerminalConnection({
     const socket = socketRef.current;
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(frame));
+      return true;
     }
+    return false;
   }, []);
 
   const sendInput = useCallback(
-    (data: string) => send({ type: "input", data }),
+    (data: string) => {
+      if (!send({ type: "input", data })) {
+        setError("端末に未接続のため入力を送信できません。");
+      }
+    },
     [send],
   );
   const sendResize = useCallback(
@@ -39,44 +47,59 @@ export function useTerminalConnection({
   );
 
   useEffect(() => {
-    const socket = new WebSocket(terminalUrl(endpoint));
-    socket.binaryType = "arraybuffer";
     let disposed = false;
-    socketRef.current = socket;
-    setError(null);
+    let reconnectTimer: number | undefined;
 
-    socket.addEventListener("open", () => {
-      if (disposed) {
-        return;
-      }
-      socket.send(JSON.stringify({ type: "claim" }));
-      onConnected();
-    });
-    socket.addEventListener("message", (event: MessageEvent<ArrayBuffer>) => {
-      if (!disposed && typeof event.data !== "string") {
-        onOutput(new Uint8Array(event.data));
-      }
-    });
-    socket.addEventListener("error", () => {
-      if (!disposed) {
-        setError("端末へ接続できませんでした。");
-      }
-    });
-    socket.addEventListener("close", () => {
-      if (!disposed) {
+    const connect = () => {
+      const socket = new WebSocket(terminalUrl(endpoint));
+      socket.binaryType = "arraybuffer";
+      socketRef.current = socket;
+
+      socket.addEventListener("open", () => {
+        if (disposed) return;
+        setError(null);
+        socket.send(JSON.stringify({ type: "claim" }));
+        onConnected();
+      });
+      socket.addEventListener("message", (event: MessageEvent) => {
+        if (disposed) return;
+        if (typeof event.data !== "string") {
+          onOutput(new Uint8Array(event.data));
+          return;
+        }
+        try {
+          const frame = JSON.parse(event.data) as {
+            detail?: unknown;
+            type?: unknown;
+          };
+          if (frame.type === "error" && typeof frame.detail === "string") {
+            setError(frame.detail);
+          }
+        } catch {
+          setError("端末から不正な応答を受信しました。");
+        }
+      });
+      socket.addEventListener("error", () => {
+        if (!disposed) setError("端末へ接続できませんでした。");
+      });
+      socket.addEventListener("close", () => {
+        if (disposed) return;
+        if (socketRef.current === socket) socketRef.current = null;
         setError((current) => current ?? "端末接続が切断されました。");
-      }
-    });
+        reconnectTimer = window.setTimeout(connect, RECONNECT_DELAY_MS);
+      });
+    };
+    connect();
 
     return () => {
       disposed = true;
-      if (socket.readyState === WebSocket.OPEN) {
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      const socket = socketRef.current;
+      if (socket?.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: "release" }));
       }
-      socket.close();
-      if (socketRef.current === socket) {
-        socketRef.current = null;
-      }
+      socket?.close();
+      socketRef.current = null;
     };
   }, [endpoint, onConnected, onOutput]);
 

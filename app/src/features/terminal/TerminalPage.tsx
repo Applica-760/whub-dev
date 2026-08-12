@@ -59,12 +59,10 @@ export function TerminalPage({
   const graphProject = selectedOperator
     ? "whub-dev"
     : (selectedWorktree?.project ?? null);
-  const detailProject = selectedOperator
-    ? selectedOperationTask?.project
-    : selectedWorktree?.project;
-  const detailTaskId = selectedOperator
-    ? selectedOperationTask?.taskId
-    : selectedWorktree?.task_id;
+  const detailProject =
+    selectedOperationTask?.project ?? selectedWorktree?.project;
+  const detailTaskId =
+    selectedOperationTask?.taskId ?? selectedWorktree?.task_id;
   const explorer = location.pathname === "/terminal/explorer";
 
   const acknowledgeTerminal = useCallback(
@@ -126,6 +124,8 @@ export function TerminalPage({
   const selectOperationTask = useCallback((project: string, taskId: string) => {
     setSelectedOperationTask({ project, taskId });
   }, []);
+
+  useEffect(() => setSelectedOperationTask(null), [selectedTerminal]);
 
   useEffect(() => {
     setSelectedTerminal((current) => {
@@ -245,13 +245,7 @@ export function TerminalPage({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        !event.metaKey ||
-        !event.shiftKey ||
-        event.altKey ||
-        event.ctrlKey ||
-        !(event.target instanceof Element)
-      )
+      if (!event.metaKey || !event.shiftKey || event.altKey || event.ctrlKey)
         return;
 
       if (event.code === "KeyO") {
@@ -266,6 +260,7 @@ export function TerminalPage({
         navigate(explorer ? "/terminal" : "/terminal/explorer");
         return;
       }
+      if (!(event.target instanceof Element)) return;
       if (!event.target.closest(".xterm-view")) return;
       if (event.code === "KeyX") {
         if (selectedOperator && !operatorPending) {
@@ -322,9 +317,7 @@ export function TerminalPage({
                   active
                   height="100%"
                   hideTitle
-                  onSelectTask={
-                    selectedOperator ? selectOperationTask : undefined
-                  }
+                  onSelectTask={selectOperationTask}
                   project={graphProject}
                 />
               </div>
@@ -343,19 +336,44 @@ export function TerminalPage({
               </div>
             </aside>
             <TerminalWidgetFrame>
-              {selectedOperator ? (
-                <TerminalWidget
-                  endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
-                  key={selectedTerminal}
-                  resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}:${explorer}`}
-                />
-              ) : selectedWorktree ? (
-                <TerminalWidget
-                  key={selectedTerminal}
-                  project={selectedWorktree.project}
-                  resizeSignal={`${selectedTerminal ?? ""}:${collapsed.left}:${collapsed.right}:${explorer}`}
-                  taskId={selectedWorktree.task_id}
-                />
+              {terminalValues.length ? (
+                <>
+                  {operators.map((operator) => {
+                    const value = operatorValue(operator.operator_id);
+                    const active = !explorer && value === selectedTerminal;
+                    return (
+                      <div
+                        hidden={!active}
+                        key={value}
+                        style={{ height: "100%" }}
+                      >
+                        <TerminalWidget
+                          active={active}
+                          endpoint={`/api/operator-terminals/${encodeURIComponent(operator.operator_id)}`}
+                          resizeSignal={`${value}:${active}:${collapsed.left}:${collapsed.right}:${explorer}`}
+                        />
+                      </div>
+                    );
+                  })}
+                  {terminals.map((worktree) => {
+                    const value = worktreeValue(worktree);
+                    const active = !explorer && value === selectedTerminal;
+                    return (
+                      <div
+                        hidden={!active}
+                        key={value}
+                        style={{ height: "100%" }}
+                      >
+                        <TerminalWidget
+                          active={active}
+                          project={worktree.project}
+                          resizeSignal={`${value}:${active}:${collapsed.left}:${collapsed.right}:${explorer}`}
+                          taskId={worktree.task_id}
+                        />
+                      </div>
+                    );
+                  })}
+                </>
               ) : (
                 <Text c="dimmed" p="md">
                   表示できる端末はありません。

@@ -29,16 +29,19 @@ let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
 let deferSessions = false;
 let deferredSessionProject: string | null = null;
+let includeSessionlessProject = false;
 let terminalMounts: string[] = [];
 let terminalUnmounts: string[] = [];
 
 vi.mock("./TerminalWidget", () => ({
   TerminalWidget: ({
+    active,
     endpoint,
     project,
     resizeSignal,
     taskId,
   }: {
+    active?: boolean;
     endpoint?: string;
     project?: string;
     resizeSignal: string;
@@ -52,7 +55,11 @@ vi.mock("./TerminalWidget", () => ({
       };
     }, []);
     return (
-      <div className="xterm-view" data-resize-signal={resizeSignal}>
+      <div
+        className="xterm-view"
+        data-active={active}
+        data-resize-signal={resizeSignal}
+      >
         {terminal}
       </div>
     );
@@ -81,6 +88,7 @@ beforeEach(() => {
   operatorTerminals = [];
   deferSessions = false;
   deferredSessionProject = null;
+  includeSessionlessProject = false;
   terminalMounts = [];
   terminalUnmounts = [];
   approvalAttention = [
@@ -182,7 +190,13 @@ beforeEach(() => {
       if (url === "/api/projects")
         return Promise.resolve({
           ok: true,
-          json: async () => ({ projects: ["whub-dev", "vault"] }),
+          json: async () => ({
+            projects: [
+              "whub-dev",
+              "vault",
+              ...(includeSessionlessProject ? ["portfolio"] : []),
+            ],
+          }),
         });
       if (url.startsWith("/api/agent-sessions/")) {
         const project = url.split("/").at(-1);
@@ -192,21 +206,23 @@ beforeEach(() => {
           ok: true,
           json: async () => ({
             sessions:
-              project === "whub-dev"
-                ? [
-                    {
-                      project: "whub-dev",
-                      task_id: "TASK-099",
-                      workspace_path: "projects/worktrees/whub-dev-099",
-                    },
-                  ]
-                : [
-                    {
-                      project: "vault",
-                      task_id: "TASK-101",
-                      workspace_path: "projects/worktrees/vault-101",
-                    },
-                  ],
+              project === "portfolio"
+                ? []
+                : project === "whub-dev"
+                  ? [
+                      {
+                        project: "whub-dev",
+                        task_id: "TASK-099",
+                        workspace_path: "projects/worktrees/whub-dev-099",
+                      },
+                    ]
+                  : [
+                      {
+                        project: "vault",
+                        task_id: "TASK-101",
+                        workspace_path: "projects/worktrees/vault-101",
+                      },
+                    ],
           }),
         });
       }
@@ -262,9 +278,13 @@ describe("TerminalPage", () => {
     expect(screen.getByText("Task graph: vault")).toBeTruthy();
     expect(await screen.findByText("TASK-101(in_progress)")).toBeTruthy();
     fireEvent.click(screen.getByText("Task graph: vault"));
-    expect(screen.getByText("TASK-101(in_progress)")).toBeTruthy();
+    expect(await screen.findByText("TASK-126(in_progress)")).toBeTruthy();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/tasks/active/TASK-126?project=vault",
+      undefined,
+    );
     expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
-    expect(terminalUnmounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalUnmounts).toEqual([]);
   });
 
   it("直接アクセスしたExplorerではHub rootを表示する", async () => {
@@ -277,7 +297,25 @@ describe("TerminalPage", () => {
       "/api/hub-explorer/directory",
       undefined,
     );
-    expect(screen.queryByText("whub-dev / TASK-099")).toBeNull();
+    const terminal = await screen.findByText("whub-dev / TASK-099");
+    expect(terminal.getAttribute("data-active")).toBe("false");
+    expect(terminal.closest("[hidden]")).toBeTruthy();
+  });
+
+  it("worktree parentがないProjectをExplorerの警告にしない", async () => {
+    includeSessionlessProject = true;
+    renderPage("/terminal/explorer");
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/agent-sessions/portfolio",
+        undefined,
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Agent sessionを読み込んでいます…")).toBeNull(),
+    );
+    expect(screen.queryByText(/portfolio:/)).toBeNull();
   });
 
   it("⌘⇧EをTerminal内の任意の位置からExplorerへ遷移する", async () => {
@@ -297,7 +335,7 @@ describe("TerminalPage", () => {
         ).length;
     expect(hubRequests()).toBe(1);
 
-    fireEvent.keyDown(document.body, {
+    fireEvent.keyDown(document, {
       code: "KeyE",
       key: "E",
       metaKey: true,
@@ -308,10 +346,13 @@ describe("TerminalPage", () => {
       await screen.findByText("ファイルを選択してください。"),
     ).toBeTruthy();
     expect(hubRequests()).toBe(1);
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
     expect(terminalUnmounts).toEqual([]);
+    expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe(
+      "false",
+    );
 
-    fireEvent.keyDown(document.body, {
+    fireEvent.keyDown(document, {
       code: "KeyE",
       key: "E",
       metaKey: true,
@@ -319,8 +360,9 @@ describe("TerminalPage", () => {
     });
 
     expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
     expect(terminalUnmounts).toEqual([]);
+    expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe("true");
   });
 
   it("複数Operationを起動・選択・個別終了できる", async () => {
@@ -435,7 +477,7 @@ describe("TerminalPage", () => {
   it("⌘⇧OでOperationを起動する", async () => {
     renderPage();
 
-    fireEvent.keyDown(document.body, {
+    fireEvent.keyDown(document, {
       code: "KeyO",
       key: "O",
       metaKey: true,

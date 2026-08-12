@@ -28,6 +28,12 @@ def get_agent_sessions(project: str) -> AgentSessionListResponse:
     manifest = load_manifest()
     workspace_root = current_context().workspace_root
     resolved = manifest.resolve_project(project)
+    if resolved is not None and (
+        resolved.resource is None
+        or resolved.resource.git is None
+        or resolved.resource.git.branch is None
+    ):
+        return AgentSessionListResponse(sessions=[])
     if resolved is not None and isinstance(resolved.resource, RemoteResource):
         try:
             sessions = list_agent_sessions(manifest, workspace_root, project)

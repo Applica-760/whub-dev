@@ -26,7 +26,7 @@ import pytest
 from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
-from whub.models import ManifestError
+from whub.models import GitInfo, ManifestError
 from whub.models.flow import TaskRuntime
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
@@ -630,6 +630,9 @@ def test_get_agent_sessions_returns_running_sessions(
     client: TestClient, tmp_path: Path
 ) -> None:
     m = manifest()
+    resource = m.projects[0].resource
+    assert resource is not None
+    resource.git = GitInfo(url="git@example.com:local.git", branch="main")
     session = SimpleNamespace(
         project="local",
         task_id="TASK-075",
@@ -659,6 +662,51 @@ def test_get_agent_sessions_returns_running_sessions(
         ]
     }
     mock_sessions.assert_called_once_with(m, tmp_path, "local")
+
+
+def test_get_agent_sessions_returns_empty_for_project_without_worktree_parent(
+    client: TestClient, tmp_path: Path
+) -> None:
+    m = manifest()
+    with (
+        patch("whub.webapp.routers.agent_sessions.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.agent_sessions.current_context",
+            return_value=type("Context", (), {"workspace_root": tmp_path})(),
+        ),
+        patch(
+            "whub.webapp.routers.agent_sessions.list_agent_sessions"
+        ) as mock_sessions,
+    ):
+        response = client.get("/api/agent-sessions/local")
+
+    assert response.status_code == 200
+    assert response.json() == {"sessions": []}
+    mock_sessions.assert_not_called()
+
+
+def test_get_agent_sessions_keeps_local_session_failures_visible(
+    client: TestClient, tmp_path: Path
+) -> None:
+    m = manifest()
+    resource = m.projects[0].resource
+    assert resource is not None
+    resource.git = GitInfo(url="git@example.com:local.git", branch="main")
+    with (
+        patch("whub.webapp.routers.agent_sessions.load_manifest", return_value=m),
+        patch(
+            "whub.webapp.routers.agent_sessions.current_context",
+            return_value=type("Context", (), {"workspace_root": tmp_path})(),
+        ),
+        patch(
+            "whub.webapp.routers.agent_sessions.list_agent_sessions",
+            side_effect=ServiceError("tmux unavailable"),
+        ),
+    ):
+        response = client.get("/api/agent-sessions/local")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "tmux unavailable"}
 
 
 def test_get_agent_sessions_omits_unavailable_remote_project(
