@@ -257,7 +257,8 @@ def test_remote_worktree_uses_ssh_attach_command() -> None:
         assert attach.call_args.args[0].attach_command == tuple(
             build_ssh_command(
                 host,
-                "exec tmux attach-session -t =whub-la-il-TASK-017",
+                "exec tmux set-option -t =whub-la-il-TASK-017 mouse on \\; "
+                "attach-session -t =whub-la-il-TASK-017",
                 tty=True,
             )
         )
