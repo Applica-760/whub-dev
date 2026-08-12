@@ -269,6 +269,7 @@ describe("TerminalPage", () => {
     expect(container.querySelectorAll(".terminal-task-graph")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-detail")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(1);
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
 
     fireEvent.click(secondTerminal);
 
@@ -297,9 +298,19 @@ describe("TerminalPage", () => {
       "/api/hub-explorer/directory",
       undefined,
     );
+    expect(screen.queryByText("whub-dev / TASK-099")).toBeNull();
+    expect(terminalMounts).toEqual([]);
+
+    fireEvent.keyDown(document, {
+      code: "KeyE",
+      key: "E",
+      metaKey: true,
+      shiftKey: true,
+    });
+
     const terminal = await screen.findByText("whub-dev / TASK-099");
-    expect(terminal.getAttribute("data-active")).toBe("false");
-    expect(terminal.closest("[hidden]")).toBeTruthy();
+    expect(terminal.dataset.active).toBe("true");
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
   });
 
   it("worktree parentがないProjectをExplorerの警告にしない", async () => {
@@ -346,7 +357,7 @@ describe("TerminalPage", () => {
       await screen.findByText("ファイルを選択してください。"),
     ).toBeTruthy();
     expect(hubRequests()).toBe(1);
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
     expect(terminalUnmounts).toEqual([]);
     expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe(
       "false",
@@ -360,7 +371,7 @@ describe("TerminalPage", () => {
     });
 
     expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
+    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
     expect(terminalUnmounts).toEqual([]);
     expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe("true");
   });

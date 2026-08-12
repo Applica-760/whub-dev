@@ -47,6 +47,7 @@ export function TerminalPage({
   const [operatorError, setOperatorError] = useState<string | null>(null);
   const [operatorsLoaded, setOperatorsLoaded] = useState(false);
   const [operatorPending, setOperatorPending] = useState(false);
+  const [mountedTerminals, setMountedTerminals] = useState<string[]>([]);
   const [selectedOperationTask, setSelectedOperationTask] =
     useState<SelectedTask | null>(null);
   const selectedWorktree = terminals.find(
@@ -126,6 +127,15 @@ export function TerminalPage({
   }, []);
 
   useEffect(() => setSelectedOperationTask(null), [selectedTerminal]);
+
+  useEffect(() => {
+    if (explorer || !selectedTerminal) return;
+    setMountedTerminals((current) =>
+      current.includes(selectedTerminal)
+        ? current
+        : [...current, selectedTerminal],
+    );
+  }, [explorer, selectedTerminal]);
 
   useEffect(() => {
     setSelectedTerminal((current) => {
@@ -341,6 +351,8 @@ export function TerminalPage({
                   {operators.map((operator) => {
                     const value = operatorValue(operator.operator_id);
                     const active = !explorer && value === selectedTerminal;
+                    if (!active && !mountedTerminals.includes(value))
+                      return null;
                     return (
                       <div
                         hidden={!active}
@@ -358,6 +370,8 @@ export function TerminalPage({
                   {terminals.map((worktree) => {
                     const value = worktreeValue(worktree);
                     const active = !explorer && value === selectedTerminal;
+                    if (!active && !mountedTerminals.includes(value))
+                      return null;
                     return (
                       <div
                         hidden={!active}
