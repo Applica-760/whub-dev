@@ -453,29 +453,33 @@ export function TerminalPage({
                                 : "応答終了"}
                             </Badge>
                           ))}
-                        <ActionIcon
-                          aria-label={`Operationを再読み込み: ${operator.operator_id}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            reloadTerminal(operatorValue(operator.operator_id));
-                          }}
-                          title="Terminalを再読み込み"
-                          variant="subtle"
-                        >
-                          <IconRefresh aria-hidden size={16} stroke={1.5} />
-                        </ActionIcon>
-                        <ActionIcon
-                          aria-label={`Operation ${operator.operator_id}を停止`}
-                          disabled={operatorPending}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void stopOperator(operator.operator_id);
-                          }}
-                          title="Operationを終了"
-                          variant="subtle"
-                        >
-                          <IconX aria-hidden size={16} stroke={1.5} />
-                        </ActionIcon>
+                        <Group gap={0} wrap="nowrap">
+                          <ActionIcon
+                            aria-label={`Operationを再読み込み: ${operator.operator_id}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              reloadTerminal(
+                                operatorValue(operator.operator_id),
+                              );
+                            }}
+                            title="Terminalを再読み込み"
+                            variant="subtle"
+                          >
+                            <IconRefresh aria-hidden size={16} stroke={1.5} />
+                          </ActionIcon>
+                          <ActionIcon
+                            aria-label={`Operation ${operator.operator_id}を停止`}
+                            disabled={operatorPending}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void stopOperator(operator.operator_id);
+                            }}
+                            title="Operationを終了"
+                            variant="subtle"
+                          >
+                            <IconX aria-hidden size={16} stroke={1.5} />
+                          </ActionIcon>
+                        </Group>
                       </Group>
                     }
                     selected={
