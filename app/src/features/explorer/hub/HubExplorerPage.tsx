@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 
 import { requestJson } from "../../../api/client";
 import { errorMessage } from "../../../api/errorMessage";
-import { WidgetFrame } from "../../../components/WidgetFrame";
+import { TerminalWidgetFrame } from "../../../components/TerminalWidgetFrame";
 import { FileTabs } from "../FileTabs";
 import { highlightLine } from "../fileLanguage";
 
@@ -258,7 +258,7 @@ export function HubExplorerPage() {
   return (
     <main className="terminal-page">
       <section className="terminal-diff-layout explorer-page">
-        <WidgetFrame>
+        <TerminalWidgetFrame>
           <ScrollArea h="100%" p="xs">
             {loading ? (
               <Loader m="md" size="sm" />
@@ -266,8 +266,8 @@ export function HubExplorerPage() {
               renderTree(directories[""] ?? [])
             )}
           </ScrollArea>
-        </WidgetFrame>
-        <WidgetFrame>
+        </TerminalWidgetFrame>
+        <TerminalWidgetFrame>
           <div className="explorer-file">
             <FileTabs
               onClose={closeFile}
@@ -323,7 +323,7 @@ export function HubExplorerPage() {
               )}
             </div>
           </div>
-        </WidgetFrame>
+        </TerminalWidgetFrame>
       </section>
     </main>
   );

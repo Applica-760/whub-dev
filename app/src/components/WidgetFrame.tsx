@@ -9,20 +9,14 @@ type WidgetFrameProps = {
 
 export function WidgetFrame({ title, action, children }: WidgetFrameProps) {
   return (
-    <Stack gap={2} h="100%" style={{ minHeight: 0 }}>
+    <Stack gap={6} h="100%">
       {(title || action) && (
-        <Group justify="space-between" px="xs" wrap="nowrap">
+        <Group justify="space-between" px="sm" wrap="nowrap">
           {title}
           {action}
         </Group>
       )}
-      <Paper
-        className="whub-box"
-        radius="md"
-        shadow="xs"
-        style={{ flex: "1 1 0", minHeight: 0 }}
-        withBorder
-      >
+      <Paper className="whub-box" h="100%" radius="md" shadow="xs" withBorder>
         {children}
       </Paper>
     </Stack>

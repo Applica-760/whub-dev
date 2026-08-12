@@ -30,9 +30,3 @@
 .overview-column[data-collapsed="true"] {
   display: none;
 }
-
-@media (max-width: 48rem) {
-  .overview-frame {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}

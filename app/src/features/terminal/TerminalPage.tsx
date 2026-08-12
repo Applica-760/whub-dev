@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router";
 
 import { requestJson } from "../../api/client";
 import { GroupedListRow } from "../../components/GroupedList";
-import { WidgetFrame } from "../../components/WidgetFrame";
+import { TerminalWidgetFrame } from "../../components/TerminalWidgetFrame";
 import type { AgentSession } from "./agentSessions";
 import { useAgentSessions } from "./agentSessions";
 import { TerminalWidget } from "./TerminalWidget";
@@ -342,7 +342,7 @@ export function TerminalPage({
                 />
               </div>
             </aside>
-            <WidgetFrame>
+            <TerminalWidgetFrame>
               {selectedOperator ? (
                 <TerminalWidget
                   endpoint={`/api/operator-terminals/${encodeURIComponent(selectedOperator.operator_id)}`}
@@ -361,12 +361,12 @@ export function TerminalPage({
                   表示できる端末はありません。
                 </Text>
               )}
-            </WidgetFrame>
+            </TerminalWidgetFrame>
             <aside
               className="terminal-explorer"
               data-collapsed={collapsed.left || undefined}
             >
-              <WidgetFrame>
+              <TerminalWidgetFrame>
                 <Group justify="space-between" m="md">
                   <Text fw={500}>Operations</Text>
                   <Button
@@ -483,7 +483,7 @@ export function TerminalPage({
                     {error ?? operatorError}
                   </Alert>
                 )}
-              </WidgetFrame>
+              </TerminalWidgetFrame>
             </aside>
           </section>
         </main>
