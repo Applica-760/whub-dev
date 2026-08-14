@@ -3,11 +3,11 @@ import { IconRefresh, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
-import { requestJson } from "../../api/client";
 import { GroupedListRow } from "../../components/GroupedList";
 import { TerminalWidgetFrame } from "../../components/TerminalWidgetFrame";
 import type { AgentSession } from "./agentSessions";
 import { useAgentSessions } from "./agentSessions";
+import { useOperatorTerminals } from "./operatorTerminals";
 import { TerminalWidget } from "./TerminalWidget";
 import { useApprovalAttention } from "./useApprovalAttention";
 import type { TerminalCollapseState } from "./useTerminalCollapse";
@@ -17,9 +17,6 @@ import { TaskDetailWidget } from "../tasks/TaskDetailWidget";
 import { TerminalExplorerPage } from "../explorer/TerminalExplorerPage";
 
 import "./terminal.css";
-
-type OperatorTerminal = { operator_id: string };
-type OperatorTerminals = { terminals: OperatorTerminal[] };
 
 function worktreeValue(worktree: AgentSession) {
   return `${worktree.project}/${worktree.task_id}`;
@@ -39,14 +36,18 @@ export function TerminalPage({
   const location = useLocation();
   const navigate = useNavigate();
   const { error, loading, sessions } = useAgentSessions();
+  const {
+    error: operatorError,
+    loaded: operatorsLoaded,
+    operators,
+    pending: operatorPending,
+    startOperator: createOperator,
+    stopOperator: removeOperator,
+  } = useOperatorTerminals();
   const { acknowledgeOperator, acknowledgeWorktree, attention } =
     useApprovalAttention();
   const terminals = sessions;
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
-  const [operators, setOperators] = useState<OperatorTerminal[]>([]);
-  const [operatorError, setOperatorError] = useState<string | null>(null);
-  const [operatorsLoaded, setOperatorsLoaded] = useState(false);
-  const [operatorPending, setOperatorPending] = useState(false);
   const [mountedTerminals, setMountedTerminals] = useState<string[]>([]);
   const [terminalReloads, setTerminalReloads] = useState<
     Record<string, number>
@@ -194,78 +195,18 @@ export function TerminalPage({
     selectedWorktree,
   ]);
 
-  const refreshOperator = useCallback(async () => {
-    try {
-      const listed = await requestJson<OperatorTerminals>(
-        "/api/operator-terminals",
-      );
-      setOperators((current) =>
-        current.length === listed.terminals.length &&
-        current.every(
-          (operator, index) =>
-            operator.operator_id === listed.terminals[index]?.operator_id,
-        )
-          ? current
-          : listed.terminals,
-      );
-    } catch (requestError) {
-      setOperatorError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Operator Terminalを読み込めませんでした。",
-      );
-    } finally {
-      setOperatorsLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshOperator();
-  }, [refreshOperator]);
-
   const startOperator = useCallback(async () => {
-    setOperatorPending(true);
-    setOperatorError(null);
-    try {
-      const created = await requestJson<OperatorTerminal>(
-        "/api/operator-terminals",
-        { method: "POST" },
-      );
-      setOperators((current) => [...current, created]);
-      openOperator(created.operator_id);
-    } catch (requestError) {
-      setOperatorError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Operator Terminalを更新できませんでした。",
-      );
-    } finally {
-      setOperatorPending(false);
-    }
-  }, [openOperator]);
+    const created = await createOperator();
+    if (created) openOperator(created.operator_id);
+  }, [createOperator, openOperator]);
 
-  const stopOperator = useCallback(async (operatorId: string) => {
-    if (!window.confirm("Operationを終了しますか？")) return;
-    setOperatorPending(true);
-    setOperatorError(null);
-    try {
-      await requestJson<void>(
-        `/api/operator-terminals/${encodeURIComponent(operatorId)}`,
-        { method: "DELETE" },
-      );
-      setOperators((current) =>
-        current.filter((item) => item.operator_id !== operatorId),
-      );
-    } catch (requestError) {
-      setOperatorError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Operationを終了できませんでした。",
-      );
-    } finally {
-      setOperatorPending(false);
-    }
-  }, []);
+  const stopOperator = useCallback(
+    async (operatorId: string) => {
+      if (!window.confirm("Operationを終了しますか？")) return;
+      await removeOperator(operatorId);
+    },
+    [removeOperator],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
