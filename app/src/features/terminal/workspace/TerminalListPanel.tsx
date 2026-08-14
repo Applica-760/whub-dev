@@ -3,10 +3,8 @@ import { IconRefresh, IconX } from "@tabler/icons-react";
 
 import { GroupedListRow } from "../../../components/GroupedList";
 import { TerminalWidgetFrame } from "../../../components/TerminalWidgetFrame";
-import type { AgentSession } from "../agentSessions";
 import type { ApprovalAttention } from "../attentionApi";
-import type { OperatorTerminal } from "../operatorTerminals";
-import { operatorValue, worktreeValue } from "./terminalValue";
+import { targetHasAttention, type TerminalTarget } from "./terminalTarget";
 
 type TerminalListPanelProps = {
   collapsed: boolean;
@@ -17,10 +15,9 @@ type TerminalListPanelProps = {
   onStartOperator: () => void;
   onStopOperator: (operatorId: string) => void;
   operatorPending: boolean;
-  operators: OperatorTerminal[];
   pendingAttention: ApprovalAttention[];
-  selectedTerminal: string | null;
-  terminals: AgentSession[];
+  selectedValue: string | null;
+  targets: TerminalTarget[];
 };
 
 export function TerminalListPanel({
@@ -32,11 +29,11 @@ export function TerminalListPanel({
   onStartOperator,
   onStopOperator,
   operatorPending,
-  operators,
   pendingAttention,
-  selectedTerminal,
-  terminals,
+  selectedValue,
+  targets,
 }: TerminalListPanelProps) {
+  const hasWorktrees = targets.some((target) => target.kind === "worktree");
   return (
     <aside
       className="terminal-explorer"
@@ -54,123 +51,71 @@ export function TerminalListPanel({
             起動
           </Button>
         </Group>
-        {operators.map((operator, index) => {
-          const value = operatorValue(operator.operator_id);
-          return (
-            <GroupedListRow
-              key={operator.operator_id}
-              onClick={() => onSelect(value)}
-              rightSection={
-                <Group gap={4} wrap="nowrap">
-                  {pendingAttention
-                    .filter(
-                      (item) =>
-                        item.target === "operator" &&
-                        item.operator_id === operator.operator_id,
-                    )
-                    .map((item) => (
-                      <Badge
-                        color={
-                          item.event === "permission_request"
-                            ? "yellow"
-                            : "blue"
-                        }
-                        key={item.event}
-                        size="sm"
-                      >
-                        {item.event === "permission_request"
-                          ? "承認待ち"
-                          : "応答終了"}
-                      </Badge>
-                    ))}
-                  <Group gap={0} wrap="nowrap">
-                    <ActionIcon
-                      aria-label={`Operationを再読み込み: ${operator.operator_id}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onReload(value);
-                      }}
-                      title="Terminalを再読み込み"
-                      variant="subtle"
+        {targets.map((target, index) => (
+          <GroupedListRow
+            key={target.value}
+            onClick={() => onSelect(target.value)}
+            rightSection={
+              <Group gap={4} wrap="nowrap">
+                {pendingAttention
+                  .filter((item) => targetHasAttention(target, item))
+                  .map((item) => (
+                    <Badge
+                      color={
+                        item.event === "permission_request" ? "yellow" : "blue"
+                      }
+                      key={item.event}
+                      size="sm"
                     >
-                      <IconRefresh aria-hidden size={16} stroke={1.5} />
-                    </ActionIcon>
-                    <ActionIcon
-                      aria-label={`Operation ${operator.operator_id}を停止`}
-                      disabled={operatorPending}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onStopOperator(operator.operator_id);
-                      }}
-                      title="Operationを終了"
-                      variant="subtle"
-                    >
-                      <IconX aria-hidden size={16} stroke={1.5} />
-                    </ActionIcon>
-                  </Group>
-                </Group>
-              }
-              selected={selectedTerminal === value}
-              title={`Operation ${index + 1}`}
-              withDivider={operators.length > 1 || terminals.length > 0}
-            />
-          );
-        })}
-        {terminals.map((worktree, index) => {
-          const value = worktreeValue(worktree);
-          return (
-            <GroupedListRow
-              key={value}
-              onClick={() => onSelect(value)}
-              rightSection={
-                <Group gap={4} wrap="nowrap">
-                  {pendingAttention
-                    .filter(
-                      (item) =>
-                        item.target === "worktree" &&
-                        item.project === worktree.project &&
-                        item.task_id === worktree.task_id,
-                    )
-                    .map((item) => (
-                      <Badge
-                        color={
-                          item.event === "permission_request"
-                            ? "yellow"
-                            : "blue"
-                        }
-                        key={item.event}
-                        size="sm"
-                      >
-                        {item.event === "permission_request"
-                          ? "承認待ち"
-                          : "応答終了"}
-                      </Badge>
-                    ))}
+                      {item.event === "permission_request"
+                        ? "承認待ち"
+                        : "応答終了"}
+                    </Badge>
+                  ))}
+                <Group gap={0} wrap="nowrap">
                   <ActionIcon
-                    aria-label={`Terminalを再読み込み: ${worktree.task_id} (${worktree.project})`}
+                    aria-label={
+                      target.kind === "operator"
+                        ? `Operationを再読み込み: ${target.operatorId}`
+                        : `Terminalを再読み込み: ${target.taskId} (${target.project})`
+                    }
                     onClick={(event) => {
                       event.stopPropagation();
-                      onReload(value);
+                      onReload(target.value);
                     }}
                     title="Terminalを再読み込み"
                     variant="subtle"
                   >
                     <IconRefresh aria-hidden size={16} stroke={1.5} />
                   </ActionIcon>
+                  {target.kind === "operator" && (
+                    <ActionIcon
+                      aria-label={`Operation ${target.operatorId}を停止`}
+                      disabled={operatorPending}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onStopOperator(target.operatorId);
+                      }}
+                      title="Operationを終了"
+                      variant="subtle"
+                    >
+                      <IconX aria-hidden size={16} stroke={1.5} />
+                    </ActionIcon>
+                  )}
                 </Group>
-              }
-              selected={value === selectedTerminal}
-              subtitle={worktree.task_id}
-              title={worktree.project}
-              withDivider={index < terminals.length - 1}
-            />
-          );
-        })}
+              </Group>
+            }
+            selected={selectedValue === target.value}
+            subtitle={target.kind === "worktree" ? target.taskId : undefined}
+            title={target.title}
+            withDivider={index < targets.length - 1}
+          />
+        ))}
         {loading ? (
           <Text c="dimmed" p="md">
             Agent sessionを読み込んでいます…
           </Text>
-        ) : terminals.length === 0 ? (
+        ) : !hasWorktrees ? (
           <Text c="dimmed" p="md">
             Agent sessionがありません
           </Text>
