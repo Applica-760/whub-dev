@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 
 from fastapi import (
@@ -16,13 +17,16 @@ from fastapi import (
 from pydantic import BaseModel, Field, model_validator
 
 from whub.core.context import current_context
+from whub.models import SymlinkResource
 from whub.services.agent.codex.attention import ApprovalAttention, approval_attention
+from whub.services.agent.tmux_session import resolve_tmux_session
 from whub.services.errors import ServiceError
 from whub.services.manifest import load_manifest
 from whub.services.operator_terminal import operator_terminal
-from whub.services.agent.tmux_session import resolve_tmux_session
-from whub.services.task.project import list_all_project_tasks
-from whub.services.worktree.resolve import resolve_project_worktree
+from whub.services.worktree.resolve import (
+    LOCAL_WORKTREE_ROOT,
+    resolve_conventional_worktree,
+)
 from whub.webapp.runner import HOST
 
 
@@ -118,17 +122,29 @@ async def attention_stream(websocket: WebSocket) -> None:
 def _registered_worktree(cwd: str) -> tuple[str, str]:
     context = current_context()
     manifest = load_manifest()
-    for project_tasks in list_all_project_tasks(manifest):
-        for task in project_tasks.tasks:
-            try:
-                worktree = resolve_project_worktree(
-                    manifest, context.workspace_root, project_tasks.project, task.id
-                )
-                resolve_tmux_session(worktree.project, worktree.task_id, worktree.host)
-            except ServiceError:
-                continue
-            if cwd == str(worktree.destination):
-                return worktree.project, worktree.task_id
+    path = Path(cwd)
+    if path.parent != context.workspace_root / LOCAL_WORKTREE_ROOT:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    for project in manifest.projects:
+        prefix = f"{project.name}-"
+        number = path.name.removeprefix(prefix)
+        if not path.name.startswith(prefix) or not number.isdecimal():
+            continue
+        resolved = manifest.resolve_project(project.name)
+        if resolved is None or not isinstance(resolved.resource, SymlinkResource):
+            continue
+        try:
+            worktree = resolve_conventional_worktree(
+                manifest,
+                context.workspace_root,
+                project.name,
+                f"TASK-{number}",
+            )
+            resolve_tmux_session(worktree.project, worktree.task_id, worktree.host)
+        except ServiceError:
+            continue
+        if cwd == str(worktree.destination):
+            return worktree.project, worktree.task_id
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
 
