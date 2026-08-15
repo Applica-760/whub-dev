@@ -142,7 +142,7 @@ def open_tmux_session(
 
 def _shell_command(worktree: str) -> str:
     return (
-        f"cd {shlex.quote(worktree)} && "
+        f"unset WHUB_OPERATOR_ID; cd {shlex.quote(worktree)} && "
         "printf '%s\\n' 'whub: use the Web Agent panel to start Codex; "
         "this tmux session remains available for general shell commands.' && "
         "exec $SHELL -l"

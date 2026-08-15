@@ -170,7 +170,7 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
     body = {
         "hook_event_name": "PermissionRequest",
         "session_id": "session-1",
-        "cwd": "/workspace/projects/worktrees/whub-dev-104",
+        "cwd": "/workspace/projects/worktrees/local-104",
         "turn_id": "turn-1",
         "tool_name": "Bash",
     }
@@ -179,13 +179,11 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
     store = ApprovalAttentionStore()
     local_client = TestClient(client.app, client=("127.0.0.1", 50000))
     context = Mock(workspace_root=Path("/workspace"))
-    tasks = [
-        SimpleNamespace(project="whub-dev", tasks=(SimpleNamespace(id="TASK-104"),))
-    ]
+    listed_manifest = manifest()
     worktree = SimpleNamespace(
-        project="whub-dev",
+        project="local",
         task_id="TASK-104",
-        destination=Path("/workspace/projects/worktrees/whub-dev-104"),
+        destination=Path("/workspace/projects/worktrees/local-104"),
         host=None,
     )
     with (
@@ -193,16 +191,17 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
             "whub.webapp.routers.agent_attention.current_context",
             return_value=context,
         ),
-        patch("whub.webapp.routers.agent_attention.load_manifest"),
         patch(
-            "whub.webapp.routers.agent_attention.list_all_project_tasks",
-            return_value=tasks,
+            "whub.webapp.routers.agent_attention.load_manifest",
+            return_value=listed_manifest,
         ),
         patch(
-            "whub.webapp.routers.agent_attention.resolve_project_worktree",
+            "whub.webapp.routers.agent_attention.resolve_conventional_worktree",
             return_value=worktree,
-        ),
-        patch("whub.webapp.routers.agent_attention.resolve_tmux_session"),
+        ) as resolve_worktree,
+        patch(
+            "whub.webapp.routers.agent_attention.resolve_tmux_session"
+        ) as resolve_session,
         patch("whub.webapp.routers.agent_attention.attention", store),
     ):
         assert (
@@ -224,7 +223,24 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
             == 204
         )
         assert [item.event for item in store.list()] == ["response_completed"]
+        for unavailable in (resolve_worktree, resolve_session):
+            unavailable.side_effect = ServiceError("unavailable")
+            assert (
+                local_client.post("/api/agent-attention/events", json=body).status_code
+                == 404
+            )
+            unavailable.side_effect = None
         body["cwd"] = "/workspace/projects/worktrees/not-registered"
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 404
+        )
+        body["cwd"] = "/workspace/projects/worktrees/local-not-a-task"
+        assert (
+            local_client.post("/api/agent-attention/events", json=body).status_code
+            == 404
+        )
+        body["cwd"] = "/srv/worktrees/remote-104"
         assert (
             local_client.post("/api/agent-attention/events", json=body).status_code
             == 404
@@ -236,6 +252,11 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
         )
 
     assert [item.event for item in store.list()] == ["response_completed"]
+    assert (
+        resolve_worktree.call_args_list
+        == [call(listed_manifest, Path("/workspace"), "local", "TASK-104")] * 5
+    )
+    assert resolve_session.call_count == 4
 
 
 def test_hook_events_identify_an_active_operator_by_immutable_id(

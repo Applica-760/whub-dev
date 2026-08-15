@@ -57,24 +57,6 @@ export function useApprovalAttention() {
     soundBuffers.current = Object.fromEntries(loaded);
   }, []);
 
-  const playSound = useCallback((event: NotificationEvent) => {
-    try {
-      const context = audioContext.current;
-      const buffer = soundBuffers.current[event];
-      if (!context || context.state !== "running")
-        throw new Error("audio unavailable");
-      if (!buffer) throw new Error("sound unavailable");
-      const source = context.createBufferSource();
-      const gain = context.createGain();
-      source.buffer = buffer;
-      gain.gain.setValueAtTime(0.35, context.currentTime);
-      source.connect(gain).connect(context.destination);
-      source.start();
-    } catch {
-      // Browsers block audio until a user interaction; the badge remains visible.
-    }
-  }, []);
-
   const activateSound = useCallback(async () => {
     try {
       const AudioContextConstructor = window.AudioContext;
@@ -93,20 +75,36 @@ export function useApprovalAttention() {
     }
   }, [loadSoundBuffers]);
 
-  const refresh = useCallback(
-    async (event?: NotificationEvent) => {
-      const version = ++refreshVersion.current;
+  const playSound = useCallback(
+    async (event: NotificationEvent) => {
       try {
-        const response = await listApprovalAttention();
-        if (version !== refreshVersion.current) return;
-        setAttention(response.attention);
-        if (event) playSound(event);
+        if (!(await activateSound())) throw new Error("audio unavailable");
+        const context = audioContext.current;
+        const buffer = soundBuffers.current[event];
+        if (!context || !buffer) throw new Error("sound unavailable");
+        const source = context.createBufferSource();
+        const gain = context.createGain();
+        source.buffer = buffer;
+        gain.gain.setValueAtTime(0.35, context.currentTime);
+        source.connect(gain).connect(context.destination);
+        source.start();
       } catch {
-        // Approval attention is supplementary; retain the latest visible state.
+        // Browsers block audio until a user interaction; the badge remains visible.
       }
     },
-    [playSound],
+    [activateSound],
   );
+
+  const refresh = useCallback(async () => {
+    const version = ++refreshVersion.current;
+    try {
+      const response = await listApprovalAttention();
+      if (version !== refreshVersion.current) return;
+      setAttention(response.attention);
+    } catch {
+      // Approval attention is supplementary; retain the latest visible state.
+    }
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -128,7 +126,10 @@ export function useApprovalAttention() {
             event?: NotificationEvent;
             type?: string;
           };
-          if (payload.type === "attention_updated") void refresh(payload.event);
+          if (payload.type === "attention_updated") {
+            if (payload.event) void playSound(payload.event);
+            void refresh();
+          }
         } catch {
           // A malformed supplementary event is ignored until reconnect synchronization.
         }
@@ -145,21 +146,15 @@ export function useApprovalAttention() {
       socket?.close();
       setTabAttention([]);
     };
-  }, [refresh]);
+  }, [playSound, refresh]);
 
   useEffect(() => {
     setTabAttention(attention);
   }, [attention]);
 
   useEffect(() => {
-    let activated = false;
     const activate = () => {
-      void activateSound().then((running) => {
-        if (!running || activated) return;
-        activated = true;
-        window.removeEventListener("pointerdown", activate, true);
-        window.removeEventListener("keydown", activate, true);
-      });
+      void activateSound();
     };
     window.addEventListener("pointerdown", activate, true);
     window.addEventListener("keydown", activate, true);

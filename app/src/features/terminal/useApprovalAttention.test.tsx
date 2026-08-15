@@ -203,6 +203,47 @@ describe("useApprovalAttention", () => {
     );
   });
 
+  it("通知状態の再取得に失敗してもWebSocketイベントの音を鳴らす", async () => {
+    renderHook(() => useApprovalAttention());
+
+    act(() => window.dispatchEvent(new Event("pointerdown")));
+    await waitFor(() =>
+      expect(
+        FakeAudioContext.contexts[0]?.decodeAudioData,
+      ).toHaveBeenCalledTimes(2),
+    );
+    vi.mocked(fetch).mockRejectedValue(new Error("request failed"));
+
+    act(() =>
+      FakeWebSocket.connections[0]?.emit({
+        type: "attention_updated",
+        event: "response_completed",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(FakeAudioContext.contexts[0]?.playedAssets).toEqual([
+        "/audio/response-completed.ogg",
+      ]),
+    );
+  });
+
+  it("初回起動後に停止した音声を次の通常操作で再開する", async () => {
+    renderHook(() => useApprovalAttention());
+
+    act(() => window.dispatchEvent(new Event("pointerdown")));
+    await waitFor(() =>
+      expect(FakeAudioContext.contexts[0]?.state).toBe("running"),
+    );
+    const context = FakeAudioContext.contexts[0];
+    if (!context) throw new Error("audio context unavailable");
+    context.state = "suspended";
+
+    act(() => window.dispatchEvent(new Event("keydown")));
+
+    await waitFor(() => expect(context.state).toBe("running"));
+  });
+
   it("通知音が拒否されても次の通常操作で再試行する", async () => {
     FakeAudioContext.rejectResume = true;
     renderHook(() => useApprovalAttention());

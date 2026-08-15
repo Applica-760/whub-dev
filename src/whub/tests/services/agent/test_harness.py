@@ -338,7 +338,7 @@ def test_start_tmux_session_creates_codex_from_hub_root(tmp_path: Path) -> None:
         "-c",
         str(tmp_path),
         (
-            f"cd {tmp_path / 'worktree'} && "
+            f"unset WHUB_OPERATOR_ID; cd {tmp_path / 'worktree'} && "
             "printf '%s\\n' 'whub: use the Web Agent panel to start Codex; "
             "this tmux session remains available for general shell commands.' && "
             "exec $SHELL -l"
