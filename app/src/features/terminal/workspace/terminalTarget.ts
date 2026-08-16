@@ -28,7 +28,7 @@ export function terminalTargets(
       kind: "operator",
       operatorId: operator.operator_id,
       taskProject: "whub-dev",
-      title: `Operation ${index + 1}`,
+      title: `term${index + 1}`,
       value: `operator/${operator.operator_id}`,
     })),
     ...worktrees.map((worktree): TerminalTarget => ({
@@ -36,7 +36,7 @@ export function terminalTargets(
       project: worktree.project,
       taskId: worktree.task_id,
       taskProject: worktree.project,
-      title: worktree.project,
+      title: worktree.project.slice(0, 4),
       value: `${worktree.project}/${worktree.task_id}`,
     })),
   ];

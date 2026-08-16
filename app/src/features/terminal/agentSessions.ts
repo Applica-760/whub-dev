@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from "react";
 type AgentSessionList =
   paths["/api/agent-sessions/{project}"]["get"]["responses"][200]["content"]["application/json"];
 export type AgentSession = AgentSessionList["sessions"][number];
+const LOADING_INDICATOR_TIMEOUT_MS = 5_000;
+const SESSION_REQUEST_TIMEOUT_MS = 10_000;
 
 export function useAgentSessions() {
   const [sessions, setSessions] = useState<AgentSession[]>([]);
@@ -22,16 +24,12 @@ export function useAgentSessions() {
       for (const project of projects)
         void requestJson<AgentSessionList>(
           `/api/agent-sessions/${encodeURIComponent(project)}`,
+          { signal: AbortSignal.timeout(SESSION_REQUEST_TIMEOUT_MS) },
         )
           .then((listed) =>
             setSessions((current) => [...current, ...listed.sessions]),
           )
-          .catch((requestError) => {
-            const message = `${project}: ${errorMessage(requestError)}`;
-            setError((current) =>
-              current ? `${current}\n${message}` : message,
-            );
-          })
+          .catch(() => undefined)
           .finally(() => {
             pending -= 1;
             if (!pending) setLoading(false);
@@ -41,6 +39,13 @@ export function useAgentSessions() {
       setLoading(false);
     }
   }, []);
-  useEffect(() => void refresh(), [refresh]);
+  useEffect(() => {
+    void refresh();
+    const timeout = window.setTimeout(
+      () => setLoading(false),
+      LOADING_INDICATOR_TIMEOUT_MS,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [refresh]);
   return { error, loading, sessions };
 }

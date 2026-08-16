@@ -1,5 +1,4 @@
-import { ActionIcon, Alert, Group, Text } from "@mantine/core";
-import { IconPlus, IconRefresh } from "@tabler/icons-react";
+import { Alert, Text } from "@mantine/core";
 
 import { GroupedListRow } from "../../../components/GroupedList";
 import { TerminalWidgetFrame } from "../../../components/TerminalWidgetFrame";
@@ -10,10 +9,7 @@ type TerminalListPanelProps = {
   collapsed: boolean;
   error: string | null;
   loading: boolean;
-  onReload: (value: string) => void;
   onSelect: (value: string) => void;
-  onStartOperator: () => void;
-  operatorPending: boolean;
   pendingAttention: ApprovalAttention[];
   selectedValue: string | null;
   targets: TerminalTarget[];
@@ -23,87 +19,65 @@ export function TerminalListPanel({
   collapsed,
   error,
   loading,
-  onReload,
   onSelect,
-  onStartOperator,
-  operatorPending,
   pendingAttention,
   selectedValue,
   targets,
 }: TerminalListPanelProps) {
   const hasWorktrees = targets.some((target) => target.kind === "worktree");
+  const attentionSlots = [
+    ["permission_request", "権限待ち"],
+    ["response_completed", "完了"],
+  ] as const;
   return (
     <aside
       className="terminal-explorer"
       data-collapsed={collapsed || undefined}
     >
       <TerminalWidgetFrame>
-        <Group className="terminal-list-header" justify="space-between">
-          <Text fw={500} size="sm">
-            Operations
-          </Text>
-          <ActionIcon
-            aria-label="Operationを起動"
-            disabled={operatorPending}
-            onClick={onStartOperator}
-            size="xs"
-            title="Operationを起動"
-            variant="subtle"
-          >
-            <IconPlus aria-hidden size={14} stroke={1.5} />
-          </ActionIcon>
-        </Group>
-        {targets.map((target, index) => (
-          <GroupedListRow
-            key={target.value}
-            onClick={() => onSelect(target.value)}
-            rightSection={
-              <Group gap={4} wrap="nowrap">
-                {pendingAttention
-                  .filter((item) => targetHasAttention(target, item))
-                  .map((item) => {
-                    const label =
-                      item.event === "permission_request"
-                        ? "権限リクエスト"
-                        : "応答完了";
+        {targets.map((target, index) => {
+          const targetAttention = pendingAttention.filter((item) =>
+            targetHasAttention(target, item),
+          );
+          return (
+            <GroupedListRow
+              key={target.value}
+              onClick={() => onSelect(target.value)}
+              rightSection={
+                <span className="terminal-attention-slots">
+                  {attentionSlots.map(([event, label]) => {
+                    const active = targetAttention.some(
+                      (item) => item.event === event,
+                    );
                     return (
                       <span
-                        aria-label={label}
+                        aria-hidden={!active}
+                        aria-label={active ? label : undefined}
                         className="terminal-attention-dot"
-                        data-event={item.event}
-                        key={item.event}
-                        role="img"
-                        title={label}
+                        data-active={active || undefined}
+                        data-event={event}
+                        key={event}
+                        role={active ? "img" : undefined}
+                        title={active ? label : undefined}
                       />
                     );
                   })}
-                <ActionIcon
-                  aria-label={
-                    target.kind === "operator"
-                      ? `Operationを再読み込み: ${target.operatorId}`
-                      : `Terminalを再読み込み: ${target.taskId} (${target.project})`
-                  }
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onReload(target.value);
-                  }}
-                  size="sm"
-                  title="Terminalを再読み込み"
-                  variant="subtle"
-                >
-                  <IconRefresh aria-hidden size={14} stroke={1.5} />
-                </ActionIcon>
-              </Group>
-            }
-            selected={selectedValue === target.value}
-            subtitle={target.kind === "worktree" ? target.taskId : undefined}
-            title={target.title}
-            withDivider={index < targets.length - 1}
-          />
-        ))}
+                </span>
+              }
+              selected={selectedValue === target.value}
+              subtitle={
+                target.kind === "worktree"
+                  ? (target.taskId.match(/\d+$/)?.[0] ?? target.taskId)
+                  : undefined
+              }
+              title={target.title}
+              withDivider={index < targets.length - 1}
+            />
+          );
+        })}
         {loading ? (
           <Text c="dimmed" p="md">
-            Agent sessionを読み込んでいます…
+            読込中…
           </Text>
         ) : !hasWorktrees ? (
           <Text c="dimmed" p="md">
