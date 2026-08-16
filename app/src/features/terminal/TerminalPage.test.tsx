@@ -379,7 +379,7 @@ describe("TerminalPage", () => {
     expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe("true");
   });
 
-  it("複数Operationを起動・選択・個別終了できる", async () => {
+  it("複数Operationを起動でき、終了ボタンを表示しない", async () => {
     renderPage();
     const start = await screen.findByRole("button", {
       name: "Operationを起動",
@@ -389,19 +389,10 @@ describe("TerminalPage", () => {
 
     fireEvent.click(start);
     expect(
-      await screen.findByRole("button", { name: "Operation operator-2を停止" }),
+      await screen.findByRole("button", { name: /Operation 2/ }),
     ).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Operation operator-1を停止" }),
-    );
-
-    await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith("/api/operator-terminals/operator-1", {
-        method: "DELETE",
-      }),
-    );
     expect(
-      screen.queryByRole("button", { name: "Operation operator-1を停止" }),
+      screen.queryByRole("button", { name: /Operation .*を停止/ }),
     ).toBeNull();
   });
 
@@ -514,10 +505,11 @@ describe("TerminalPage", () => {
     expect(screen.queryByText("vault / TASK-101")).toBeNull();
   });
 
-  it("承認待ちのTerminalをExplorerバッジと選択行で示す", async () => {
+  it("権限リクエストのTerminalをExplorerの通知点と選択行で示す", async () => {
     renderPage();
 
-    expect(await screen.findByText("承認待ち")).toBeTruthy();
+    const dot = await screen.findByRole("img", { name: "権限リクエスト" });
+    expect(dot.dataset.event).toBe("permission_request");
     expect(screen.queryByText("承認待ちのTerminalがあります")).toBeNull();
 
     fireEvent.click(
@@ -616,7 +608,8 @@ describe("TerminalPage", () => {
     ];
     renderPage();
 
-    expect(await screen.findByText("応答終了")).toBeTruthy();
+    const dot = await screen.findByRole("img", { name: "応答完了" });
+    expect(dot.dataset.event).toBe("response_completed");
     fireEvent.click(await screen.findByText("Operation 1"));
 
     await waitFor(() =>
@@ -643,7 +636,9 @@ describe("TerminalPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("承認待ち")).toBeTruthy();
+    expect(
+      await screen.findByRole("img", { name: "権限リクエスト" }),
+    ).toBeTruthy();
     expect(fetch).not.toHaveBeenCalledWith(
       "/api/agent-attention/whub-dev/TASK-099/acknowledge",
       { method: "POST" },
@@ -668,7 +663,7 @@ describe("TerminalPage", () => {
       value: "hidden",
     });
     renderPage();
-    await screen.findByText("応答終了");
+    await screen.findByRole("img", { name: "応答完了" });
     await screen.findByText("whub-dev / TASK-099");
 
     Object.defineProperty(document, "visibilityState", {
