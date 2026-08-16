@@ -1,0 +1,8 @@
+schema_version: 2
+id: TASK-148
+workflow: WF-001
+state: completed
+depends_on:
+- TASK-146
+interruption_task_id: null
+interruption_source_task_id: null
