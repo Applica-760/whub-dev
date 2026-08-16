@@ -55,13 +55,7 @@ export function TerminalPage({
               collapsed={collapsed.left}
               error={terminal.error}
               loading={terminal.loading}
-              onReload={terminal.reloadTerminal}
-              onSelect={terminal.selectTerminal}
-              onStartOperator={() => void terminal.startOperator()}
-              onStopOperator={(operatorId) =>
-                void terminal.stopOperator(operatorId)
-              }
-              operatorPending={terminal.operatorPending}
+              onSelect={terminal.reloadTerminal}
               pendingAttention={terminal.pendingAttention}
               selectedValue={terminal.selectedValue}
               targets={terminal.targets}

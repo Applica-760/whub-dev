@@ -1,5 +1,6 @@
 import { MantineProvider } from "@mantine/core";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -29,6 +30,7 @@ let operationStarts = 0;
 let operatorTerminals: { operator_id: string }[] = [];
 let deferSessions = false;
 let deferredSessionProject: string | null = null;
+let failedSessionProject: string | null = null;
 let includeSessionlessProject = false;
 let terminalMounts: string[] = [];
 let terminalActiveAtMount: boolean[] = [];
@@ -90,6 +92,7 @@ beforeEach(() => {
   operatorTerminals = [];
   deferSessions = false;
   deferredSessionProject = null;
+  failedSessionProject = null;
   includeSessionlessProject = false;
   terminalMounts = [];
   terminalActiveAtMount = [];
@@ -203,6 +206,8 @@ beforeEach(() => {
         });
       if (url.startsWith("/api/agent-sessions/")) {
         const project = url.split("/").at(-1);
+        if (project === failedSessionProject)
+          return Promise.reject(new Error("unmounted"));
         if (deferSessions || project === deferredSessionProject)
           return new Promise(() => {});
         return Promise.resolve({
@@ -256,14 +261,19 @@ describe("TerminalPage", () => {
   it("Task詳細・端末とTerminal一覧を表示する", async () => {
     const { container } = renderPage();
     const firstTerminal = await screen.findByRole("button", {
-      name: /whub-dev.*TASK-099/,
+      name: /whub.*099/,
     });
     const secondTerminal = screen.getByRole("button", {
-      name: /vault.*TASK-101/,
+      name: /vaul.*101/,
     });
     await waitFor(() =>
       expect(firstTerminal.getAttribute("aria-pressed")).toBe("true"),
     );
+    expect(firstTerminal.textContent).toBe("whub099");
+    expect(secondTerminal.textContent).toBe("vaul101");
+    expect(
+      firstTerminal.querySelectorAll(".terminal-attention-dot"),
+    ).toHaveLength(2);
     expect(screen.getByText("whub-dev / TASK-099")).toBeTruthy();
     expect(await screen.findByText("TASK-099(in_progress)")).toBeTruthy();
     expect(screen.getByText("Task graph: whub-dev")).toBeTruthy();
@@ -321,15 +331,21 @@ describe("TerminalPage", () => {
     renderPage("/terminal/explorer");
 
     await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith(
-        "/api/agent-sessions/portfolio",
-        undefined,
-      ),
+      expect(fetch).toHaveBeenCalledWith("/api/agent-sessions/portfolio", {
+        signal: expect.any(AbortSignal),
+      }),
     );
-    await waitFor(() =>
-      expect(screen.queryByText("Agent sessionを読み込んでいます…")).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByText("読込中…")).toBeNull());
     expect(screen.queryByText(/portfolio:/)).toBeNull();
+  });
+
+  it("unmount中のProjectをExplorerの警告にしない", async () => {
+    failedSessionProject = "vault";
+    renderPage();
+
+    await screen.findByRole("button", { name: /whub.*099/ });
+    await waitFor(() => expect(screen.queryByText("読込中…")).toBeNull());
+    expect(screen.queryByText(/vault:/)).toBeNull();
   });
 
   it("⌘⇧EをTerminal内の任意の位置からExplorerへ遷移する", async () => {
@@ -379,44 +395,33 @@ describe("TerminalPage", () => {
     expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe("true");
   });
 
-  it("複数Operationを起動・選択・個別終了できる", async () => {
+  it("見出しなしで複数Operationを短い名前で表示する", async () => {
+    operatorTerminals = [
+      { operator_id: "operator-1" },
+      { operator_id: "operator-2" },
+    ];
     renderPage();
-    const start = await screen.findByRole("button", {
-      name: "Operationを起動",
-    });
-    fireEvent.click(start);
-    expect(await screen.findByText("Operation terminal")).toBeTruthy();
 
-    fireEvent.click(start);
+    expect(await screen.findByRole("button", { name: /term1/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /term2/ })).toBeTruthy();
+    expect(screen.queryByText("Operations")).toBeNull();
     expect(
-      await screen.findByRole("button", { name: "Operation operator-2を停止" }),
-    ).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Operation operator-1を停止" }),
-    );
-
-    await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith("/api/operator-terminals/operator-1", {
-        method: "DELETE",
-      }),
-    );
-    expect(
-      screen.queryByRole("button", { name: "Operation operator-1を停止" }),
+      screen.queryByRole("button", { name: "Operationを起動" }),
     ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Operation .*を停止/ }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /再読み込み/ })).toBeNull();
   });
 
-  it("選択中OperationのTerminalだけを再読み込みする", async () => {
+  it("選択中OperationをクリックするとTerminalだけを再読み込みする", async () => {
     operatorTerminals = [{ operator_id: "operator-1" }];
     renderPage();
 
     expect(await screen.findByText("Operation terminal")).toBeTruthy();
     expect(terminalMounts).toEqual(["Operation terminal"]);
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Operationを再読み込み: operator-1",
-      }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /term1/ }));
 
     await waitFor(() =>
       expect(terminalUnmounts).toEqual(["Operation terminal"]),
@@ -431,29 +436,30 @@ describe("TerminalPage", () => {
     ).toBe(false);
   });
 
-  it("非選択Worktreeを選択して可視状態で再読み込みする", async () => {
+  it("非選択Worktreeをクリックすると可視状態で再読み込みする", async () => {
     renderPage();
-    const firstTerminal = await screen.findByRole("button", {
-      name: /whub-dev.*TASK-099/,
+    await screen.findByRole("button", {
+      name: /whub.*099/,
     });
     const secondTerminal = screen.getByRole("button", {
-      name: /vault.*TASK-101/,
+      name: /vaul.*101/,
     });
 
-    fireEvent.click(secondTerminal);
-    await waitFor(() =>
-      expect(secondTerminal.getAttribute("aria-pressed")).toBe("true"),
-    );
-    fireEvent.click(firstTerminal);
-    await waitFor(() =>
-      expect(firstTerminal.getAttribute("aria-pressed")).toBe("true"),
-    );
+    fireEvent.keyDown(screen.getByText("whub-dev / TASK-099"), {
+      code: "ArrowDown",
+      key: "ArrowDown",
+      metaKey: true,
+      shiftKey: true,
+    });
+    fireEvent.keyDown(await screen.findByText("vault / TASK-101"), {
+      code: "ArrowUp",
+      key: "ArrowUp",
+      metaKey: true,
+      shiftKey: true,
+    });
+    expect(terminalUnmounts).toEqual([]);
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Terminalを再読み込み: TASK-101 (vault)",
-      }),
-    );
+    fireEvent.click(secondTerminal);
 
     await waitFor(() =>
       expect(secondTerminal.getAttribute("aria-pressed")).toBe("true"),
@@ -495,12 +501,26 @@ describe("TerminalPage", () => {
     renderPage();
 
     expect(await screen.findByText("Operation terminal")).toBeTruthy();
-    expect(screen.getByText("Agent sessionを読み込んでいます…")).toBeTruthy();
+    expect(screen.getByText("読込中…")).toBeTruthy();
     expect(
       screen
-        .getByRole("button", { name: /Operation 1/ })
+        .getByRole("button", { name: /term1/ })
         .getAttribute("aria-pressed"),
     ).toBe("true");
+  });
+
+  it("worktreeの探索が遅くても読込中表示を5秒で消す", () => {
+    deferSessions = true;
+    const setTimeout = vi.spyOn(window, "setTimeout");
+    renderPage();
+
+    expect(screen.getByText("読込中…")).toBeTruthy();
+    const loadingTimeout = setTimeout.mock.calls.find(
+      ([, delay]) => delay === 5_000,
+    );
+    expect(loadingTimeout).toBeTruthy();
+    act(() => (loadingTimeout?.[0] as () => void)());
+    expect(screen.queryByText("読込中…")).toBeNull();
   });
 
   it("遅いProjectを待たずに取得済みAgent sessionを表示する", async () => {
@@ -508,21 +528,25 @@ describe("TerminalPage", () => {
     renderPage();
 
     expect(
-      await screen.findByRole("button", { name: /whub-dev.*TASK-099/ }),
+      await screen.findByRole("button", { name: /whub.*099/ }),
     ).toBeTruthy();
-    expect(screen.getByText("Agent sessionを読み込んでいます…")).toBeTruthy();
+    expect(screen.getByText("読込中…")).toBeTruthy();
     expect(screen.queryByText("vault / TASK-101")).toBeNull();
   });
 
-  it("承認待ちのTerminalをExplorerバッジと選択行で示す", async () => {
+  it("権限待ちと完了の通知枠を固定して縦に並べる", async () => {
     renderPage();
 
-    expect(await screen.findByText("承認待ち")).toBeTruthy();
+    const dot = await screen.findByRole("img", { name: "権限待ち" });
+    expect(dot.dataset.event).toBe("permission_request");
+    const row = screen.getByRole("button", { name: /vaul.*101/ });
+    const slots = row.querySelectorAll(".terminal-attention-dot");
+    expect(slots).toHaveLength(2);
+    expect(slots[0].getAttribute("data-active")).toBe("true");
+    expect(slots[1].getAttribute("data-active")).toBeNull();
     expect(screen.queryByText("承認待ちのTerminalがあります")).toBeNull();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: /vault.*TASK-101/ }),
-    );
+    fireEvent.click(row);
 
     expect(await screen.findByText("vault / TASK-101")).toBeTruthy();
     await waitFor(() =>
@@ -616,8 +640,9 @@ describe("TerminalPage", () => {
     ];
     renderPage();
 
-    expect(await screen.findByText("応答終了")).toBeTruthy();
-    fireEvent.click(await screen.findByText("Operation 1"));
+    const dot = await screen.findByRole("img", { name: "完了" });
+    expect(dot.dataset.event).toBe("response_completed");
+    fireEvent.click(await screen.findByText("term1"));
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
@@ -643,7 +668,7 @@ describe("TerminalPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("承認待ち")).toBeTruthy();
+    expect(await screen.findByRole("img", { name: "権限待ち" })).toBeTruthy();
     expect(fetch).not.toHaveBeenCalledWith(
       "/api/agent-attention/whub-dev/TASK-099/acknowledge",
       { method: "POST" },
@@ -668,7 +693,7 @@ describe("TerminalPage", () => {
       value: "hidden",
     });
     renderPage();
-    await screen.findByText("応答終了");
+    await screen.findByRole("img", { name: "完了" });
     await screen.findByText("whub-dev / TASK-099");
 
     Object.defineProperty(document, "visibilityState", {
@@ -699,9 +724,7 @@ describe("TerminalPage", () => {
     ];
     renderPage();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: /whub-dev.*TASK-099/ }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: /whub.*099/ }));
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
