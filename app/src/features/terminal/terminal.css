@@ -62,6 +62,10 @@
   order: -1;
 }
 
+.terminal-explorer .whub-box {
+  overflow: hidden;
+}
+
 .terminal-explorer .grouped-list-row {
   font-size: var(--mantine-font-size-sm);
   gap: 0.25rem;

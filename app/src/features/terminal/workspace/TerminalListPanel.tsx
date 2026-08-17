@@ -24,7 +24,6 @@ export function TerminalListPanel({
   selectedValue,
   targets,
 }: TerminalListPanelProps) {
-  const hasWorktrees = targets.some((target) => target.kind === "worktree");
   const attentionSlots = [
     ["permission_request", "権限待ち"],
     ["response_completed", "完了"],
@@ -75,15 +74,11 @@ export function TerminalListPanel({
             />
           );
         })}
-        {loading ? (
+        {loading && (
           <Text c="dimmed" p="md">
             読込中…
           </Text>
-        ) : !hasWorktrees ? (
-          <Text c="dimmed" p="md">
-            Agent sessionがありません
-          </Text>
-        ) : null}
+        )}
         {error && (
           <Alert color="red" m="md">
             {error}
