@@ -12,6 +12,7 @@ __pycache__/
 app/dist/
 src/whub/webapp/dist/
 app/node_modules
+*/node_modules/*
 
 # Release build metadata
 src/whub/_build.json
