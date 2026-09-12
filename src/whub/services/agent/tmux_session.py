@@ -46,9 +46,9 @@ def resolve_tmux_session(
     return TmuxSession(name, tuple(tmux_command("attach-session", "-t", target)))
 
 
-def list_tmux_sessions(project: str, host: Host | None = None) -> tuple[str, ...]:
-    """List running Agent Task IDs for PROJECT."""
-    prefix = session_name(project, "TASK") + "-"
+def list_tmux_sessions(project: str, host: Host | None = None) -> tuple[int, ...]:
+    """List running Agent Issue numbers for PROJECT."""
+    prefix = session_name(project) + "-"
     if host is None:
         try:
             result = subprocess.run(
@@ -67,7 +67,7 @@ def list_tmux_sessions(project: str, host: Host | None = None) -> tuple[str, ...
         raise ServiceError(f"failed to list tmux sessions: {detail}")
     pattern = re.compile(re.escape(prefix) + r"([0-9]+)$")
     return tuple(
-        f"TASK-{match.group(1)}"
+        int(match.group(1))
         for name in result.stdout.splitlines()
         if (match := pattern.fullmatch(name))
     )

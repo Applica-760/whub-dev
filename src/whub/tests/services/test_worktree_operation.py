@@ -7,7 +7,7 @@ import pytest
 
 from whub.services.errors import ServiceError
 from whub.services.worktree.operation import (
-    _status_paths,
+    _require_clean_worktree,
     close_project_worktree,
     create_project_pull_request,
     open_project_worktree,
@@ -17,8 +17,9 @@ from whub.services.worktree.operation import (
 def _worktree(tmp_path: Path) -> SimpleNamespace:
     return SimpleNamespace(
         project="local",
-        task_id="TASK-072",
-        branch="tasks/072",
+        issue_number=72,
+        branch="issue/72",
+        repository_url="git@github.com:Applica-760/whub.git",
         parent=tmp_path / "source",
         destination=tmp_path / "projects/worktrees/local-072",
         base_branch="main",
@@ -35,31 +36,105 @@ def test_open_reuses_branch_then_opens_agent(tmp_path: Path) -> None:
             "whub.services.worktree.operation.resolve_worktree", return_value=worktree
         ),
         patch(
-            "whub.services.worktree.operation.resolve_task_worktree",
-            return_value=worktree,
-        ),
-        patch(
-            "whub.services.worktree.operation.run_worktree_git",
-            side_effect=[CompletedProcess([], 0), CompletedProcess([], 0)],
+            "whub.services.worktree.operation.run_git_at",
+            return_value=CompletedProcess([], 0),
         ) as git,
+        patch(
+            "whub.services.worktree.operation._prepare_issue_branch",
+            return_value=False,
+        ),
         patch(
             "whub.services.worktree.operation.open_agent", return_value=session
         ) as open_agent,
     ):
         assert (
-            open_project_worktree(None, tmp_path, "local", "TASK-072", ("implementer",))
+            open_project_worktree(None, tmp_path, "local", 72, ("implementer",))
             is session
         )
 
-    assert git.call_args_list[1].args[2:] == (
+    assert git.call_args.args[2:] == (
         "worktree",
         "add",
         str(worktree.destination),
-        "tasks/072",
+        "issue/72",
     )
     open_agent.assert_called_once_with(
-        None, tmp_path, "local", "TASK-072", ("implementer",)
+        None, tmp_path, "local", 72, ("implementer",)
     )
+
+
+def test_open_links_a_new_issue_branch_before_adding_its_worktree(
+    tmp_path: Path,
+) -> None:
+    worktree = _worktree(tmp_path)
+    session = SimpleNamespace()
+    with (
+        patch(
+            "whub.services.worktree.operation.resolve_worktree", return_value=worktree
+        ),
+        patch(
+            "whub.services.worktree.operation.run_git_at",
+            side_effect=[
+                CompletedProcess([], 1, "", ""),
+                CompletedProcess([], 0, "git@github.com:Applica-760/whub.git\n", ""),
+                CompletedProcess([], 0, "", ""),
+            ],
+        ) as git,
+        patch(
+            "whub.services.worktree.operation._require_gh",
+            return_value=CompletedProcess([], 0, "{}", ""),
+        ) as gh,
+        patch(
+            "whub.services.worktree.operation.open_agent", return_value=session
+        ),
+    ):
+        assert (
+            open_project_worktree(None, tmp_path, "local", 72, ("implementer",))
+            is session
+        )
+
+    gh.assert_called_once()
+    assert gh.call_args.args[2:] == (
+        "issue",
+        "develop",
+        "72",
+        "--repo",
+        "Applica-760/whub",
+        "--base",
+        "main",
+        "--name",
+        "issue/72",
+    )
+    assert git.call_args_list[2].args[2:] == (
+        "worktree",
+        "add",
+        str(worktree.destination),
+        "issue/72",
+    )
+
+
+def test_open_removes_a_new_branch_when_worktree_creation_fails(tmp_path: Path) -> None:
+    worktree = _worktree(tmp_path)
+    with (
+        patch(
+            "whub.services.worktree.operation.resolve_worktree", return_value=worktree
+        ),
+        patch(
+            "whub.services.worktree.operation.worktree_exists", return_value=False
+        ),
+        patch(
+            "whub.services.worktree.operation._prepare_issue_branch", return_value=True
+        ),
+        patch(
+            "whub.services.worktree.operation._add_worktree",
+            side_effect=ServiceError("git worktree add failed"),
+        ),
+        patch("whub.services.worktree.operation._rollback_branch") as rollback,
+        pytest.raises(ServiceError, match="git worktree add failed"),
+    ):
+        open_project_worktree(None, tmp_path, "local", 72, ("implementer",))
+
+    rollback.assert_called_once_with(worktree)
 
 
 def test_open_reuses_existing_worktree_without_git_lifecycle(tmp_path: Path) -> None:
@@ -70,19 +145,21 @@ def test_open_reuses_existing_worktree_without_git_lifecycle(tmp_path: Path) -> 
         patch(
             "whub.services.worktree.operation.resolve_worktree", return_value=worktree
         ),
-        patch("whub.services.worktree.operation.run_worktree_git") as git,
+        patch("whub.services.worktree.operation.run_git_at") as git,
+        patch("whub.services.worktree.operation._prepare_issue_branch") as prepare,
         patch(
             "whub.services.worktree.operation.open_agent", return_value=session
         ) as open_agent,
     ):
         assert (
-            open_project_worktree(None, tmp_path, "local", "TASK-072", ("implementer",))
+            open_project_worktree(None, tmp_path, "local", 72, ("implementer",))
             is session
         )
 
     git.assert_not_called()
+    prepare.assert_not_called()
     open_agent.assert_called_once_with(
-        None, tmp_path, "local", "TASK-072", ("implementer",)
+        None, tmp_path, "local", 72, ("implementer",)
     )
 
 
@@ -93,32 +170,30 @@ def test_open_rolls_back_only_new_branch_when_agent_open_fails(tmp_path: Path) -
             "whub.services.worktree.operation.resolve_worktree", return_value=worktree
         ),
         patch(
-            "whub.services.worktree.operation.resolve_task_worktree",
-            return_value=worktree,
-        ),
-        patch(
-            "whub.services.worktree.operation.run_worktree_git",
+            "whub.services.worktree.operation.run_git_at",
             side_effect=[
-                CompletedProcess([], 1),
                 CompletedProcess([], 0),
                 CompletedProcess([], 0),
                 CompletedProcess([], 0),
             ],
         ) as git,
         patch(
+            "whub.services.worktree.operation._prepare_issue_branch", return_value=True
+        ),
+        patch(
             "whub.services.worktree.operation.open_agent",
             side_effect=ServiceError("auth failed"),
         ),
         pytest.raises(ServiceError, match="auth failed"),
     ):
-        open_project_worktree(None, tmp_path, "local", "TASK-072", ("implementer",))
+        open_project_worktree(None, tmp_path, "local", 72, ("implementer",))
 
-    assert git.call_args_list[2].args[2:] == (
+    assert git.call_args_list[1].args[2:] == (
         "worktree",
         "remove",
         str(worktree.destination),
     )
-    assert git.call_args_list[3].args[2:] == ("branch", "-D", "tasks/072")
+    assert git.call_args_list[2].args[2:] == ("branch", "-D", "issue/72")
 
 
 def test_close_ignores_only_unchanged_agent_files_then_merges(tmp_path: Path) -> None:
@@ -126,11 +201,11 @@ def test_close_ignores_only_unchanged_agent_files_then_merges(tmp_path: Path) ->
     status = CompletedProcess([], 0, "?? .codex/config.toml\0", "")
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.operation.resolve_conventional_worktree",
             return_value=worktree,
         ),
         patch(
-            "whub.services.worktree.operation.run_worktree_git",
+            "whub.services.worktree.operation.run_git_at",
             side_effect=[
                 status,
                 CompletedProcess([], 0, "", ""),
@@ -143,7 +218,7 @@ def test_close_ignores_only_unchanged_agent_files_then_merges(tmp_path: Path) ->
             return_value={Path(".codex/config.toml")},
         ),
         patch(
-            "whub.services.worktree.operation._run_gh",
+            "whub.services.worktree.operation._require_gh",
             side_effect=[
                 CompletedProcess(
                     [], 0, '[{"url":"https://example/pr/72","headRefOid":"abc123"}]', ""
@@ -155,7 +230,7 @@ def test_close_ignores_only_unchanged_agent_files_then_merges(tmp_path: Path) ->
         patch("whub.services.worktree.operation.close_agent") as close_agent,
     ):
         assert (
-            close_project_worktree(None, tmp_path, "local", "TASK-072")
+            close_project_worktree(None, tmp_path, "local", 72)
             == "https://example/pr/72"
         )
 
@@ -163,16 +238,16 @@ def test_close_ignores_only_unchanged_agent_files_then_merges(tmp_path: Path) ->
         "push",
         "--set-upstream",
         "origin",
-        "tasks/072",
+        "issue/72",
     )
-    assert gh.call_args_list[1].args[1:6] == (
+    assert gh.call_args_list[1].args[2:7] == (
         "pr",
         "merge",
         "https://example/pr/72",
         "--merge",
         "--match-head-commit",
     )
-    close_agent.assert_called_once_with(None, tmp_path, "local", "TASK-072")
+    close_agent.assert_called_once_with(None, tmp_path, "local", 72)
 
 
 def test_pr_ignores_unchanged_agent_files_without_cleanup_or_merge(
@@ -182,11 +257,11 @@ def test_pr_ignores_unchanged_agent_files_without_cleanup_or_merge(
     status = CompletedProcess([], 0, "?? .codex/config.toml\0", "")
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.operation.resolve_conventional_worktree",
             return_value=worktree,
         ),
         patch(
-            "whub.services.worktree.operation.run_worktree_git",
+            "whub.services.worktree.operation.run_git_at",
             side_effect=[
                 status,
                 CompletedProcess([], 0, "", ""),
@@ -198,7 +273,7 @@ def test_pr_ignores_unchanged_agent_files_without_cleanup_or_merge(
             return_value={Path(".codex/config.toml")},
         ),
         patch(
-            "whub.services.worktree.operation._run_gh",
+            "whub.services.worktree.operation._require_gh",
             return_value=CompletedProcess(
                 [], 0, '[{"url":"https://example/pr/72","headRefOid":"abc123"}]', ""
             ),
@@ -206,7 +281,7 @@ def test_pr_ignores_unchanged_agent_files_without_cleanup_or_merge(
         patch("whub.services.worktree.operation.close_agent") as close_agent,
     ):
         assert (
-            create_project_pull_request(None, tmp_path, "local", "TASK-072")
+            create_project_pull_request(None, tmp_path, "local", 72)
             == "https://example/pr/72"
         )
 
@@ -214,9 +289,9 @@ def test_pr_ignores_unchanged_agent_files_without_cleanup_or_merge(
         "push",
         "--set-upstream",
         "origin",
-        "tasks/072",
+        "issue/72",
     )
-    assert gh.call_args_list[0].args[1:3] == ("pr", "list")
+    assert gh.call_args_list[0].args[2:4] == ("pr", "list")
     close_agent.assert_not_called()
 
 
@@ -224,11 +299,11 @@ def test_close_keeps_worktree_when_non_agent_change_exists(tmp_path: Path) -> No
     worktree = _worktree(tmp_path)
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.operation.resolve_conventional_worktree",
             return_value=worktree,
         ),
         patch(
-            "whub.services.worktree.operation.run_worktree_git",
+            "whub.services.worktree.operation.run_git_at",
             return_value=CompletedProcess([], 0, " M app.py\0", ""),
         ) as git,
         patch(
@@ -237,7 +312,7 @@ def test_close_keeps_worktree_when_non_agent_change_exists(tmp_path: Path) -> No
         ),
         pytest.raises(ServiceError, match="worktree has uncommitted changes"),
     ):
-        close_project_worktree(None, tmp_path, "local", "TASK-072")
+        close_project_worktree(None, tmp_path, "local", 72)
 
     assert git.call_count == 1
 
@@ -246,11 +321,11 @@ def test_close_stops_before_merge_when_agent_cleanup_fails(tmp_path: Path) -> No
     worktree = _worktree(tmp_path)
     with (
         patch(
-            "whub.services.worktree.operation.resolve_project_worktree",
+            "whub.services.worktree.operation.resolve_conventional_worktree",
             return_value=worktree,
         ),
         patch(
-            "whub.services.worktree.operation.run_worktree_git",
+            "whub.services.worktree.operation.run_git_at",
             side_effect=[
                 CompletedProcess([], 0, "", ""),
                 CompletedProcess([], 0, "", ""),
@@ -261,17 +336,29 @@ def test_close_stops_before_merge_when_agent_cleanup_fails(tmp_path: Path) -> No
             "whub.services.worktree.operation.unchanged_generated_paths",
             return_value=set(),
         ),
-        patch("whub.services.worktree.operation._run_gh") as gh,
+        patch("whub.services.worktree.operation._require_gh") as gh,
         patch(
             "whub.services.worktree.operation.close_agent",
             side_effect=ServiceError("config changed"),
         ),
         pytest.raises(ServiceError, match="config changed"),
     ):
-        close_project_worktree(None, tmp_path, "local", "TASK-072")
+        close_project_worktree(None, tmp_path, "local", 72)
 
     gh.assert_not_called()
 
 
-def test_status_paths_preserves_renamed_paths() -> None:
-    assert _status_paths("R  new.py\0old.py\0") == ["new.py", "old.py"]
+def test_clean_worktree_checks_both_renamed_paths(tmp_path: Path) -> None:
+    worktree = _worktree(tmp_path)
+    with (
+        patch(
+            "whub.services.worktree.operation.run_git_at",
+            return_value=CompletedProcess([], 0, "R  new.py\0old.py\0", ""),
+        ),
+        patch(
+            "whub.services.worktree.operation.unchanged_generated_paths",
+            return_value={Path("new.py")},
+        ),
+        pytest.raises(ServiceError, match="worktree has uncommitted changes"),
+    ):
+        _require_clean_worktree(None, tmp_path, worktree)

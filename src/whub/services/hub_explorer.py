@@ -5,13 +5,14 @@ from __future__ import annotations
 import os
 from pathlib import Path, PurePosixPath
 import stat
+import subprocess
 from typing import Literal
 
 from pydantic import BaseModel
 
+from whub.core.git import run_git
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.manifest import ResolvedManifest
-from whub.services.worktree.git import process_detail, run_git
 
 
 class HubEntry(BaseModel):
@@ -168,7 +169,7 @@ def _path_has_changes(
     if changed.returncode == 1:
         return True
     if changed.returncode != 0:
-        raise ServiceError("git diff failed: " + process_detail(changed))
+        raise ServiceError("git diff failed: " + _process_detail(changed))
     untracked = run_git(
         repository,
         "ls-files",
@@ -178,7 +179,7 @@ def _path_has_changes(
         repo_path,
     )
     if untracked.returncode != 0:
-        raise ServiceError("git ls-files failed: " + process_detail(untracked))
+        raise ServiceError("git ls-files failed: " + _process_detail(untracked))
     return bool(untracked.stdout.strip())
 
 
@@ -227,6 +228,10 @@ def _file_diff(
                 repo_path,
             )
         if result.returncode not in (0, 1):
-            raise ServiceError("git diff failed: " + process_detail(result))
+            raise ServiceError("git diff failed: " + _process_detail(result))
         return result.stdout
     return ""
+
+
+def _process_detail(result: subprocess.CompletedProcess[str]) -> str:
+    return result.stderr.strip() or result.stdout.strip() or f"exit status {result.returncode}"

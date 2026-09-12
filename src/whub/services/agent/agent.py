@@ -42,7 +42,7 @@ class AgentSession:
     """One running Agent tmux session with a valid conventional worktree."""
 
     project: str
-    task_id: str
+    issue_number: int
     workspace_path: str
 
 
@@ -50,17 +50,19 @@ def list_agent_sessions(
     manifest: Manifest, workspace_root: Path, project: str
 ) -> tuple[AgentSession, ...]:
     """List one Project's running Agent sessions; stale tmux sessions are omitted."""
-    worktree = resolve_worktree(manifest, workspace_root, project, "TASK-0")
+    worktree = resolve_worktree(manifest, workspace_root, project, 1)
     sessions: list[AgentSession] = []
-    for task_id in list_tmux_sessions(project, worktree.host):
+    for issue_number in list_tmux_sessions(project, worktree.host):
         try:
             worktree = resolve_conventional_worktree(
-                manifest, workspace_root, project, task_id
+                manifest, workspace_root, project, issue_number
             )
         except (OSError, ServiceError):
             continue
         sessions.append(
-            AgentSession(worktree.project, worktree.task_id, worktree.workspace_path)
+            AgentSession(
+                worktree.project, worktree.issue_number, worktree.workspace_path
+            )
         )
     return tuple(sessions)
 
@@ -69,18 +71,19 @@ def open_agent(
     manifest: Manifest,
     workspace_root: Path,
     project: str,
-    task_id: str,
+    issue_number: int,
     auth_names: tuple[str, ...],
 ) -> TmuxSession:
-    """Prepare PROJECT/TASK and return its tmux session."""
+    """Prepare PROJECT/ISSUE_NUMBER and return its tmux session."""
     registered = resolve_conventional_worktree(
-        manifest, workspace_root, project, task_id
+        manifest, workspace_root, project, issue_number
     )
+    agent_id = str(registered.issue_number)
     resolved_auth = resolve_agent_auth(auth_names)
     variables = resolve_variables(
         resolved_auth.auth.variables,
         project,
-        registered.task_id,
+        agent_id,
         registered.destination,
     )
     files = {
@@ -93,30 +96,30 @@ def open_agent(
         prepare(
             workspace_root,
             project,
-            registered.task_id,
+            agent_id,
             registered.destination,
             files,
             context,
         )
         prepare_codex_trust(
-            workspace_root, project, registered.task_id, registered.destination
+            workspace_root, project, agent_id, registered.destination
         )
         return open_tmux_session(
-            project, registered.task_id, registered.destination, workspace_root
+            project, agent_id, registered.destination, workspace_root
         )
 
     assert registered.host is not None and isinstance(registered.destination, str)
     prepare_remote_codex_trust(
         workspace_root,
         project,
-        registered.task_id,
+        agent_id,
         registered.host,
         registered.destination,
     )
     remote_state.prepare(
         workspace_root,
         project,
-        registered.task_id,
+        agent_id,
         registered.host,
         registered.destination,
         files,
@@ -124,7 +127,7 @@ def open_agent(
     )
     return open_tmux_session(
         project,
-        registered.task_id,
+        agent_id,
         registered.destination,
         workspace_root,
         registered.host,
@@ -132,72 +135,84 @@ def open_agent(
 
 
 def generated_paths(
-    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+    manifest: Manifest, workspace_root: Path, project: str, issue_number: int
 ) -> set[PurePosixPath]:
     """Return Agent-owned paths for one registered local or remote worktree."""
     registered = resolve_conventional_worktree(
-        manifest, workspace_root, project, task_id
+        manifest, workspace_root, project, issue_number
     )
     if registered.is_remote:
         assert isinstance(registered.destination, str)
         return remote_state.owned_paths(
-            workspace_root, project, task_id, registered.destination
+            workspace_root,
+            project,
+            str(registered.issue_number),
+            registered.destination,
         )
     assert isinstance(registered.destination, Path)
-    return local_owned_paths(workspace_root, project, task_id, registered.destination)
+    return local_owned_paths(
+        workspace_root,
+        project,
+        str(registered.issue_number),
+        registered.destination,
+    )
 
 
 def unchanged_generated_paths(
-    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+    manifest: Manifest, workspace_root: Path, project: str, issue_number: int
 ) -> set[PurePosixPath]:
     """Return Agent paths safe to ignore in a clean-worktree check."""
     registered = resolve_conventional_worktree(
-        manifest, workspace_root, project, task_id
+        manifest, workspace_root, project, issue_number
     )
     if registered.is_remote:
         assert registered.host is not None and isinstance(registered.destination, str)
         return remote_state.unchanged_owned_paths(
             workspace_root,
             project,
-            registered.task_id,
+            str(registered.issue_number),
             registered.host,
             registered.destination,
         )
     assert isinstance(registered.destination, Path)
     return local_unchanged_owned_paths(
-        workspace_root, project, registered.task_id, registered.destination
+        workspace_root,
+        project,
+        str(registered.issue_number),
+        registered.destination,
     )
 
 
 def close_agent(
-    manifest: Manifest, workspace_root: Path, project: str, task_id: str
+    manifest: Manifest, workspace_root: Path, project: str, issue_number: int
 ) -> None:
-    """Stop PROJECT/TASK's session and clean its owned configuration."""
+    """Stop PROJECT/ISSUE_NUMBER's session and clean its owned configuration."""
     registered = resolve_conventional_worktree(
-        manifest, workspace_root, project, task_id
+        manifest, workspace_root, project, issue_number
     )
+    agent_id = str(registered.issue_number)
     if registered.host is None:
         assert isinstance(registered.destination, Path)
-        close_tmux_session(project, registered.task_id)
+        close_tmux_session(project, agent_id)
         cleanup_codex_trust(
-            workspace_root, project, registered.task_id, registered.destination
+            workspace_root, project, agent_id, registered.destination
         )
-        cleanup(workspace_root, project, registered.task_id, registered.destination)
+        cleanup(workspace_root, project, agent_id, registered.destination)
         return
 
     assert registered.host is not None and isinstance(registered.destination, str)
-    close_tmux_session(project, registered.task_id, registered.host)
+    close_tmux_session(project, agent_id, registered.host)
     cleanup_remote_codex_trust(
         workspace_root,
         project,
-        registered.task_id,
+        agent_id,
         registered.host,
         registered.destination,
     )
     remote_state.cleanup(
         workspace_root,
         project,
-        registered.task_id,
+        agent_id,
         registered.host,
         registered.destination,
     )

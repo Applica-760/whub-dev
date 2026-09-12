@@ -48,7 +48,7 @@ def test_remote_tmux_confirmed_missing_is_idempotent() -> None:
 
 def test_remote_close_preserves_state_when_tmux_probe_fails(tmp_path: Path) -> None:
     registered = SimpleNamespace(
-        task_id="TASK-120",
+        issue_number=120,
         destination="/srv/worktrees/whub-dev-120",
         host=_host(),
     )
@@ -65,7 +65,7 @@ def test_remote_close_preserves_state_when_tmux_probe_fails(tmp_path: Path) -> N
         patch("whub.services.agent.agent.remote_state.cleanup") as remote_state,
         pytest.raises(ServiceError, match="failed to inspect remote tmux"),
     ):
-        close_agent(None, tmp_path, "whub-dev", "TASK-120")
+        close_agent(None, tmp_path, "whub-dev", 120)
 
     trust.assert_not_called()
     remote_state.assert_not_called()

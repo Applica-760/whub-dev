@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import os
-import re
 
 import click
 
 from whub.commands import get_manifest, project_names
 from whub.core.context import current_context
-from whub.models.flow import TASK_ID_PATTERN
 from whub.services.errors import ServiceError
 from whub.services.worktree.operation import (
     close_project_worktree,
@@ -18,36 +16,24 @@ from whub.services.worktree.operation import (
 )
 
 
-_TASK_ID_PATTERN = re.compile(TASK_ID_PATTERN)
-
-
-def _task_id(value: str) -> str:
-    task_id = f"TASK-{value}"
-    if not _TASK_ID_PATTERN.fullmatch(task_id):
-        raise click.BadParameter("expected TTT", param_hint="task_id")
-    return task_id
-
-
 @click.group()
 def worktree() -> None:
-    """Open and close conventional Task worktrees."""
+    """Open and close conventional Issue worktrees."""
 
 
 @worktree.command()
 @click.argument("project", shell_complete=project_names)
-@click.argument(
-    "task_id", metavar="TTT", callback=lambda _ctx, _param, value: _task_id(value)
-)
+@click.argument("issue_number", metavar="ISSUE_NUMBER", type=click.IntRange(min=1))
 @click.option("--auth", "auth_names", multiple=True, required=True)
 @click.pass_context
 def open(
-    ctx: click.Context, project: str, task_id: str, auth_names: tuple[str, ...]
+    ctx: click.Context, project: str, issue_number: int, auth_names: tuple[str, ...]
 ) -> None:
-    """Create PROJECT/TTT, prepare its Agent, and attach tmux."""
+    """Create PROJECT/ISSUE_NUMBER, prepare its Agent, and attach tmux."""
     context = current_context()
     try:
         session = open_project_worktree(
-            get_manifest(ctx), context.workspace_root, project, task_id, auth_names
+            get_manifest(ctx), context.workspace_root, project, issue_number, auth_names
         )
     except (OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
@@ -56,35 +42,31 @@ def open(
 
 @worktree.command()
 @click.argument("project", shell_complete=project_names)
-@click.argument(
-    "task_id", metavar="TTT", callback=lambda _ctx, _param, value: _task_id(value)
-)
+@click.argument("issue_number", metavar="ISSUE_NUMBER", type=click.IntRange(min=1))
 @click.pass_context
-def close(ctx: click.Context, project: str, task_id: str) -> None:
-    """Clean Agent files, merge PROJECT/TTT, then remove its worktree."""
+def close(ctx: click.Context, project: str, issue_number: int) -> None:
+    """Clean Agent files, merge PROJECT/ISSUE_NUMBER, then remove its worktree."""
     context = current_context()
     try:
         url = close_project_worktree(
-            get_manifest(ctx), context.workspace_root, project, task_id
+            get_manifest(ctx), context.workspace_root, project, issue_number
         )
     except (OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
-    click.echo(f"merged {project}/{task_id}: {url}")
+    click.echo(f"merged {project}/{issue_number}: {url}")
 
 
 @worktree.command()
 @click.argument("project", shell_complete=project_names)
-@click.argument(
-    "task_id", metavar="TTT", callback=lambda _ctx, _param, value: _task_id(value)
-)
+@click.argument("issue_number", metavar="ISSUE_NUMBER", type=click.IntRange(min=1))
 @click.pass_context
-def pr(ctx: click.Context, project: str, task_id: str) -> None:
-    """Push PROJECT/TTT and create or return its pull request."""
+def pr(ctx: click.Context, project: str, issue_number: int) -> None:
+    """Push PROJECT/ISSUE_NUMBER and create or return its pull request."""
     context = current_context()
     try:
         url = create_project_pull_request(
-            get_manifest(ctx), context.workspace_root, project, task_id
+            get_manifest(ctx), context.workspace_root, project, issue_number
         )
     except (OSError, ServiceError) as error:
         raise click.ClickException(str(error)) from error
-    click.echo(f"pull request {project}/{task_id}: {url}")
+    click.echo(f"pull request {project}/{issue_number}: {url}")

@@ -31,7 +31,7 @@ def test_open_passes_auth_and_attaches_tmux(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     open_worktree.assert_called_once_with(
-        "manifest", tmp_path, "local", "TASK-072", ("implementer",)
+        "manifest", tmp_path, "local", 72, ("implementer",)
     )
     attach.assert_called_once_with("tmux", ["tmux", "attach-session", "-t", "worktree"])
 
@@ -50,8 +50,8 @@ def test_close_merges_then_reports_url(tmp_path: Path) -> None:
         result = CliRunner().invoke(worktree, ["close", "local", "072"])
 
     assert result.exit_code == 0
-    assert "merged local/TASK-072: https://example/pr/72" in result.output
-    close_worktree.assert_called_once_with("manifest", tmp_path, "local", "TASK-072")
+    assert "merged local/72: https://example/pr/72" in result.output
+    close_worktree.assert_called_once_with("manifest", tmp_path, "local", 72)
 
 
 def test_pr_reports_url_without_merging(tmp_path: Path) -> None:
@@ -68,12 +68,12 @@ def test_pr_reports_url_without_merging(tmp_path: Path) -> None:
         result = CliRunner().invoke(worktree, ["pr", "local", "072"])
 
     assert result.exit_code == 0
-    assert "pull request local/TASK-072: https://example/pr/72" in result.output
-    create_pr.assert_called_once_with("manifest", tmp_path, "local", "TASK-072")
+    assert "pull request local/72: https://example/pr/72" in result.output
+    create_pr.assert_called_once_with("manifest", tmp_path, "local", 72)
 
 
-def test_rejects_prefixed_task_number() -> None:
+def test_rejects_non_numeric_issue_number() -> None:
     result = CliRunner().invoke(worktree, ["close", "local", "TASK-072"])
 
     assert result.exit_code != 0
-    assert "expected TTT" in result.output
+    assert "not a valid integer" in result.output
