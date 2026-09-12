@@ -26,5 +26,9 @@ struct whubApp: App {
             AppView()
         }
         .modelContainer(workspaceContainer)
+
+        Settings {
+            SettingsView()
+        }
     }
 }

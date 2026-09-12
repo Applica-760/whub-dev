@@ -1,4 +1,6 @@
+import SwiftData
 import SwiftUI
+import WhubWorkspace
 
 struct AppView: View {
     private enum Section: CaseIterable, Hashable {
@@ -46,12 +48,12 @@ struct AppView: View {
 
     @State private var section = Section.overview
 
-    private let projects = ["whub-dev", "vault", "portfolio", "research-hub"]
+    @Query(sort: \Project.name) private var projects: [Project]
 
     var body: some View {
         NavigationSplitView {
-            List(projects, id: \.self) { project in
-                Text(project)
+            List(projects, id: \.name) { project in
+                Text(project.name)
             }
             .navigationTitle("Projects")
         } detail: {
@@ -59,7 +61,7 @@ struct AppView: View {
         }
         .frame(minWidth: 700, minHeight: 430)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
                 Picker("ページ", selection: $section) {
                     ForEach(Section.allCases, id: \.self) { section in
                         Label(section.label, systemImage: section.systemImage)
@@ -68,6 +70,11 @@ struct AppView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+
+                SettingsLink {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .labelStyle(.iconOnly)
             }
         }
     }
