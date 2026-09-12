@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C8244DC530553E480038A6AF /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = C8244DC430553E480038A6AF /* SwiftTerm */; };
+		C8244DD1305564550038A6AF /* WhubWorkspace in Frameworks */ = {isa = PBXBuildFile; productRef = C8244DD0305564550038A6AF /* WhubWorkspace */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		C8244D853052F9300038A6AF /* whub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = whub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +28,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C8244DD1305564550038A6AF /* WhubWorkspace in Frameworks */,
+				C8244DC530553E480038A6AF /* SwiftTerm in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +72,8 @@
 			);
 			name = whub;
 			packageProductDependencies = (
+				C8244DC430553E480038A6AF /* SwiftTerm */,
+				C8244DD0305564550038A6AF /* WhubWorkspace */,
 			);
 			productName = whub;
 			productReference = C8244D853052F9300038A6AF /* whub.app */;
@@ -94,6 +103,10 @@
 			);
 			mainGroup = C8244D7C3052F9300038A6AF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C8244DC330553E480038A6AF /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				C8244DCF305564550038A6AF /* XCLocalSwiftPackageReference "Packages/WhubWorkspace" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C8244D863052F9300038A6AF /* Products */;
 			projectDirPath = "";
@@ -254,10 +267,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3CC3X9AHFH;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -286,10 +298,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3CC3X9AHFH;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -331,6 +342,36 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		C8244DCF305564550038A6AF /* XCLocalSwiftPackageReference "Packages/WhubWorkspace" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/WhubWorkspace;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C8244DC330553E480038A6AF /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.15.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C8244DC430553E480038A6AF /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C8244DC330553E480038A6AF /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+		C8244DD0305564550038A6AF /* WhubWorkspace */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WhubWorkspace;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C8244D7D3052F9300038A6AF /* Project object */;
 }
