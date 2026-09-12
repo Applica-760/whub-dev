@@ -73,7 +73,7 @@ def create_api_app() -> FastAPI:
     app.include_router(inbox_router)
     app.include_router(status_router)
     app.include_router(tasks_router)
-    app.add_api_websocket_route("/api/terminals/{project}/{task_id}", terminal)
+    app.add_api_websocket_route("/api/terminals/{project}/{issue_number}", terminal)
     app.include_router(operator_terminal_router)
     app.add_api_websocket_route(
         "/api/operator-terminals/{operator_id}", operator_terminal_socket

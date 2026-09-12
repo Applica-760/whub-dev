@@ -18,16 +18,16 @@ router = APIRouter(prefix="/api/terminals")
 access = TerminalAccessRegistry()
 
 
-@router.websocket("/{project}/{task_id}")
-async def terminal(websocket: WebSocket, project: str, task_id: str) -> None:
+@router.websocket("/{project}/{issue_number}")
+async def terminal(websocket: WebSocket, project: str, issue_number: int) -> None:
     """Bridge one localhost WebSocket to an existing Agent tmux session."""
-    session = TerminalSessionRef(project=project, task_id=task_id)
+    session = TerminalSessionRef(project=project, issue_number=issue_number)
     worktree = resolve_conventional_worktree(
-        load_manifest(), current_context().workspace_root, project, task_id
+        load_manifest(), current_context().workspace_root, project, issue_number
     )
     await terminal_bridge(
         websocket,
         session,
         access,
-        lambda: resolve_tmux_session(project, task_id, worktree.host),
+        lambda: resolve_tmux_session(project, str(issue_number), worktree.host),
     )

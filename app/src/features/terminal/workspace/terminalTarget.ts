@@ -13,7 +13,7 @@ export type TerminalTarget =
   | {
       kind: "worktree";
       project: string;
-      taskId: string;
+      issueNumber: number;
       taskProject: string;
       title: string;
       value: string;
@@ -34,10 +34,10 @@ export function terminalTargets(
     ...worktrees.map((worktree): TerminalTarget => ({
       kind: "worktree",
       project: worktree.project,
-      taskId: worktree.task_id,
+      issueNumber: worktree.issue_number,
       taskProject: worktree.project,
       title: worktree.project.slice(0, 4),
-      value: `${worktree.project}/${worktree.task_id}`,
+      value: `${worktree.project}/${worktree.issue_number}`,
     })),
   ];
 }
@@ -51,5 +51,5 @@ export function targetHasAttention(
         attention.operator_id === target.operatorId
     : attention.target === "worktree" &&
         attention.project === target.project &&
-        attention.task_id === target.taskId;
+        attention.issue_number === target.issueNumber;
 }

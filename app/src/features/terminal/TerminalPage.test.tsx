@@ -19,7 +19,7 @@ let approvalAttention: ApprovalAttention[] = [
     target: "worktree",
     event: "permission_request",
     project: "vault",
-    task_id: "TASK-101",
+    issue_number: 101,
     operator_id: null,
     tool_name: "Bash",
     requested_at: "2026-08-03T00:00:00+00:00",
@@ -102,7 +102,7 @@ beforeEach(() => {
       target: "worktree",
       event: "permission_request",
       project: "vault",
-      task_id: "TASK-101",
+      issue_number: 101,
       operator_id: null,
       tool_name: "Bash",
       requested_at: "2026-08-03T00:00:00+00:00",
@@ -220,14 +220,14 @@ beforeEach(() => {
                   ? [
                       {
                         project: "whub-dev",
-                        task_id: "TASK-099",
+                        issue_number: 99,
                         workspace_path: "projects/worktrees/whub-dev-099",
                       },
                     ]
                   : [
                       {
                         project: "vault",
-                        task_id: "TASK-101",
+                        issue_number: 101,
                         workspace_path: "projects/worktrees/vault-101",
                       },
                     ],
@@ -551,7 +551,7 @@ describe("TerminalPage", () => {
     expect(await screen.findByText("vault / TASK-101")).toBeTruthy();
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
-        "/api/agent-attention/vault/TASK-101/acknowledge",
+        "/api/agent-attention/vault/101/acknowledge",
         { method: "POST" },
       ),
     );
@@ -631,7 +631,7 @@ describe("TerminalPage", () => {
         target: "operator",
         event: "response_completed",
         project: null,
-        task_id: null,
+        issue_number: null,
         operator_id: "operator-3",
         tool_name: null,
         requested_at: "2026-08-03T00:00:00+00:00",
@@ -658,7 +658,7 @@ describe("TerminalPage", () => {
         target: "worktree",
         event: "permission_request",
         project: "whub-dev",
-        task_id: "TASK-099",
+        issue_number: 99,
         operator_id: null,
         tool_name: "Bash",
         requested_at: "2026-08-03T00:00:00+00:00",
@@ -670,7 +670,7 @@ describe("TerminalPage", () => {
 
     expect(await screen.findByRole("img", { name: "権限待ち" })).toBeTruthy();
     expect(fetch).not.toHaveBeenCalledWith(
-      "/api/agent-attention/whub-dev/TASK-099/acknowledge",
+      "/api/agent-attention/whub-dev/099/acknowledge",
       { method: "POST" },
     );
   });
@@ -681,7 +681,7 @@ describe("TerminalPage", () => {
         target: "worktree",
         event: "response_completed",
         project: "whub-dev",
-        task_id: "TASK-099",
+        issue_number: 99,
         operator_id: null,
         tool_name: null,
         requested_at: "2026-08-03T00:00:00+00:00",
@@ -703,7 +703,7 @@ describe("TerminalPage", () => {
     await waitFor(() => {
       fireEvent(document, new Event("visibilitychange"));
       expect(fetch).toHaveBeenCalledWith(
-        "/api/agent-attention/whub-dev/TASK-099/acknowledge",
+        "/api/agent-attention/whub-dev/099/acknowledge",
         { method: "POST" },
       );
     });
@@ -715,7 +715,7 @@ describe("TerminalPage", () => {
         target: "worktree",
         event: "permission_request",
         project: "whub-dev",
-        task_id: "TASK-099",
+        issue_number: 99,
         operator_id: null,
         tool_name: "Bash",
         requested_at: "2026-08-03T00:00:00+00:00",
@@ -728,7 +728,7 @@ describe("TerminalPage", () => {
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
-        "/api/agent-attention/whub-dev/TASK-099/acknowledge",
+        "/api/agent-attention/whub-dev/099/acknowledge",
         { method: "POST" },
       ),
     );

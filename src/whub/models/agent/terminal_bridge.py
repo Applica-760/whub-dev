@@ -19,7 +19,7 @@ class TerminalAccessMode(StrEnum):
 
 class TerminalSessionRef(TerminalBridgeModel):
     project: str = Field(min_length=1)
-    task_id: str = Field(pattern=r"^TASK-[0-9]+$")
+    issue_number: int = Field(ge=1)
 
 
 class TerminalLease(TerminalBridgeModel):

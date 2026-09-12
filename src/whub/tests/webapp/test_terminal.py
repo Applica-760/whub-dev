@@ -55,7 +55,7 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
         attachment = TerminalAttachment(
             server.detach(), Mock(poll=Mock(return_value=0))
         )
-        session = TerminalSessionRef(project="whub-dev", task_id="TASK-100")
+        session = TerminalSessionRef(project="whub-dev", issue_number=100)
 
         with (
             patch.dict(
@@ -74,7 +74,7 @@ def test_input_echo_and_disconnect_share_one_long_lived_output_pump() -> None:
             patch("whub.webapp.terminal_bridge.attach", return_value=attachment),
         ):
             bridge = asyncio.create_task(
-                terminal(websocket, session.project, session.task_id)
+                terminal(websocket, session.project, session.issue_number)
             )
             await websocket.messages.put(
                 {"type": "websocket.receive", "text": '{"type":"claim"}'}
@@ -118,7 +118,7 @@ def test_disconnect_releases_control_for_immediate_reconnect() -> None:
             TerminalAttachment(first_server.detach(), Mock(poll=Mock(return_value=0))),
             TerminalAttachment(second_server.detach(), Mock(poll=Mock(return_value=0))),
         ]
-        session = TerminalSessionRef(project="whub-dev", task_id="TASK-100")
+        session = TerminalSessionRef(project="whub-dev", issue_number=100)
 
         with (
             patch.dict(
@@ -137,7 +137,7 @@ def test_disconnect_releases_control_for_immediate_reconnect() -> None:
             patch("whub.webapp.terminal_bridge.attach", side_effect=attachments),
         ):
             first_bridge = asyncio.create_task(
-                terminal(first_websocket, session.project, session.task_id)
+                terminal(first_websocket, session.project, session.issue_number)
             )
             await first_websocket.messages.put(
                 {"type": "websocket.receive", "text": '{"type":"claim"}'}
@@ -147,7 +147,7 @@ def test_disconnect_releases_control_for_immediate_reconnect() -> None:
                 await first_bridge
 
             second_bridge = asyncio.create_task(
-                terminal(second_websocket, session.project, session.task_id)
+                terminal(second_websocket, session.project, session.issue_number)
             )
             await second_websocket.messages.put(
                 {"type": "websocket.receive", "text": '{"type":"claim"}'}
@@ -198,7 +198,7 @@ def test_attachment_cleanup_does_not_block_the_event_loop() -> None:
             patch("whub.webapp.routers.terminal.resolve_tmux_session"),
             patch("whub.webapp.terminal_bridge.attach", return_value=attachment),
         ):
-            bridge = asyncio.create_task(terminal(websocket, "whub-dev", "TASK-100"))
+            bridge = asyncio.create_task(terminal(websocket, "whub-dev", 100))
             await websocket.messages.put({"type": "websocket.disconnect"})
             while not cleanup_started.is_set():
                 await asyncio.sleep(0)
@@ -249,7 +249,7 @@ def test_remote_worktree_uses_ssh_attach_command() -> None:
                 "whub.webapp.terminal_bridge.attach", return_value=attachment
             ) as attach,
         ):
-            bridge = asyncio.create_task(terminal(websocket, "la-il", "TASK-017"))
+            bridge = asyncio.create_task(terminal(websocket, "la-il", 17))
             await websocket.messages.put({"type": "websocket.disconnect"})
             async with asyncio.timeout(1):
                 await bridge
@@ -257,8 +257,8 @@ def test_remote_worktree_uses_ssh_attach_command() -> None:
         assert attach.call_args.args[0].attach_command == tuple(
             build_ssh_command(
                 host,
-                "exec tmux set-option -t whub-la-il-TASK-017 mouse on \\; "
-                "attach-session -t whub-la-il-TASK-017",
+                "exec tmux set-option -t whub-la-il-17 mouse on \\; "
+                "attach-session -t whub-la-il-17",
                 tty=True,
             )
         )

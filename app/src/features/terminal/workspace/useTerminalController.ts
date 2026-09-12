@@ -48,9 +48,7 @@ export function useTerminalController({
       (selectedTarget?.kind === "worktree"
         ? selectedTarget.project
         : undefined),
-    detailTaskId:
-      selectedTask?.taskId ??
-      (selectedTarget?.kind === "worktree" ? selectedTarget.taskId : undefined),
+    detailTaskId: selectedTask?.taskId,
     emptyMessage:
       selectedTarget?.kind === "operator"
         ? "グラフからTaskを選択してください"
@@ -64,7 +62,7 @@ export function useTerminalController({
         return;
       if (target.kind === "operator")
         void acknowledgeOperator(target.operatorId);
-      else void acknowledgeWorktree(target.project, target.taskId);
+      else void acknowledgeWorktree(target.project, target.issueNumber);
     },
     [acknowledgeOperator, acknowledgeWorktree, pendingAttention],
   );

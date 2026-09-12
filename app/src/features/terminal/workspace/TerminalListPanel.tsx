@@ -66,7 +66,7 @@ export function TerminalListPanel({
               selected={selectedValue === target.value}
               subtitle={
                 target.kind === "worktree"
-                  ? (target.taskId.match(/\d+$/)?.[0] ?? target.taskId)
+                  ? String(target.issueNumber)
                   : undefined
               }
               title={target.title}

@@ -9,8 +9,8 @@ type TerminalWidgetProps = {
   active?: boolean;
   resizeSignal: string;
 } & (
-  | { endpoint: string; project?: never; taskId?: never }
-  | { endpoint?: never; project: string; taskId: string }
+  | { endpoint: string; project?: never; issueNumber?: never }
+  | { endpoint?: never; project: string; issueNumber: number }
 );
 
 function openWebLink(event: MouseEvent, uri: string) {
@@ -33,7 +33,7 @@ export function TerminalWidget({
   endpoint,
   project,
   resizeSignal,
-  taskId,
+  issueNumber,
 }: TerminalWidgetProps) {
   const activeRef = useRef(active);
   const previousActiveRef = useRef(active);
@@ -55,7 +55,7 @@ export function TerminalWidget({
   const { error, sendInput, sendResize } = useTerminalConnection({
     endpoint:
       endpoint ??
-      `/api/terminals/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}`,
+      `/api/terminals/${encodeURIComponent(project)}/${issueNumber}`,
     onConnected: handleConnected,
     onOutput: handleOutput,
   });

@@ -12,10 +12,10 @@ export async function listApprovalAttention(): Promise<ApprovalAttentionListResp
 
 export async function acknowledgeWorktreeAttention(
   project: string,
-  taskId: string,
+  issueNumber: number,
 ): Promise<ApprovalAttention[]> {
   return requestJson<ApprovalAttention[]>(
-    `/api/agent-attention/${encodeURIComponent(project)}/${encodeURIComponent(taskId)}/acknowledge`,
+    `/api/agent-attention/${encodeURIComponent(project)}/${issueNumber}/acknowledge`,
     { method: "POST" },
   );
 }

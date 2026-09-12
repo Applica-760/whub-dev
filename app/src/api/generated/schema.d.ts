@@ -109,7 +109,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/agent-attention/{project}/{task_id}/acknowledge": {
+    "/api/agent-attention/{project}/{issue_number}/acknowledge": {
         parameters: {
             query?: never;
             header?: never;
@@ -119,7 +119,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Acknowledge Worktree Attention */
-        post: operations["acknowledge_worktree_attention_api_agent_attention__project___task_id__acknowledge_post"];
+        post: operations["acknowledge_worktree_attention_api_agent_attention__project___issue_number__acknowledge_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -446,8 +446,8 @@ export interface components {
         AgentSessionResponse: {
             /** Project */
             project: string;
-            /** Task Id */
-            task_id: string;
+            /** Issue Number */
+            issue_number: number;
             /** Workspace Path */
             workspace_path: string;
         };
@@ -479,8 +479,8 @@ export interface components {
             acknowledged: boolean;
             /** Project */
             project?: string | null;
-            /** Task Id */
-            task_id?: string | null;
+            /** Issue Number */
+            issue_number?: number | null;
             /** Operator Id */
             operator_id?: string | null;
             /** Tool Name */
@@ -1076,13 +1076,13 @@ export interface operations {
             };
         };
     };
-    acknowledge_worktree_attention_api_agent_attention__project___task_id__acknowledge_post: {
+    acknowledge_worktree_attention_api_agent_attention__project___issue_number__acknowledge_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 project: string;
-                task_id: string;
+                issue_number: number;
             };
             cookie?: never;
         };

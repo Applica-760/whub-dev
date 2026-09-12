@@ -33,7 +33,7 @@ export function TerminalViewport({
               ? {
                   endpoint: `/api/operator-terminals/${encodeURIComponent(target.operatorId)}`,
                 }
-              : { project: target.project, taskId: target.taskId };
+              : { project: target.project, issueNumber: target.issueNumber };
           return (
             <div hidden={!active} key={target.value} style={{ height: "100%" }}>
               <TerminalWidget

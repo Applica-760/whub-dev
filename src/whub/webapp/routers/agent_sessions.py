@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/agent-sessions")
 
 class AgentSessionResponse(BaseModel):
     project: str
-    task_id: str
+    issue_number: int
     workspace_path: str
 
 
@@ -45,7 +45,7 @@ def get_agent_sessions(project: str) -> AgentSessionListResponse:
         sessions=[
             AgentSessionResponse(
                 project=item.project,
-                task_id=item.task_id,
+                issue_number=item.issue_number,
                 workspace_path=item.workspace_path,
             )
             for item in sessions

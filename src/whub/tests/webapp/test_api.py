@@ -153,11 +153,11 @@ def test_get_todos_returns_service_display_order(client: TestClient) -> None:
 
 def test_agent_attention_has_no_external_event_producer(client: TestClient) -> None:
     store = ApprovalAttentionStore()
-    store.request("whub-dev", "TASK-104", "Bash", "turn-1")
+    store.request("whub-dev", "104", "Bash", "turn-1")
 
     with patch("whub.webapp.routers.agent_attention.attention", store):
         listed = client.get("/api/agent-attention")
-        acknowledged = client.post("/api/agent-attention/whub-dev/TASK-104/acknowledge")
+        acknowledged = client.post("/api/agent-attention/whub-dev/104/acknowledge")
 
     assert client.post("/api/agent-attention", json={}).status_code == 405
     assert listed.json()["attention"][0]["acknowledged"] is False
@@ -182,7 +182,7 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
     listed_manifest = manifest()
     worktree = SimpleNamespace(
         project="local",
-        task_id="TASK-104",
+        issue_number=104,
         destination=Path("/workspace/projects/worktrees/local-104"),
         host=None,
     )
@@ -254,7 +254,7 @@ def test_hook_events_require_localhost_and_an_exact_registered_worktree(
     assert [item.event for item in store.list()] == ["response_completed"]
     assert (
         resolve_worktree.call_args_list
-        == [call(listed_manifest, Path("/workspace"), "local", "TASK-104")] * 5
+        == [call(listed_manifest, Path("/workspace"), "local", 104)] * 5
     )
     assert resolve_session.call_count == 4
 
@@ -656,7 +656,7 @@ def test_get_agent_sessions_returns_running_sessions(
     resource.git = GitInfo(url="git@example.com:local.git", branch="main")
     session = SimpleNamespace(
         project="local",
-        task_id="TASK-075",
+        issue_number=75,
         workspace_path="projects/worktrees/local-075",
     )
     with (
@@ -677,7 +677,7 @@ def test_get_agent_sessions_returns_running_sessions(
         "sessions": [
             {
                 "project": "local",
-                "task_id": "TASK-075",
+                "issue_number": 75,
                 "workspace_path": "projects/worktrees/local-075",
             }
         ]

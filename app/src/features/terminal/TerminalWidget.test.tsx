@@ -144,7 +144,7 @@ describe("TerminalWidget", () => {
         <TerminalWidget
           project="whub-dev"
           resizeSignal="false:false"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );
@@ -181,7 +181,7 @@ describe("TerminalWidget", () => {
         <TerminalWidget
           project="whub-dev"
           resizeSignal="initial"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );
@@ -215,7 +215,7 @@ describe("TerminalWidget", () => {
           active={false}
           project="whub-dev"
           resizeSignal="inactive"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );
@@ -234,7 +234,7 @@ describe("TerminalWidget", () => {
           active
           project="whub-dev"
           resizeSignal="active"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );
@@ -256,7 +256,7 @@ describe("TerminalWidget", () => {
         <TerminalWidget
           project="whub-dev"
           resizeSignal="initial"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );
@@ -277,7 +277,7 @@ describe("TerminalWidget", () => {
         <TerminalWidget
           project="whub-dev"
           resizeSignal="false:false"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );
@@ -291,7 +291,7 @@ describe("TerminalWidget", () => {
         <TerminalWidget
           project="whub-dev"
           resizeSignal="true:true"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );
@@ -313,7 +313,7 @@ describe("TerminalWidget", () => {
         <TerminalWidget
           project="whub-dev"
           resizeSignal="false:false"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );
@@ -353,7 +353,7 @@ describe("TerminalWidget", () => {
         <TerminalWidget
           project="whub-dev"
           resizeSignal="initial"
-          taskId="TASK-100"
+          issueNumber={100}
         />
       </MantineProvider>,
     );

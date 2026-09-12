@@ -113,7 +113,7 @@ describe("useApprovalAttention", () => {
         target: "worktree",
         event: "response_completed",
         project: "whub-dev",
-        task_id: "TASK-116",
+        issue_number: 116,
         operator_id: null,
         tool_name: null,
         requested_at: "2026-08-05T00:00:00+00:00",
@@ -132,7 +132,7 @@ describe("useApprovalAttention", () => {
         target: "worktree",
         event: "response_completed",
         project: "whub-dev",
-        task_id: "TASK-116",
+        issue_number: 116,
         operator_id: null,
         tool_name: null,
         requested_at: "2026-08-05T00:00:00+00:00",
@@ -142,7 +142,7 @@ describe("useApprovalAttention", () => {
     const { result } = renderHook(() => useApprovalAttention());
 
     await waitFor(() => expect(document.title).toBe("🔔 (1) whub"));
-    await act(() => result.current.acknowledgeWorktree("whub-dev", "TASK-116"));
+    await act(() => result.current.acknowledgeWorktree("whub-dev", 116));
 
     await waitFor(() => expect(document.title).toBe("whub"));
     expect(
@@ -168,7 +168,7 @@ describe("useApprovalAttention", () => {
         target: "worktree",
         event: "response_completed",
         project: "whub-dev",
-        task_id: "TASK-116",
+        issue_number: 116,
         operator_id: null,
         tool_name: null,
         requested_at: "2026-08-05T00:00:00+00:00",

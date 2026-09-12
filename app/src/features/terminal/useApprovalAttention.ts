@@ -165,9 +165,9 @@ export function useApprovalAttention() {
   }, [activateSound]);
 
   const acknowledgeWorktree = useCallback(
-    async (project: string, taskId: string) => {
+    async (project: string, issueNumber: number) => {
       try {
-        const updated = await acknowledgeWorktreeAttention(project, taskId);
+        const updated = await acknowledgeWorktreeAttention(project, issueNumber);
         setAttention((current) =>
           current.map(
             (item) =>
@@ -176,7 +176,7 @@ export function useApprovalAttention() {
                   updatedItem.target === item.target &&
                   updatedItem.event === item.event &&
                   updatedItem.project === item.project &&
-                  updatedItem.task_id === item.task_id,
+                  updatedItem.issue_number === item.issue_number,
               ) ?? item,
           ),
         );

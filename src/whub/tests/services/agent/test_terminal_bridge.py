@@ -17,7 +17,7 @@ from whub.services.agent.terminal_bridge import (
 
 def test_controller_is_explicit_and_unique() -> None:
     registry = TerminalAccessRegistry()
-    session = TerminalSessionRef(project="whub-dev", task_id="TASK-094")
+    session = TerminalSessionRef(project="whub-dev", issue_number=94)
 
     assert registry.access_mode(session, "a") is TerminalAccessMode.VIEWER
     registry.claim(session, "a")
@@ -29,7 +29,7 @@ def test_controller_is_explicit_and_unique() -> None:
 
 def test_disconnect_releases_controller() -> None:
     registry = TerminalAccessRegistry()
-    session = TerminalSessionRef(project="whub-dev", task_id="TASK-094")
+    session = TerminalSessionRef(project="whub-dev", issue_number=94)
     registry.claim(session, "a")
 
     registry.disconnect("a")
@@ -40,7 +40,7 @@ def test_disconnect_releases_controller() -> None:
 
 def test_viewer_cannot_send_terminal_input() -> None:
     registry = TerminalAccessRegistry()
-    session = TerminalSessionRef(project="whub-dev", task_id="TASK-094")
+    session = TerminalSessionRef(project="whub-dev", issue_number=94)
 
     with pytest.raises(TerminalAccessError, match="controller is required"):
         registry.require_controller(session, "viewer")

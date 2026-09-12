@@ -35,7 +35,7 @@ class TerminalAccessRegistry:
     def _key(session: TerminalConnectionRef) -> tuple[str, str]:
         if isinstance(session, OperatorTerminalRef):
             return "operator", session.operator_id
-        return session.project, session.task_id
+        return session.project, session.issue_number
 
     def access_mode(
         self, session: TerminalConnectionRef, connection_id: str

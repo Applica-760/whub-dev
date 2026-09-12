@@ -41,7 +41,7 @@ class ApprovalAttentionResponse(BaseModel):
     requested_at: str
     acknowledged: bool
     project: str | None = None
-    task_id: str | None = None
+    issue_number: int | None = None
     operator_id: str | None = None
     tool_name: str | None = None
 
@@ -66,7 +66,7 @@ class HookEvent(BaseModel):
 
 
 def _response(item: ApprovalAttention) -> ApprovalAttentionResponse:
-    project, task_id = (
+    project, issue_number = (
         item.target_id.split("/", 1) if item.target == "worktree" else (None, None)
     )
     return ApprovalAttentionResponse(
@@ -75,7 +75,7 @@ def _response(item: ApprovalAttention) -> ApprovalAttentionResponse:
         requested_at=item.requested_at.isoformat(),
         acknowledged=item.acknowledged,
         project=project,
-        task_id=task_id,
+        issue_number=int(issue_number) if issue_number is not None else None,
         operator_id=item.target_id if item.target == "operator" else None,
         tool_name=item.tool_name,
     )
@@ -119,7 +119,7 @@ async def attention_stream(websocket: WebSocket) -> None:
         _subscribers.discard(websocket)
 
 
-def _registered_worktree(cwd: str) -> tuple[str, str]:
+def _registered_worktree(cwd: str) -> tuple[str, int]:
     context = current_context()
     manifest = load_manifest()
     path = Path(cwd)
@@ -138,25 +138,25 @@ def _registered_worktree(cwd: str) -> tuple[str, str]:
                 manifest,
                 context.workspace_root,
                 project.name,
-                f"TASK-{number}",
+                int(number),
             )
-            resolve_tmux_session(worktree.project, worktree.task_id, worktree.host)
+            resolve_tmux_session(worktree.project, str(worktree.issue_number), worktree.host)
         except ServiceError:
             continue
         if cwd == str(worktree.destination):
-            return worktree.project, worktree.task_id
+            return worktree.project, worktree.issue_number
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
 
-def _registered_target(body: HookEvent) -> tuple[str, str, str | None, str | None]:
+def _registered_target(body: HookEvent) -> tuple[str, str, str | None, int | None]:
     if body.operator_id is not None:
         try:
             operator_terminal.resolve(current_context(), body.operator_id)
         except ServiceError as error:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from error
         return "operator", body.operator_id, None, None
-    project, task_id = _registered_worktree(body.cwd)
-    return "worktree", f"{project}/{task_id}", project, task_id
+    project, issue_number = _registered_worktree(body.cwd)
+    return "worktree", f"{project}/{issue_number}", project, issue_number
 
 
 @router.get("", response_model=ApprovalAttentionListResponse)
@@ -179,12 +179,14 @@ async def acknowledge_operator_attention(
 
 
 @router.post(
-    "/{project}/{task_id}/acknowledge", response_model=list[ApprovalAttentionResponse]
+    "/{project}/{issue_number}/acknowledge", response_model=list[ApprovalAttentionResponse]
 )
 async def acknowledge_worktree_attention(
-    project: str, task_id: str
+    project: str, issue_number: int
 ) -> list[ApprovalAttentionResponse]:
-    updated = [_response(item) for item in attention.acknowledge(project, task_id)]
+    updated = [
+        _response(item) for item in attention.acknowledge(project, str(issue_number))
+    ]
     await _publish()
     return updated
 
@@ -192,7 +194,7 @@ async def acknowledge_worktree_attention(
 @router.post("/events", status_code=status.HTTP_204_NO_CONTENT)
 async def record_hook_event(body: HookEvent, request: Request) -> Response:
     _require_localhost(request)
-    target, target_id, project, task_id = _registered_target(body)
+    target, target_id, project, issue_number = _registered_target(body)
     event: str | None = None
     if body.hook_event_name == "PermissionRequest":
         if target == "operator":
@@ -205,7 +207,7 @@ async def record_hook_event(body: HookEvent, request: Request) -> Response:
         else:
             attention.request(
                 project or "",
-                task_id or "",
+                str(issue_number or ""),
                 body.tool_name or "",
                 body.turn_id,
                 session_id=body.session_id,
@@ -219,7 +221,7 @@ async def record_hook_event(body: HookEvent, request: Request) -> Response:
         else:
             attention.clear(
                 project or "",
-                task_id or "",
+                str(issue_number or ""),
                 body.tool_name or "",
                 body.turn_id,
                 session_id=body.session_id,
@@ -229,7 +231,7 @@ async def record_hook_event(body: HookEvent, request: Request) -> Response:
         event = "response_completed"
     else:
         attention.complete(
-            project or "", task_id or "", body.turn_id, session_id=body.session_id
+            project or "", str(issue_number or ""), body.turn_id, session_id=body.session_id
         )
         event = "response_completed"
     await _publish(event)
