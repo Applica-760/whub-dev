@@ -12,6 +12,10 @@ __pycache__/
 .DS_Store
 xcuserdata/
 
+# Swift build output
+.build/
+DerivedData/
+
 # Web app build output
 app/dist/
 src/whub/webapp/dist/

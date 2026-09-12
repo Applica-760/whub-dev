@@ -2,29 +2,31 @@ import SwiftUI
 
 struct OverviewView: View {
     var body: some View {
-        HStack(spacing: 0) {
+        let columns = Array(repeating: GridItem(.flexible(), alignment: .top), count: 3)
+
+        ScrollView {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
             column("Projects", items: ["whub-dev", "vault", "portfolio"])
-            Divider()
             column("Tasks", items: ["SwiftUI migration", "Vault explorer", "Resource status"])
-            Divider()
             column("Activity", items: ["Status: ok", "Vault: updated", "No pending tasks"])
+                StatusWidget()
+                TerminalWidget()
+            }
+            .padding()
         }
         .navigationTitle("Overview")
     }
 
     private func column(_ title: String, items: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-
+        WidgetFrame(title) {
+            VStack(alignment: .leading, spacing: 8) {
             ForEach(items, id: \.self) { item in
                 Text(item)
             }
-
-            Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding()
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 

@@ -3,15 +3,19 @@ import SwiftUI
 struct AppView: View {
     private enum Section: CaseIterable, Hashable {
         case overview
-        case resourceStatus
-        case vault
+        case terminal
         case todo
+        case vault
+        case status
+        case timer
 
         var label: String {
             switch self {
             case .overview: "Overview"
-            case .resourceStatus: "リソース"
+            case .status: "Status"
+            case .timer: "Timer"
             case .vault: "Vault"
+            case .terminal: "Terminal"
             case .todo: "Todo"
             }
         }
@@ -19,8 +23,10 @@ struct AppView: View {
         var systemImage: String {
             switch self {
             case .overview: "rectangle.3.group"
-            case .resourceStatus: "tablecells"
+            case .status: "tablecells"
+            case .timer: "timer"
             case .vault: "tray.full"
+            case .terminal: "terminal"
             case .todo: "list.bullet.clipboard"
             }
         }
@@ -29,8 +35,10 @@ struct AppView: View {
         var content: some View {
             switch self {
             case .overview: OverviewView()
-            case .resourceStatus: ResourceStatusView()
+            case .status: StatusView()
+            case .timer: TimerView()
             case .vault: VaultExplorerView()
+            case .terminal: TerminalView()
             case .todo: TodoView()
             }
         }
@@ -43,7 +51,7 @@ struct AppView: View {
     var body: some View {
         NavigationSplitView {
             List(projects, id: \.self) { project in
-                Label(project, systemImage: "folder")
+                Text(project)
             }
             .navigationTitle("Projects")
         } detail: {
