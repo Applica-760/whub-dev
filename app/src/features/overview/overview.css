@@ -1,16 +1,11 @@
 .overview-frame {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 1rem;
 }
 
-.overview-frame[data-collapse-left="true"],
-.overview-frame[data-collapse-right="true"] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.overview-frame[data-collapse-left="true"][data-collapse-right="true"] {
+.overview-frame[data-collapse-left="true"] {
   grid-template-columns: minmax(0, 1fr);
 }
 

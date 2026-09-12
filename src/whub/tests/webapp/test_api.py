@@ -27,13 +27,11 @@ from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from whub.models import GitInfo, ManifestError
-from whub.models.flow import TaskRuntime
 from whub.models.todo import Todo
 from whub.services.errors import NotFoundError, ServiceError
 from whub.services.agent.codex.attention import ApprovalAttentionStore
 from whub.models import ResourceStatus
 from whub.models.operator_terminal import OperatorTerminal, OperatorTerminals
-from whub.services.task.project import ProjectTasks, TaskRecord, TaskSummary
 from whub.services.vault import VaultNode
 from whub.services.hub_explorer import HubEntry, HubFile
 from whub.tests.helpers import manifest
@@ -356,6 +354,50 @@ def test_get_projects_returns_manifest_names(client: TestClient) -> None:
     assert response.json() == {"projects": ["local", "remote", "nested", "no-resource"]}
 
 
+def test_get_issues_returns_open_github_issues(client: TestClient) -> None:
+    m = manifest()
+    resource = m.resolve_project("local").resource
+    assert resource is not None
+    resource.git = GitInfo(
+        url="https://github.com/Applica-760/local.git",
+        branch="main",
+    )
+    context = Mock(workspace_root=Path("/workspace"))
+    with (
+        patch("whub.webapp.routers.issues.load_manifest", return_value=m),
+        patch("whub.webapp.routers.issues.current_context", return_value=context),
+        patch(
+            "whub.webapp.routers.issues.run_gh",
+            return_value=SimpleNamespace(
+                returncode=0,
+                stdout='[{"number":28,"title":"Issue list","url":"https://github.com/Applica-760/local/issues/28"}]',
+                stderr="",
+            ),
+        ) as mock_run,
+    ):
+        response = client.get("/api/issues/local")
+
+    assert response.json() == [
+        {
+            "number": 28,
+            "title": "Issue list",
+            "url": "https://github.com/Applica-760/local/issues/28",
+        }
+    ]
+    mock_run.assert_called_once_with(
+        None,
+        context.workspace_root,
+        "issue",
+        "list",
+        "--repo",
+        "Applica-760/local",
+        "--state",
+        "open",
+        "--json",
+        "number,title,url",
+    )
+
+
 def test_operator_terminal_endpoints_delegate_to_its_lifecycle_service(
     client: TestClient, tmp_path: Path
 ) -> None:
@@ -477,134 +519,6 @@ def test_create_daily_entry_returns_service_error_for_blank_body(
 
     assert response.status_code == 400
     assert response.json() == {"detail": "daily body is required"}
-
-
-def test_task_endpoints_return_task_query_results(client: TestClient) -> None:
-    summary = TaskSummary(
-        path="20260715_task.yaml",
-        id="TASK-003",
-        title="Task view",
-        state="draft",
-        depends_on=[],
-        blocked_by=[],
-        ready=True,
-    )
-    document = TaskRecord(
-        path="20260715_task.yaml",
-        title="Task view",
-        markdown="# Task view\n",
-        task=TaskRuntime(
-            schema_version=2,
-            id="TASK-003",
-            workflow="WF-001",
-            state="draft",
-        ),
-    )
-    m = manifest()
-    with (
-        patch("whub.webapp.routers.tasks.load_manifest", return_value=m),
-        patch(
-            "whub.webapp.routers.tasks.list_project_tasks",
-            return_value=(summary,),
-        ) as mock_list,
-        patch(
-            "whub.webapp.routers.tasks.load_project_task",
-            return_value=document,
-        ) as mock_load,
-    ):
-        list_response = client.get("/api/tasks", params={"project": "local"})
-        default_response = client.get("/api/tasks")
-        detail_response = client.get(
-            "/api/tasks/TASK-003",
-            params={"project": "local"},
-        )
-
-    assert list_response.status_code == 200
-    assert list_response.json() == {"tasks": [summary.model_dump()]}
-    assert default_response.status_code == 200
-    assert mock_list.call_args_list == [
-        call(m, "local"),
-        call(m, "whub-dev"),
-    ]
-    assert detail_response.status_code == 200
-    assert detail_response.json() == document.model_dump()
-    mock_load.assert_called_once_with(m, "local", "TASK-003")
-
-
-def test_all_tasks_endpoint_returns_per_project_results(client: TestClient) -> None:
-    summary = TaskSummary(
-        path="20260715_task.yaml",
-        id="TASK-001",
-        title="Task view",
-        state="draft",
-        depends_on=[],
-        blocked_by=[],
-        ready=True,
-    )
-    m = manifest()
-    results = (
-        ProjectTasks(project="local", tasks=(summary,)),
-        ProjectTasks(project="empty", tasks=()),
-        ProjectTasks(project="remote", error="project resource is not available"),
-    )
-    with (
-        patch("whub.webapp.routers.tasks.load_manifest", return_value=m),
-        patch(
-            "whub.webapp.routers.tasks.list_all_project_tasks",
-            return_value=results,
-        ) as mock_list_all,
-    ):
-        response = client.get("/api/tasks/all")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "projects": [
-            {"project": "local", "tasks": [summary.model_dump()], "error": None},
-            {"project": "empty", "tasks": [], "error": None},
-            {
-                "project": "remote",
-                "tasks": [],
-                "error": "project resource is not available",
-            },
-        ],
-    }
-    mock_list_all.assert_called_once_with(m)
-
-
-def test_active_task_endpoints_do_not_read_project_history(client: TestClient) -> None:
-    summary = TaskSummary(
-        path="20260811_task.yaml",
-        id="TASK-001",
-        title="Active Task",
-        state="draft",
-        depends_on=[],
-        blocked_by=[],
-        ready=True,
-    )
-    m = manifest()
-    results = (ProjectTasks(project="local", tasks=(summary,)),)
-    with (
-        patch("whub.webapp.routers.tasks.load_manifest", return_value=m),
-        patch(
-            "whub.webapp.routers.tasks.list_active_project_tasks",
-            return_value=(summary,),
-        ) as mock_list,
-        patch(
-            "whub.webapp.routers.tasks.list_all_active_project_tasks",
-            return_value=results,
-        ) as mock_list_all,
-    ):
-        response = client.get("/api/tasks/active", params={"project": "local"})
-        all_response = client.get("/api/tasks/active/all")
-
-    assert response.json() == {"tasks": [summary.model_dump()]}
-    assert all_response.json() == {
-        "projects": [
-            {"project": "local", "tasks": [summary.model_dump()], "error": None}
-        ]
-    }
-    mock_list.assert_called_once_with(m, "local")
-    mock_list_all.assert_called_once_with(m)
 
 
 def test_get_resource_status_returns_service_results(client: TestClient) -> None:

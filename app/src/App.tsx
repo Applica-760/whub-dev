@@ -10,14 +10,8 @@ import { useOverviewCollapse } from "./features/overview/useOverviewCollapse";
 import { ResourceStatusPage } from "./features/status/ResourceStatusPage";
 import { TerminalPage } from "./features/terminal/TerminalPage";
 import { useTerminalCollapse } from "./features/terminal/useTerminalCollapse";
-import { TaskDetailPage } from "./features/tasks/TaskDetailPage";
 import { TasksPage } from "./features/tasks/TasksPage";
-import {
-  isTasksRoute,
-  LEGACY_TASK_DETAIL_PATH,
-  TASK_DETAIL_PATH,
-  TASKS_PATH,
-} from "./features/tasks/routes";
+import { isTasksRoute, TASKS_PATH } from "./features/tasks/routes";
 import { TodosPage } from "./features/todos/TodosPage";
 
 // react-markdownの依存ツリーを初回チャンクから外すため、Backlog/Vaultは遅延読込する
@@ -94,6 +88,7 @@ export function App() {
               <OverviewCollapseToggles
                 collapsed={overviewCollapse.collapsed}
                 onToggle={overviewCollapse.toggle}
+                sides={["left"]}
               />
             )}
             {location.pathname.startsWith(TERMINAL_PATH) && (
@@ -130,11 +125,6 @@ export function App() {
               path={`${TERMINAL_PATH}/*`}
             />
             <Route element={<TasksPage />} path="/tasks" />
-            <Route element={<TaskDetailPage />} path={TASK_DETAIL_PATH} />
-            <Route
-              element={<TaskDetailPage />}
-              path={LEGACY_TASK_DETAIL_PATH}
-            />
             <Route element={<InboxPage />} path="/inbox" />
             <Route element={<ResourceStatusPage />} path="/status" />
           </Routes>

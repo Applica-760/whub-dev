@@ -19,24 +19,9 @@ def test_openapi_schema_contains_all_resource_endpoints() -> None:
         "/api/inbox",
         "/api/resources/status",
         "/api/agent-sessions/{project}",
-        "/api/tasks",
-        "/api/tasks/all",
-        "/api/tasks/{task_id}",
+        "/api/issues/{project}",
         "/api/operator-terminals",
     }
-    # 集約エンドポイントはProject指定を取らない
-    assert "parameters" not in schema["paths"]["/api/tasks/all"]["get"]
-    for path in (
-        "/api/tasks",
-        "/api/tasks/{task_id}",
-    ):
-        project = next(
-            parameter
-            for parameter in schema["paths"][path]["get"]["parameters"]
-            if parameter["name"] == "project"
-        )
-        assert project["required"] is False
-        assert project["schema"]["default"] == "whub-dev"
 
 
 def test_main_writes_valid_json(capsys) -> None:

@@ -42,15 +42,17 @@ vi.mock("./TerminalWidget", () => ({
     endpoint,
     project,
     resizeSignal,
-    taskId,
+    issueNumber,
   }: {
     active?: boolean;
     endpoint?: string;
     project?: string;
     resizeSignal: string;
-    taskId?: string;
+    issueNumber?: number;
   }) => {
-    const terminal = endpoint ? "Operation terminal" : `${project} / ${taskId}`;
+    const terminal = endpoint
+      ? "Operation terminal"
+      : `${project} / ${issueNumber}`;
     useEffect(() => {
       terminalMounts.push(terminal);
       terminalActiveAtMount.push(Boolean(active));
@@ -68,23 +70,6 @@ vi.mock("./TerminalWidget", () => ({
       </div>
     );
   },
-}));
-
-vi.mock("../tasks/TaskDependencyGraphWidget", () => ({
-  TaskDependencyGraphWidget: ({
-    onSelectTask,
-    project,
-  }: {
-    onSelectTask?: (project: string, taskId: string) => void;
-    project: string | null;
-  }) => (
-    <button
-      onClick={() => project && onSelectTask?.(project, "TASK-126")}
-      type="button"
-    >
-      Task graph: {project ?? "-"}
-    </button>
-  ),
 }));
 
 beforeEach(() => {
@@ -159,34 +144,16 @@ beforeEach(() => {
             return approvalAttention;
           },
         });
-      if (url.startsWith("/api/tasks/active?"))
+      if (url.startsWith("/api/issues/"))
         return Promise.resolve({
           ok: true,
-          json: async () => ({ tasks: [] }),
-        });
-      if (url.startsWith("/api/tasks/"))
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            schema_version: 1,
-            task: {
-              id: url.includes("TASK-101")
-                ? "TASK-101"
-                : url.includes("TASK-126")
-                  ? "TASK-126"
-                  : "TASK-099",
-              state: "in_progress",
-              title: "Terminal task",
-              approach: [],
-              depends_on: [],
+          json: async () => [
+            {
+              number: 28,
+              title: "Issue list",
+              url: "https://github.com/Applica-760/whub/issues/28",
             },
-            plan: { phases: [] },
-          }),
-        });
-      if (url.startsWith("/api/tasks?"))
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ tasks: [] }),
+          ],
         });
       if (url.startsWith("/api/hub-explorer/directory"))
         return Promise.resolve({
@@ -258,10 +225,10 @@ function renderPage(path = "/terminal") {
 }
 
 describe("TerminalPage", () => {
-  it("Task詳細・端末とTerminal一覧を表示する", async () => {
+  it("Issue一覧・端末とTerminal一覧を表示する", async () => {
     const { container } = renderPage();
     const firstTerminal = await screen.findByRole("button", {
-      name: /whub.*099/,
+      name: /whub.*99/,
     });
     const secondTerminal = screen.getByRole("button", {
       name: /vaul.*101/,
@@ -269,35 +236,29 @@ describe("TerminalPage", () => {
     await waitFor(() =>
       expect(firstTerminal.getAttribute("aria-pressed")).toBe("true"),
     );
-    expect(firstTerminal.textContent).toBe("whub099");
+    expect(firstTerminal.textContent).toBe("whub99");
     expect(secondTerminal.textContent).toBe("vaul101");
     expect(
       firstTerminal.querySelectorAll(".terminal-attention-dot"),
     ).toHaveLength(2);
-    expect(screen.getByText("whub-dev / TASK-099")).toBeTruthy();
-    expect(await screen.findByText("TASK-099(in_progress)")).toBeTruthy();
-    expect(screen.getByText("Task graph: whub-dev")).toBeTruthy();
+    expect(screen.getByText("whub-dev / 99")).toBeTruthy();
+    expect(
+      await screen.findByRole("link", { name: "#28 Issue list" }),
+    ).toBeTruthy();
     expect(container.querySelectorAll(".terminal-layout")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-task-panel")).toHaveLength(1);
-    expect(container.querySelectorAll(".terminal-task-graph")).toHaveLength(1);
-    expect(container.querySelectorAll(".terminal-task-detail")).toHaveLength(1);
     expect(container.querySelectorAll(".terminal-diff-layout")).toHaveLength(1);
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalMounts).toEqual(["whub-dev / 99"]);
 
     fireEvent.click(secondTerminal);
 
     expect(firstTerminal.getAttribute("aria-pressed")).toBe("false");
     expect(secondTerminal.getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getAllByText("vault / TASK-101")).not.toHaveLength(0);
-    expect(screen.getByText("Task graph: vault")).toBeTruthy();
-    expect(await screen.findByText("TASK-101(in_progress)")).toBeTruthy();
-    fireEvent.click(screen.getByText("Task graph: vault"));
-    expect(await screen.findByText("TASK-126(in_progress)")).toBeTruthy();
-    expect(fetch).toHaveBeenCalledWith(
-      "/api/tasks/active/TASK-126?project=vault",
-      undefined,
-    );
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099", "vault / TASK-101"]);
+    expect(screen.getAllByText("vault / 101")).not.toHaveLength(0);
+    expect(
+      await screen.findByRole("link", { name: "#28 Issue list" }),
+    ).toBeTruthy();
+    expect(terminalMounts).toEqual(["whub-dev / 99", "vault / 101"]);
     expect(terminalUnmounts).toEqual([]);
   });
 
@@ -311,7 +272,7 @@ describe("TerminalPage", () => {
       "/api/hub-explorer/directory",
       undefined,
     );
-    expect(screen.queryByText("whub-dev / TASK-099")).toBeNull();
+    expect(screen.queryByText("whub-dev / 99")).toBeNull();
     expect(terminalMounts).toEqual([]);
 
     fireEvent.keyDown(document, {
@@ -321,9 +282,9 @@ describe("TerminalPage", () => {
       shiftKey: true,
     });
 
-    const terminal = await screen.findByText("whub-dev / TASK-099");
+    const terminal = await screen.findByText("whub-dev / 99");
     expect(terminal.dataset.active).toBe("true");
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalMounts).toEqual(["whub-dev / 99"]);
   });
 
   it("worktree parentがないProjectをExplorerの警告にしない", async () => {
@@ -343,14 +304,14 @@ describe("TerminalPage", () => {
     failedSessionProject = "vault";
     renderPage();
 
-    await screen.findByRole("button", { name: /whub.*099/ });
+    await screen.findByRole("button", { name: /whub.*99/ });
     await waitFor(() => expect(screen.queryByText("読込中…")).toBeNull());
     expect(screen.queryByText(/vault:/)).toBeNull();
   });
 
   it("⌘⇧EをTerminal内の任意の位置からExplorerへ遷移する", async () => {
     renderPage();
-    await screen.findByText("whub-dev / TASK-099");
+    await screen.findByText("whub-dev / 99");
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
         "/api/hub-explorer/directory",
@@ -376,11 +337,9 @@ describe("TerminalPage", () => {
       await screen.findByText("ファイルを選択してください。"),
     ).toBeTruthy();
     expect(hubRequests()).toBe(1);
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(terminalMounts).toEqual(["whub-dev / 99"]);
     expect(terminalUnmounts).toEqual([]);
-    expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe(
-      "false",
-    );
+    expect(screen.getByText("whub-dev / 99").dataset.active).toBe("false");
 
     fireEvent.keyDown(document, {
       code: "KeyE",
@@ -389,10 +348,10 @@ describe("TerminalPage", () => {
       shiftKey: true,
     });
 
-    expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
-    expect(terminalMounts).toEqual(["whub-dev / TASK-099"]);
+    expect(await screen.findByText("whub-dev / 99")).toBeTruthy();
+    expect(terminalMounts).toEqual(["whub-dev / 99"]);
     expect(terminalUnmounts).toEqual([]);
-    expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe("true");
+    expect(screen.getByText("whub-dev / 99").dataset.active).toBe("true");
   });
 
   it("見出しなしで複数Operationを短い名前で表示する", async () => {
@@ -439,19 +398,19 @@ describe("TerminalPage", () => {
   it("非選択Worktreeをクリックすると可視状態で再読み込みする", async () => {
     renderPage();
     await screen.findByRole("button", {
-      name: /whub.*099/,
+      name: /whub.*99/,
     });
     const secondTerminal = screen.getByRole("button", {
       name: /vaul.*101/,
     });
 
-    fireEvent.keyDown(screen.getByText("whub-dev / TASK-099"), {
+    fireEvent.keyDown(screen.getByText("whub-dev / 99"), {
       code: "ArrowDown",
       key: "ArrowDown",
       metaKey: true,
       shiftKey: true,
     });
-    fireEvent.keyDown(await screen.findByText("vault / TASK-101"), {
+    fireEvent.keyDown(await screen.findByText("vault / 101"), {
       code: "ArrowUp",
       key: "ArrowUp",
       metaKey: true,
@@ -464,34 +423,15 @@ describe("TerminalPage", () => {
     await waitFor(() =>
       expect(secondTerminal.getAttribute("aria-pressed")).toBe("true"),
     );
-    expect(screen.getByText("vault / TASK-101").dataset.active).toBe("true");
-    expect(screen.getByText("whub-dev / TASK-099").dataset.active).toBe(
-      "false",
-    );
+    expect(screen.getByText("vault / 101").dataset.active).toBe("true");
+    expect(screen.getByText("whub-dev / 99").dataset.active).toBe("false");
     expect(terminalMounts).toEqual([
-      "whub-dev / TASK-099",
-      "vault / TASK-101",
-      "vault / TASK-101",
+      "whub-dev / 99",
+      "vault / 101",
+      "vault / 101",
     ]);
     expect(terminalActiveAtMount).toEqual([true, true, true]);
-    expect(terminalUnmounts).toEqual(["vault / TASK-101"]);
-  });
-
-  it("Operationではwhub-devのグラフ選択後にTask詳細を表示する", async () => {
-    operatorTerminals = [{ operator_id: "operator-1" }];
-    renderPage();
-
-    const graph = await screen.findByText("Task graph: whub-dev");
-    expect(screen.getByText("グラフからTaskを選択してください")).toBeTruthy();
-    expect(screen.queryByText("Task ID: TASK-126")).toBeNull();
-
-    fireEvent.click(graph);
-
-    expect(await screen.findByText("TASK-126(in_progress)")).toBeTruthy();
-    expect(fetch).toHaveBeenCalledWith(
-      "/api/tasks/active/TASK-126?project=whub-dev",
-      undefined,
-    );
+    expect(terminalUnmounts).toEqual(["vault / 101"]);
   });
 
   it("worktreeの探索中でも既存Operationを先に表示する", async () => {
@@ -528,10 +468,10 @@ describe("TerminalPage", () => {
     renderPage();
 
     expect(
-      await screen.findByRole("button", { name: /whub.*099/ }),
+      await screen.findByRole("button", { name: /whub.*99/ }),
     ).toBeTruthy();
     expect(screen.getByText("読込中…")).toBeTruthy();
-    expect(screen.queryByText("vault / TASK-101")).toBeNull();
+    expect(screen.queryByText("vault / 101")).toBeNull();
   });
 
   it("権限待ちと完了の通知枠を固定して縦に並べる", async () => {
@@ -548,7 +488,7 @@ describe("TerminalPage", () => {
 
     fireEvent.click(row);
 
-    expect(await screen.findByText("vault / TASK-101")).toBeTruthy();
+    expect(await screen.findByText("vault / 101")).toBeTruthy();
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
         "/api/agent-attention/vault/101/acknowledge",
@@ -560,22 +500,22 @@ describe("TerminalPage", () => {
   it("xterm上の⌘⇧↑↓でTerminalを切り替える", async () => {
     renderPage();
 
-    const first = await screen.findByText("whub-dev / TASK-099");
+    const first = await screen.findByText("whub-dev / 99");
     fireEvent.keyDown(first, {
       code: "ArrowDown",
       key: "ArrowDown",
       metaKey: true,
       shiftKey: true,
     });
-    expect(await screen.findByText("vault / TASK-101")).toBeTruthy();
+    expect(await screen.findByText("vault / 101")).toBeTruthy();
 
-    fireEvent.keyDown(screen.getByText("vault / TASK-101"), {
+    fireEvent.keyDown(screen.getByText("vault / 101"), {
       code: "ArrowUp",
       key: "ArrowUp",
       metaKey: true,
       shiftKey: true,
     });
-    expect(await screen.findByText("whub-dev / TASK-099")).toBeTruthy();
+    expect(await screen.findByText("whub-dev / 99")).toBeTruthy();
   });
 
   it("⌘⇧OでOperationを起動する", async () => {
@@ -670,7 +610,7 @@ describe("TerminalPage", () => {
 
     expect(await screen.findByRole("img", { name: "権限待ち" })).toBeTruthy();
     expect(fetch).not.toHaveBeenCalledWith(
-      "/api/agent-attention/whub-dev/099/acknowledge",
+      "/api/agent-attention/whub-dev/99/acknowledge",
       { method: "POST" },
     );
   });
@@ -694,7 +634,7 @@ describe("TerminalPage", () => {
     });
     renderPage();
     await screen.findByRole("img", { name: "完了" });
-    await screen.findByText("whub-dev / TASK-099");
+    await screen.findByText("whub-dev / 99");
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
@@ -703,7 +643,7 @@ describe("TerminalPage", () => {
     await waitFor(() => {
       fireEvent(document, new Event("visibilitychange"));
       expect(fetch).toHaveBeenCalledWith(
-        "/api/agent-attention/whub-dev/099/acknowledge",
+        "/api/agent-attention/whub-dev/99/acknowledge",
         { method: "POST" },
       );
     });
@@ -724,11 +664,11 @@ describe("TerminalPage", () => {
     ];
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: /whub.*099/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /whub.*99/ }));
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
-        "/api/agent-attention/whub-dev/099/acknowledge",
+        "/api/agent-attention/whub-dev/99/acknowledge",
         { method: "POST" },
       ),
     );
@@ -736,7 +676,7 @@ describe("TerminalPage", () => {
 
   it("左右ペインの折りたたみ状態をTerminalのresize signalへ反映する", async () => {
     const view = renderPage();
-    const terminal = await screen.findByText("whub-dev / TASK-099");
+    const terminal = await screen.findByText("whub-dev / 99");
     expect(terminal.getAttribute("data-resize-signal")).toContain(
       ":false:false",
     );
