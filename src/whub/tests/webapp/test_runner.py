@@ -80,9 +80,11 @@ def test_serve_removes_its_pid_record_after_shutdown(tmp_path: Path) -> None:
 
 
 def test_uvicorn_accepts_terminal_websocket_upgrade() -> None:
-    async def terminal_probe(websocket: WebSocket, project: str, task_id: str) -> None:
+    async def terminal_probe(
+        websocket: WebSocket, project: str, issue_number: int
+    ) -> None:
         await websocket.accept()
-        await websocket.send_text(f"{project}/{task_id}")
+        await websocket.send_text(f"{project}/{issue_number}")
         await websocket.close()
 
     with patch("whub.webapp.server.terminal", terminal_probe):
@@ -103,9 +105,9 @@ def test_uvicorn_accepts_terminal_websocket_upgrade() -> None:
         assert server.started
 
         with connect(
-            f"ws://127.0.0.1:{port}/api/terminals/whub-dev/TASK-099"
+            f"ws://127.0.0.1:{port}/api/terminals/whub-dev/99"
         ) as socket_client:
-            assert socket_client.recv() == "whub-dev/TASK-099"
+            assert socket_client.recv() == "whub-dev/99"
     finally:
         server.should_exit = True
         thread.join(timeout=5)

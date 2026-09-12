@@ -22,10 +22,9 @@ def _auth() -> EffectiveAuth:
                         {
                             "executable": "whub",
                             "arguments": [
-                                "task",
-                                "--project",
+                                "worktree",
+                                "open",
                                 "$project",
-                                "check",
                             ],
                         }
                     ],
@@ -96,7 +95,7 @@ def test_render_generates_settings_policy_hook_and_mcp_config() -> None:
         (
             {
                 "tool_name": "Bash",
-                "tool_input": {"command": "whub task --project whub-dev check 078"},
+                "tool_input": {"command": "whub worktree open whub-dev 28"},
             },
             False,
         ),
@@ -112,7 +111,7 @@ def test_render_generates_settings_policy_hook_and_mcp_config() -> None:
             {
                 "tool_name": "Bash",
                 "tool_input": {
-                    "command": "whub task --project whub-dev check 078 && rm -rf /"
+                    "command": "whub worktree open whub-dev 28 && rm -rf /"
                 },
             },
             True,
@@ -177,7 +176,7 @@ def test_policy_hook_auto_allows_explicitly_allowed_commands(tmp_path: Path) -> 
         input=json.dumps(
             {
                 "tool_name": "Bash",
-                "tool_input": {"command": "whub task --project whub-dev check 078"},
+                "tool_input": {"command": "whub worktree open whub-dev 28"},
             }
         ),
         capture_output=True,

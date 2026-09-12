@@ -40,9 +40,6 @@ grants:
         arguments: [ls]
       - executable: whub  # whub shell-init *
         arguments: [shell-init]
-      - executable: whub  # whub task --project $project check *
-        arguments: [task, --project, "$project", check]
-
       # system metadata
       # dfは対象pathに限定できず、全mountのmetadataを返す。
       # system metadata権限を定義してからbaseへ追加する。

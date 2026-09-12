@@ -3,12 +3,10 @@ from pathlib import Path
 
 from whub.models.agent.auth import (
     AgentAuth,
-    CommandDecision,
     CommandRule,
     ExtensionTool,
     RegisteredProjectVariable,
     RegisteredTaskWorktreeVariable,
-    VariableReference,
 )
 from whub.services.agent.auth import (
     AgentAuthError,
@@ -34,15 +32,6 @@ def test_loads_agent_auth_assets() -> None:
     assert isinstance(base.variables["project"], RegisteredProjectVariable)
     assert isinstance(base.grants.commands.prefixes[0], CommandRule)
     assert isinstance(base.grants.commands.exact[0], CommandRule)
-    rule = next(
-        rule
-        for rule in base.grants.commands.prefixes
-        if rule.executable == "whub"
-        and [token.value for token in rule.arguments[:2]] == ["task", "--project"]
-    )
-    variable = rule.arguments[2]
-    assert isinstance(variable, VariableReference)
-    assert variable.name == "project"
     assert isinstance(
         implementer.variables["current_worktree"], RegisteredTaskWorktreeVariable
     )
@@ -142,10 +131,7 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
         "extension",
         variables={"project": {"source": "registered_project"}},
         prefixes=[
-            {
-                "executable": "whub",
-                "arguments": ["task", "--project", "$project", "check"],
-            }
+            {"executable": "whub", "arguments": ["worktree", "open", "$project"]}
         ],
         write=["current_worktree"],
         extension_tools=["codegraph"],
@@ -160,7 +146,7 @@ def test_compose_auth_unions_grants_and_matching_variables() -> None:
     assert allows_command(effective, ["date"], {})
     assert allows_command(
         effective,
-        ["whub", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "worktree", "open", "whub-dev", "28"],
         {"project": "whub-dev"},
     )
 
@@ -170,23 +156,6 @@ def test_resolve_agent_auth_loads_packaged_assets() -> None:
 
     assert resolved.auth.grants.extension_tools == ["codegraph"]
     assert [tool.id for tool in resolved.tools] == ["codegraph"]
-
-
-def test_implementer_task_auth_allows_only_logs() -> None:
-    rules = resolve_agent_auth(("implementer",)).auth.grants.commands.prefixes
-    whub_rules = [rule for rule in rules if rule.executable == "whub"]
-
-    log_rule = next(
-        rule
-        for rule in whub_rules
-        if {"kind": "literal", "value": "log"} in rule.model_dump()["arguments"]
-    )
-    assert log_rule.decision is CommandDecision.ALLOW
-    assert all(
-        rule.decision is CommandDecision.PROMPT
-        for rule in whub_rules
-        if rule is not log_rule
-    )
 
 
 def test_resolve_agent_auth_rejects_non_basename_extension_name() -> None:
@@ -235,7 +204,7 @@ def test_allows_command_distinguishes_prefix_and_exact_rules() -> None:
         prefixes=[
             {
                 "executable": "whub",
-                "arguments": ["task", "--project", "$project", "check"],
+                "arguments": ["worktree", "open", "$project"],
             }
         ],
         exact=[{"executable": "git", "arguments": ["diff"]}],
@@ -246,16 +215,16 @@ def test_allows_command_distinguishes_prefix_and_exact_rules() -> None:
     assert not allows_command(effective, ["git", "diff", "--stat"], {})
     assert allows_command(
         effective,
-        ["whub", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "worktree", "open", "whub-dev", "28"],
         {"project": "whub-dev"},
     )
     assert not allows_command(
         effective,
-        ["whub", "task", "--project", "whub-dev", "show", "078"],
+        ["whub", "worktree", "close", "whub-dev", "28"],
         {"project": "whub-dev"},
     )
     assert not allows_command(
         effective,
-        ["whub", "task", "--project", "whub-dev", "check", "078"],
+        ["whub", "worktree", "open", "whub-dev", "28"],
         {},
     )
