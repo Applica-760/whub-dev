@@ -1,14 +1,14 @@
 # Agent harness
 
-`whub worktree open/close`が扱うTask worktreeのAgent sessionを扱う。コマンドは[CLI reference](../reference/cli.md)、
+`whub worktree open/close`が扱うIssue worktreeのAgent sessionを扱う。コマンドは[CLI reference](../reference/cli.md)、
 設定生成とcleanupの契約は[Agent adapters](../architecture/agent-adapters.md)を参照する。
 
 ## Open (`whub worktree open`)
 
-- 規約pathのTask worktreeとauthを検証する。
-- 同じTaskのtmux sessionがあれば再接続し、なければworktree sessionを作成する。
+- 規約pathのIssue worktreeとauthを検証する。
+- 同じIssueのtmux sessionがあれば再接続し、なければworktree sessionを作成する。
 - Hub共通指示・Skills・Role・登録branchをsnapshotしてworktreeへ配置する。
-- remote Resourceはhost内のworktreeへ設定をSSH経由で配置し、host内のtmux sessionを起動してSSHでattachする。Hub側はTask YAMLを更新しない。
+- remote Resourceはhost内のworktreeへ設定をSSH経由で配置し、host内のtmux sessionを起動してSSHでattachする。Hub側はGitHub Issueを更新しない。
 - 会話履歴とTask本文はOpen時のcontextへ自動注入しない。
 - Hub共通指示・Skills・Roleの更新を反映する場合は、Close後にOpenし直す。
 
@@ -58,6 +58,6 @@ Agent openはこのuser-level設定を作成・変更しない。
 
 - tmux sessionを停止し、未変更のHarness所有設定だけを削除する。
 - remote Resourceではtmux停止後に、Hubが所有記録したcontext・auth設定・Codex trustだけをhost上から削除する。
-- Project固有設定とTaskは変更しない。worktreeとbranchの削除はmerge成功後だけ、外側のWorktree operationが行う。
+- Project固有設定とIssueは変更しない。worktreeとbranchの削除はmerge成功後だけ、外側のWorktree operationが行う。
 - Harness所有設定が変更済みならcleanupを停止し、変更とStateを残す。`--force`は提供しない。
 - tmux sessionが終了済みでもcleanupを続行する。

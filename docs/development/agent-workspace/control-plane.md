@@ -2,7 +2,7 @@
 
 ## Decision
 
-Task YAML、worktree登録、Agent session、権限要求の単一情報源はoperation rootに集約する。worktreeにはコード実行に必要な内容だけを置き、branchごとにTaskやsessionの管理情報を分岐させない。
+worktree登録、Agent session、権限要求の単一情報源はoperation rootに集約する。Taskの正本はGitHub Issueとし、worktreeにはコード実行に必要な内容だけを置く。
 
 現在symlinkまたはmountで参照しているProjectを親とし、そのProjectから作成したworktreeを子として扱う。子worktreeは親Projectとの対応を保持し、whub appとCLIから識別・操作できる。
 

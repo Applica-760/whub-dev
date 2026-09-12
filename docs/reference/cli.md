@@ -7,20 +7,8 @@
 
 ## Task workflow
 
-| コマンド | 直接の挙動 |
-|---|---|
-| `whub task --project <PROJECT> init <TITLE> <OBJECTIVE>` | draft TaskのYAML/Markdown pairを作成 |
-| `whub task --project <PROJECT> check <TASK-REF>` | active/archiveのTask pairを検証 |
-| `whub task --project <PROJECT> start <TASK-REF>` | 依存が完了したdraft Taskを開始 |
-| `whub task --project <PROJECT> depends {add,delete} <TASK-REF> <TASK-REF>` | Task依存を更新 |
-| `whub task --project <PROJECT> {interrupt,resume}` | Taskの割り込み・再開を操作 |
-| `whub task --project <PROJECT> {complete,cancel} <TASK-REF>` | terminal stateへ遷移しProjectの`docs/tasks/done/`へpairをarchive |
-| `whub task --project <PROJECT> log <TASK-REF> --log <JSON>` | Markdownへ構造化ログを追記 |
-
-未完了TaskはHub側の`flow/tasks/<project>/`で管理する。`docs/tasks/done/`だけを履歴として
-読み、旧`docs/tasks/`のYAMLは参照しない。Task操作では`--project`を明示する。状態遷移の
-actor指定は公開しない。Taskを跨ぐ運用は
-[Task development](../operations/task-development.md)を参照する。
+TaskはGitHub Issueで管理する。ローカルCLIにTask操作はなく、worktree利用時だけ
+`whub worktree`を使う。運用は[Task development](../operations/task-development.md)を参照する。
 
 ## ProjectとResource
 
@@ -46,9 +34,9 @@ actor指定は公開しない。Taskを跨ぐ運用は
 
 | コマンド | 直接の挙動 |
 |---|---|
-| `whub worktree open <PROJECT> <TTT> --auth <AUTH> [--auth <AUTH>]` | `tasks/<TTT>`と規約pathでworktreeを作成し、Agent設定を生成してtmux sessionへ接続。remote Resourceはhost内で起動しSSHでattachする |
-| `whub worktree pr <PROJECT> <TTT>` | Agent生成ファイル以外がcleanなTask branchをpushし、PRを作成または取得する。merge・Agent cleanup・worktree削除は行わない |
-| `whub worktree close <PROJECT> <TTT>` | Agent生成ファイルをcleanupしてからPRをmergeし、成功確認後にworktreeを削除する |
+| `whub worktree open <PROJECT> <ISSUE-NUMBER> --auth <AUTH> [--auth <AUTH>]` | `issue/<ISSUE-NUMBER>`と規約pathでworktreeを作成し、Agent設定を生成してtmux sessionへ接続。remote Resourceはhost内で起動しSSHでattachする |
+| `whub worktree pr <PROJECT> <ISSUE-NUMBER>` | Agent生成ファイル以外がcleanなIssue branchをpushし、PRを作成または取得する。merge・Agent cleanup・worktree削除は行わない |
+| `whub worktree close <PROJECT> <ISSUE-NUMBER>` | Agent生成ファイルをcleanupしてからPRをmergeし、成功確認後にworktreeを削除する |
 | `whub agent attention-hook` | stdinのCodex Hook eventをlocalhost Web appへ転送する。入力・通信・backendの失敗時も成功終了する |
 
 詳細は[Agent harness operation](../operations/agent.md)を参照する。
@@ -71,7 +59,7 @@ actor指定は公開しない。Taskを跨ぐ運用は
 | `whub app down` | managed Web app serverを停止 |
 | `whub remote session <COMMAND>` | remote GUI sessionを予約・観測・削除 |
 
-Web appはTask YAMLを更新しない。Terminalは稼働中Agent sessionだけを表示する。
+Web appはGitHub Issueを表示する。Terminalは稼働中Agent sessionだけを表示する。
 Remote GUI sessionの運用は[Remote GUI session](../operations/session.md)を参照する。
 
 ## Operation release

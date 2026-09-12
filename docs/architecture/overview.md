@@ -25,13 +25,8 @@ mountの健全性はmount table、sshfs process、即時エラーで判断する
 
 ## Task Workflow
 
-Taskの状態遷移は `src/whub/services/flow/definitions/task.yaml` が正本である。保存済みTaskの整合性、操作可否、Task間関係はそれぞれ `integrity`、`eligibility`、`relation` serviceへ分離する。依存関係はTask間だけに持ち、完了またはcancelledのTaskは関係グラフに表示しない。
-
-`services/task_resolution.py` はProject単位のTask storageを解決する。Hub側の
-`flow/tasks/<project>/`を未完了Taskの書込先、Project側の`docs/tasks/done/`を
-terminal Taskのarchive先とする。参照時は存在するactive、archiveの順で一つのTask集合として
-読み、依存・割り込み・重複IDを全root横断で導出する。ID採番ではactiveに加えてProject側の
-`docs/tasks/`全体を履歴として読む。
+Taskの正本はGitHub Issueである。worktreeとAgent sessionはProjectとIssue番号で識別し、
+状態・依存・進捗はGitHubの標準機能とIssueコメントで管理する。
 
 archiveは読み取り専用である。Taskの依存更新、構造化ログの追記、状態遷移はactive側で解決した
 Taskだけへ書き込み、参照で見つかったarchive YAMLを変更しない。

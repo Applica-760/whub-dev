@@ -24,7 +24,7 @@ Agent所有の管理blockとして追加する。`.claude/CLAUDE.md`はworktree�
 Hubの更新は稼働中sessionへ反映せず、close後の次回openで反映する。
 
 remote Resourceでは`agent.py`が`on_targets()`でSSH adapterを選択する。remoteの所有recordはHub側に残すため、
-remote AgentはTask YAMLやHub control planeを更新しない。
+remote AgentはGitHub IssueやHub control planeを更新しない。
 
 ## Execution context
 
@@ -36,10 +36,8 @@ Agent serviceがAgentへ渡す指示は、Hub共通、Role、Session固有の三
   copyせず、render時にHub rootまたはworktreeのどちらを基準とするかを明示する。
 - Roleは実行者の責務と許可されたTask操作を扱う。`description.md`がある選択済みextension roleだけを
   Sessionへ渡し、権限定義そのものはagent authを正本とする。
-- Session固有はProject、Task、規約worktreeを束縛する。implementerの変更先はこのworktreeだけであり、
-  親Projectのcheckout・`main`・他Taskのworktreeを変更先にしない。未完了TaskのSSOTはHub側
-  `flow/tasks/<project>/`であり、Task YAMLの直接編集ではなく、束縛済みProject/Taskへの`whub task`
-  操作を使う。
+- Session固有はProject、Issue、規約worktreeを束縛する。implementerの変更先はこのworktreeだけであり、
+  親Projectのcheckout・`main`・他Issueのworktreeを変更先にしない。Taskの正本はGitHub Issueである。
 - Project固有指示はAgent serviceが生成しない既存内容であり、管理blockの外側を変更・削除しない。
 
 Hub contextとRole contextを含む`.agents/AGENTS_context.md`、その参照管理block、Agent serviceが新規作成した
@@ -49,9 +47,9 @@ Skill・adapter設定はAgent serviceが所有する。`close`はStateに記録�
 
 ## Worktree runtime guard
 
-Task YAMLはHubのFlow serviceが一元管理するため、Hub runtime hookはTask操作の場所を制限しない。worktree
+GitHub Issueはworktreeから直接変更しないため、Hub runtime hookはIssue操作の場所を制限しない。worktree
 runtime guardは、Agent sessionを開く際に解決した`ResolvedProjectWorktree`を唯一の実行対象とする。
-branch名はTask IDから`tasks/<task-number>`として導出する。worktreeの存在だけを確認し、Git branch整合はGitへ委ねる。
+branch名はIssue番号から`issue/<issue-number>`として導出する。worktreeの存在だけを確認し、Git branch整合はGitへ委ねる。
 
 CodexとClaude Codeへ渡すguard policyには、規約worktreeの絶対pathとbranchを含める。両adapterは同じ
 policy rendererを使い、実行前に少なくとも次をblockする。
@@ -61,8 +59,7 @@ policy rendererを使い、実行前に少なくとも次をblockする。
   この条件で対象外となる。
 - worktree外を指定するfile edit、または検証不能なshell構文による境界回避。
 
-guardの対象外であるTask YAML操作は、中央storageを正本とする既存の`whub task`契約に委ねる。hookは
-filesystem・process全体を完全に隔離する仕組みではないため、adapterが表現できるsandbox境界と併用する。
+hookはfilesystem・process全体を完全に隔離する仕組みではないため、adapterが表現できるsandbox境界と併用する。
 
 Hub hookはAgent open/closeとbuild・verify・releaseの前提・結果を確認する。worktree hookは実行対象の
 pathとbranchを検査する。両者が同じ操作を二重実行しないよう、Hubはlifecycle、worktreeは対象境界だけを
@@ -91,7 +88,7 @@ hook subcommandは、stdin不正・backend未起動・通信失敗・HTTPエラ�
 返さない。したがってHookは通常のCodex承認フローを許可・拒否・中断しない。
 
 現MVPは設定生成、tmux lifecycle、生成物cleanupまでを扱う。adapterが表現するruntime authorizationは
-まだAgent serviceで強制しておらず、filesystem・process network・Task YAML操作の強制は後続Taskの対象である。
+まだAgent serviceで強制しておらず、filesystem・process networkの強制は後続Issueの対象である。
 
 ## Codex
 

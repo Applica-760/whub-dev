@@ -7,7 +7,6 @@ Agent Harnessの現状で確認している課題を、今後の設計・実装�
 - sandbox内で割り当てられたworktreeの作業者であることを、Agentが十分に理解できない。
 - Hubのコンテキストファイルをコピーするだけでは、継続作業に必要な文脈を引き継げない。
 - worktree内で完結する変更でも親Projectを編集しようとして、権限拒否後に作業の整合性を見失うことがある。
-- `whub task` 実行後にworktree内のTask YAMLを見て、反映されていないと誤認することがある。本元のTask YAMLがHub側のSSOTである認識が不足している。
 - テスト実行系コマンドの許可がexact matchに限定され、実行時の柔軟性を欠く。prefix許可への見直しが必要である。
 
 ## Release workflow
