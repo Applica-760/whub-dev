@@ -1,19 +1,33 @@
-import { Stack } from "@mantine/core";
+import { Anchor, Stack, Text } from "@mantine/core";
+import { useEffect, useState } from "react";
 
+import { requestJson } from "../../api/client";
 import { PageFrame } from "../../components/PageFrame";
-import { ProjectAside } from "../projects/ProjectAside";
-import { useProjectSelection } from "../projects/useProjectSelection";
-import { TaskDependencyGraphWidget } from "./TaskDependencyGraphWidget";
-import { TaskWidget } from "./TaskWidget";
+import { listProjects } from "../projects/api";
+
+type Issue = { number: number; title: string; url: string };
 
 export function TasksPage() {
-  const projectSelection = useProjectSelection();
+  const [issues, setIssues] = useState<{ project: string; issue: Issue }[]>([]);
+
+  useEffect(() => {
+    void listProjects()
+      .then((projects) => Promise.all(projects.map(async (project) =>
+        (await requestJson<Issue[]>(`/api/issues/${encodeURIComponent(project)}`))
+          .map((issue) => ({ project, issue })),
+      )))
+      .then((listed) => setIssues(listed.flat()))
+      .catch(() => setIssues([]));
+  }, []);
 
   return (
-    <PageFrame aside={<ProjectAside {...projectSelection} />}>
+    <PageFrame>
       <Stack gap="md">
-        <TaskDependencyGraphWidget project={projectSelection.selectedProject} />
-        <TaskWidget project={projectSelection.selectedProject} />
+        {issues.length ? issues.map(({ project, issue }) => (
+          <Anchor href={issue.url} key={`${project}/${issue.number}`} target="_blank">
+            {project} #{issue.number} {issue.title}
+          </Anchor>
+        )) : <Text c="dimmed">Open Issueはありません。</Text>}
       </Stack>
     </PageFrame>
   );

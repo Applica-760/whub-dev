@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { SelectedTask } from "../../tasks/AllTasksWidget";
 import { useAgentSessions } from "../agentSessions";
 import { useOperatorTerminals } from "../operatorTerminals";
 import { useApprovalAttention } from "../useApprovalAttention";
@@ -37,24 +36,10 @@ export function useTerminalController({
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [mountedValues, setMountedValues] = useState<string[]>([]);
   const [reloads, setReloads] = useState<Record<string, number>>({});
-  const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
   const selectedTarget = targets.find(
     (target) => target.value === selectedValue,
   );
   const pendingAttention = attention.filter((item) => !item.acknowledged);
-  const taskContext = {
-    detailProject:
-      selectedTask?.project ??
-      (selectedTarget?.kind === "worktree"
-        ? selectedTarget.project
-        : undefined),
-    detailTaskId: selectedTask?.taskId,
-    emptyMessage:
-      selectedTarget?.kind === "operator"
-        ? "グラフからTaskを選択してください"
-        : "Terminalを選択してください",
-    graphProject: selectedTarget?.taskProject ?? null,
-  };
   const issueProject = selectedTarget?.kind === "worktree" ? selectedTarget.project : null;
 
   const acknowledgeTarget = useCallback(
@@ -87,12 +72,6 @@ export function useTerminalController({
     },
     [selectTerminal],
   );
-
-  const selectTask = useCallback((project: string, taskId: string) => {
-    setSelectedTask({ project, taskId });
-  }, []);
-
-  useEffect(() => setSelectedTask(null), [selectedValue]);
 
   useEffect(() => {
     if (explorer || !selectedValue) return;
@@ -201,13 +180,10 @@ export function useTerminalController({
     reloads,
     reloadTerminal,
     selectedTarget,
-    selectedTask,
     selectedValue,
-    selectTask,
     selectTerminal,
     startOperator,
     stopOperator,
-    taskContext,
     targets,
   };
 }
