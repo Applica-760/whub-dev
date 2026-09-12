@@ -194,6 +194,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/issues/{project}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Issues */
+        get: operations["list_issues_api_issues__project__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/resources/status": {
         parameters: {
             query?: never;
@@ -614,6 +631,15 @@ export interface components {
         InboxResponse: {
             /** Filename */
             filename: string;
+        };
+        /** IssueResponse */
+        IssueResponse: {
+            /** Number */
+            number: number;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
         };
         /**
          * OperatorTerminal
@@ -1223,6 +1249,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InboxResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_issues_api_issues__project__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponse"][];
                 };
             };
             /** @description Validation Error */

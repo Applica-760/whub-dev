@@ -16,6 +16,7 @@ from whub.webapp.routers.agent_sessions import router as agent_sessions_router
 from whub.webapp.routers.daily import router as daily_router
 from whub.webapp.routers.hub_explorer import router as hub_explorer_router
 from whub.webapp.routers.inbox import router as inbox_router
+from whub.webapp.routers.issues import router as issues_router
 from whub.webapp.routers.operator_terminal import (
     operator_terminal_socket,
     router as operator_terminal_router,
@@ -71,6 +72,7 @@ def create_api_app() -> FastAPI:
     app.include_router(agent_sessions_router)
     app.include_router(daily_router)
     app.include_router(inbox_router)
+    app.include_router(issues_router)
     app.include_router(status_router)
     app.include_router(tasks_router)
     app.add_api_websocket_route("/api/terminals/{project}/{issue_number}", terminal)

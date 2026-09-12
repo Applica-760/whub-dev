@@ -40,8 +40,7 @@ export function TerminalPage({
           >
             <TerminalTaskPanel
               collapsed={collapsed.right}
-              {...terminal.taskContext}
-              onSelectTask={terminal.selectTask}
+              project={terminal.issueProject}
             />
             <TerminalViewport
               collapsed={collapsed}

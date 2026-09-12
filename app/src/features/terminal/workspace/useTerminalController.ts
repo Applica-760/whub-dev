@@ -55,6 +55,7 @@ export function useTerminalController({
         : "Terminalを選択してください",
     graphProject: selectedTarget?.taskProject ?? null,
   };
+  const issueProject = selectedTarget?.kind === "worktree" ? selectedTarget.project : null;
 
   const acknowledgeTarget = useCallback(
     (target: TerminalTarget) => {
@@ -192,6 +193,7 @@ export function useTerminalController({
 
   return {
     error: error ?? operatorError,
+    issueProject,
     loading,
     mountedValues,
     operatorPending,
