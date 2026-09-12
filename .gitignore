@@ -8,6 +8,10 @@
 __pycache__/
 *.py[cod]
 
+# macOS and Xcode local state
+.DS_Store
+xcuserdata/
+
 # Web app build output
 app/dist/
 src/whub/webapp/dist/
