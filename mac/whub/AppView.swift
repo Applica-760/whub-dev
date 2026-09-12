@@ -47,6 +47,7 @@ struct AppView: View {
     }
 
     @State private var section = Section.overview
+    @State private var showsSettings = false
 
     @Query(sort: \Project.name) private var projects: [Project]
 
@@ -59,7 +60,7 @@ struct AppView: View {
         } detail: {
             section.content
         }
-        .frame(minWidth: 700, minHeight: 430)
+        .frame(minWidth: 950, minHeight: 550)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Picker("ページ", selection: $section) {
@@ -71,11 +72,16 @@ struct AppView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
 
-                SettingsLink {
+                Button {
+                    showsSettings = true
+                } label: {
                     Label("Settings", systemImage: "gearshape")
                 }
                 .labelStyle(.iconOnly)
             }
+        }
+        .sheet(isPresented: $showsSettings) {
+            SettingsView()
         }
     }
 }
