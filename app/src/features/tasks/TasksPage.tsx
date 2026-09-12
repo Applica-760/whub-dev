@@ -12,11 +12,13 @@ export function TasksPage() {
 
   useEffect(() => {
     void listProjects()
-      .then((projects) => Promise.all(projects.map(async (project) =>
+      .then((projects) => Promise.allSettled(projects.map(async (project) =>
         (await requestJson<Issue[]>(`/api/issues/${encodeURIComponent(project)}`))
           .map((issue) => ({ project, issue })),
       )))
-      .then((listed) => setIssues(listed.flat()))
+      .then((listed) => setIssues(listed.flatMap((result) =>
+        result.status === "fulfilled" ? result.value : [],
+      )))
       .catch(() => setIssues([]));
   }, []);
 

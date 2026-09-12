@@ -17,17 +17,19 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string) => ({
-      ok: true,
       json: async () =>
         input === "/api/projects"
-          ? { projects: ["whub-dev"] }
-          : [
+          ? { projects: ["whub-dev", "private"] }
+          : input === "/api/issues/whub-dev"
+            ? [
               {
                 number: 28,
                 title: "Issue一覧",
                 url: "https://github.com/Applica-760/whub/issues/28",
               },
-            ],
+            ]
+            : { detail: "GitHub repository is not configured." },
+      ok: input !== "/api/issues/private",
     })),
   );
 });
