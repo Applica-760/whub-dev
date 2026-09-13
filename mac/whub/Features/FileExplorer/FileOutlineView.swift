@@ -9,7 +9,7 @@ struct FileOutlineView: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let outlineView = NSOutlineView()
+        let outlineView = FileOutlineControl()
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
         column.resizingMask = .autoresizingMask
         outlineView.addTableColumn(column)
@@ -17,10 +17,7 @@ struct FileOutlineView: NSViewRepresentable {
         outlineView.headerView = nil
         outlineView.autoresizesOutlineColumn = true
         outlineView.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
-        outlineView.indentationPerLevel = 12
         outlineView.intercellSpacing = .zero
-        outlineView.style = .sourceList
-        outlineView.autoresizingMask = [.width]
         outlineView.dataSource = context.coordinator
         outlineView.delegate = context.coordinator
         context.coordinator.outlineView = outlineView
@@ -33,7 +30,7 @@ struct FileOutlineView: NSViewRepresentable {
         return scrollView
     }
 
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+    func updateNSView(_: NSScrollView, context: Context) {
         context.coordinator.update(rootURL: rootURL)
     }
 
@@ -70,6 +67,7 @@ struct FileOutlineView: NSViewRepresentable {
             let identifier = NSUserInterfaceItemIdentifier("file")
             let cell = (outlineView.makeView(withIdentifier: identifier, owner: nil) as? NSTableCellView) ?? makeCell(identifier: identifier)
             cell.textField?.stringValue = item.url.lastPathComponent
+            cell.textField?.textColor = item.url.lastPathComponent.hasPrefix(".") ? .secondaryLabelColor : .labelColor
             cell.imageView?.image = NSWorkspace.shared.icon(forFile: item.url.path)
             return cell
         }
@@ -123,6 +121,27 @@ struct FileOutlineView: NSViewRepresentable {
                 textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
             ])
             return cell
+        }
+    }
+}
+
+private final class FileOutlineControl: NSOutlineView {
+    override func mouseDown(with event: NSEvent) {
+        let row = self.row(at: convert(event.locationInWindow, from: nil))
+        guard
+            row >= 0,
+            let item = item(atRow: row) as? FileItem,
+            item.isDirectory
+        else {
+            super.mouseDown(with: event)
+            return
+        }
+
+        selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        if isItemExpanded(item) {
+            collapseItem(item)
+        } else {
+            expandItem(item)
         }
     }
 }
