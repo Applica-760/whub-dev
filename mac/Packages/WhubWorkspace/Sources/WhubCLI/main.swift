@@ -7,8 +7,8 @@ func run() throws {
         throw CLIError.usage
     }
 
-    let container = try Store.makeContainer()
-    let names = try Store.projects(in: container).map(\.name)
+    let container = try Container.make()
+    let names = try ProjectStore(context: container.mainContext).fetchProjects().map(\.name)
     let data = try JSONEncoder().encode(names)
     print(String(decoding: data, as: UTF8.self))
 }
