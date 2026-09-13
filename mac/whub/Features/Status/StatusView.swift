@@ -31,7 +31,7 @@ struct StatusWidget: View {
     ]
 
     var body: some View {
-        WidgetFrame("Status") {
+        WidgetFrame {
             Table(resources) {
                 TableColumn("Project", value: \.project)
                 TableColumn("State", value: \.state)

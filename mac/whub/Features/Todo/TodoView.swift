@@ -23,7 +23,7 @@ struct TodoWidget: View {
     ]
 
     var body: some View {
-        WidgetFrame("Todo") {
+        WidgetFrame {
             VStack(spacing: 0) {
                 ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
                     HStack(alignment: .top, spacing: 10) {

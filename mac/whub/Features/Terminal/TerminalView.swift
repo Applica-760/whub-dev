@@ -12,7 +12,7 @@ struct TerminalView: View {
 
 struct TerminalWidget: View {
     var body: some View {
-        WidgetFrame("Terminal") {
+        WidgetFrame {
             LocalTerminalView()
                 .frame(maxWidth: .infinity, minHeight: 240)
         }

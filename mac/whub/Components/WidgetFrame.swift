@@ -1,21 +1,19 @@
 import SwiftUI
 
 struct WidgetFrame<Content: View>: View {
-    private let title: String
     private let content: Content
 
-    init(_ title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
+    init(@ViewBuilder content: () -> Content) {
         self.content = content()
     }
 
     var body: some View {
-        GroupBox(title) {
+        GroupBox {
             content
         }
     }
 }
 
 #Preview {
-    WidgetFrame("Widget") { Text("Content") }
+    WidgetFrame { Text("Content") }
 }

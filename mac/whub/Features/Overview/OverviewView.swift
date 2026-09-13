@@ -18,7 +18,7 @@ struct OverviewView: View {
     }
 
     private func column(_ title: String, items: [String]) -> some View {
-        WidgetFrame(title) {
+        WidgetFrame {
             VStack(alignment: .leading, spacing: 8) {
             ForEach(items, id: \.self) { item in
                 Text(item)
