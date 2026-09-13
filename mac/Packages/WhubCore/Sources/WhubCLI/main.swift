@@ -1,5 +1,5 @@
 import Foundation
-import WhubWorkspace
+import WhubCore
 
 @MainActor
 func run() throws {

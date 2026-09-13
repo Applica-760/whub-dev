@@ -3,14 +3,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "WhubWorkspace",
+    name: "WhubCore",
     platforms: [.macOS(.v26)],
     products: [
-        .library(name: "WhubWorkspace", targets: ["WhubWorkspace"]),
+        .library(name: "WhubCore", targets: ["WhubCore"]),
         .executable(name: "whub", targets: ["WhubCLI"]),
     ],
     targets: [
-        .target(name: "WhubWorkspace"),
-        .executableTarget(name: "WhubCLI", dependencies: ["WhubWorkspace"]),
+        .target(name: "WhubCore"),
+        .executableTarget(name: "WhubCLI", dependencies: ["WhubCore"]),
     ]
 )
