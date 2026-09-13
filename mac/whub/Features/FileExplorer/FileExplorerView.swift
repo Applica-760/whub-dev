@@ -7,7 +7,7 @@ struct FileExplorerView: View {
     @State private var selectedProject: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 16) {
             Picker("Project", selection: $selectedProject) {
                 if projects.isEmpty {
                     Text("---").tag(nil as String?)
@@ -19,8 +19,11 @@ struct FileExplorerView: View {
             }
             .pickerStyle(.menu)
             .labelsHidden()
+            .padding(.horizontal)
+            .padding(.top)
 
             Divider()
+                .padding(.horizontal)
 
             FileOutlineView(rootURL: rootURL)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
