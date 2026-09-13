@@ -1,6 +1,6 @@
 import SwiftData
 import SwiftUI
-import WhubWorkspace
+import WhubCore
 
 struct AppView: View {
     private enum Section: CaseIterable, Hashable {
@@ -47,7 +47,7 @@ struct AppView: View {
     }
 
     @State private var section = Section.overview
-    @State private var showsSettings = false
+    @Environment(\.openSettings) private var openSettings
 
     @Query(sort: \Project.name) private var projects: [Project]
 
@@ -73,15 +73,12 @@ struct AppView: View {
                 .labelsHidden()
 
                 Button {
-                    showsSettings = true
+                    openSettings()
                 } label: {
                     Label("Settings", systemImage: "gearshape")
                 }
                 .labelStyle(.iconOnly)
             }
-        }
-        .sheet(isPresented: $showsSettings) {
-            SettingsView()
         }
     }
 }

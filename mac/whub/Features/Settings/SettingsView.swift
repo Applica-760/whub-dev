@@ -1,33 +1,21 @@
 import SwiftUI
-import WhubWorkspace
+import WhubCore
 
 struct SettingsView: View {
-    @State private var showsAddManifest = false
-
     var body: some View {
         TabView {
-            Form {
-                LabeledContent("Workspace Store") {
-                    Text(Store.storeURL.path)
-                        .textSelection(.enabled)
-                }
-            }
-            .padding()
+            ContentUnavailableView(
+                "General",
+                systemImage: "gearshape",
+                description: Text("General settings will be available here.")
+            )
             .tabItem { Label("General", systemImage: "gearshape") }
 
-            ManifestTable {
-                showsAddManifest = true
-            }
+            ProjectTable()
                 .padding()
-                .tabItem { Label("Manifests", systemImage: "folder") }
-
-            ContentUnavailableView("Advanced", systemImage: "slider.horizontal.3")
-                .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
+                .tabItem { Label("Projects", systemImage: "folder") }
         }
         .frame(width: 720, height: 480)
-        .sheet(isPresented: $showsAddManifest) {
-            AddManifest()
-        }
     }
 }
 

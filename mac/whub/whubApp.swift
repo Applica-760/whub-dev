@@ -7,7 +7,7 @@
 
 import SwiftData
 import SwiftUI
-import WhubWorkspace
+import WhubCore
 
 @main
 struct whubApp: App {
@@ -15,7 +15,7 @@ struct whubApp: App {
 
     init() {
         do {
-            workspaceContainer = try Store.makeContainer()
+            workspaceContainer = try Container.make()
         } catch {
             fatalError("Unable to open workspace store: \(error)")
         }
@@ -24,6 +24,11 @@ struct whubApp: App {
     var body: some Scene {
         WindowGroup {
             AppView()
+        }
+        .modelContainer(workspaceContainer)
+
+        Settings {
+            SettingsView()
         }
         .modelContainer(workspaceContainer)
     }
