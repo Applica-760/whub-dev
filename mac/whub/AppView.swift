@@ -1,6 +1,4 @@
-import SwiftData
 import SwiftUI
-import WhubCore
 
 struct AppView: View {
     private enum Section: CaseIterable, Hashable {
@@ -49,14 +47,10 @@ struct AppView: View {
     @State private var section = Section.overview
     @Environment(\.openSettings) private var openSettings
 
-    @Query(sort: \Project.name) private var projects: [Project]
-
     var body: some View {
         NavigationSplitView {
-            List(projects, id: \.name) { project in
-                Text(project.name)
-            }
-            .navigationTitle("Projects")
+            FileExplorerView()
+                .navigationSplitViewColumnWidth(min: 260, ideal: 320, max: 640)
         } detail: {
             section.content
         }

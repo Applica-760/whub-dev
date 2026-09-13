@@ -1,0 +1,139 @@
+import AppKit
+import SwiftUI
+
+struct FileOutlineView: NSViewRepresentable {
+    let rootURL: URL?
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let outlineView = NSOutlineView()
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
+        column.resizingMask = .autoresizingMask
+        outlineView.addTableColumn(column)
+        outlineView.outlineTableColumn = column
+        outlineView.headerView = nil
+        outlineView.autoresizesOutlineColumn = true
+        outlineView.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
+        outlineView.indentationPerLevel = 12
+        outlineView.intercellSpacing = .zero
+        outlineView.style = .sourceList
+        outlineView.autoresizingMask = [.width]
+        outlineView.dataSource = context.coordinator
+        outlineView.delegate = context.coordinator
+        context.coordinator.outlineView = outlineView
+        context.coordinator.update(rootURL: rootURL)
+
+        let scrollView = NSScrollView()
+        scrollView.documentView = outlineView
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        context.coordinator.update(rootURL: rootURL)
+    }
+
+    final class Coordinator: NSObject, NSOutlineViewDataSource, NSOutlineViewDelegate {
+        weak var outlineView: NSOutlineView?
+        private var rootURL: URL?
+        private var rootItems: [FileItem] = []
+
+        func update(rootURL: URL?) {
+            guard self.rootURL != rootURL else { return }
+            self.rootURL = rootURL
+            rootItems = rootURL.map(directoryContents) ?? []
+            outlineView?.reloadData()
+        }
+
+        func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
+            children(for: item as? FileItem).count
+        }
+
+        func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
+            children(for: item as? FileItem)[index]
+        }
+
+        func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
+            (item as? FileItem)?.isDirectory == true
+        }
+
+        func outlineView(
+            _ outlineView: NSOutlineView,
+            viewFor tableColumn: NSTableColumn?,
+            item: Any
+        ) -> NSView? {
+            guard let item = item as? FileItem else { return nil }
+            let identifier = NSUserInterfaceItemIdentifier("file")
+            let cell = (outlineView.makeView(withIdentifier: identifier, owner: nil) as? NSTableCellView) ?? makeCell(identifier: identifier)
+            cell.textField?.stringValue = item.url.lastPathComponent
+            cell.imageView?.image = NSWorkspace.shared.icon(forFile: item.url.path)
+            return cell
+        }
+
+        private func children(for item: FileItem?) -> [FileItem] {
+            guard let item else { return rootItems }
+            guard item.isDirectory else { return [] }
+            if let children = item.children { return children }
+            let children = directoryContents(at: item.url)
+            item.children = children
+            return children
+        }
+
+        private func directoryContents(at url: URL) -> [FileItem] {
+            let urls = (try? FileManager.default.contentsOfDirectory(
+                at: url,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: []
+            )) ?? []
+            return urls.map(FileItem.init).sorted {
+                if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
+                return $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending
+            }
+        }
+
+        private func makeCell(identifier: NSUserInterfaceItemIdentifier) -> NSTableCellView {
+            let cell = NSTableCellView()
+            cell.identifier = identifier
+
+            let imageView = NSImageView()
+            imageView.translatesAutoresizingMaskIntoConstraints = false
+            imageView.imageScaling = .scaleProportionallyDown
+            cell.addSubview(imageView)
+            cell.imageView = imageView
+
+            let textField = NSTextField(labelWithString: "")
+            textField.translatesAutoresizingMaskIntoConstraints = false
+            textField.lineBreakMode = .byTruncatingTail
+            textField.usesSingleLineMode = true
+            textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            cell.addSubview(textField)
+            cell.textField = textField
+
+            NSLayoutConstraint.activate([
+                imageView.leadingAnchor.constraint(equalTo: cell.leadingAnchor),
+                imageView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+                imageView.widthAnchor.constraint(equalToConstant: 16),
+                imageView.heightAnchor.constraint(equalToConstant: 16),
+                textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 4),
+                textField.trailingAnchor.constraint(equalTo: cell.trailingAnchor),
+                textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+            ])
+            return cell
+        }
+    }
+}
+
+private final class FileItem: NSObject {
+    let url: URL
+    let isDirectory: Bool
+    var children: [FileItem]?
+
+    init(url: URL) {
+        self.url = url
+        isDirectory = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+    }
+}
