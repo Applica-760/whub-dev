@@ -8,7 +8,8 @@ func run() throws {
     }
 
     let container = try Container.make()
-    let names = try ProjectStore(context: container.mainContext).fetchProjects().map(\.name)
+    let store = ProjectStore(context: container.mainContext)
+    let names = try store.fetchProjects().map(\.name)
     let data = try JSONEncoder().encode(names)
     print(String(decoding: data, as: UTF8.self))
 }
