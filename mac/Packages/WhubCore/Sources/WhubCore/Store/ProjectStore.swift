@@ -47,4 +47,9 @@ public struct ProjectStore {
         try context.save()
         return project
     }
+
+    public func delete(_ project: Project) throws {
+        context.delete(project)
+        try context.save()
+    }
 }

@@ -4,7 +4,11 @@ import WhubCore
 
 struct ProjectTable: View {
     @Query(sort: \Project.name) private var projects: [Project]
+    @Environment(\.modelContext) private var context
     @State private var showsAddProject = false
+    @State private var showsDeleteConfirmation = false
+    @State private var showsDeleteError = false
+    @State private var deleteErrorMessage = ""
     @State private var selection: String?
     @State private var expanded = Set<String>()
 
@@ -42,8 +46,10 @@ struct ProjectTable: View {
                     Button("Add Project", systemImage: "plus") {
                         showsAddProject = true
                     }
-                    Button("Remove Project", systemImage: "minus", action: {})
-                        .disabled(true)
+                    Button("Remove Project", systemImage: "minus") {
+                        showsDeleteConfirmation = true
+                    }
+                    .disabled(selectedProject == nil)
                 }
                 .controlGroupStyle(.automatic)
                 .labelStyle(.iconOnly)
@@ -53,6 +59,17 @@ struct ProjectTable: View {
         }
         .sheet(isPresented: $showsAddProject) {
             AddProjectForm()
+        }
+        .alert("Delete Project?", isPresented: $showsDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive, action: deleteSelectedProject)
+        } message: {
+            Text("Delete \(selectedProject?.name ?? "this project")? This cannot be undone.")
+        }
+        .alert("Unable to Delete Project", isPresented: $showsDeleteError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteErrorMessage)
         }
     }
 
@@ -66,6 +83,10 @@ struct ProjectTable: View {
                 children: [resourceRow(for: project.resource, id: "\(id).resource")]
             )
         }
+    }
+
+    private var selectedProject: Project? {
+        projects.first { String(describing: $0.persistentModelID) == selection }
     }
 
     private func resourceRow(for resource: Resource, id: String) -> ProjectTableRow {
@@ -113,6 +134,18 @@ struct ProjectTable: View {
             expanded.remove(row.id)
         } else {
             expanded.insert(row.id)
+        }
+    }
+
+    private func deleteSelectedProject() {
+        guard let project = selectedProject else { return }
+
+        do {
+            try ProjectStore(context: context).delete(project)
+            selection = nil
+        } catch {
+            deleteErrorMessage = error.localizedDescription
+            showsDeleteError = true
         }
     }
 }
