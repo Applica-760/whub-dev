@@ -33,7 +33,7 @@ private struct LocalTerminalView: NSViewRepresentable {
         terminal.startProcess(
             executable: "/bin/zsh",
             args: ["-l"],
-            currentDirectory: NSHomeDirectory()
+            currentDirectory: "\(NSHomeDirectory())/workspace-hub"
         )
         return terminal
     }
