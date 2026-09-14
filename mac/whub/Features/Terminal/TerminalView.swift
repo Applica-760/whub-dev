@@ -1,26 +1,12 @@
 import AppKit
+import Combine
 import SwiftTerm
 import SwiftUI
 
-struct TerminalView: View {
-    var body: some View {
-        TerminalWidget()
-            .padding()
-            .navigationTitle("Terminal")
-    }
-}
+final class TerminalSession: ObservableObject {
+    let terminal: LocalProcessTerminalView
 
-struct TerminalWidget: View {
-    var body: some View {
-        WidgetFrame {
-            LocalTerminalView()
-                .frame(maxWidth: .infinity, minHeight: 240)
-        }
-    }
-}
-
-private struct LocalTerminalView: NSViewRepresentable {
-    func makeNSView(context: Context) -> LocalProcessTerminalView {
+    init() {
         let terminal = LocalProcessTerminalView(frame: .zero)
         terminal.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
         terminal.lineSpacing = 1.1
@@ -35,16 +21,44 @@ private struct LocalTerminalView: NSViewRepresentable {
             args: ["-l"],
             currentDirectory: "\(NSHomeDirectory())/workspace-hub"
         )
-        return terminal
+        self.terminal = terminal
     }
 
-    func updateNSView(_ terminal: LocalProcessTerminalView, context: Context) {}
-
-    static func dismantleNSView(_ terminal: LocalProcessTerminalView, coordinator: ()) {
+    deinit {
         terminal.terminate()
     }
 }
 
+struct TerminalView: View {
+    var body: some View {
+        TerminalWidget()
+            .padding()
+            .navigationTitle("Terminal")
+    }
+}
+
+struct TerminalWidget: View {
+    @EnvironmentObject private var session: TerminalSession
+
+    var body: some View {
+        WidgetFrame {
+            LocalTerminalView(terminal: session.terminal)
+                .frame(maxWidth: .infinity, minHeight: 240)
+        }
+    }
+}
+
+private struct LocalTerminalView: NSViewRepresentable {
+    let terminal: LocalProcessTerminalView
+
+    func makeNSView(context: Context) -> LocalProcessTerminalView {
+        return terminal
+    }
+
+    func updateNSView(_ terminal: LocalProcessTerminalView, context: Context) {}
+}
+
 #Preview {
     TerminalView()
+        .environmentObject(TerminalSession())
 }
