@@ -3,6 +3,7 @@ import SwiftUI
 struct AppView: View {
     private enum Section: CaseIterable, Hashable {
         case overview
+        case file
         case terminal
         case todo
         case vault
@@ -12,6 +13,7 @@ struct AppView: View {
         var label: String {
             switch self {
             case .overview: "Overview"
+            case .file: "File"
             case .status: "Status"
             case .timer: "Timer"
             case .vault: "Vault"
@@ -23,6 +25,7 @@ struct AppView: View {
         var systemImage: String {
             switch self {
             case .overview: "rectangle.3.group"
+            case .file: "doc.text"
             case .status: "tablecells"
             case .timer: "timer"
             case .vault: "tray.full"
@@ -32,9 +35,10 @@ struct AppView: View {
         }
 
         @ViewBuilder
-        var content: some View {
+        func content(fileURL: URL?) -> some View {
             switch self {
             case .overview: OverviewView()
+            case .file: FileViewerView(fileURL: fileURL)
             case .status: StatusView()
             case .timer: TimerView()
             case .vault: VaultExplorerView()
@@ -45,14 +49,18 @@ struct AppView: View {
     }
 
     @State private var section = Section.overview
+    @State private var selectedFileURL: URL?
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         NavigationSplitView {
-            FileExplorerView()
+            FileExplorerView { fileURL in
+                selectedFileURL = fileURL
+                section = .file
+            }
                 .navigationSplitViewColumnWidth(min: 260, ideal: 320, max: 640)
         } detail: {
-            section.content
+            section.content(fileURL: selectedFileURL)
         }
         .frame(minWidth: 950, minHeight: 550)
         .toolbar {

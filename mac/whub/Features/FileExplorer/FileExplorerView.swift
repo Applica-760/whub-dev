@@ -3,6 +3,7 @@ import SwiftUI
 import WhubCore
 
 struct FileExplorerView: View {
+    let onFileSelect: (URL) -> Void
     @Query(sort: \Project.name) private var projects: [Project]
     @State private var selectedProject: String?
 
@@ -25,7 +26,7 @@ struct FileExplorerView: View {
             Divider()
                 .padding(.horizontal)
 
-            FileOutlineView(rootURL: rootURL)
+            FileOutlineView(rootURL: rootURL, onFileSelect: onFileSelect)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -52,5 +53,5 @@ struct FileExplorerView: View {
 }
 
 #Preview {
-    FileExplorerView()
+    FileExplorerView { _ in }
 }

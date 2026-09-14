@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C8244DC530553E480038A6AF /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = C8244DC430553E480038A6AF /* SwiftTerm */; };
-		C8244DD1305564550038A6AF /* WhubWorkspace in Frameworks */ = {isa = PBXBuildFile; productRef = C8244DD0305564550038A6AF /* WhubWorkspace */; };
+		C8244E5C3056B24F0038A6AF /* WhubCore in Frameworks */ = {isa = PBXBuildFile; productRef = C8244E5B3056B24F0038A6AF /* WhubCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,8 +28,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C8244DD1305564550038A6AF /* WhubWorkspace in Frameworks */,
 				C8244DC530553E480038A6AF /* SwiftTerm in Frameworks */,
+				C8244E5C3056B24F0038A6AF /* WhubCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,7 +73,7 @@
 			name = whub;
 			packageProductDependencies = (
 				C8244DC430553E480038A6AF /* SwiftTerm */,
-				C8244DD0305564550038A6AF /* WhubWorkspace */,
+				C8244E5B3056B24F0038A6AF /* WhubCore */,
 			);
 			productName = whub;
 			productReference = C8244D853052F9300038A6AF /* whub.app */;
@@ -105,7 +105,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				C8244DC330553E480038A6AF /* XCRemoteSwiftPackageReference "SwiftTerm" */,
-				C8244DCF305564550038A6AF /* XCLocalSwiftPackageReference "Packages/WhubWorkspace" */,
+				C8244E5A3056B24F0038A6AF /* XCLocalSwiftPackageReference "Packages/WhubCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C8244D863052F9300038A6AF /* Products */;
@@ -344,9 +344,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		C8244DCF305564550038A6AF /* XCLocalSwiftPackageReference "Packages/WhubWorkspace" */ = {
+		C8244E5A3056B24F0038A6AF /* XCLocalSwiftPackageReference "Packages/WhubCore" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/WhubWorkspace;
+			relativePath = Packages/WhubCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -367,9 +367,9 @@
 			package = C8244DC330553E480038A6AF /* XCRemoteSwiftPackageReference "SwiftTerm" */;
 			productName = SwiftTerm;
 		};
-		C8244DD0305564550038A6AF /* WhubWorkspace */ = {
+		C8244E5B3056B24F0038A6AF /* WhubCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = WhubWorkspace;
+			productName = WhubCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

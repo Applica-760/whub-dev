@@ -1,11 +1,14 @@
 import AppKit
 import SwiftUI
 
+private let hiddenFileNames = [".git", ".DS_Store"]
+
 struct FileOutlineView: NSViewRepresentable {
     let rootURL: URL?
+    let onFileSelect: (URL) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(onFileSelect: onFileSelect)
     }
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -31,13 +34,19 @@ struct FileOutlineView: NSViewRepresentable {
     }
 
     func updateNSView(_: NSScrollView, context: Context) {
+        context.coordinator.onFileSelect = onFileSelect
         context.coordinator.update(rootURL: rootURL)
     }
 
     final class Coordinator: NSObject, NSOutlineViewDataSource, NSOutlineViewDelegate {
         weak var outlineView: NSOutlineView?
+        var onFileSelect: (URL) -> Void
         private var rootURL: URL?
         private var rootItems: [FileItem] = []
+
+        init(onFileSelect: @escaping (URL) -> Void) {
+            self.onFileSelect = onFileSelect
+        }
 
         func update(rootURL: URL?) {
             guard self.rootURL != rootURL else { return }
@@ -56,6 +65,17 @@ struct FileOutlineView: NSViewRepresentable {
 
         func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
             (item as? FileItem)?.isDirectory == true
+        }
+
+        func outlineViewSelectionDidChange(_ notification: Notification) {
+            guard
+                let outlineView = notification.object as? NSOutlineView,
+                let item = outlineView.item(atRow: outlineView.selectedRow) as? FileItem,
+                !item.isDirectory
+            else {
+                return
+            }
+            onFileSelect(item.url)
         }
 
         func outlineView(
@@ -87,10 +107,13 @@ struct FileOutlineView: NSViewRepresentable {
                 includingPropertiesForKeys: [.isDirectoryKey],
                 options: []
             )) ?? []
-            return urls.map(FileItem.init).sorted {
-                if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
-                return $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending
-            }
+            return urls
+                .filter { !hiddenFileNames.contains($0.lastPathComponent) }
+                .map(FileItem.init)
+                .sorted {
+                    if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
+                    return $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending
+                }
         }
 
         private func makeCell(identifier: NSUserInterfaceItemIdentifier) -> NSTableCellView {
