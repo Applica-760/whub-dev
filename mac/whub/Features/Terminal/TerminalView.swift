@@ -8,7 +8,11 @@ struct TerminalView: View {
         VStack(spacing: 8) {
             HStack(alignment: .bottom) {
                 ForEach(Array(store.sessions.enumerated()), id: \.element.id) { index, session in
-                    TabBar(title: "Terminal \(index + 1)", systemImage: "terminal") {
+                    TabBar(
+                        title: "Terminal \(index + 1)",
+                        systemImage: "terminal",
+                        isSelected: session.id == store.selectedSessionID
+                    ) {
                         store.select(session.id)
                     }
                 }
