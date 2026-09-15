@@ -2,12 +2,18 @@ import AppKit
 import Combine
 import SwiftTerm
 
+private final class FixedCursorTerminalView: LocalProcessTerminalView {
+    override func cursorStyleChanged(source: Terminal, newStyle: CursorStyle) {
+        super.cursorStyleChanged(source: source, newStyle: .steadyBar)
+    }
+}
+
 final class TerminalSession: Identifiable {
     let id = UUID()
     let terminal: LocalProcessTerminalView
 
     init() {
-        let terminal = LocalProcessTerminalView(frame: .zero)
+        let terminal = FixedCursorTerminalView(frame: .zero)
         terminal.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
         terminal.lineSpacing = 1.1
         terminal.nativeBackgroundColor = NSColor(calibratedWhite: 0.1, alpha: 1)

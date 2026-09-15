@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AppView: View {
-    private enum Section: CaseIterable, Hashable {
+    enum Section: CaseIterable, Hashable {
         case overview
         case file
         case terminal
@@ -48,8 +48,7 @@ struct AppView: View {
         }
     }
 
-    @StateObject private var terminalStore = TerminalStore()
-    @State private var section = Section.overview
+    @Binding var section: Section
     @State private var selectedFileURL: URL?
     @Environment(\.openSettings) private var openSettings
 
@@ -83,10 +82,10 @@ struct AppView: View {
                 .labelStyle(.iconOnly)
             }
         }
-        .environmentObject(terminalStore)
     }
 }
 
 #Preview {
-    AppView()
+    AppView(section: .constant(.overview))
+        .environmentObject(TerminalStore())
 }

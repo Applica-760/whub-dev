@@ -11,6 +11,8 @@ import WhubCore
 
 @main
 struct whubApp: App {
+    @StateObject private var terminalStore = TerminalStore()
+    @State private var section = AppView.Section.overview
     private let workspaceContainer: ModelContainer
 
     init() {
@@ -23,7 +25,8 @@ struct whubApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppView()
+            AppView(section: $section)
+                .environmentObject(terminalStore)
         }
         .modelContainer(workspaceContainer)
 
