@@ -23,7 +23,12 @@ struct TerminalView: View {
                     Button("Add Terminal", systemImage: "plus") {
                         store.add()
                     }
-                    Button("Close Terminal", systemImage: "minus") {}
+                    .keyboardShortcut("t", modifiers: .command)
+                    Button("Close Terminal", systemImage: "minus") {
+                        store.removeSelected()
+                    }
+                    .keyboardShortcut("w", modifiers: [.command, .shift])
+                    .disabled(store.sessions.count == 1)
                 }
                 .controlGroupStyle(.automatic)
                 .labelStyle(.iconOnly)
