@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct OverviewView: View {
+    @EnvironmentObject private var terminalStore: TerminalStore
+
     var body: some View {
         let columns = Array(repeating: GridItem(.flexible(), alignment: .top), count: 3)
 
@@ -10,7 +12,7 @@ struct OverviewView: View {
             column("Tasks", items: ["SwiftUI migration", "Vault explorer", "Resource status"])
             column("Activity", items: ["Status: ok", "Vault: updated", "No pending tasks"])
                 StatusWidget()
-                TerminalWidget()
+                TerminalWidget(session: terminalStore.selectedSession)
             }
             .padding()
         }
@@ -32,4 +34,5 @@ struct OverviewView: View {
 
 #Preview {
     OverviewView()
+        .environmentObject(TerminalStore())
 }

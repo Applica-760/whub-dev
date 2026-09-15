@@ -3,7 +3,8 @@ import Combine
 import SwiftTerm
 import SwiftUI
 
-final class TerminalSession: ObservableObject {
+final class TerminalSession: Identifiable {
+    let id = UUID()
     let terminal: LocalProcessTerminalView
 
     init() {
@@ -29,52 +30,71 @@ final class TerminalSession: ObservableObject {
     }
 }
 
+final class TerminalStore: ObservableObject {
+    @Published private(set) var sessions: [TerminalSession]
+    @Published private(set) var selectedSessionID: TerminalSession.ID
+
+    init() {
+        let session = TerminalSession()
+        sessions = [session]
+        selectedSessionID = session.id
+    }
+
+    var selectedSession: TerminalSession {
+        sessions.first { $0.id == selectedSessionID } ?? sessions[0]
+    }
+
+    func add() {
+        let session = TerminalSession()
+        sessions.append(session)
+        selectedSessionID = session.id
+    }
+
+    func select(_ id: TerminalSession.ID) {
+        selectedSessionID = id
+    }
+}
+
 struct TerminalView: View {
+    @EnvironmentObject private var store: TerminalStore
+
     var body: some View {
         VStack(spacing: 8) {
             HStack(alignment: .bottom) {
-                TerminalTabBar()
+                ForEach(Array(store.sessions.enumerated()), id: \.element.id) { index, session in
+                    TabBar(title: "Terminal \(index + 1)", systemImage: "terminal") {
+                        store.select(session.id)
+                    }
+                }
 
                 Spacer()
 
                 ControlGroup {
-                    Button("Add Terminal", systemImage: "plus") {}
+                    Button("Add Terminal", systemImage: "plus") {
+                        store.add()
+                    }
                     Button("Close Terminal", systemImage: "minus") {}
                 }
                 .controlGroupStyle(.automatic)
                 .labelStyle(.iconOnly)
             }
 
-            TerminalWidget()
+            TerminalWidget(session: store.selectedSession)
         }
         .padding(.horizontal)
         .padding(.bottom)
-        .padding(.top, 2)
+        .padding(.top, 8)
         .navigationTitle("Terminal")
     }
 }
 
-private struct TerminalTabBar: View {
-    var body: some View {
-        Button("Terminal 1", systemImage: "terminal") {}
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .frame(height: 28)
-            .background(.background, in: RoundedRectangle(cornerRadius: 6))
-            .overlay {
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(.quaternary)
-            }
-            .accessibilityAddTraits(.isSelected)
-    }
-}
-
 struct TerminalWidget: View {
-    @EnvironmentObject private var session: TerminalSession
+    let session: TerminalSession
 
     var body: some View {
         WidgetFrame {
             LocalTerminalView(terminal: session.terminal)
+                .id(session.id)
                 .frame(maxWidth: .infinity, minHeight: 240)
         }
     }
@@ -92,5 +112,5 @@ private struct LocalTerminalView: NSViewRepresentable {
 
 #Preview {
     TerminalView()
-        .environmentObject(TerminalSession())
+        .environmentObject(TerminalStore())
 }

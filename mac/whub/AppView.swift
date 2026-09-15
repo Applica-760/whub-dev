@@ -48,7 +48,7 @@ struct AppView: View {
         }
     }
 
-    @StateObject private var terminalSession = TerminalSession()
+    @StateObject private var terminalStore = TerminalStore()
     @State private var section = Section.overview
     @State private var selectedFileURL: URL?
     @Environment(\.openSettings) private var openSettings
@@ -83,7 +83,7 @@ struct AppView: View {
                 .labelStyle(.iconOnly)
             }
         }
-        .environmentObject(terminalSession)
+        .environmentObject(terminalStore)
     }
 }
 
