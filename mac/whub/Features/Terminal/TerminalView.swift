@@ -31,9 +31,41 @@ final class TerminalSession: ObservableObject {
 
 struct TerminalView: View {
     var body: some View {
-        TerminalWidget()
-            .padding()
-            .navigationTitle("Terminal")
+        VStack(spacing: 8) {
+            HStack(alignment: .bottom) {
+                TerminalTabBar()
+
+                Spacer()
+
+                ControlGroup {
+                    Button("Add Terminal", systemImage: "plus") {}
+                    Button("Close Terminal", systemImage: "minus") {}
+                }
+                .controlGroupStyle(.automatic)
+                .labelStyle(.iconOnly)
+            }
+
+            TerminalWidget()
+        }
+        .padding(.horizontal)
+        .padding(.bottom)
+        .padding(.top, 2)
+        .navigationTitle("Terminal")
+    }
+}
+
+private struct TerminalTabBar: View {
+    var body: some View {
+        Button("Terminal 1", systemImage: "terminal") {}
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .frame(height: 28)
+            .background(.background, in: RoundedRectangle(cornerRadius: 6))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(.quaternary)
+            }
+            .accessibilityAddTraits(.isSelected)
     }
 }
 
