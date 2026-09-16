@@ -35,10 +35,10 @@ struct AppView: View {
         }
 
         @ViewBuilder
-        func content(fileURL: URL?) -> some View {
+        func content() -> some View {
             switch self {
             case .overview: OverviewView()
-            case .file: FileViewerView(fileURL: fileURL)
+            case .file: FileViewerView()
             case .status: StatusView()
             case .timer: TimerView()
             case .vault: VaultExplorerView()
@@ -49,18 +49,18 @@ struct AppView: View {
     }
 
     @Binding var section: Section
-    @State private var selectedFileURL: URL?
+    @EnvironmentObject private var fileViewerStore: FileViewerStore
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         NavigationSplitView {
             FileExplorerView { fileURL in
-                selectedFileURL = fileURL
+                fileViewerStore.open(fileURL)
                 section = .file
             }
                 .navigationSplitViewColumnWidth(min: 260, ideal: 320, max: 640)
         } detail: {
-            section.content(fileURL: selectedFileURL)
+            section.content()
         }
         .frame(minWidth: 950, minHeight: 550)
         .toolbar {
@@ -87,5 +87,6 @@ struct AppView: View {
 
 #Preview {
     AppView(section: .constant(.overview))
+        .environmentObject(FileViewerStore())
         .environmentObject(TerminalStore())
 }

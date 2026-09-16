@@ -1,24 +1,55 @@
 import QuickLookUI
 import SwiftUI
 
-private let codeFileExtensions = ["py", "swift"]
-
 struct FileViewerView: View {
-    let fileURL: URL?
+    @EnvironmentObject private var store: FileViewerStore
 
     var body: some View {
-        WidgetFrame {
-            if let fileURL {
-                if codeFileExtensions.contains(fileURL.pathExtension.lowercased()) {
-                    CodeViewerView(fileURL: fileURL)
-                } else {
-                    QuickLookPreviewView(fileURL: fileURL)
+        VStack(spacing: 8) {
+            if !store.fileURLs.isEmpty {
+                HStack(alignment: .bottom) {
+                    ScrollView(.horizontal) {
+                        HStack {
+                            ForEach(store.fileURLs, id: \.self) { fileURL in
+                                let kind = fileKind(for: fileURL)
+                                TabBar(
+                                    title: fileURL.lastPathComponent,
+                                    systemImage: kind.systemImage,
+                                    isSelected: fileURL == store.selectedFileURL
+                                ) {
+                                    store.select(fileURL)
+                                }
+                            }
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+
+                    Button("Close File", systemImage: "xmark") {
+                        if let selectedFileURL = store.selectedFileURL {
+                            store.close(selectedFileURL)
+                        }
+                    }
+                    .labelStyle(.iconOnly)
+                    .disabled(store.selectedFileURL == nil)
                 }
-            } else {
-                Text("Select a file")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            WidgetFrame {
+                if let selectedFileURL = store.selectedFileURL {
+                    if let language = fileKind(for: selectedFileURL).language {
+                        CodeViewerView(fileURL: selectedFileURL, language: language)
+                    } else {
+                        QuickLookPreviewView(fileURL: selectedFileURL)
+                    }
+                } else {
+                    Text("Select a file")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
+        .padding(.horizontal)
+        .padding(.bottom)
+        .padding(.top, 8)
     }
 }
 
@@ -37,5 +68,6 @@ private struct QuickLookPreviewView: NSViewRepresentable {
 }
 
 #Preview {
-    FileViewerView(fileURL: nil)
+    FileViewerView()
+        .environmentObject(FileViewerStore())
 }

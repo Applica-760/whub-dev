@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		C8244DC530553E480038A6AF /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = C8244DC430553E480038A6AF /* SwiftTerm */; };
 		C8244E5C3056B24F0038A6AF /* WhubCore in Frameworks */ = {isa = PBXBuildFile; productRef = C8244E5B3056B24F0038A6AF /* WhubCore */; };
+		CAA6689B4CD1D40F57C3DB8D /* Highlighter in Frameworks */ = {isa = PBXBuildFile; productRef = E46B7CCC8930061F68FD4E6E /* Highlighter */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 			files = (
 				C8244DC530553E480038A6AF /* SwiftTerm in Frameworks */,
 				C8244E5C3056B24F0038A6AF /* WhubCore in Frameworks */,
+				CAA6689B4CD1D40F57C3DB8D /* Highlighter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +76,7 @@
 			packageProductDependencies = (
 				C8244DC430553E480038A6AF /* SwiftTerm */,
 				C8244E5B3056B24F0038A6AF /* WhubCore */,
+				E46B7CCC8930061F68FD4E6E /* Highlighter */,
 			);
 			productName = whub;
 			productReference = C8244D853052F9300038A6AF /* whub.app */;
@@ -106,6 +109,7 @@
 			packageReferences = (
 				C8244DC330553E480038A6AF /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 				C8244E5A3056B24F0038A6AF /* XCLocalSwiftPackageReference "Packages/WhubCore" */,
+				03AEE2700291130EC651D647 /* XCRemoteSwiftPackageReference "HighlighterSwift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C8244D863052F9300038A6AF /* Products */;
@@ -196,6 +200,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=*]" = "";
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -353,6 +358,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		03AEE2700291130EC651D647 /* XCRemoteSwiftPackageReference "HighlighterSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/smittytone/HighlighterSwift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 3.1.0;
+			};
+		};
 		C8244DC330553E480038A6AF /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
@@ -372,6 +385,11 @@
 		C8244E5B3056B24F0038A6AF /* WhubCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WhubCore;
+		};
+		E46B7CCC8930061F68FD4E6E /* Highlighter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 03AEE2700291130EC651D647 /* XCRemoteSwiftPackageReference "HighlighterSwift" */;
+			productName = Highlighter;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
