@@ -5,6 +5,7 @@
 //  Created by 村上匠 on 2026/09/10.
 //
 
+import AppKit
 import SwiftData
 import SwiftUI
 import WhubCore
@@ -29,6 +30,14 @@ struct whubApp: App {
                 .environmentObject(terminalStore)
         }
         .modelContainer(workspaceContainer)
+        .commands {
+            CommandGroup(replacing: .sidebar) {
+                Button("Toggle Full Screen") {
+                    NSApp.sendAction(#selector(NSWindow.toggleFullScreen(_:)), to: nil, from: nil)
+                }
+                .keyboardShortcut("f", modifiers: [.command, .control])
+            }
+        }
 
         Settings {
             SettingsView()
